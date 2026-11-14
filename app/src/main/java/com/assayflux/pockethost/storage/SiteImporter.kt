@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import java.io.File
+import java.io.FilterInputStream
 import java.io.IOException
 import java.util.UUID
 import java.util.zip.ZipInputStream
@@ -37,14 +38,15 @@ object SiteImporter {
             val input = context.contentResolver.openInputStream(zipUri)
                 ?: throw IOException("The selected ZIP file cannot be opened.")
             input.use { raw ->
-                ZipInputStream(raw.buffered()).use { zip ->
+                ZipInputStream(CappedInputStream(raw, MAX_BYTES).buffered()).use { zip ->
                     while (true) {
                         val entry = zip.nextEntry ?: break
                         counter.entries++
                         if (counter.entries > MAX_ENTRIES) throw IOException("ZIP contains too many entries (limit: $MAX_ENTRIES).")
                         val normalized = entry.name.replace('\\', '/')
-                        if (normalized.startsWith('/') || normalized.startsWith("../") ||
-                            normalized.split('/').any { it == ".." || it.isBlank() && it != normalized.substringAfterLast('/') }) {
+                        val pathParts = normalized.split('/')
+                        if (normalized.startsWith('/') || normalized.contains('\u0000') ||
+                            pathParts.any { it == ".." || it == "." || (it.isBlank() && it != pathParts.last()) }) {
                             throw IOException("ZIP contains an unsafe path.")
                         }
                         val parts = normalized.split('/').filter { it.isNotEmpty() }
@@ -155,6 +157,26 @@ object SiteImporter {
         directory.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
             ?.sortedByDescending { it.name }
             ?.drop(5)?.forEach { it.deleteRecursively() }
+    }
+
+    private class CappedInputStream(input: java.io.InputStream, private val limit: Long) : FilterInputStream(input) {
+        private var consumed = 0L
+        private fun account(count: Int) {
+            if (count > 0) {
+                consumed += count
+                if (consumed > limit) throw IOException("Compressed ZIP exceeds the 50 MB import limit.")
+            }
+        }
+        override fun read(): Int {
+            val value = super.read()
+            if (value >= 0) account(1)
+            return value
+        }
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val count = super.read(buffer, offset, length)
+            account(count)
+            return count
+        }
     }
 
     private class Counter(var files: Int = 0, var entries: Int = 0, var bytes: Long = 0)
