@@ -10,7 +10,6 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.Socket
 import java.net.ServerSocket
-import java.net.URL
 
 @RunWith(AndroidJUnit4::class)
 class NativeEngineSmokeTest {
@@ -29,7 +28,7 @@ class NativeEngineSmokeTest {
             val response = Socket().use { socket ->
                 socket.soTimeout = 5_000
                 socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
-                socket.getOutputStream().write("GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n".toByteArray())
+                socket.getOutputStream().write("GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".toByteArray())
                 socket.getOutputStream().flush()
                 socket.getInputStream().bufferedReader().use { it.readText() }
             }
