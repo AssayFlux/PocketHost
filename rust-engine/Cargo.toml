@@ -1,0 +1,19 @@
+[package]
+name = "pockethost"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Rust HTTP static hosting engine for AssayFlux PocketHost"
+
+[lib]
+name = "pockethost"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = "0.21"
+tokio = { version = "1.43", features = ["rt-multi-thread", "net", "sync", "macros", "time", "fs"] }
+hyper = { version = "1.5", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio", "server", "http1"] }
+http-body-util = "0.1"
+bytes = "1"
+percent-encoding = "2"
