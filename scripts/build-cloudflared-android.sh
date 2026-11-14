@@ -15,10 +15,16 @@ TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
 mkdir -p "$WORK" "$OUT"
 
 if [[ ! -d "$WORK/.git" ]]; then
+  rm -rf "$WORK"
   git clone --depth 1 --branch "$VERSION" https://github.com/cloudflare/cloudflared.git "$WORK"
 fi
 cd "$WORK"
 test "$(git describe --tags --exact-match HEAD)" = "$VERSION"
+
+# Include notices for the full statically linked Go dependency graph in the APK.
+go install github.com/google/go-licenses@v1.6.0
+"$(go env GOPATH)/bin/go-licenses" save ./cmd/cloudflared \
+  --save_path="$ROOT/app/src/main/assets/licenses/cloudflared"
 
 build_one() {
   local abi="$1" arch="$2" compiler="$3"
