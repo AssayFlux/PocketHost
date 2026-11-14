@@ -215,7 +215,7 @@ private fun PocketHostDashboard() {
                                     ) {
                                         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     } else {
-                                        startHosting()
+                                        startHosting(notificationDenied = false)
                                     }
                                 },
                                 enabled = !hosting && !importing
