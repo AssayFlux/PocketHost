@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.runtime.PythonHostRuntime
@@ -19,6 +20,7 @@ class HostingService : Service() {
     @Volatile private var stopping = false
     @Volatile private var tunnelSupervisorActive = false
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
+    private var hostingWakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -31,6 +33,7 @@ class HostingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(1, notification("Starting local website server…"))
+        acquireWakeLockIfRequested()
         updateStatus("Starting local website server…")
 
         val site = File(filesDir, "site")
@@ -141,6 +144,7 @@ class HostingService : Service() {
         Thread({ runCatching { CloudflareTunnelRuntime.stop() } }, "PocketHost-Cloudflare-Stop").start()
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
+        releaseWakeLock()
         if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {
             updateStatus("Hosting stopped.")
         }
@@ -148,6 +152,33 @@ class HostingService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun acquireWakeLockIfRequested() {
+        if (!statePreferences.getBoolean("keep_awake", false) || hostingWakeLock?.isHeld == true) return
+        runCatching {
+            val powerManager = getSystemService(PowerManager::class.java)
+            hostingWakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "AssayFlux: PocketHostHosting"
+            ).apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+            OperationalLog.record(this, "INFO", "WAKE_LOCK_ACQUIRED", "Optional CPU wake lock enabled while hosting.")
+        }.onFailure {
+            OperationalLog.record(this, "WARN", "WAKE_LOCK_UNAVAILABLE", it.message ?: "Could not acquire CPU wake lock.")
+        }
+    }
+
+    private fun releaseWakeLock() {
+        runCatching {
+            hostingWakeLock?.let { lock ->
+                if (lock.isHeld) lock.release()
+            }
+            hostingWakeLock = null
+            OperationalLog.record(this, "INFO", "WAKE_LOCK_RELEASED", "CPU wake lock released.")
+        }
+    }
 
     private fun updateStatus(value: String) {
         statePreferences.edit().putString("service_status", value).apply()
