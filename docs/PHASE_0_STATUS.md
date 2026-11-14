@@ -19,6 +19,7 @@
 ### Rust static engine
 - Tokio + Hyper asynchronous static HTTP server.
 - GET and HEAD requests.
+- Single-range HTTP byte serving (`bytes=start-end`, open-ended and suffix ranges), `206 Partial Content`, `Content-Range`, and `416 Range Not Satisfiable`; multi-range requests are intentionally rejected.
 - Streaming file responses.
 - Loopback default binding and explicit LAN bind mode.
 - 32 concurrent-connection cap.
@@ -30,6 +31,8 @@
 - In-memory session metrics: request count, bytes served and active connections.
 
 ### Website import and deployment
+- Android 13+ notification permission is requested before starting the visible hosting service.
+- Preview URL and startup status use the configured HTTP port.
 - Android Storage Access Framework folder import.
 - ZIP import with path validation and compressed/uncompressed 50 MiB caps.
 - Maximum 5,000 files, 10,000 entries and 32 levels of nesting.
@@ -44,7 +47,7 @@
 - GitHub Actions for Rust tests, Android debug APK and TypeScript production build.
 - CI debug APK artifact upload.
 
-## Latest verified build
+## Latest source changes (CI pending)\n\n- `cf608ca`: added bounded single-byte-range HTTP responses and range parser tests.\n- `bf894cb`: added Android 13+ notification permission onboarding and corrected preview/startup port handling.\n- The changes above are committed to `main`; their workflow run must pass before they are marked build-verified.\n\n## Latest verified build
 
 - Workflow: [PocketHost quality #43598386277](https://github.com/AssayFlux/PocketHost/actions/runs/43598386277)
 - Source commit: `c48ee3e1b18c84a787e3b8f686e195181aedb6d8`
@@ -70,7 +73,8 @@
 - Persistent analytics across engine restarts.
 - Structured logs, filtering, rotation and redacted diagnostics export.
 - Encrypted backup/restore.
-- HTTP byte-range requests and configurable caching/404 behaviour.
+- Configurable cache policies and custom 404 pages.
+- HTTP multi-range requests (single-range requests are now implemented).
 - Release signing, release APK and external security review.
 
 ## Safety boundaries
