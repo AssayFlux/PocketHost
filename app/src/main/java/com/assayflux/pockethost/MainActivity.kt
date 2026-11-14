@@ -46,6 +46,7 @@ private fun PocketHostDashboard() {
     val scope = rememberCoroutineScope()
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
+    var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
     var status by remember { mutableStateOf("Ready to configure your first website.") }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -196,7 +197,18 @@ private fun PocketHostDashboard() {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("LOCAL PREVIEW", fontWeight = FontWeight.SemiBold, color = Teal)
                         Text("http://127.0.0.1:8080", color = Teal)
-                        Text("Loopback only. LAN and public access are not enabled.", color = Slate, fontSize = 12.sp)
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Allow local network access", color = Teal, fontWeight = FontWeight.SemiBold)
+                                Text("Lets devices on your current Wi-Fi open this site. No visitor authentication is provided.", color = Slate, fontSize = 11.sp)
+                            }
+                            Switch(checked = allowLan, onCheckedChange = { enabled ->
+                                allowLan = enabled
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                    .putBoolean("allow_lan", enabled).apply()
+                            }, enabled = !hosting)
+                        }
+                        Text(if (allowLan) "LAN mode enabled · port 8080 · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
                         OutlinedButton(
                             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:8080"))) },
                             enabled = hosting
@@ -205,7 +217,7 @@ private fun PocketHostDashboard() {
                 }
                 Spacer(Modifier.weight(1f))
                 Text("PHASE 1 · SAFE STATIC SITE IMPORT", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Cloudflare Tunnel, Python and Node.js remain unavailable until their Android integrations are validated.", color = Slate, fontSize = 11.sp)
+                Text("Public tunnel, Python and Node.js are not available in this build. LAN access is optional and limited to your local network.", color = Slate, fontSize = 11.sp)
                 Text("AssayFlux PocketHost · v0.1.0", color = Slate, fontSize = 11.sp)
             }
         }

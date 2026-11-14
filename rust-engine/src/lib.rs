@@ -7,7 +7,7 @@ use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder;
 use jni::objects::{JClass, JString};
-use jni::sys::{jint, jstring};
+use jni::sys::{jboolean, jint, jstring};
 use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
@@ -146,14 +146,15 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Re
     }
 }
 
-fn start_engine(root: &str, port: u16) -> Result<(), String> {
+fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
     let root = std::fs::canonicalize(root).map_err(|e| format!("Invalid site directory: {e}"))?;
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
 
-    // Public/LAN exposure is deliberately disabled in this initial release.
-    let listener = std::net::TcpListener::bind(("127.0.0.1", port))
+    // LAN exposure is opt-in from the Android dashboard. Public tunnel exposure is separate.
+    let bind_host = if allow_lan { "0.0.0.0" } else { "127.0.0.1" };
+    let listener = std::net::TcpListener::bind((bind_host, port))
         .map_err(|e| format!("Cannot bind port {port}: {e}"))?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
     let (stop_tx, stop_rx) = oneshot::channel();
@@ -205,11 +206,11 @@ fn to_jstring(env: &mut JNIEnv, value: String) -> jstring {
     env.new_string(value).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
 }
 #[no_mangle]
-pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_start(mut env: JNIEnv, _class: JClass, root: JString, port: jint) -> jstring {
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_start(mut env: JNIEnv, _class: JClass, root: JString, port: jint, allow_lan: jboolean) -> jstring {
     let result = (|| {
         let root: String = env.get_string(&root).map_err(|e| e.to_string())?.into();
         if !(1024..=65535).contains(&port) { return Err("Port must be 1024–65535".to_string()); }
-        start_engine(&root, port as u16)?;
+        start_engine(&root, port as u16, allow_lan == 1)?;
         Ok("OK".to_string())
     })();
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
