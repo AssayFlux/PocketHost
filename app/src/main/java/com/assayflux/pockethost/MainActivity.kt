@@ -27,11 +27,31 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 private val Teal = Color(0xFF24434A)
 private val Bronze = Color(0xFFB18B5E)
 private val Ivory = Color(0xFFF6F4EF)
 private val Slate = Color(0xFF657174)
+
+private fun localLanAddress(): String? = runCatching {
+    val interfaces = NetworkInterface.getNetworkInterfaces()
+    val candidates = mutableListOf<String>()
+    while (interfaces.hasMoreElements()) {
+        val network = interfaces.nextElement()
+        if (network.isUp && !network.isLoopback) {
+            val addresses = network.inetAddresses
+            while (addresses.hasMoreElements()) {
+                val address = addresses.nextElement()
+                if (address is Inet4Address && !address.isLoopbackAddress && !address.isLinkLocalAddress) {
+                    candidates.add(address.hostAddress ?: "")
+                }
+            }
+        }
+    }
+    candidates.firstOrNull { it.isNotBlank() }
+}.getOrNull()
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +67,7 @@ private fun PocketHostDashboard() {
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
+    val lanAddress = remember(allowLan, hosting) { if (allowLan) localLanAddress() else null }
     var status by remember { mutableStateOf("Ready to configure your first website.") }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -196,7 +217,7 @@ private fun PocketHostDashboard() {
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("LOCAL PREVIEW", fontWeight = FontWeight.SemiBold, color = Teal)
-                        Text("http://127.0.0.1:8080", color = Teal)
+                        Text(if (allowLan && lanAddress != null) "http://$lanAddress:8080" else "http://127.0.0.1:8080", color = Teal)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Allow local network access", color = Teal, fontWeight = FontWeight.SemiBold)
@@ -208,7 +229,7 @@ private fun PocketHostDashboard() {
                                     .putBoolean("allow_lan", enabled).apply()
                             }, enabled = !hosting)
                         }
-                        Text(if (allowLan) "LAN mode enabled · port 8080 · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
+                        Text(if (allowLan) "LAN mode enabled · port 8080 · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
                         OutlinedButton(
                             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:8080"))) },
                             enabled = hosting
