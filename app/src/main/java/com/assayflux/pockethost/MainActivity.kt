@@ -78,6 +78,7 @@ private fun PocketHostDashboard() {
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
     var advancedMode by remember { mutableStateOf(false) }
+    var keepAwake by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("keep_awake", false)) }
     var portText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080).toString()) }
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
     val lanAddress = remember(allowLan, hosting) { if (allowLan) localLanAddress() else null }
@@ -253,6 +254,22 @@ private fun PocketHostDashboard() {
                                 enabled = !hosting
                             ) { Text("Save server settings") }
                             Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = Slate, fontSize = 11.sp)
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Keep CPU awake while hosting", color = Teal, fontWeight = FontWeight.SemiBold)
+                                    Text("Optional screen-off reliability aid. Uses more battery and cannot override every OEM network policy.", color = Slate, fontSize = 10.sp)
+                                }
+                                Switch(
+                                    checked = keepAwake,
+                                    onCheckedChange = { enabled ->
+                                        keepAwake = enabled
+                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                            .putBoolean("keep_awake", enabled).apply()
+                                        status = if (enabled) "CPU wake lock will be used the next time hosting starts." else "CPU wake lock disabled for the next hosting session."
+                                    },
+                                    enabled = !hosting
+                                )
+                            }
                         }
                     }
                 }
