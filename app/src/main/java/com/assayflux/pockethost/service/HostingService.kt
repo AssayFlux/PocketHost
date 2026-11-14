@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.IBinder
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.tunnel.CloudflareTokenStore
+import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import java.io.File
 
 class HostingService : Service() {
@@ -50,6 +52,32 @@ class HostingService : Service() {
             updateStatus(if (notificationHidden) "$initialMessage. Notification permission is off; Android may hide the service notification from the notification drawer." else initialMessage)
             val manager = getSystemService(NotificationManager::class.java)
             manager.notify(1, notification("$host hosting · port $staticPort"))
+            if (statePreferences.getBoolean("tunnel_enabled", false)) {
+                Thread({
+                    if (stopping) return@Thread
+                    val tunnelToken = runCatching { CloudflareTokenStore.read(this) }.getOrNull()
+                    if (tunnelToken.isNullOrBlank()) {
+                        updateStatus("$baseMessage · Cloudflare Tunnel token is missing or cannot be decrypted.")
+                        manager.notify(1, notification("Cloudflare Tunnel token unavailable"))
+                        return@Thread
+                    }
+                    val tunnelResult = runCatching {
+                        CloudflareTunnelRuntime.start(this, tunnelToken) { event ->
+                            if (!stopping) {
+                                updateStatus(event)
+                                manager.notify(1, notification(event))
+                            }
+                        }
+                    }.getOrElse { "ERROR: ${it.message ?: "connector failed"}" }
+                    if (stopping) {
+                        runCatching { CloudflareTunnelRuntime.stop() }
+                        return@Thread
+                    }
+                    val tunnelMessage = "$baseMessage · Cloudflare Tunnel $tunnelResult"
+                    updateStatus(tunnelMessage)
+                    manager.notify(1, notification(tunnelMessage))
+                }, "PocketHost-Cloudflare-Startup").start()
+            }
             if (pythonEnabled) {
                 Thread({
                     if (stopping) return@Thread
@@ -64,7 +92,8 @@ class HostingService : Service() {
                         )
                     }.getOrElse { "ERROR: ${it.message ?: "Python runtime failed"}" }
                     if (stopping) {
-                        runCatching { PythonHostRuntime.stop(this) }
+                        runCatching { CloudflareTunnelRuntime.stop() }
+        runCatching { PythonHostRuntime.stop(this) }
                         return@Thread
                     }
                     val pythonMessage = when (pythonResult) {
