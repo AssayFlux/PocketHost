@@ -168,7 +168,7 @@ flowchart TB
 - cargo-ndk
 - Node.js and npm for the TypeScript console
 
-See [implementation status and build prerequisites](docs/PHASE_0_STATUS.md) before building.
+See [implementation status and build prerequisites](docs/PHASE_0_STATUS.md) before building. Release maintainers should follow the [Android signing guide](docs/RELEASE_SIGNING.md).
 
 ### Build the Android application
 
