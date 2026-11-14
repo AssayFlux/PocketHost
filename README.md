@@ -84,10 +84,10 @@ The project starts with a focused goal: make it possible to select a website, ru
 |---|---|:---:|
 | Android application shell | Kotlin + Jetpack Compose foundation | IN REPOSITORY |
 | Foreground hosting service | User-started Android service foundation | IN REPOSITORY |
-| Rust HTTP engine | Loopback static server; bounded to 64 active connections and 50 MiB per file | PROTOTYPE |
+| Rust HTTP engine | Loopback static server; streaming responses, 32 active connections and 50 MiB per file | PROTOTYPE |
 | Sample website | Bundled static sample | IN REPOSITORY |
 | TypeScript console | React + Vite visual scaffold; no management API | FOUNDATION |
-| Site folder import | Implemented with SAF, staging, limits and replacement rollback | IN REPOSITORY · CI PENDING |
+| Site folder import | Implemented with SAF, staging, limits and replacement rollback | CI PASSED · DEVICE PENDING |
 | ZIP import | Not implemented | PLANNED |
 | Versioned deployment history / user rollback | Not implemented | PLANNED |
 | LAN access | Not implemented; loopback only | NOT AVAILABLE |
@@ -96,7 +96,7 @@ The project starts with a focused goal: make it possible to select a website, ru
 | Python / Node.js backends | Not implemented | FUTURE |
 | Vivo Y95 device validation | No physical-device verification published | NOT VERIFIED |
 
-**Current safety boundary:** the Rust server binds to 127.0.0.1 only. Folder import is implemented with staging and bounded size/count/depth checks, but it has not yet been verified on a physical Vivo Y95. The app is not an internet-facing server. Do not expose it publicly.
+**Current safety boundary:** the Rust server binds to 127.0.0.1 only and streams files with bounded connections. Folder import is implemented with staging and bounded size/count/depth checks, but neither feature has yet been verified on a physical Vivo Y95. The app is not an internet-facing server. Do not expose it publicly.
 
 ## ENGINEERING ARCHITECTURE
 
