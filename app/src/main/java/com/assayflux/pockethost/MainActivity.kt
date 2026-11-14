@@ -382,23 +382,14 @@ private fun PocketHostDashboard() {
                                 onClick = {
                                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                                         .putBoolean("tunnel_enabled", true).apply()
-                                    if (hosting) {
-                                        scope.launch {
-                                            val result = runCatching {
-                                                val token = CloudflareTokenStore.read(context)
-                                                    ?: error("Save a Cloudflare tunnel token first.")
-                                                withContext(Dispatchers.IO) {
-                                                    CloudflareTunnelRuntime.start(context, token) { event ->
-                                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
-                                                            .edit().putString("service_status", event).apply()
-                                                    }
-                                                }
-                                            }
-                                            result.onSuccess { tunnelStatus = it; status = "Cloudflare Tunnel $it." }
-                                                .onFailure { status = it.message ?: "Cloudflare Tunnel failed to start." }
+                                    if (cloudflareTokenSaved) {
+                                        if (hosting) {
+                                            // Re-enter the foreground service command path so the
+                                            // bounded reconnect supervisor owns this tunnel session.
+                                            ContextCompat.startForegroundService(context, Intent(context, HostingService::class.java))
+                                        } else {
+                                            startHosting(false)
                                         }
-                                    } else if (cloudflareTokenSaved) {
-                                        startHosting(false)
                                     } else {
                                         status = "Save a Cloudflare tunnel token first."
                                     }
