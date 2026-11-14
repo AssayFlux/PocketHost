@@ -10,11 +10,14 @@ use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
-use std::sync::{mpsc, Mutex, OnceLock};
+use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
+
+const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
+const MAX_CONNECTIONS: usize = 64;
 
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
@@ -27,12 +30,28 @@ fn text_response(status: StatusCode, mime: &'static str, body: &'static str) -> 
 }
 fn mime_type(path: &Path) -> &'static str {
     match path.extension().and_then(|v| v.to_str()).unwrap_or("").to_ascii_lowercase().as_str() {
-        "html" | "htm" => "text/html; charset=utf-8", "css" => "text/css; charset=utf-8",
-        "js" | "mjs" => "text/javascript; charset=utf-8", "json" => "application/json",
-        "svg" => "image/svg+xml", "png" => "image/png", "jpg" | "jpeg" => "image/jpeg",
-        "webp" => "image/webp", "gif" => "image/gif", "ico" => "image/x-icon",
-        "txt" => "text/plain; charset=utf-8", "pdf" => "application/pdf",
-        "woff" => "font/woff", "woff2" => "font/woff2", _ => "application/octet-stream",
+        "html" | "htm" => "text/html; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "js" | "mjs" => "text/javascript; charset=utf-8",
+        "json" | "webmanifest" | "map" => "application/json",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "ico" => "image/x-icon",
+        "txt" => "text/plain; charset=utf-8",
+        "xml" => "application/xml",
+        "pdf" => "application/pdf",
+        "wasm" => "application/wasm",
+        "mp4" | "m4v" => "video/mp4",
+        "webm" => "video/webm",
+        "mp3" => "audio/mpeg",
+        "woff" => "font/woff",
+        "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        "otf" => "font/otf",
+        _ => "application/octet-stream",
     }
 }
 async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<Bytes>>, std::convert::Infallible> {
@@ -59,18 +78,32 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<By
     if !canonical.starts_with(&root) || !canonical.is_file() {
         return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden"));
     }
-    let data = match tokio::fs::read(&canonical).await {
-        Ok(data) => data,
-        Err(_) => return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error")),
+    let metadata = match tokio::fs::metadata(&canonical).await {
+        Ok(metadata) => metadata,
+        Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
     };
-    let body = if req.method() == Method::HEAD { Bytes::new() } else { Bytes::from(data) };
-    Ok(Response::builder().status(StatusCode::OK).header("content-type", mime_type(&canonical))
-        .header("x-content-type-options", "nosniff").header("cache-control", "no-cache")
+    if metadata.len() > MAX_FILE_BYTES {
+        return Ok(text_response(StatusCode::PAYLOAD_TOO_LARGE, "text/plain; charset=utf-8", "File exceeds the 50 MB serving limit"));
+    }
+    let body = if req.method() == Method::HEAD {
+        Bytes::new()
+    } else {
+        match tokio::fs::read(&canonical).await {
+            Ok(data) => Bytes::from(data),
+            Err(_) => return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error")),
+        }
+    };
+    Ok(Response::builder().status(StatusCode::OK)
+        .header("content-type", mime_type(&canonical))
+        .header("content-length", metadata.len())
+        .header("x-content-type-options", "nosniff")
+        .header("cache-control", "no-cache")
         .body(Full::new(body)).expect("file response"))
 }
 
 async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
+    let permits = Arc::new(Semaphore::new(MAX_CONNECTIONS));
     loop {
         tokio::select! {
             _ = &mut stop => {
@@ -80,8 +113,13 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Re
             },
             accepted = listener.accept() => {
                 let Ok((stream, _peer)) = accepted else { continue };
+                let Ok(permit) = permits.clone().try_acquire_owned() else {
+                    drop(stream);
+                    continue;
+                };
                 let site_root = root.clone();
                 connections.spawn(async move {
+                    let _permit = permit;
                     let service = service_fn(move |req| serve(site_root.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
@@ -98,7 +136,7 @@ fn start_engine(root: &str, port: u16) -> Result<(), String> {
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
 
-    // Phase 0 deliberately binds to loopback. LAN/public exposure is not enabled.
+    // Public/LAN exposure is deliberately disabled in this initial release.
     let listener = std::net::TcpListener::bind(("127.0.0.1", port))
         .map_err(|e| format!("Cannot bind port {port}: {e}"))?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
@@ -139,7 +177,6 @@ fn start_engine(root: &str, port: u16) -> Result<(), String> {
         }
     }
 }
-
 fn stop_engine() -> Result<(), String> {
     let running = engine().lock().map_err(|_| "Engine state unavailable".to_string())?.take();
     if let Some(running) = running {
@@ -179,5 +216,7 @@ mod tests {
         assert_eq!(mime_type(Path::new("site.css")), "text/css; charset=utf-8");
         assert_eq!(mime_type(Path::new("app.js")), "text/javascript; charset=utf-8");
         assert_eq!(mime_type(Path::new("font.woff2")), "font/woff2");
+        assert_eq!(mime_type(Path::new("app.wasm")), "application/wasm");
+        assert_eq!(mime_type(Path::new("video.mp4")), "video/mp4");
     }
 }

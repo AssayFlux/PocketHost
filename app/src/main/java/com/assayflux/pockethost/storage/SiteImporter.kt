@@ -11,6 +11,7 @@ data class ImportReport(val fileCount: Int, val totalBytes: Long)
 
 object SiteImporter {
     private const val MAX_FILES = 5_000
+    private const val MAX_ENTRIES = 10_000
     private const val MAX_BYTES = 50L * 1024L * 1024L
     private const val MAX_DEPTH = 32
     private val blockedNames = setOf(
@@ -54,7 +55,7 @@ object SiteImporter {
         }
     }
 
-    private class Counter(var files: Int = 0, var bytes: Long = 0)
+    private class Counter(var files: Int = 0, var entries: Int = 0, var bytes: Long = 0)
 
     private fun copyDirectory(
         context: Context,
@@ -66,6 +67,8 @@ object SiteImporter {
     ) {
         if (depth > MAX_DEPTH) throw IOException("Website folder nesting is too deep.")
         for (entry in source.listFiles()) {
+            counter.entries += 1
+            if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many files and folders (limit: $MAX_ENTRIES).")
             val name = entry.name ?: throw IOException("A selected item has no usable filename.")
             validateName(name)
             val target = File(destination, name)
