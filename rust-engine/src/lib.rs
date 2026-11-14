@@ -13,7 +13,8 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::{mpsc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use tokio::net::TcpListener;
-use tokio::sync::{oneshot, JoinSet};
+use tokio::sync::oneshot;
+use tokio::task::JoinSet;
 
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
