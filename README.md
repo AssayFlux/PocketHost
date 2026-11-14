@@ -40,7 +40,7 @@
 
 **AssayFlux PocketHost** is an in-development Android application designed to turn a compatible Android phone into a compact website-hosting appliance—without requiring Termux or root access.
 
-The project provides static hosting and an embedded Python WSGI preview backend. An Android-targeted Cloudflare Tunnel connector is being integrated from pinned upstream source; it is not considered available until Android CI, physical-device and external-hostname tests pass. Node.js hosting and remote management remain separate engineering milestones. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
+The project provides static hosting, an embedded Python WSGI preview backend and an Android-targeted Cloudflare Tunnel connector built from pinned upstream source. The connector binaries and encrypted token lifecycle are integrated in source; physical-device and external-hostname validation remain open. Node.js hosting, multi-site routing and the authenticated remote-management API are not yet implemented. The native application is built with Kotlin, the hosting core is written in Rust, and a TypeScript browser console is currently a disconnected visual scaffold.
 
 > **Hosting should be understandable, controllable and transparent—even when the server fits in your pocket.**
 
@@ -60,12 +60,12 @@ The project provides static hosting and an embedded Python WSGI preview backend.
 <td align="center" width="50%"><img src="https://api.iconify.design/lucide/folder-input.svg?color=%23B18B5E" width="30" alt=""><br><strong>SITE IMPORT & DEPLOYMENT</strong><br><sub>Folder and ZIP import, staged activation, retained releases and rollback.</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="https://api.iconify.design/lucide/route.svg?color=%23B18B5E" width="30" alt=""><br><strong>DOMAINS & TUNNELLING</strong><br><sub>An Android-targeted cloudflared build and named-tunnel controls are in development; public-hosting claims remain gated on tests.</sub></td>
-<td align="center"><img src="https://api.iconify.design/lucide/network.svg?color=%23B18B5E" width="30" alt=""><br><strong>MULTI-SITE ROUTING</strong><br><sub>Future host-based routing, reverse proxy rules, local preview and advanced configuration.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/route.svg?color=%23B18B5E" width="30" alt=""><br><strong>DOMAINS & TUNNELLING</strong><br><sub>Android-targeted cloudflared binaries, encrypted token storage and connector lifecycle controls are integrated. Users must create the remotely managed tunnel and Public Hostname in Cloudflare; real-device and external-network validation remain required before public release.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/network.svg?color=%23B18B5E" width="30" alt=""><br><strong>MULTI-SITE ROUTING</strong><br><sub>Local preview and advanced configuration are present. Multi-site host-based routing and reverse-proxy rules are not yet implemented.</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="https://api.iconify.design/lucide/terminal.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL PYTHON RUNTIME</strong><br><sub>Future backend capability; packaging and server compatibility remain to be validated.</sub></td>
-<td align="center"><img src="https://api.iconify.design/lucide/code-2.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL NODE.JS RUNTIME</strong><br><sub>Future capability, subject to Android compatibility and resource testing.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/terminal.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL PYTHON RUNTIME</strong><br><sub>Embedded CPython 3.11 WSGI preview backend is implemented for trusted code; it is not sandboxed or production-ready.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/code-2.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL NODE.JS RUNTIME</strong><br><sub>Not implemented. A maintained Android-compatible Node.js runtime and process supervisor still need to be selected and integrated.</sub></td>
 </tr>
 </table>
 
@@ -84,7 +84,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 
 ## IMPLEMENTATION STATUS
 
-**Latest source additions:** embedded CPython 3.11 WSGI hosting, a bounded 16-worker Python HTTP server, staged Python project import, a minimal WSGI example and host-side lifecycle tests. The latest CI run has passed the Android build, Rust tests, TypeScript build, Python tests and API 26 emulator smoke; API 33 and API 35 emulator smoke are still pending. The Python backend has not yet passed physical-device acceptance testing.
+**Latest source additions:** embedded CPython 3.11 WSGI hosting, a bounded 16-worker Python HTTP server, staged Python project import, a minimal WSGI example and host-side lifecycle tests. The latest recorded CI run passed Rust, Python, TypeScript, cloudflared cross-compilation, Android debug APK compilation and API 26 emulator smoke. API 33 was still running at last check. API 35's emulator runner failed with adb broken-pipe errors after emulator boot, before a valid test result. See [implementation status](docs/PHASE_0_STATUS.md) for the exact validation snapshot. The Python backend has not yet passed physical-device acceptance testing.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
@@ -94,15 +94,15 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | Foreground hosting service | User-started Android service; Android 13+ notification permission onboarding | CI PENDING · DEVICE PENDING |
 | Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, single-range media seeking, bounded concurrency, file-size limits and live session counters | CI VERIFIED · DEVICE PENDING |
 | Sample website | Bundled static sample | IN REPOSITORY |
-| TypeScript console | React + Vite visual scaffold; not yet connected to a management API | FOUNDATION |
+| TypeScript console | React + TypeScript + Vite visual scaffold; no authenticated management API connection yet | FOUNDATION |
 | Site folder import | SAF import with staging, sensitive-file checks and bounded size/count/depth | CI VERIFIED · DEVICE PENDING |
 | ZIP import | Compressed and uncompressed size caps, path validation and staged activation | CI VERIFIED · DEVICE PENDING |
 | Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | CI VERIFIED · DEVICE PENDING |
 | LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
-| Cloudflare Tunnel | Not implemented; Android-native connector and credential lifecycle remain an engineering gate | NOT IMPLEMENTED |
+| Cloudflare Tunnel | Android-targeted cloudflared, encrypted token storage and reconnect supervisor in source; external hostname and physical-device tests remain | INTEGRATED · VALIDATION PENDING |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
 | Python WSGI backend | Embedded CPython 3.11 via Chaquopy; root `wsgi.py`, bounded threaded server, loopback default, optional LAN binding; limited to compatible pure-Python dependencies unless Android wheels are supplied | IMPLEMENTED · CI PARTIAL · DEVICE PENDING |\n| Node.js backend | No Android runtime or process supervisor integrated | NOT IMPLEMENTED |
-| Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26, API 33 and API 35 emulator smoke tests | CI PENDING |
+| Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds; API 26 smoke passed, API 33 pending and API 35 runner failed before tests | PARTIAL CI · DEVICE PENDING |
 
 **Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.\n\n**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
 
@@ -139,7 +139,7 @@ flowchart TB
 | Native bridge | JNI | Communication between Kotlin and Rust |
 | Web console | TypeScript, React, Vite | Companion browser-based management interface |
 | Metadata | SQLite / Room | Planned site and configuration persistence |
-| Python runtime | CPython 3.11 via Chaquopy | Optional embedded WSGI backend; trusted code only |
+| Python runtime | CPython 3.11 via Chaquopy | Embedded WSGI preview backend; trusted code only |
 | JavaScript runtime | Node.js | Optional future backend execution |
 | External connectivity | Cloudflare Tunnel | Planned outbound tunnel; requires Android-specific validation |
 
