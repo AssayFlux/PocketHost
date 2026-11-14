@@ -25,8 +25,8 @@ class CloudflareConnectorSmokeTest {
         val child = ProcessBuilder(binary.absolutePath, "version")
             .redirectErrorStream(true)
             .start()
-        val output = child.inputStream.bufferedReader().use { it.readText() }
         assertTrue("cloudflared version command timed out", child.waitFor(20, TimeUnit.SECONDS))
+        val output = child.inputStream.bufferedReader().use { it.readText() }
         assertEquals("cloudflared exited unsuccessfully: $output", 0, child.exitValue())
         assertTrue("Unexpected cloudflared output: $output", output.contains("cloudflared", ignoreCase = true))
     }
