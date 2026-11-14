@@ -1,5 +1,6 @@
 package com.assayflux.pockethost
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -49,8 +50,10 @@ private fun PocketHostDashboard() {
     var importedSummary by remember { mutableStateOf("Bundled sample website is available.") }
 
     LaunchedEffect(Unit) {
+        val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         while (true) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
+            preferences.getString("service_status", null)?.let { status = it }
             delay(1_000)
         }
     }
@@ -102,8 +105,11 @@ private fun PocketHostDashboard() {
                                     runCatching {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, intent)
                                         else context.startService(intent)
-                                    }.onFailure { status = it.message ?: "Could not start hosting service." }
-                                    status = "Starting local server on port 8080…"
+                                    }.onSuccess {
+                                        status = "Starting local server on port 8080…"
+                                    }.onFailure {
+                                        status = it.message ?: "Could not start hosting service."
+                                    }
                                 },
                                 enabled = !hosting && !importing
                             ) { Text("Start hosting") }
@@ -131,7 +137,7 @@ private fun PocketHostDashboard() {
                             enabled = !hosting && !importing,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text(if (importing) "Importing website…" else "Choose website folder") }
-                        Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB and 5,000 files.", color = Slate, fontSize = 11.sp)
+                        Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = Slate, fontSize = 11.sp)
                     }
                 }
 

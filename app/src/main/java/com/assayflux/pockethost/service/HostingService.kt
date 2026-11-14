@@ -12,6 +12,7 @@ import java.io.File
 
 class HostingService : Service() {
     private val channelId = "pockethost-hosting"
+    private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
 
     override fun onCreate() {
         super.onCreate()
@@ -24,6 +25,8 @@ class HostingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(1, notification("Starting local website server…"))
+        updateStatus("Starting local website server…")
+
         val site = File(filesDir, "site")
         if (!site.exists()) {
             site.mkdirs()
@@ -34,19 +37,34 @@ class HostingService : Service() {
 
         val result = if (NativeEngine.status() == "RUNNING") "OK"
             else NativeEngine.start(site.absolutePath, 8080)
-        getSystemService(NotificationManager::class.java).notify(
-            1, notification(if (result == "OK") "Local hosting · 127.0.0.1:8080" else "Hosting error: $result")
-        )
-        if (result != "OK") stopSelf()
+        if (result == "OK") {
+            updateStatus("Local server ready at 127.0.0.1:8080")
+            getSystemService(NotificationManager::class.java).notify(
+                1, notification("Local hosting · 127.0.0.1:8080")
+            )
+        } else {
+            updateStatus("Hosting failed: $result")
+            getSystemService(NotificationManager::class.java).notify(
+                1, notification("Hosting error: $result")
+            )
+            stopSelf()
+        }
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         runCatching { NativeEngine.stop() }
+        if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {
+            updateStatus("Hosting stopped.")
+        }
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun updateStatus(value: String) {
+        statePreferences.edit().putString("service_status", value).apply()
+    }
 
     private fun notification(text: String): Notification =
         Notification.Builder(this, channelId)
