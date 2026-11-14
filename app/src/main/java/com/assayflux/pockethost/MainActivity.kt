@@ -71,6 +71,9 @@ private fun PocketHostDashboard() {
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
     val lanAddress = remember(allowLan, hosting) { if (allowLan) localLanAddress() else null }
     var status by remember { mutableStateOf("Ready to configure your first website.") }
+    var requests by remember { mutableLongStateOf(0L) }
+    var bytesServed by remember { mutableLongStateOf(0L) }
+    var activeConnections by remember { mutableLongStateOf(0L) }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
@@ -81,6 +84,9 @@ private fun PocketHostDashboard() {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         while (true) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
+            requests = runCatching { NativeEngine.requestCount() }.getOrDefault(0L)
+            bytesServed = runCatching { NativeEngine.bytesServed() }.getOrDefault(0L)
+            activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
             preferences.getString("service_status", null)?.let { status = it }
             delay(1_000)
         }
@@ -205,6 +211,31 @@ private fun PocketHostDashboard() {
                                 enabled = hosting
                             ) { Text("Stop") }
                         }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("LIVE TRAFFIC · THIS ENGINE SESSION", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Requests", color = Slate, fontSize = 11.sp)
+                                Text(requests.toString(), color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("Active", color = Slate, fontSize = 11.sp)
+                                Text(activeConnections.toString(), color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("Transferred", color = Slate, fontSize = 11.sp)
+                                Text(if (bytesServed < 1024 * 1024) "${bytesServed / 1024} KB" else "${bytesServed / (1024 * 1024)} MB", color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Text("Counters reset when the hosting engine restarts. Requests are counted inside the Rust server.", color = Slate, fontSize = 10.sp)
                     }
                 }
 

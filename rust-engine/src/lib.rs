@@ -7,11 +7,12 @@ use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder;
 use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jint, jstring};
+use jni::sys::{jboolean, jint, jlong, jstring};
 use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Semaphore};
@@ -21,6 +22,15 @@ use tokio_util::io::ReaderStream;
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_CONNECTIONS: usize = 32;
 type ResponseBody = UnsyncBoxBody<Bytes, std::io::Error>;
+
+static REQUESTS: AtomicU64 = AtomicU64::new(0);
+static BYTES_SERVED: AtomicU64 = AtomicU64::new(0);
+static ACTIVE_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
+
+struct ActiveConnection;
+impl Drop for ActiveConnection {
+    fn drop(&mut self) { ACTIVE_CONNECTIONS.fetch_sub(1, Ordering::Relaxed); }
+}
 
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
@@ -78,6 +88,7 @@ fn request_relative_path(raw_path: &str) -> Result<PathBuf, StatusCode> {
     Ok(relative)
 }
 async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+    REQUESTS.fetch_add(1, Ordering::Relaxed);
     if req.method() != Method::GET && req.method() != Method::HEAD {
         return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
     }
@@ -102,6 +113,7 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Respons
     let body = if req.method() == Method::HEAD {
         full_body(Bytes::new())
     } else {
+        BYTES_SERVED.fetch_add(metadata.len(), Ordering::Relaxed);
         let file = match tokio::fs::File::open(&canonical).await {
             Ok(file) => file,
             Err(_) => return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error")),
@@ -134,7 +146,10 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Re
                     continue;
                 };
                 let site_root = root.clone();
+                ACTIVE_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+                let active = ActiveConnection;
                 connections.spawn(async move {
+                    let _active = active;
                     let _permit = permit;
                     let service = service_fn(move |req| serve(site_root.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
@@ -223,6 +238,18 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_stop(mu
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_status(mut env: JNIEnv, _class: JClass) -> jstring {
     let running = engine().lock().map(|s| s.is_some()).unwrap_or(false);
     to_jstring(&mut env, if running { "RUNNING".into() } else { "STOPPED".into() })
+}
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_requestCount(_env: JNIEnv, _class: JClass) -> jlong {
+    REQUESTS.load(Ordering::Relaxed) as jlong
+}
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_bytesServed(_env: JNIEnv, _class: JClass) -> jlong {
+    BYTES_SERVED.load(Ordering::Relaxed) as jlong
+}
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeConnections(_env: JNIEnv, _class: JClass) -> jlong {
+    ACTIVE_CONNECTIONS.load(Ordering::Relaxed) as jlong
 }
 #[cfg(test)]
 mod tests {
