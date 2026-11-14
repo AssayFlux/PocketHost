@@ -33,15 +33,16 @@ class PythonHostRuntimeTest(unittest.TestCase):
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
                     self.assertEqual(200, response.status)
                     self.assertEqual(b"PocketHost WSGI test", response.read())
-                with socket.create_connection(("127.0.0.1", port), timeout=5) as client:
-                    client.sendall(
-                        b"POST / HTTP/1.0\r\n"
-                        b"Host: 127.0.0.1\r\n"
-                        + f"Content-Length: {runtime.MAX_REQUEST_BODY_BYTES + 1}\r\n".encode()
-                        + b"\r\n"
-                    )
-                    response = client.recv(1024)
-                self.assertIn(b"413 Payload Too Large", response)
+                statuses = []
+                limited = runtime._RequestBodyLimit(
+                    lambda environ, start_response: self.fail("Oversized request reached the WSGI app")
+                )
+                body = limited(
+                    {"CONTENT_LENGTH": str(runtime.MAX_REQUEST_BODY_BYTES + 1)},
+                    lambda status, headers: statuses.append(status),
+                )
+                self.assertEqual(["413 Payload Too Large"], statuses)
+                self.assertEqual([b""], list(body))
             finally:
                 self.assertEqual("STOPPED", runtime.stop())
             self.assertEqual("STOPPED", runtime.status())
