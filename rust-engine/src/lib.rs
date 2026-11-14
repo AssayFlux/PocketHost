@@ -14,6 +14,7 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
@@ -87,6 +88,26 @@ fn request_relative_path(raw_path: &str) -> Result<PathBuf, StatusCode> {
     if relative.as_os_str().is_empty() { relative.push("index.html"); }
     Ok(relative)
 }
+fn parse_byte_range(value: &str, size: u64) -> Result<(u64, u64), ()> {
+    if size == 0 { return Err(()); }
+    let spec = value.strip_prefix("bytes=").ok_or(())?;
+    if spec.contains(',') { return Err(()); } // Multi-range responses are deliberately unsupported.
+    let (start, end) = spec.split_once('-').ok_or(())?;
+    if start.is_empty() {
+        let suffix = end.parse::<u64>().map_err(|_| ())?;
+        if suffix == 0 { return Err(()); }
+        let length = suffix.min(size);
+        return Ok((size - length, size - 1));
+    }
+    let first = start.parse::<u64>().map_err(|_| ())?;
+    if first >= size { return Err(()); }
+    let last = if end.is_empty() { size - 1 } else {
+        end.parse::<u64>().map_err(|_| ())?.min(size - 1)
+    };
+    if last < first { return Err(()); }
+    Ok((first, last))
+}
+
 async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     REQUESTS.fetch_add(1, Ordering::Relaxed);
     if req.method() != Method::GET && req.method() != Method::HEAD {
@@ -110,23 +131,46 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Respons
     if metadata.len() > MAX_FILE_BYTES {
         return Ok(text_response(StatusCode::PAYLOAD_TOO_LARGE, "text/plain; charset=utf-8", "File exceeds the 50 MB serving limit"));
     }
-    let body = if req.method() == Method::HEAD {
+    let selected = match req.headers().get(hyper::header::RANGE) {
+        Some(value) => match value.to_str().ok().and_then(|v| parse_byte_range(v, metadata.len()).ok()) {
+            Some(range) => Some(range),
+            None => {
+                return Ok(Response::builder().status(StatusCode::RANGE_NOT_SATISFIABLE)
+                    .header("content-range", format!("bytes */{}", metadata.len()))
+                    .header("accept-ranges", "bytes")
+                    .header("content-length", "0")
+                    .body(full_body(Bytes::new())).expect("range error"));
+            }
+        },
+        None => None,
+    };
+    let (start, end) = selected.unwrap_or((0, metadata.len().saturating_sub(1)));
+    let response_length = if metadata.len() == 0 { 0 } else { end - start + 1 };
+    let status = if selected.is_some() { StatusCode::PARTIAL_CONTENT } else { StatusCode::OK };
+    let body = if req.method() == Method::HEAD || response_length == 0 {
         full_body(Bytes::new())
     } else {
-        BYTES_SERVED.fetch_add(metadata.len(), Ordering::Relaxed);
-        let file = match tokio::fs::File::open(&canonical).await {
+        let mut file = match tokio::fs::File::open(&canonical).await {
             Ok(file) => file,
             Err(_) => return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error")),
         };
-        let chunks = ReaderStream::new(file).map(|chunk| chunk.map(|bytes| Frame::data(bytes)));
+        if file.seek(std::io::SeekFrom::Start(start)).await.is_err() {
+            return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error"));
+        }
+        BYTES_SERVED.fetch_add(response_length, Ordering::Relaxed);
+        let chunks = ReaderStream::new(file.take(response_length)).map(|chunk| chunk.map(|bytes| Frame::data(bytes)));
         StreamBody::new(chunks).boxed_unsync()
     };
-    Ok(Response::builder().status(StatusCode::OK)
+    let mut response = Response::builder().status(status)
         .header("content-type", mime_type(&canonical))
-        .header("content-length", metadata.len())
+        .header("content-length", response_length)
+        .header("accept-ranges", "bytes")
         .header("x-content-type-options", "nosniff")
-        .header("cache-control", "no-cache")
-        .body(body).expect("file response"))
+        .header("cache-control", "no-cache");
+    if selected.is_some() {
+        response = response.header("content-range", format!("bytes {start}-{end}/{}", metadata.len()));
+    }
+    Ok(response.body(body).expect("file response"))
 }
 
 async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Receiver<()>) {
