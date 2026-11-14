@@ -61,21 +61,38 @@ class HostingService : Service() {
                         manager.notify(1, notification("Cloudflare Tunnel token unavailable"))
                         return@Thread
                     }
-                    val tunnelResult = runCatching {
-                        CloudflareTunnelRuntime.start(this, tunnelToken) { event ->
-                            if (!stopping) {
-                                updateStatus(event)
-                                manager.notify(1, notification(event))
+                    var retry = 0
+                    while (!stopping && statePreferences.getBoolean("tunnel_enabled", false) && retry < 5) {
+                        val tunnelResult = runCatching {
+                            CloudflareTunnelRuntime.start(this, tunnelToken) { event ->
+                                if (!stopping) {
+                                    updateStatus(event)
+                                    manager.notify(1, notification(event))
+                                }
                             }
+                        }.getOrElse { "ERROR: ${it.message ?: "connector failed"}" }
+                        if (tunnelResult.startsWith("ERROR")) {
+                            updateStatus("$baseMessage · $tunnelResult")
+                        } else {
+                            updateStatus("$baseMessage · Cloudflare Tunnel $tunnelResult")
+                            manager.notify(1, notification("Cloudflare Tunnel $tunnelResult"))
                         }
-                    }.getOrElse { "ERROR: ${it.message ?: "connector failed"}" }
-                    if (stopping) {
-                        runCatching { CloudflareTunnelRuntime.stop() }
-                        return@Thread
+                        while (!stopping &&
+                            statePreferences.getBoolean("tunnel_enabled", false) &&
+                            CloudflareTunnelRuntime.status() in setOf("CONNECTING", "CONNECTED")) {
+                            try { Thread.sleep(1_000) } catch (_: InterruptedException) { break }
+                        }
+                        if (stopping || !statePreferences.getBoolean("tunnel_enabled", false)) break
+                        retry++
+                        val delayMs = (5_000L shl (retry - 1)).coerceAtMost(60_000L)
+                        val retryMessage = "Cloudflare Tunnel disconnected · retry $retry/5 in ${delayMs / 1_000}s"
+                        updateStatus(retryMessage)
+                        manager.notify(1, notification(retryMessage))
+                        try { Thread.sleep(delayMs) } catch (_: InterruptedException) { break }
                     }
-                    val tunnelMessage = "$baseMessage · Cloudflare Tunnel $tunnelResult"
-                    updateStatus(tunnelMessage)
-                    manager.notify(1, notification(tunnelMessage))
+                    if (!stopping && statePreferences.getBoolean("tunnel_enabled", false)) {
+                        updateStatus("Cloudflare Tunnel stopped after five restart attempts. Check the token and network.")
+                    }
                 }, "PocketHost-Cloudflare-Startup").start()
             }
             if (pythonEnabled) {
