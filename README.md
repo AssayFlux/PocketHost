@@ -40,7 +40,7 @@
 
 **AssayFlux PocketHost** is an in-development Android application designed to turn a compatible Android phone into a compact website-hosting appliance—without requiring Termux or root access.
 
-The project starts with static hosting and an embedded Python WSGI backend. Public exposure through a managed tunnel, Node.js hosting and remote management are separate engineering milestones and must not be treated as available until implemented and tested. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
+The project currently provides static hosting and an embedded Python WSGI preview backend. Public exposure through a managed tunnel, Node.js hosting and remote management are separate engineering milestones and must not be treated as available until implemented and tested. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
 
 > **Hosting should be understandable, controllable and transparent—even when the server fits in your pocket.**
 
@@ -84,7 +84,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 
 ## IMPLEMENTATION STATUS
 
-**Latest source additions (CI pending):** single-range HTTP media seeking, Android 13+ notification permission onboarding that does not block hosting when permission is denied, native x86_64 emulator support, API 26 / API 33 / API 35 Android emulator smoke tests, and a conservative 16-connection engine limit. These changes are committed but not build-verified until the current GitHub Actions run completes.
+**Latest source additions:** embedded CPython 3.11 WSGI hosting, a bounded 16-worker Python HTTP server, staged Python project import, a minimal WSGI example and host-side lifecycle tests. The latest CI run has passed the Android build, Rust tests, TypeScript build, Python tests and API 26 emulator smoke; API 33 and API 35 emulator smoke are still pending. The Python backend has not yet passed physical-device acceptance testing.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
@@ -99,9 +99,9 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | ZIP import | Compressed and uncompressed size caps, path validation and staged activation | CI VERIFIED · DEVICE PENDING |
 | Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | CI VERIFIED · DEVICE PENDING |
 | LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
-| Cloudflare Tunnel | Not implemented; Android compatibility is an open engineering gate | NOT VERIFIED |
+| Cloudflare Tunnel | Not implemented; Android-native connector and credential lifecycle remain an engineering gate | NOT IMPLEMENTED |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
-| Python / Node.js backends | Not implemented | FUTURE |
+| Python WSGI backend | Embedded CPython 3.11 via Chaquopy; root `wsgi.py`, bounded threaded server, loopback default, optional LAN binding; limited to compatible pure-Python dependencies unless Android wheels are supplied | IMPLEMENTED · CI PARTIAL · DEVICE PENDING |\n| Node.js backend | No Android runtime or process supervisor integrated | NOT IMPLEMENTED |
 | Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26, API 33 and API 35 emulator smoke tests | CI PENDING |
 
 **Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.\n\n**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel and public hosting are not available.
@@ -139,7 +139,7 @@ flowchart TB
 | Native bridge | JNI | Communication between Kotlin and Rust |
 | Web console | TypeScript, React, Vite | Companion browser-based management interface |
 | Metadata | SQLite / Room | Planned site and configuration persistence |
-| Python runtime | Python | Optional future backend execution |
+| Python runtime | CPython 3.11 via Chaquopy | Optional embedded WSGI backend; trusted code only |
 | JavaScript runtime | Node.js | Optional future backend execution |
 | External connectivity | Cloudflare Tunnel | Planned outbound tunnel; requires Android-specific validation |
 
@@ -204,12 +204,12 @@ The Android build and physical-device behaviour must be verified independently. 
 
 | PATH | PURPOSE |
 |---|---|
-| app/ | Native Android application |
+| app/ | Native Android application and embedded Python WSGI runtime |
 | rust-engine/ | Rust hosting engine and native interface |
 | web-console/ | TypeScript / React companion console |
 | docs/NORTH_STAR.md | Product principles and long-term direction |
 | docs/MASTER_PLAN.md | Detailed architecture and implementation plan |
-| docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |
+| docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |\n| docs/PYTHON_RUNTIME.md | Embedded Python WSGI setup, limits and security |
 | .github/workflows/ | Automated quality and build workflows |
 
 ## CONTRIBUTING
