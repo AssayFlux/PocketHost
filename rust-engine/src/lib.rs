@@ -158,9 +158,9 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Respons
             return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error"));
         }
         let chunks = ReaderStream::new(file.take(response_length)).map(|chunk| chunk.map(|bytes| {
-            // Count bytes as the stream yields them, not when the response is
-            // merely constructed. Aborted/short reads must not count the
-            // complete Content-Length as transferred.
+            // Count bytes as the file stream yields them to Hyper, not when the
+            // response is merely constructed. Aborted/short reads therefore
+            // do not count the complete Content-Length in advance.
             BYTES_SERVED.fetch_add(bytes.len() as u64, Ordering::Relaxed);
             Frame::data(bytes)
         }));
