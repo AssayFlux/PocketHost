@@ -369,9 +369,13 @@ private fun PocketHostDashboard() {
                                         context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                                             .putBoolean("python_enabled", true).putInt("python_port", port).apply()
                                         if (hosting) {
-                                            runCatching { PythonHostRuntime.start(context, root, port, allowLan) }
-                                                .onSuccess { status = "Python WSGI backend $it on port $port." }
-                                                .onFailure { status = it.message ?: "Python backend failed to start." }
+                                            scope.launch {
+                                                val started = runCatching {
+                                                    withContext(Dispatchers.IO) { PythonHostRuntime.start(context, root, port, allowLan) }
+                                                }
+                                                started.onSuccess { status = "Python WSGI backend $it on port $port." }
+                                                    .onFailure { status = it.message ?: "Python backend failed to start." }
+                                            }
                                         } else {
                                             startHosting(false)
                                         }
@@ -389,6 +393,7 @@ private fun PocketHostDashboard() {
                                 enabled = pythonHosting
                             ) { Text("Stop Python") }
                         }
+                        if (pythonHosting) Text("Python preview: http://127.0.0.1:$pythonPortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Text("Runs trusted WSGI applications from wsgi.py. Loopback by default; LAN access follows the explicit hosting setting. Python project code runs with app privileges.", color = Slate, fontSize = 10.sp)
                     }
                 }
