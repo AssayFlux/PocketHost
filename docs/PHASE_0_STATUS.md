@@ -46,6 +46,7 @@
 - React + TypeScript + Vite console foundation.
 - GitHub Actions for Rust tests, Android debug APK and TypeScript production build.
 - CI debug APK artifact upload.
+- Manual signed-release workflow with keystore secrets supplied through GitHub Actions; APK signature verification is part of the workflow.
 
 ## Latest source changes (CI pending)\n\n- `cf608ca`: added bounded single-byte-range HTTP responses and range parser tests.\n- `bf894cb`: added Android 13+ notification permission onboarding and corrected preview/startup port handling.\n- The changes above are committed to `main`; their workflow run must pass before they are marked build-verified.\n\n## Latest verified build
 
@@ -75,9 +76,10 @@
 - Encrypted backup/restore.
 - Configurable cache policies and custom 404 pages.
 - HTTP multi-range requests (single-range requests are now implemented).
-- Release signing, release APK and external security review.
+- Signed release workflow is implemented and requires repository Actions secrets; no user signing keystore has been supplied, so no signed release artifact has been produced.
+- External security review and production release acceptance.
 
-## Safety boundaries
+## Release signing\n\nSee [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for keystore creation, secret names, and the manual release workflow. The repository contains no signing key or passwords.\n\n## Safety boundaries
 
 - Loopback binding is the default.
 - LAN mode is opt-in and binds to all local interfaces. There is no visitor authentication; only enable it on a trusted network.
