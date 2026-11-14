@@ -84,18 +84,19 @@ The project starts with a focused goal: make it possible to select a website, ru
 |---|---|:---:|
 | Android application shell | Kotlin + Jetpack Compose foundation | IN REPOSITORY |
 | Foreground hosting service | User-started Android service foundation | IN REPOSITORY |
-| Rust HTTP engine | Basic static server, loopback binding | PROTOTYPE |
+| Rust HTTP engine | Loopback static server; bounded to 64 active connections and 50 MiB per file | PROTOTYPE |
 | Sample website | Bundled static sample | IN REPOSITORY |
-| TypeScript console | React + Vite scaffold | FOUNDATION |
-| Site folder / ZIP import | Not implemented | PLANNED |
-| Versioned deployment / rollback | Not implemented | PLANNED |
-| LAN access | Not implemented | NOT VERIFIED |
+| TypeScript console | React + Vite visual scaffold; no management API | FOUNDATION |
+| Site folder import | Implemented with SAF, staging, limits and replacement rollback | IN REPOSITORY · CI PENDING |
+| ZIP import | Not implemented | PLANNED |
+| Versioned deployment history / user rollback | Not implemented | PLANNED |
+| LAN access | Not implemented; loopback only | NOT AVAILABLE |
 | Cloudflare Tunnel | Not implemented; Android compatibility is an open engineering gate | NOT VERIFIED |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
 | Python / Node.js backends | Not implemented | FUTURE |
 | Vivo Y95 device validation | No physical-device verification published | NOT VERIFIED |
 
-**Current safety boundary:** the Rust prototype binds to 127.0.0.1 and is intended for local development only. It is not an internet-facing server. Do not expose it publicly.
+**Current safety boundary:** the Rust server binds to 127.0.0.1 only. Folder import is implemented with staging and bounded size/count/depth checks, but it has not yet been verified on a physical Vivo Y95. The app is not an internet-facing server. Do not expose it publicly.
 
 ## ENGINEERING ARCHITECTURE
 
@@ -148,7 +149,7 @@ flowchart TB
 | PHASE | ENGINEERING FOCUS | EXIT CONDITION |
 |:---:|---|---|
 | **0** | Native shell + Rust static HTTP prototype | Reproducible build and baseline engine checks |
-| **1** | Site import, validation and local deployment | A user-selected site can be deployed and previewed locally |
+| **1** | Site import, validation and local deployment | Folder import works on the target device; ZIP and versioned releases pass acceptance |
 | **2** | LAN preview, service state and diagnostics | Verified access from another device on the same network |
 | **3** | Android-compatible tunnel proof | Tunnel connects reliably on the target Android architecture |
 | **4** | Public domain and secure hosting | Authenticated, externally tested hosting with documented limits |
