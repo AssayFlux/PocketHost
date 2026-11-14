@@ -130,6 +130,17 @@ private fun PocketHostDashboard() {
         }
     }
 
+    val logExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/x-ndjson")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val exported = withContext(Dispatchers.IO) { OperationalLog.export(context, uri) }
+                status = if (exported) "Redacted operational logs exported." else "Could not export operational logs."
+            }
+        }
+    }
+
     val zipPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
             importing = true
@@ -327,6 +338,10 @@ private fun PocketHostDashboard() {
                             }
                         }
                         Text("App-private rotating log · credentials and bearer tokens are redacted.", color = Slate, fontSize = 10.sp)
+                        OutlinedButton(
+                            onClick = { logExportPicker.launch("pockethost-operations.jsonl") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Export redacted logs") }
                     }
                 }
 
