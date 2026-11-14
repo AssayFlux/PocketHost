@@ -12,6 +12,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -156,7 +158,7 @@ private fun PocketHostDashboard() {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Ivory) {
             Column(
-                Modifier.fillMaxSize().padding(22.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text("DESIGNED BY ASSAYFLUX", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
@@ -193,7 +195,7 @@ private fun PocketHostDashboard() {
                                 },
                                 enabled = !hosting
                             ) { Text("Save server settings") }
-                            Text("Engine limits: 32 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = Slate, fontSize = 11.sp)
+                            Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = Slate, fontSize = 11.sp)
                         }
                     }
                 }
@@ -321,7 +323,6 @@ private fun PocketHostDashboard() {
                         ) { Text("Open preview") }
                     }
                 }
-                Spacer(Modifier.weight(1f))
                 Text(if (advancedMode) "ADVANCED MODE · ENGINE DETAILS" else "SIMPLE MODE · SAFE STATIC SITE HOSTING", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("Public tunnel, Python and Node.js are not available in this build. LAN access is optional and limited to your local network.", color = Slate, fontSize = 11.sp)
                 Text("AssayFlux PocketHost · v0.1.0", color = Slate, fontSize = 11.sp)
