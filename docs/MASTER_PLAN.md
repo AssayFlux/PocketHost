@@ -453,7 +453,7 @@ Tests must run at the appropriate levels: Rust unit/integration tests, Android i
 
 ## 15. Immediate implementation backlog
 
-1. Record verified Vivo Y95 hardware/software details.
+1. Validate representative Android 8.0+ smartphones with at least 4 GB RAM across ARMv7 and ARM64, including vendor-specific service and battery policies.
 2. Establish Gradle/NDK/Rust Android toolchain compatibility.
 3. Create minimal Kotlin app shell and Rust JNI library.
 4. Implement a local-only Rust static HTTP proof.
