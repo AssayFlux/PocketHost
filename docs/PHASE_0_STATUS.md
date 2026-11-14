@@ -2,12 +2,12 @@
 
 **Last updated:** 2026-11-14  
 **Branch:** `main`  
-**Release state:** Development prototype. Not approved for public production hosting.
+**Release state:** Development prototype. Not approved for public production hosting.\n**Compatibility target:** Android 8.0 (API 26)+, 4 GB RAM minimum target, ARMv7 + ARM64 phone ABIs; x86_64 for emulator tests.
 
 ## Implemented
 
 ### Android application
-- Native Kotlin + Jetpack Compose application.
+- Native Kotlin + Jetpack Compose application.\n- Minimum Android API 26 (Android 8.0); ARMv7 and ARM64 native phone builds, plus x86_64 emulator ABI.
 - Simple and Advanced dashboard modes.
 - User-started foreground hosting service with persistent notification and status reporting.
 - JNI bridge for Rust lifecycle and session metrics.
@@ -22,7 +22,7 @@
 - Single-range HTTP byte serving (`bytes=start-end`, open-ended and suffix ranges), `206 Partial Content`, `Content-Range`, and `416 Range Not Satisfiable`; multi-range requests are intentionally rejected.
 - Streaming file responses.
 - Loopback default binding and explicit LAN bind mode.
-- 32 concurrent-connection cap.
+- 16 concurrent-connection cap, selected as a conservative default for entry-level phones.
 - 50 MiB per-file response cap.
 - MIME types for common web assets, fonts, WASM, images, audio and video.
 - Content-Length and nosniff response header.
@@ -31,7 +31,7 @@
 - In-memory session metrics: request count, bytes served and active connections.
 
 ### Website import and deployment
-- Android 13+ notification permission is requested before starting the visible hosting service.
+- Android 13+ notification permission is requested; hosting can still start when notification permission is denied, with Android's foreground-service notification visibility limitation.
 - Preview URL and startup status use the configured HTTP port.
 - Android Storage Access Framework folder import.
 - ZIP import with path validation and compressed/uncompressed 50 MiB caps.
@@ -97,7 +97,7 @@ See [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for keystore creation, secret names
 - The TypeScript console is a visual foundation, not a connected management client.
 - Imported website content is served as static files; it is not executed by the Rust static server.
 - Python and Node.js runtimes are not included.
-- Android foreground-service behaviour and vendor battery policies require physical-device validation.
+- Android foreground-service behaviour and vendor battery policies require representative physical-device validation across the supported device class.
 - A foreground service does not guarantee 24/7 uptime.
 
 ## Build prerequisites
