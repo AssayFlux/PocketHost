@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
@@ -64,6 +65,13 @@ private fun localLanAddress(): String? = runCatching {
     candidates.firstOrNull { it.isNotBlank() }
 }.getOrNull()
 
+private fun formatBytes(value: Long): String = when {
+    value < 1024L -> "$value B"
+    value < 1024L * 1024L -> "${value / 1024L} KB"
+    value < 1024L * 1024L * 1024L -> "${value / (1024L * 1024L)} MB"
+    else -> "${value / (1024L * 1024L * 1024L)} GB"
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +93,8 @@ private fun PocketHostDashboard() {
     var status by remember { mutableStateOf("Ready to configure your first website.") }
     var requests by remember { mutableLongStateOf(0L) }
     var bytesServed by remember { mutableLongStateOf(0L) }
+    var todayRequests by remember { mutableLongStateOf(0L) }
+    var todayBytes by remember { mutableLongStateOf(0L) }
     var activeConnections by remember { mutableLongStateOf(0L) }
     var recentEvents by remember { mutableStateOf(emptyList<OperationalLog.Entry>()) }
     var importedSummary by remember {
@@ -120,8 +130,11 @@ private fun PocketHostDashboard() {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         while (true) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
-            requests = runCatching { NativeEngine.requestCount() }.getOrDefault(0L)
-            bytesServed = runCatching { NativeEngine.bytesServed() }.getOrDefault(0L)
+            val metrics = withContext(Dispatchers.IO) { MetricsStore.snapshot(context) }
+            requests = metrics.totalRequests
+            bytesServed = metrics.totalBytes
+            todayRequests = metrics.todayRequests
+            todayBytes = metrics.todayBytes
             activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
@@ -313,7 +326,7 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("LIVE TRAFFIC · THIS ENGINE SESSION", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("PERSISTENT TRAFFIC · ALL HOSTING SESSIONS", color = Teal, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column(Modifier.weight(1f)) {
                                 Text("Requests", color = Slate, fontSize = 11.sp)
@@ -325,10 +338,11 @@ private fun PocketHostDashboard() {
                             }
                             Column(Modifier.weight(1f)) {
                                 Text("Transferred", color = Slate, fontSize = 11.sp)
-                                Text(if (bytesServed < 1024 * 1024) "${bytesServed / 1024} KB" else "${bytesServed / (1024 * 1024)} MB", color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text(formatBytes(bytesServed), color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                        Text("Counters reset when the hosting engine restarts. Requests are counted inside the Rust server.", color = Slate, fontSize = 10.sp)
+                        Text("Today: $todayRequests requests · ${formatBytes(todayBytes)} transferred.", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Totals are persisted across service restarts. Transferred bytes are counted as file chunks stream into the HTTP response.", color = Slate, fontSize = 10.sp)
                     }
                 }
 
