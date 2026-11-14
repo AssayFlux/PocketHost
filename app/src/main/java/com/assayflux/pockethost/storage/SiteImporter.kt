@@ -120,7 +120,7 @@ object SiteImporter {
             stagingBase.deleteRecursively()
             normalized
         }
-        val previous = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().take(8)}")
+        val previous = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
         val hadActive = active.exists()
         if (hadActive && !active.renameTo(previous)) throw IOException("Could not preserve the currently deployed website.")
         if (!replacement.renameTo(active)) {
@@ -141,7 +141,7 @@ object SiteImporter {
         val latest = releases.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
             ?.maxByOrNull { it.name } ?: throw IOException("There is no previous deployment to restore.")
         val active = File(context.filesDir, "site")
-        val displaced = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().take(8)}")
+        val displaced = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
         if (!active.exists() || !active.renameTo(displaced)) throw IOException("Could not preserve the current deployment.")
         if (!latest.renameTo(active)) {
             displaced.renameTo(active)
