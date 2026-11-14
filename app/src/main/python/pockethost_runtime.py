@@ -17,6 +17,7 @@ _lock = threading.RLock()
 _server = None
 _thread = None
 _module_name = None
+_project_root = None
 
 
 class _BoundedThreadingWSGIServer(ThreadingMixIn, WSGIServer):
@@ -47,6 +48,9 @@ class _BoundedThreadingWSGIServer(ThreadingMixIn, WSGIServer):
 
 
 class _QuietRequestHandler(WSGIRequestHandler):
+    server_version = "PocketHost"
+    sys_version = ""
+
     def log_message(self, format, *args):
         # Request logging is handled by PocketHost's Android diagnostics layer.
         return
@@ -83,7 +87,7 @@ def _load_application(project_root: str):
 
 
 def start(project_root: str, port: int, allow_lan: bool = False) -> str:
-    global _server, _thread, _module_name
+    global _server, _thread, _module_name, _project_root
     port = int(port)
     if port < 1024 or port > 65535:
         raise ValueError("Python port must be between 1024 and 65535.")
@@ -112,22 +116,25 @@ def start(project_root: str, port: int, allow_lan: bool = False) -> str:
             sys.modules.pop(module_name, None)
             raise
         _server, _thread, _module_name = server, thread, module_name
+        _project_root = os.path.realpath(project_root)
         return "RUNNING"
 
 
 def stop() -> str:
-    global _server, _thread, _module_name
+    global _server, _thread, _module_name, _project_root
     with _lock:
-        server, thread, module_name = _server, _thread, _module_name
+        server, thread, module_name, project_root = _server, _thread, _module_name, _project_root
         if server is None:
             return "STOPPED"
-        _server = _thread = _module_name = None
+        _server = _thread = _module_name = _project_root = None
     server.shutdown()
     server.server_close()
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=3.0)
     if module_name:
         sys.modules.pop(module_name, None)
+    if project_root in sys.path:
+        sys.path.remove(project_root)
     return "STOPPED"
 
 
