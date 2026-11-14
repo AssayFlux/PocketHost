@@ -166,6 +166,9 @@ fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
+    REQUESTS.store(0, Ordering::Relaxed);
+    BYTES_SERVED.store(0, Ordering::Relaxed);
+    ACTIVE_CONNECTIONS.store(0, Ordering::Relaxed);
 
     // LAN exposure is opt-in from the Android dashboard. Public tunnel exposure is separate.
     let bind_host = if allow_lan { "0.0.0.0" } else { "127.0.0.1" };
