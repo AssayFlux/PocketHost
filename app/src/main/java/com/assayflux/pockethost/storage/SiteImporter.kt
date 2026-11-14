@@ -112,20 +112,49 @@ object SiteImporter {
 
     private fun activate(context: Context, stagingBase: File, siteRoot: File) {
         val active = File(context.filesDir, "site")
-        val backup = File(context.filesDir, "site-backup-${UUID.randomUUID()}")
+        val releases = File(context.filesDir, "site-releases")
+        if (!releases.exists() && !releases.mkdirs()) throw IOException("Could not create deployment history.")
         val replacement = if (siteRoot == stagingBase) stagingBase else {
             val normalized = File(context.filesDir, "site-normalized-${UUID.randomUUID()}")
             if (!siteRoot.renameTo(normalized)) throw IOException("Could not prepare ZIP website root.")
             stagingBase.deleteRecursively()
             normalized
         }
+        val previous = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().take(8)}")
         val hadActive = active.exists()
-        if (hadActive && !active.renameTo(backup)) throw IOException("Could not preserve the currently deployed website.")
+        if (hadActive && !active.renameTo(previous)) throw IOException("Could not preserve the currently deployed website.")
         if (!replacement.renameTo(active)) {
-            if (hadActive) backup.renameTo(active)
+            if (hadActive) previous.renameTo(active)
             throw IOException("Could not activate the imported website. The previous site was preserved.")
         }
-        if (backup.exists()) backup.deleteRecursively()
+        pruneReleases(releases)
+    }
+
+    fun listReleases(context: Context): List<String> =
+        File(context.filesDir, "site-releases").listFiles()
+            ?.filter { it.isDirectory && it.name.startsWith("release-") }
+            ?.sortedByDescending { it.name }
+            ?.map { it.name } ?: emptyList()
+
+    fun rollbackLatest(context: Context): String {
+        val releases = File(context.filesDir, "site-releases")
+        val latest = releases.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
+            ?.maxByOrNull { it.name } ?: throw IOException("There is no previous deployment to restore.")
+        val active = File(context.filesDir, "site")
+        val displaced = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().take(8)}")
+        if (!active.exists() || !active.renameTo(displaced)) throw IOException("Could not preserve the current deployment.")
+        if (!latest.renameTo(active)) {
+            displaced.renameTo(active)
+            throw IOException("Rollback failed. The current deployment was restored.")
+        }
+        pruneReleases(releases)
+        return latest.name
+    }
+
+    private fun pruneReleases(directory: File) {
+        directory.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
+            ?.sortedByDescending { it.name }
+            ?.drop(5)?.forEach { it.deleteRecursively() }
     }
 
     private class Counter(var files: Int = 0, var entries: Int = 0, var bytes: Long = 0)

@@ -51,6 +51,7 @@ private fun PocketHostDashboard() {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
     }
+    var previousReleases by remember { mutableStateOf(SiteImporter.listReleases(context)) }
 
     LaunchedEffect(Unit) {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -71,6 +72,7 @@ private fun PocketHostDashboard() {
                     importedSummary = "ZIP imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                         .putString("site_summary", importedSummary).apply()
+                    previousReleases = SiteImporter.listReleases(context)
                     status = "ZIP website deployed locally. Start hosting to preview it."
                 }.onFailure { error -> status = error.message ?: "ZIP import failed." }
                 importing = false
@@ -92,6 +94,7 @@ private fun PocketHostDashboard() {
                     importedSummary = "Folder imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                         .putString("site_summary", importedSummary).apply()
+                    previousReleases = SiteImporter.listReleases(context)
                     status = "Website deployed locally. Start hosting to preview it."
                 }.onFailure { error ->
                     status = error.message ?: "Website import failed."
@@ -165,6 +168,23 @@ private fun PocketHostDashboard() {
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Import website ZIP") }
                         Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = Slate, fontSize = 11.sp)
+                        if (previousReleases.isNotEmpty()) {
+                            OutlinedButton(
+                                onClick = {
+                                    val result = runCatching { SiteImporter.rollbackLatest(context) }
+                                    result.onSuccess {
+                                        previousReleases = SiteImporter.listReleases(context)
+                                        importedSummary = "Restored previous deployment"
+                                        status = "Rollback completed. Restart hosting to load the restored site."
+                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                            .putString("site_summary", importedSummary).apply()
+                                    }.onFailure { status = it.message ?: "Rollback failed." }
+                                },
+                                enabled = !hosting && !importing,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Rollback previous deployment") }
+                            Text("${previousReleases.size} previous release(s) retained · latest first", color = Slate, fontSize = 11.sp)
+                        }
                     }
                 }
 
