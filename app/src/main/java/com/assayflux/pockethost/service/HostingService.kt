@@ -10,6 +10,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
@@ -19,6 +20,7 @@ class HostingService : Service() {
     private val channelId = "pockethost-hosting"
     @Volatile private var stopping = false
     @Volatile private var tunnelSupervisorActive = false
+    @Volatile private var metricsMonitorActive = false
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
     private var hostingWakeLock: PowerManager.WakeLock? = null
 
@@ -44,9 +46,12 @@ class HostingService : Service() {
             }
         }
 
-        val result = if (NativeEngine.status() == "RUNNING") "OK"
+        val engineAlreadyRunning = NativeEngine.status() == "RUNNING"
+        val result = if (engineAlreadyRunning) "OK"
             else NativeEngine.start(site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false))
         if (result == "OK") {
+            if (!engineAlreadyRunning) MetricsStore.beginSession(this)
+            startMetricsMonitor()
             val pythonEnabled = statePreferences.getBoolean("python_enabled", false)
             val host = if (statePreferences.getBoolean("allow_lan", false)) "LAN" else "loopback"
             val staticPort = statePreferences.getInt("port", 8080)
@@ -142,6 +147,9 @@ class HostingService : Service() {
     override fun onDestroy() {
         stopping = true
         Thread({ runCatching { CloudflareTunnelRuntime.stop() } }, "PocketHost-Cloudflare-Stop").start()
+        runCatching {
+            MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
+        }
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
         releaseWakeLock()
@@ -152,6 +160,25 @@ class HostingService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun startMetricsMonitor() {
+        if (metricsMonitorActive) return
+        metricsMonitorActive = true
+        Thread({
+            try {
+                while (!stopping && NativeEngine.status() == "RUNNING") {
+                    MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
+                    Thread.sleep(2_000)
+                }
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } catch (error: Exception) {
+                OperationalLog.record(this, "WARN", "METRICS_MONITOR_ERROR", error.message ?: "Traffic metrics sampling stopped.")
+            } finally {
+                metricsMonitorActive = false
+            }
+        }, "PocketHost-Metrics").start()
+    }
 
     private fun acquireWakeLockIfRequested() {
         if (!statePreferences.getBoolean("keep_awake", false) || hostingWakeLock?.isHeld == true) return
