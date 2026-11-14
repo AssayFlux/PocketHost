@@ -21,7 +21,7 @@ use tokio::task::JoinSet;
 use tokio_util::io::ReaderStream;
 
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
-const MAX_CONNECTIONS: usize = 32;
+const MAX_CONNECTIONS: usize = 16;
 type ResponseBody = UnsyncBoxBody<Bytes, std::io::Error>;
 
 static REQUESTS: AtomicU64 = AtomicU64::new(0);
