@@ -29,10 +29,45 @@ jobs:
       - name: Test WSGI lifecycle
         run: python -m unittest discover -s tests/python -v
 
+  cloudflared-android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools ndk;27.2.12479018"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Build pinned cloudflared for Android ABIs
+        run: bash scripts/build-cloudflared-android.sh
+      - name: Verify Android ELF architecture
+        run: |
+          file app/src/main/jniLibs/*/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/arm64-v8a/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/armeabi-v7a/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/x86_64/libcloudflared.so
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: |
+            app/src/main/jniLibs/*/libcloudflared.so
+            app/src/main/assets/licenses/cloudflared/**
+          if-no-files-found: error
+          retention-days: 7
+
   android:
+    needs: cloudflared-android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -65,6 +100,7 @@ jobs:
 
 
   android-smoke:
+    needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -72,6 +108,10 @@ jobs:
         api-level: [26, 33, 35]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main/jniLibs
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
