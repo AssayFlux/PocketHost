@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.assayflux.pockethost.engine.NativeEngine
+import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
@@ -84,6 +85,7 @@ private fun PocketHostDashboard() {
     var requests by remember { mutableLongStateOf(0L) }
     var bytesServed by remember { mutableLongStateOf(0L) }
     var activeConnections by remember { mutableLongStateOf(0L) }
+    var recentEvents by remember { mutableStateOf(OperationalLog.read(context, 8)) }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
@@ -123,6 +125,7 @@ private fun PocketHostDashboard() {
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
             preferences.getString("service_status", null)?.let { status = it }
+            recentEvents = OperationalLog.read(context, 8)
             delay(1_000)
         }
     }
@@ -298,6 +301,32 @@ private fun PocketHostDashboard() {
                             }
                         }
                         Text("Counters reset when the hosting engine restarts. Requests are counted inside the Rust server.", color = Slate, fontSize = 10.sp)
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("RECENT OPERATIONS", color = Teal, fontWeight = FontWeight.SemiBold)
+                        if (recentEvents.isEmpty()) {
+                            Text("No operational events recorded yet.", color = Slate, fontSize = 12.sp)
+                        } else {
+                            recentEvents.forEach { event ->
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else Bronze, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text(event.event.replace('_', ' '), color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                        Spacer(Modifier.weight(1f))
+                                        Text(event.timestamp.take(19).replace('T', ' '), color = Slate, fontSize = 9.sp)
+                                    }
+                                    if (event.message.isNotBlank()) Text(event.message, color = Slate, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                        Text("App-private rotating log · credentials and bearer tokens are redacted.", color = Slate, fontSize = 10.sp)
                     }
                 }
 
