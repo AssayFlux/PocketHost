@@ -29,7 +29,7 @@ class NativeEngineSmokeTest {
             assertTrue(response.startsWith("HTTP/1.1 200"))
             assertTrue(response.contains("PocketHost Android compatibility smoke test"))
 
-            val rangeResponse = exchange(port, "Range: bytes=0-9\\r\\n")
+            val rangeResponse = exchange(port, "Range: bytes=0-9\r\n")
             assertTrue(rangeResponse.startsWith("HTTP/1.1 206"))
             assertTrue(rangeResponse.contains("PocketHost"))
             assertTrue(NativeEngine.requestCount() >= 2L)
@@ -43,7 +43,7 @@ class NativeEngineSmokeTest {
     private fun exchange(port: Int, extraHeaders: String): String = Socket().use { socket ->
         socket.soTimeout = 5_000
         socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
-        val request = "GET / HTTP/1.1\\r\\nHost: localhost\\r\\n" + extraHeaders + "Connection: close\\r\\n\\r\\n"
+        val request = "GET / HTTP/1.1\r\nHost: localhost\r\n" + extraHeaders + "Connection: close\r\n\r\n"
         socket.getOutputStream().write(request.toByteArray())
         socket.getOutputStream().flush()
         socket.getInputStream().bufferedReader().use { it.readText() }
