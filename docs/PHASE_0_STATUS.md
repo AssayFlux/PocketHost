@@ -57,6 +57,7 @@
 - 1 MiB log rotation with three retained archives.
 - Redaction for token, authorization, secret, password and API-key assignments and bearer credentials.
 - Dashboard display of the latest eight events; file reads run off the main thread.
+- User-controlled export of redacted operational logs as JSONL through Android's Storage Access Framework.
 
 ### Companion console and CI
 - React + TypeScript + Vite console foundation.
@@ -88,7 +89,7 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Multi-site hosting, hostname routing and per-site listener/origin configuration.
 - Rust reverse proxy and runtime-to-site routing.
 - Persistent analytics across engine restarts.
-- Log filtering, export and a redacted diagnostics bundle; the current bounded status-event log is a first implementation, not a complete diagnostics system.
+- Log filtering and a redacted diagnostics bundle; the current bounded status-event log and JSONL export are implemented, but not a full diagnostics bundle.
 - Encrypted backup/restore and restore validation.
 - Configurable cache policies, custom 404 pages and site-level request policies.
 - Python resource quotas, request timeouts, stronger isolation and dependency management.
