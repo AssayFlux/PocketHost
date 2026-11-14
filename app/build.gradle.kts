@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.chaquo.python")
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val releaseKeystorePath = System.getenv("POCKETHOST_KEYSTORE_FILE")
@@ -66,4 +67,11 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core-ktx:1.6.1")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+}
+
+chaquopy {
+    defaultConfig {
+        // Python 3.11 is the newest Chaquopy line retaining 32-bit ARM support.
+        version = "3.11"
+    }
 }
