@@ -84,13 +84,13 @@ The project starts with a focused goal: make it possible to select a website, ru
 |---|---|:---:|
 | Android application shell | Kotlin + Jetpack Compose foundation | IN REPOSITORY |
 | Foreground hosting service | User-started Android service foundation | IN REPOSITORY |
-| Rust HTTP engine | Loopback static server; streaming responses, 32 active connections and 50 MiB per file | PROTOTYPE |
+| Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, 32 active connections and 50 MiB per file | PROTOTYPE |
 | Sample website | Bundled static sample | IN REPOSITORY |
 | TypeScript console | React + Vite visual scaffold; no management API | FOUNDATION |
 | Site folder import | Implemented with SAF, staging, limits and replacement rollback | CI PASSED · DEVICE PENDING |
 | ZIP import | Bounded streaming extraction, path validation and staged activation | IMPLEMENTED · CI PENDING |
 | Deployment history / rollback | Retains up to five prior site releases; rollback available while hosting is stopped | IMPLEMENTED · CI PENDING |
-| LAN access | Not implemented; loopback only | NOT AVAILABLE |
+| LAN access | Explicit opt-in binds to all local interfaces; no visitor authentication | IMPLEMENTED · DEVICE TEST PENDING |
 | Cloudflare Tunnel | Not implemented; Android compatibility is an open engineering gate | NOT VERIFIED |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
 | Python / Node.js backends | Not implemented | FUTURE |
@@ -150,7 +150,7 @@ flowchart TB
 |:---:|---|---|
 | **0** | Native shell + Rust static HTTP prototype | Reproducible build and baseline engine checks |
 | **1** | Site import, validation and local deployment | Folder import works on the target device; ZIP and versioned releases pass acceptance |
-| **2** | LAN preview, service state and diagnostics | Verified access from another device on the same network |
+| **2** | LAN preview, service state and diagnostics | Verified access from another device on the same network and tested opt-in controls |
 | **3** | Android-compatible tunnel proof | Tunnel connects reliably on the target Android architecture |
 | **4** | Public domain and secure hosting | Authenticated, externally tested hosting with documented limits |
 | **5** | Optional Python / Node.js runtimes | Runtime compatibility, isolation and resource tests pass |
