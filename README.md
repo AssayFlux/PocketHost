@@ -80,11 +80,11 @@ The project starts with a focused goal: make it possible to select a website, ru
 
 **Minimum supported platform:** Android 8.0 (API 26). **Minimum device memory target:** 4 GB RAM. Native builds include ARMv7 (32-bit) and ARM64 (64-bit) phone ABIs; x86_64 is included for emulator validation. The engine uses bounded concurrency and streams files instead of loading complete assets into memory.
 
-The quality workflow runs native-engine instrumentation smoke tests on Android API 26 and API 35 emulators. Emulator success is a compatibility gate, not a guarantee for every vendor firmware or background-management policy.
+The quality workflow runs native-engine instrumentation smoke tests on Android API 26, API 33 and API 35 emulators. Emulator success is a compatibility gate, not a guarantee for every vendor firmware or background-management policy.
 
 ## IMPLEMENTATION STATUS
 
-**Latest source additions (CI pending):** single-range HTTP media seeking, Android 13+ notification permission onboarding that does not block hosting when permission is denied, native x86_64 emulator support, API 26 / API 35 Android emulator smoke tests, and a conservative 16-connection engine limit. These changes are committed but not build-verified until the current GitHub Actions run completes.
+**Latest source additions (CI pending):** single-range HTTP media seeking, Android 13+ notification permission onboarding that does not block hosting when permission is denied, native x86_64 emulator support, API 26 / API 33 / API 35 Android emulator smoke tests, and a conservative 16-connection engine limit. These changes are committed but not build-verified until the current GitHub Actions run completes.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
@@ -102,7 +102,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | Cloudflare Tunnel | Not implemented; Android compatibility is an open engineering gate | NOT VERIFIED |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
 | Python / Node.js backends | Not implemented | FUTURE |
-| Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26 and API 35 emulator smoke tests | CI PENDING |
+| Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26, API 33 and API 35 emulator smoke tests | CI PENDING |
 
 **Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel and public hosting are not available.
 
