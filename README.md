@@ -76,9 +76,15 @@ The project starts with a focused goal: make it possible to select a website, ru
 | **SIMPLE MODE** | Choose a site, review its settings and start or stop hosting with minimal configuration. |
 | **ADVANCED MODE** | Configure the HTTP port and optional LAN exposure; inspect engine limits and live session traffic. Domains, routing and runtime controls remain future work. |
 
+## ANDROID COMPATIBILITY TARGET
+
+**Minimum supported platform:** Android 8.0 (API 26). **Minimum device memory target:** 4 GB RAM. Native builds include ARMv7 (32-bit) and ARM64 (64-bit) phone ABIs; x86_64 is included for emulator validation. The engine uses bounded concurrency and streams files instead of loading complete assets into memory.
+
+The quality workflow runs native-engine instrumentation smoke tests on Android API 26 and API 35 emulators. Emulator success is a compatibility gate, not a guarantee for every vendor firmware or background-management policy.
+
 ## IMPLEMENTATION STATUS
 
-**Latest source additions (CI pending):** single-range HTTP media seeking (`206`/`416`, open-ended and suffix ranges) and Android 13+ notification permission onboarding. The local preview URL now follows the configured port. These changes are committed but not build-verified until the current GitHub Actions run completes.
+**Latest source additions (CI pending):** single-range HTTP media seeking, Android 13+ notification permission onboarding that does not block hosting when permission is denied, native x86_64 emulator support, API 26 / API 35 Android emulator smoke tests, and a conservative 16-connection engine limit. These changes are committed but not build-verified until the current GitHub Actions run completes.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
