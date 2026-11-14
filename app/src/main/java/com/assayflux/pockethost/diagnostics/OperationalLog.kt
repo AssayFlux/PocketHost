@@ -72,7 +72,7 @@ object OperationalLog {
     private fun redact(value: String): String {
         val assignment = Regex("(?i)(token|authorization|secret|password|api[_-]?key)\\s*[:=]\\s*[^\\s,;]+")
         val bearer = Regex("(?i)bearer\\s+[a-z0-9._~+/-]+=*")
-        return value.replace(assignment, "\\$1=[REDACTED]")
+        return value.replace(assignment, "\$1=[REDACTED]")
             .replace(bearer, "Bearer [REDACTED]")
             .replace(Regex("[\\r\\n\\t]+"), " ")
     }
