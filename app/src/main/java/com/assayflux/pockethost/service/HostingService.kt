@@ -9,11 +9,14 @@ import android.os.Build
 import android.os.IBinder
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.tunnel.CloudflareTokenStore
+import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import java.io.File
 
 class HostingService : Service() {
     private val channelId = "pockethost-hosting"
     @Volatile private var stopping = false
+    @Volatile private var tunnelSupervisorActive = false
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
 
     override fun onCreate() {
@@ -50,6 +53,52 @@ class HostingService : Service() {
             updateStatus(if (notificationHidden) "$initialMessage. Notification permission is off; Android may hide the service notification from the notification drawer." else initialMessage)
             val manager = getSystemService(NotificationManager::class.java)
             manager.notify(1, notification("$host hosting · port $staticPort"))
+            if (statePreferences.getBoolean("tunnel_enabled", false) && !tunnelSupervisorActive) {
+                tunnelSupervisorActive = true
+                Thread({
+                    if (stopping) { tunnelSupervisorActive = false; return@Thread }
+                    val tunnelToken = runCatching { CloudflareTokenStore.read(this) }.getOrNull()
+                    if (tunnelToken.isNullOrBlank()) {
+                        updateStatus("$baseMessage · Cloudflare Tunnel token is missing or cannot be decrypted.")
+                        manager.notify(1, notification("Cloudflare Tunnel token unavailable"))
+                        tunnelSupervisorActive = false
+                        return@Thread
+                    }
+                    var retry = 0
+                    while (!stopping && statePreferences.getBoolean("tunnel_enabled", false) && retry < 5) {
+                        val tunnelResult = runCatching {
+                            CloudflareTunnelRuntime.start(this, tunnelToken) { event ->
+                                if (!stopping) {
+                                    updateStatus(event)
+                                    manager.notify(1, notification(event))
+                                }
+                            }
+                        }.getOrElse { "ERROR: ${it.message ?: "connector failed"}" }
+                        if (tunnelResult.startsWith("ERROR")) {
+                            updateStatus("$baseMessage · $tunnelResult")
+                        } else {
+                            updateStatus("$baseMessage · Cloudflare Tunnel $tunnelResult")
+                            manager.notify(1, notification("Cloudflare Tunnel $tunnelResult"))
+                        }
+                        while (!stopping &&
+                            statePreferences.getBoolean("tunnel_enabled", false) &&
+                            CloudflareTunnelRuntime.status() in setOf("CONNECTING", "CONNECTED")) {
+                            try { Thread.sleep(1_000) } catch (_: InterruptedException) { break }
+                        }
+                        if (stopping || !statePreferences.getBoolean("tunnel_enabled", false)) break
+                        retry++
+                        val delayMs = when (retry) { 1 -> 5_000L; 2 -> 10_000L; 3 -> 20_000L; 4 -> 40_000L; else -> 60_000L }
+                        val retryMessage = "Cloudflare Tunnel disconnected · retry $retry/5 in ${delayMs / 1_000}s"
+                        updateStatus(retryMessage)
+                        manager.notify(1, notification(retryMessage))
+                        try { Thread.sleep(delayMs) } catch (_: InterruptedException) { break }
+                    }
+                    if (!stopping && statePreferences.getBoolean("tunnel_enabled", false)) {
+                        updateStatus("Cloudflare Tunnel stopped after five restart attempts. Check the token and network.")
+                    }
+                    tunnelSupervisorActive = false
+                }, "PocketHost-Cloudflare-Startup").start()
+            }
             if (pythonEnabled) {
                 Thread({
                     if (stopping) return@Thread
@@ -88,6 +137,7 @@ class HostingService : Service() {
 
     override fun onDestroy() {
         stopping = true
+        Thread({ runCatching { CloudflareTunnelRuntime.stop() } }, "PocketHost-Cloudflare-Stop").start()
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
         if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {

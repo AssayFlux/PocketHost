@@ -40,7 +40,7 @@
 
 **AssayFlux PocketHost** is an in-development Android application designed to turn a compatible Android phone into a compact website-hosting appliance—without requiring Termux or root access.
 
-The project currently provides static hosting and an embedded Python WSGI preview backend. Public exposure through a managed tunnel, Node.js hosting and remote management are separate engineering milestones and must not be treated as available until implemented and tested. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
+The project provides static hosting and an embedded Python WSGI preview backend. An Android-targeted Cloudflare Tunnel connector is being integrated from pinned upstream source; it is not considered available until Android CI, physical-device and external-hostname tests pass. Node.js hosting and remote management remain separate engineering milestones. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
 
 > **Hosting should be understandable, controllable and transparent—even when the server fits in your pocket.**
 
@@ -60,7 +60,7 @@ The project currently provides static hosting and an embedded Python WSGI previe
 <td align="center" width="50%"><img src="https://api.iconify.design/lucide/folder-input.svg?color=%23B18B5E" width="30" alt=""><br><strong>SITE IMPORT & DEPLOYMENT</strong><br><sub>Folder and ZIP import, staged activation, retained releases and rollback.</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="https://api.iconify.design/lucide/route.svg?color=%23B18B5E" width="30" alt=""><br><strong>DOMAINS & TUNNELLING</strong><br><sub>Cloudflare Tunnel is planned; Android connector compatibility must be proven before public-hosting claims.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/route.svg?color=%23B18B5E" width="30" alt=""><br><strong>DOMAINS & TUNNELLING</strong><br><sub>An Android-targeted cloudflared build and named-tunnel controls are in development; public-hosting claims remain gated on tests.</sub></td>
 <td align="center"><img src="https://api.iconify.design/lucide/network.svg?color=%23B18B5E" width="30" alt=""><br><strong>MULTI-SITE ROUTING</strong><br><sub>Future host-based routing, reverse proxy rules, local preview and advanced configuration.</sub></td>
 </tr>
 <tr>
@@ -104,7 +104,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | Python WSGI backend | Embedded CPython 3.11 via Chaquopy; root `wsgi.py`, bounded threaded server, loopback default, optional LAN binding; limited to compatible pure-Python dependencies unless Android wheels are supplied | IMPLEMENTED · CI PARTIAL · DEVICE PENDING |\n| Node.js backend | No Android runtime or process supervisor integrated | NOT IMPLEMENTED |
 | Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26, API 33 and API 35 emulator smoke tests | CI PENDING |
 
-**Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.\n\n**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel and public hosting are not available.
+**Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.\n\n**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
 
 ## ENGINEERING ARCHITECTURE
 
@@ -204,12 +204,12 @@ The Android build and physical-device behaviour must be verified independently. 
 
 | PATH | PURPOSE |
 |---|---|
-| app/ | Native Android application and embedded Python WSGI runtime |
+| app/ | Native Android application, embedded Python WSGI and Cloudflare Tunnel connector |
 | rust-engine/ | Rust hosting engine and native interface |
 | web-console/ | TypeScript / React companion console |
 | docs/NORTH_STAR.md | Product principles and long-term direction |
 | docs/MASTER_PLAN.md | Detailed architecture and implementation plan |
-| docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |\n| docs/PYTHON_RUNTIME.md | Embedded Python WSGI setup, limits and security |
+| docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |\n| docs/PYTHON_RUNTIME.md | Embedded Python WSGI setup, limits and security |\n| docs/CLOUDFLARE_TUNNEL.md | Android tunnel connector, token handling and setup |
 | .github/workflows/ | Automated quality and build workflows |
 
 ## CONTRIBUTING
@@ -226,7 +226,7 @@ Contributions should keep implementation and evidence aligned.
 
 PocketHost is an early development project. The static server is loopback-only by default; optional LAN mode has no visitor authentication and must be restricted to a trusted network. It does not provide the complete security controls required for public hosting. Before any public exposure, the project needs a reviewed authentication model, request and connection limits, robust path and file handling, safe deployment/rollback, tunnel lifecycle handling, logging, and physical-device/network testing.
 
-Cloudflare Tunnel is an external connectivity service, not a fully self-hosted network edge. Its use would still depend on Cloudflare infrastructure and applicable service terms.
+Cloudflare Tunnel is an external connectivity service, not a fully self-hosted network edge. PocketHost's connector uses an encrypted-at-rest named-tunnel token, but visitor authentication is not implemented in the origin server; configure Cloudflare Access before exposing private sites. Its use would still depend on Cloudflare infrastructure and applicable service terms.
 
 ## LICENSE
 
