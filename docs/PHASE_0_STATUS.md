@@ -12,6 +12,7 @@
 - Minimum Android API 26; ARMv7 and ARM64 phone ABIs, plus x86_64 emulator ABI.
 - Simple and Advanced dashboard modes.
 - User-started foreground hosting service with persistent notification and status reporting.
+- Optional Advanced Mode partial CPU wake lock while hosting; off by default, released on service shutdown, with explicit battery-use warning.
 - JNI bridge for Rust lifecycle and session metrics.
 - Configurable HTTP port (1024–65535).
 - Loopback listener by default; explicit LAN opt-in.
