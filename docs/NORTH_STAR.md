@@ -10,7 +10,7 @@
 
 PocketHost should make hosting approachable to a website owner while giving an experienced operator meaningful control. The phone is the origin server; the app is the control plane; the Rust engine is the hosting foundation. Public connectivity is provided by a supported tunnel and edge service where available.
 
-This is an engineering ambition, not a promise of unlimited uptime or unlimited capacity. A phone remains subject to Android lifecycle policy, battery, heat, storage, mobile-network conditions and hardware limits.
+This is an engineering ambition, not a promise of unlimited uptime or unlimited capacity. A phone remains subject to Android lifecycle policy, battery, heat, storage, mobile-network conditions and hardware limits. The baseline must remain usable on entry-level 4 GB RAM hardware; higher-end devices may provide more headroom but do not change the minimum support promise.
 
 ## Who it serves
 
@@ -18,7 +18,7 @@ This is an engineering ambition, not a promise of unlimited uptime or unlimited 
 2. **Independent developer:** wants to run small trusted backend applications from a phone.
 3. **Technical operator:** wants visibility into domains, requests, runtime health, logs, limits and recovery.
 
-The first release optimizes for the website owner, not for advanced server administrators.
+The first release optimizes for the website owner, not for advanced server administrators. The compatibility baseline is Android 8.0 (API 26)+ on smartphones with at least 4 GB RAM, supporting ARMv7 and ARM64 without Termux.
 
 ## The core promise
 
