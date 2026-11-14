@@ -302,6 +302,23 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeC
 mod tests {
     use super::*;
     #[test]
+    fn parses_single_byte_ranges_and_suffix_ranges() {
+        assert_eq!(parse_byte_range("bytes=0-9", 100).unwrap(), (0, 9));
+        assert_eq!(parse_byte_range("bytes=10-", 100).unwrap(), (10, 99));
+        assert_eq!(parse_byte_range("bytes=-10", 100).unwrap(), (90, 99));
+        assert_eq!(parse_byte_range("bytes=90-200", 100).unwrap(), (90, 99));
+        assert_eq!(parse_byte_range("bytes=-200", 100).unwrap(), (0, 99));
+    }
+    #[test]
+    fn rejects_invalid_and_multiple_byte_ranges() {
+        assert!(parse_byte_range("bytes=100-", 100).is_err());
+        assert!(parse_byte_range("bytes=10-2", 100).is_err());
+        assert!(parse_byte_range("bytes=-0", 100).is_err());
+        assert!(parse_byte_range("bytes=0-1,3-4", 100).is_err());
+        assert!(parse_byte_range("items=0-1", 100).is_err());
+        assert!(parse_byte_range("bytes=0-", 0).is_err());
+    }
+    #[test]
     fn maps_common_web_mime_types() {
         assert_eq!(mime_type(Path::new("index.html")), "text/html; charset=utf-8");
         assert_eq!(mime_type(Path::new("site.css")), "text/css; charset=utf-8");
