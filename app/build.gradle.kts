@@ -5,7 +5,7 @@ plugins {
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val buildRustAndroid by tasks.registering(Exec::class) {
-    workingDir = rustDir
+    workingDir = rustDir.asFile
     commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-o",
         layout.buildDirectory.dir("generated/rust/jniLibs").get().asFile.absolutePath, "build", "--release")
     inputs.dir(rustDir)
