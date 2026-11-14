@@ -155,7 +155,19 @@ private fun PocketHostDashboard() {
         }
     }
 
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = Teal,
+            onPrimary = Ivory,
+            secondary = Bronze,
+            onSecondary = Color.White,
+            background = Ivory,
+            onBackground = Teal,
+            surface = Color.White,
+            onSurface = Teal,
+            outline = Color(0xFFD9D3C8)
+        )
+    ) {
         Surface(Modifier.fillMaxSize(), color = Ivory) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
