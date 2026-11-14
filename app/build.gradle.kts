@@ -4,6 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
+val releaseKeystorePath = System.getenv("POCKETHOST_KEYSTORE_FILE")
+val releaseStorePassword = System.getenv("POCKETHOST_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("POCKETHOST_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("POCKETHOST_KEY_PASSWORD")
+val releaseSigningReady = listOf(releaseKeystorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+    .all { !it.isNullOrBlank() }
 val buildRustAndroid by tasks.registering(Exec::class) {
     workingDir = rustDir.asFile
     commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-o",
@@ -23,6 +29,22 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (releaseSigningReady) signingConfig = signingConfigs.getByName("release")
+        }
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
