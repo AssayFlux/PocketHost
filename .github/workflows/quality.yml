@@ -28,3 +28,16 @@ jobs:
         run: python -m py_compile app/src/main/python/pockethost_runtime.py examples/python-wsgi/wsgi.py
       - name: Test WSGI lifecycle
         run: python -m unittest discover -s tests/python -v
+
+  console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run build
