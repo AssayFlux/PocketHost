@@ -385,15 +385,20 @@ private fun PocketHostDashboard() {
                             ) { Text("Start Python") }
                             OutlinedButton(
                                 onClick = {
-                                    runCatching { PythonHostRuntime.stop(context) }
                                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("python_enabled", false).apply()
-                                    pythonHosting = false
-                                    status = "Python backend stopped. Static hosting remains available."
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) { runCatching { PythonHostRuntime.stop(context) } }
+                                        pythonHosting = false
+                                        status = "Python backend stopped. Static hosting remains available."
+                                    }
                                 },
                                 enabled = pythonHosting
                             ) { Text("Stop Python") }
                         }
-                        if (pythonHosting) Text("Python preview: http://127.0.0.1:$pythonPortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        if (pythonHosting) Text(
+                            if (allowLan && lanAddress != null) "Python preview: http://$lanAddress:$pythonPortText" else "Python preview: http://127.0.0.1:$pythonPortText",
+                            color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
+                        )
                         Text("Runs trusted WSGI applications from wsgi.py. Loopback by default; LAN access follows the explicit hosting setting. Python project code runs with app privileges.", color = Slate, fontSize = 10.sp)
                     }
                 }
