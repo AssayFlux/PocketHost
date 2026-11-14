@@ -101,10 +101,13 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
 | Cloudflare Tunnel | Android-targeted cloudflared, encrypted token storage and reconnect supervisor in source; external hostname and physical-device tests remain | INTEGRATED · VALIDATION PENDING |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
-| Python WSGI backend | Embedded CPython 3.11 via Chaquopy; root `wsgi.py`, bounded threaded server, loopback default, optional LAN binding | IMPLEMENTED · HOST TESTS PASS · DEVICE PENDING |\n| Node.js backend | Android Node 24 embedding candidate identified; no runtime integrated yet | NOT IMPLEMENTED |
+| Python WSGI backend | Embedded CPython 3.11 via Chaquopy; root `wsgi.py`, bounded threaded server, loopback default, optional LAN binding | IMPLEMENTED · HOST TESTS PASS · DEVICE PENDING |
+| Node.js backend | Android Node 24 embedding candidate identified; no runtime integrated yet | NOT IMPLEMENTED |
 | Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds; API 26 smoke passed, API 33 pending and API 35 runner failed before tests | PARTIAL CI · DEVICE PENDING |
 
-**Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.\n\n**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
+**Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.
+
+**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
 
 ## ENGINEERING ARCHITECTURE
 
@@ -209,7 +212,9 @@ The Android build and physical-device behaviour must be verified independently. 
 | web-console/ | TypeScript / React companion console |
 | docs/NORTH_STAR.md | Product principles and long-term direction |
 | docs/MASTER_PLAN.md | Detailed architecture and implementation plan |
-| docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |\n| docs/PYTHON_RUNTIME.md | Embedded Python WSGI setup, limits and security |\n| docs/CLOUDFLARE_TUNNEL.md | Android tunnel connector, token handling and setup |
+| docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |
+| docs/PYTHON_RUNTIME.md | Embedded Python WSGI setup, limits and security |
+| docs/CLOUDFLARE_TUNNEL.md | Android tunnel connector, token handling and setup |
 | .github/workflows/ | Automated quality and build workflows |
 
 ## CONTRIBUTING
