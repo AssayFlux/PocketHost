@@ -157,8 +157,13 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Respons
         if file.seek(std::io::SeekFrom::Start(start)).await.is_err() {
             return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error"));
         }
-        BYTES_SERVED.fetch_add(response_length, Ordering::Relaxed);
-        let chunks = ReaderStream::new(file.take(response_length)).map(|chunk| chunk.map(|bytes| Frame::data(bytes)));
+        let chunks = ReaderStream::new(file.take(response_length)).map(|chunk| chunk.map(|bytes| {
+            // Count bytes as the stream yields them, not when the response is
+            // merely constructed. Aborted/short reads must not count the
+            // complete Content-Length as transferred.
+            BYTES_SERVED.fetch_add(bytes.len() as u64, Ordering::Relaxed);
+            Frame::data(bytes)
+        }));
         StreamBody::new(chunks).boxed_unsync()
     };
     let mut response = Response::builder().status(status)
