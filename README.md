@@ -57,7 +57,7 @@ The project starts with a focused goal: make it possible to select a website, ru
 <table>
 <tr>
 <td align="center" width="50%"><img src="https://api.iconify.design/lucide/globe.svg?color=%23B18B5E" width="30" alt=""><br><strong>STATIC WEBSITE HOSTING</strong><br><sub>First workload: serve HTML, CSS, JavaScript and static assets from an app-managed site directory.</sub></td>
-<td align="center" width="50%"><img src="https://api.iconify.design/lucide/folder-input.svg?color=%23B18B5E" width="30" alt=""><br><strong>SITE IMPORT & DEPLOYMENT</strong><br><sub>Planned folder/ZIP import, validation, versioned releases and rollback.</sub></td>
+<td align="center" width="50%"><img src="https://api.iconify.design/lucide/folder-input.svg?color=%23B18B5E" width="30" alt=""><br><strong>SITE IMPORT & DEPLOYMENT</strong><br><sub>Folder and ZIP import, staged activation, retained releases and rollback.</sub></td>
 </tr>
 <tr>
 <td align="center"><img src="https://api.iconify.design/lucide/route.svg?color=%23B18B5E" width="30" alt=""><br><strong>DOMAINS & TUNNELLING</strong><br><sub>Cloudflare Tunnel is planned; Android connector compatibility must be proven before public-hosting claims.</sub></td>
@@ -74,7 +74,7 @@ The project starts with a focused goal: make it possible to select a website, ru
 | MODE | INTENDED EXPERIENCE |
 |---|---|
 | **SIMPLE MODE** | Choose a site, review its settings and start or stop hosting with minimal configuration. |
-| **ADVANCED MODE** | Configure sites, ports, domains, routing, runtime options, limits and diagnostics as those capabilities are implemented. |
+| **ADVANCED MODE** | Configure the HTTP port and optional LAN exposure; inspect engine limits and live session traffic. Domains, routing and runtime controls remain future work. |
 
 ## IMPLEMENTATION STATUS
 
@@ -84,19 +84,19 @@ The project starts with a focused goal: make it possible to select a website, ru
 |---|---|:---:|
 | Android application shell | Kotlin + Jetpack Compose foundation | IN REPOSITORY |
 | Foreground hosting service | User-started Android service foundation | IN REPOSITORY |
-| Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, 32 active connections and 50 MiB per file | PROTOTYPE |
+| Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, bounded concurrency, file-size limits and live session counters | CI VERIFIED · DEVICE PENDING |
 | Sample website | Bundled static sample | IN REPOSITORY |
-| TypeScript console | React + Vite visual scaffold; no management API | FOUNDATION |
-| Site folder import | Implemented with SAF, staging, limits and replacement rollback | CI PASSED · DEVICE PENDING |
-| ZIP import | Bounded streaming extraction, path validation and staged activation | IMPLEMENTED · CI PENDING |
-| Deployment history / rollback | Retains up to five prior site releases; rollback available while hosting is stopped | IMPLEMENTED · CI PENDING |
-| LAN access | Explicit opt-in binds to all local interfaces; no visitor authentication | IMPLEMENTED · DEVICE TEST PENDING |
+| TypeScript console | React + Vite visual scaffold; not yet connected to a management API | FOUNDATION |
+| Site folder import | SAF import with staging, sensitive-file checks and bounded size/count/depth | CI VERIFIED · DEVICE PENDING |
+| ZIP import | Compressed and uncompressed size caps, path validation and staged activation | CI VERIFIED · DEVICE PENDING |
+| Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | CI VERIFIED · DEVICE PENDING |
+| LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
 | Cloudflare Tunnel | Not implemented; Android compatibility is an open engineering gate | NOT VERIFIED |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
 | Python / Node.js backends | Not implemented | FUTURE |
 | Vivo Y95 device validation | No physical-device verification published | NOT VERIFIED |
 
-**Current safety boundary:** the Rust server binds to 127.0.0.1 only and streams files with bounded connections. Folder and ZIP imports use staging and bounded size/count/depth checks; deployment history retains up to five previous releases. These flows have not yet been verified on a physical Vivo Y95. The app is not an internet-facing server. Do not expose it publicly.
+**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. None has yet been acceptance-tested on the physical Vivo Y95. Cloudflare Tunnel and public hosting are not available.
 
 ## ENGINEERING ARCHITECTURE
 
@@ -109,7 +109,7 @@ flowchart TB
     SERVICE <--> JNI["JNI BRIDGE"]
     JNI <--> CORE["RUST HOSTING ENGINE"]
     CORE --> STATIC["STATIC FILE SERVER"]
-    STATIC --> LOOP["LOCAL HTTP · 127.0.0.1"]
+    STATIC --> LOOP["LOCAL HTTP · LOOPBACK / OPT-IN LAN"]
     CONSOLE["OPTIONAL WEB CONSOLE · TYPESCRIPT / REACT"] -. future control API .-> APP
     TUNNEL["CLOUDFLARE TUNNEL"] -. planned · compatibility gate .-> CORE
     PY["OPTIONAL PYTHON RUNTIME"] -. future .-> CORE
@@ -168,7 +168,7 @@ flowchart TB
 - cargo-ndk
 - Node.js and npm for the TypeScript console
 
-See [Phase 0 status and build prerequisites](docs/PHASE_0_STATUS.md) before building.
+See [implementation status and build prerequisites](docs/PHASE_0_STATUS.md) before building.
 
 ### Build the Android application
 
@@ -216,7 +216,7 @@ Contributions should keep implementation and evidence aligned.
 
 ## SECURITY & DEPLOYMENT NOTICE
 
-PocketHost is an early development project. The current static server is loopback-only and does not provide the complete security controls required for public hosting. Before any public exposure, the project needs a reviewed authentication model, request and connection limits, robust path and file handling, safe deployment/rollback, tunnel lifecycle handling, logging, and physical-device/network testing.
+PocketHost is an early development project. The static server is loopback-only by default; optional LAN mode has no visitor authentication and must be restricted to a trusted network. It does not provide the complete security controls required for public hosting. Before any public exposure, the project needs a reviewed authentication model, request and connection limits, robust path and file handling, safe deployment/rollback, tunnel lifecycle handling, logging, and physical-device/network testing.
 
 Cloudflare Tunnel is an external connectivity service, not a fully self-hosted network edge. Its use would still depend on Cloudflare infrastructure and applicable service terms.
 

@@ -2,73 +2,94 @@
 
 **Last updated:** 2026-11-14  
 **Branch:** `main`  
-**Current status:** Feature-complete source is not yet achieved; development build only.
+**Release state:** Development prototype. Not approved for public production hosting.
 
-## Implemented in source
+## Implemented
 
-- Kotlin + Jetpack Compose native Android application.
-- Foreground hosting service with persistent notification and service-state reporting.
-- JNI lifecycle bridge to Rust.
-- Rust/Tokio/Hyper static server with streaming file delivery.
-- Loopback binding by default; explicit user opt-in for LAN binding.
-- Bounded 32 concurrent connections and 50 MiB per-file response limit.
-- MIME mapping, GET/HEAD, content length, no directory listing.
-- Canonical path checks, percent-decoding validation and traversal rejection.
+### Android application
+- Native Kotlin + Jetpack Compose application.
+- Simple and Advanced dashboard modes.
+- User-started foreground hosting service with persistent notification and status reporting.
+- JNI bridge for Rust lifecycle and session metrics.
+- Configurable HTTP port (1024–65535).
+- Loopback listener by default; explicit LAN opt-in.
+- LAN IPv4 address discovery for local preview when available.
+- Website import summary persisted across app restarts.
+
+### Rust static engine
+- Tokio + Hyper asynchronous static HTTP server.
+- GET and HEAD requests.
+- Streaming file responses.
+- Loopback default binding and explicit LAN bind mode.
+- 32 concurrent-connection cap.
+- 50 MiB per-file response cap.
+- MIME types for common web assets, fonts, WASM, images, audio and video.
+- Content-Length and nosniff response header.
+- Canonical path validation, percent-decoding validation, traversal rejection and no directory listing.
 - Startup readiness handshake and graceful connection shutdown.
-- Android folder import and ZIP import with staging, path checks and bounded entry/size/depth limits.
-- Deployment history retaining up to five prior releases and rollback while hosting is stopped.
-- Persistent website import summary.
+- In-memory session metrics: request count, bytes served and active connections.
+
+### Website import and deployment
+- Android Storage Access Framework folder import.
+- ZIP import with path validation and compressed/uncompressed 50 MiB caps.
+- Maximum 5,000 files, 10,000 entries and 32 levels of nesting.
+- Sensitive-name rejection for common secrets and repository metadata.
+- Staging before activation.
+- Retains up to five previous releases.
+- One-tap rollback while hosting is stopped.
+- A failed activation attempts to restore the previous active site.
+
+### Companion console and CI
 - React + TypeScript + Vite console foundation.
+- GitHub Actions for Rust tests, Android debug APK and TypeScript production build.
+- CI debug APK artifact upload.
 
-## Verified
+## Latest verified build
 
-- CI workflow [#43596745893](https://github.com/AssayFlux/PocketHost/actions/runs/43596745893) passed Rust tests, Android debug APK compilation and TypeScript console production build for commit `89011087da0f3e95d796bfb0a0b305cc2a030037`.
-- ZIP import, release history/rollback and LAN opt-in were added after that verified commit. Their newer CI runs must pass before they are considered build-verified.
-- CI compilation is not physical-device acceptance.
+- Workflow: [PocketHost quality #43598386277](https://github.com/AssayFlux/PocketHost/actions/runs/43598386277)
+- Source commit: `c48ee3e1b18c84a787e3b8f686e195181aedb6d8`
+- Rust tests: passed.
+- TypeScript production build: passed.
+- Android debug APK compilation: passed.
+- Artifact: `pockethost-debug-apk`.
+- Artifact SHA-256: `9e34ffa13bf7a02151dafa2a5bc5e31f9a66f090c1a09222c65ec58165744d48`.
+- The workflow's APK is a debug build and is not a signed production release.
 
-## Still incomplete / blocked
+## Not implemented / not verified
 
-- Physical Vivo Y95 installation and real-device testing, including OS version, ABI, startup, file picker, ZIP import, rollback, LAN access, lifecycle, battery and thermal behavior.
-- Cloudflare Tunnel Android connector, named tunnel credentials, DNS/domain configuration, external-network validation and recovery after network changes.
+- Physical Vivo Y95 installation and acceptance testing.
+- Exact Vivo Y95 Android version, ABI and firmware confirmation.
+- Real-device tests for service lifecycle, folder/ZIP import, rollback, LAN access, Wi-Fi transitions, battery and thermal behaviour.
+- Cloudflare Tunnel Android connector and named-tunnel lifecycle.
+- Cloudflare token onboarding and secure credential storage.
+- DNS/domain mapping and external-network validation.
 - Authenticated management API and connected TypeScript console.
+- Multi-site hosting and host-based routing.
 - Python runtime and Node.js runtime.
-- Multi-site management, per-site hostnames and routing.
-- Metrics, traffic analytics, structured log viewer and redacted diagnostics export.
-- Encrypted backup/restore and signed production release.
-- HTTP byte-range media seeking and configurable caching/404 behavior.
-- External security review and release acceptance.
+- Reverse proxy and per-site backend routing.
+- Persistent analytics across engine restarts.
+- Structured logs, filtering, rotation and redacted diagnostics export.
+- Encrypted backup/restore.
+- HTTP byte-range requests and configurable caching/404 behaviour.
+- Release signing, release APK and external security review.
 
-## Security boundaries
+## Safety boundaries
 
-- Loopback is the default listener.
-- LAN mode is opt-in and binds to all local interfaces. It has no visitor authentication; only enable it on a trusted network.
-- Public hosting and Cloudflare Tunnel are not available.
-- The management console is not connected to a management API.
-- Imported content is served as static files and is not executed by the Rust static server.
-- Python and Node runtimes are not shipped.
-- This build is not a production internet-facing server.
+- Loopback binding is the default.
+- LAN mode is opt-in and binds to all local interfaces. There is no visitor authentication; only enable it on a trusted network.
+- Cloudflare Tunnel and public hosting are not available.
+- The TypeScript console is a visual foundation, not a connected management client.
+- Imported website content is served as static files; it is not executed by the Rust static server.
+- Python and Node.js runtimes are not included.
+- Android foreground-service behaviour and vendor battery policies require physical-device validation.
+- A foreground service does not guarantee 24/7 uptime.
 
-## Current acceptance state
+## Build prerequisites
 
-| Gate | State |
-|---|---|
-| Rust unit tests | Passed on earlier engine revision; latest source CI pending |
-| Android compilation | Passed on earlier app revision; latest source CI pending |
-| TypeScript build | Passed on earlier console revision; latest source CI pending |
-| Folder import | Source implemented; device test pending |
-| ZIP import | Source implemented; CI/device test pending |
-| Release rollback | Source implemented; CI/device test pending |
-| LAN opt-in | Source implemented; CI/device test pending |
-| Public tunnel | Not implemented |
-| Python / Node | Not implemented |
-| Production release | Not ready |
-
-## Build
-
-Requires JDK 17, Android SDK 35, NDK 27.2.12479018, Rust stable, Android Rust targets and `cargo-ndk`.
+JDK 17, Android SDK 35, NDK 27.2.12479018, Rust stable, Android Rust targets and `cargo-ndk`.
 
 ```bash
 gradle :app:assembleDebug
 ```
 
-The CI APK is a development artifact, not a signed production release.
+The resulting debug APK is for development and testing only.
