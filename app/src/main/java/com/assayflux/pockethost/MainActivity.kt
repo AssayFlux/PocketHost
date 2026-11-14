@@ -96,7 +96,7 @@ private fun PocketHostDashboard() {
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        startHosting(notificationDenied = !granted)
+        startHosting(!granted)
     }
 
     LaunchedEffect(Unit) {
@@ -215,7 +215,7 @@ private fun PocketHostDashboard() {
                                     ) {
                                         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     } else {
-                                        startHosting(notificationDenied = false)
+                                        startHosting(false)
                                     }
                                 },
                                 enabled = !hosting && !importing
