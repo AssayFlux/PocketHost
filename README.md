@@ -94,9 +94,9 @@ The project starts with a focused goal: make it possible to select a website, ru
 | Cloudflare Tunnel | Not implemented; Android compatibility is an open engineering gate | NOT VERIFIED |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
 | Python / Node.js backends | Not implemented | FUTURE |
-| Vivo Y95 device validation | No physical-device verification published | NOT VERIFIED |
+| Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26 and API 35 emulator smoke tests | CI PENDING |
 
-**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. None has yet been acceptance-tested on the physical Vivo Y95. Cloudflare Tunnel and public hosting are not available.
+**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel and public hosting are not available.
 
 ## ENGINEERING ARCHITECTURE
 
