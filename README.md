@@ -76,15 +76,15 @@ The project starts with a focused goal: make it possible to select a website, ru
 | **SIMPLE MODE** | Choose a site, review its settings and start or stop hosting with minimal configuration. |
 | **ADVANCED MODE** | Configure the HTTP port and optional LAN exposure; inspect engine limits and live session traffic. Domains, routing and runtime controls remain future work. |
 
-## IMPLEMENTATION STATUS
+## IMPLEMENTATION STATUS\n\n**Latest source additions (CI pending):** single-range HTTP media seeking (`206`/`416`, open-ended and suffix ranges) and Android 13+ notification permission onboarding. The local preview URL now follows the configured port. These changes are committed but not build-verified until the current GitHub Actions run completes.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
 | AREA | CURRENT POSITION | STATUS |
 |---|---|:---:|
 | Android application shell | Kotlin + Jetpack Compose foundation | IN REPOSITORY |
-| Foreground hosting service | User-started Android service foundation | IN REPOSITORY |
-| Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, bounded concurrency, file-size limits and live session counters | CI VERIFIED · DEVICE PENDING |
+| Foreground hosting service | User-started Android service; Android 13+ notification permission onboarding | CI PENDING · DEVICE PENDING |
+| Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, single-range media seeking, bounded concurrency, file-size limits and live session counters | CI VERIFIED · DEVICE PENDING |
 | Sample website | Bundled static sample | IN REPOSITORY |
 | TypeScript console | React + Vite visual scaffold; not yet connected to a management API | FOUNDATION |
 | Site folder import | SAF import with staging, sensitive-file checks and bounded size/count/depth | CI VERIFIED · DEVICE PENDING |
