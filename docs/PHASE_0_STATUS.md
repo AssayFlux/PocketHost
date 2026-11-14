@@ -52,9 +52,15 @@
 - Host-side syntax and WSGI lifecycle tests, plus a minimal starter project.
 - This is a trusted-code preview runtime, not a sandbox or production multi-tenant runtime.
 
+### Operations and diagnostics
+- App-private structured JSONL service-status event log.
+- 1 MiB log rotation with three retained archives.
+- Redaction for token, authorization, secret, password and API-key assignments and bearer credentials.
+- Dashboard display of the latest eight events; file reads run off the main thread.
+
 ### Companion console and CI
 - React + TypeScript + Vite console foundation.
-- GitHub Actions for Rust tests, Python runtime tests, console build, cloudflared Android cross-build, Android debug APK build and emulator smoke tests.
+- GitHub Actions for Rust tests, Python runtime tests, TypeScript build and Kotlin source compilation on routine commits; Android packaging and emulator smoke tests are separated into a manual integration workflow.
 - Manual signed-release workflow; signing requires the owner's keystore and Actions secrets.
 
 ## Latest validation snapshot
@@ -82,7 +88,7 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Multi-site hosting, hostname routing and per-site listener/origin configuration.
 - Rust reverse proxy and runtime-to-site routing.
 - Persistent analytics across engine restarts.
-- Structured logs, filtering, rotation and redacted diagnostics export.
+- Log filtering, export and a redacted diagnostics bundle; the current bounded status-event log is a first implementation, not a complete diagnostics system.
 - Encrypted backup/restore and restore validation.
 - Configurable cache policies, custom 404 pages and site-level request policies.
 - Python resource quotas, request timeouts, stronger isolation and dependency management.
@@ -98,7 +104,7 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Cloudflare connector code and binaries are integrated, but public hosting is not approved until an externally configured hostname, Access policy where needed, physical-device tunnel validation and external-network tests pass.
 - The TypeScript console is a visual foundation, not a connected management client.
 - Python WSGI executes trusted imported code inside the app process; it is not sandboxed. Do not expose it publicly.
-- Node.js runtime and multi-site routing are not included.
+- Node.js runtime and multi-site routing are not included. A pinned Node 24 Android embedding candidate and its process/memory constraints are documented in [NODE_RUNTIME.md](NODE_RUNTIME.md).
 - A foreground service does not guarantee 24/7 uptime; Android and OEM power policies still apply.
 
 ## Build prerequisites
