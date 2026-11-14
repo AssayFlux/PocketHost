@@ -25,20 +25,27 @@ class NativeEngineSmokeTest {
             assertEquals("OK", NativeEngine.start(root.absolutePath, port, false))
             assertEquals("RUNNING", NativeEngine.status())
 
-            val response = Socket().use { socket ->
-                socket.soTimeout = 5_000
-                socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
-                socket.getOutputStream().write("GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".toByteArray())
-                socket.getOutputStream().flush()
-                socket.getInputStream().bufferedReader().use { it.readText() }
-            }
+            val response = exchange(port, "")
             assertTrue(response.startsWith("HTTP/1.1 200"))
             assertTrue(response.contains("PocketHost Android compatibility smoke test"))
-            assertTrue(NativeEngine.requestCount() >= 1L)
+
+            val rangeResponse = exchange(port, "Range: bytes=0-9\\r\\n")
+            assertTrue(rangeResponse.startsWith("HTTP/1.1 206"))
+            assertTrue(rangeResponse.contains("PocketHost"))
+            assertTrue(NativeEngine.requestCount() >= 2L)
         } finally {
             NativeEngine.stop()
             root.deleteRecursively()
         }
         assertEquals("STOPPED", NativeEngine.status())
+    }
+
+    private fun exchange(port: Int, extraHeaders: String): String = Socket().use { socket ->
+        socket.soTimeout = 5_000
+        socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
+        val request = "GET / HTTP/1.1\\r\\nHost: localhost\\r\\n" + extraHeaders + "Connection: close\\r\\n\\r\\n"
+        socket.getOutputStream().write(request.toByteArray())
+        socket.getOutputStream().flush()
+        socket.getInputStream().bufferedReader().use { it.readText() }
     }
 }
