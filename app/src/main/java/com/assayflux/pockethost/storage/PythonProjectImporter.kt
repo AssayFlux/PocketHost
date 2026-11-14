@@ -34,7 +34,7 @@ object PythonProjectImporter {
                     require(name != "." && name != ".." && !name.contains('/') && !name.contains('\\')) {
                         "Invalid project filename: $name"
                     }
-                    require(name != ".git" && name != ".ssh" && name != ".env" &&
+                    require(name != ".git" && name != ".ssh" && !name.startsWith(".env") &&
                         !name.endsWith(".pem", true) && !name.endsWith(".key", true) &&
                         !name.endsWith(".p12", true) && !name.endsWith(".pfx", true)) {
                         "Sensitive file or directory is not allowed: $name"
