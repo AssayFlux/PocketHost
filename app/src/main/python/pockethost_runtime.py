@@ -63,13 +63,16 @@ def _load_application(project_root: str):
         raise ValueError("Python project directory does not exist.")
     if not os.path.isfile(entry):
         raise ValueError("Python project must contain wsgi.py.")
-    if root not in sys.path:
+    added_path = root not in sys.path
+    if added_path:
         sys.path.insert(0, root)
 
     name = "_pockethost_user_wsgi"
     previous = sys.modules.pop(name, None)
     spec = importlib.util.spec_from_file_location(name, entry)
     if spec is None or spec.loader is None:
+        if added_path and root in sys.path:
+            sys.path.remove(root)
         raise ImportError("Unable to load wsgi.py.")
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
@@ -83,6 +86,8 @@ def _load_application(project_root: str):
         sys.modules.pop(name, None)
         if previous is not None:
             sys.modules[name] = previous
+        if added_path and root in sys.path:
+            sys.path.remove(root)
         raise
 
 
@@ -96,13 +101,20 @@ def start(project_root: str, port: int, allow_lan: bool = False) -> str:
             return "ALREADY_RUNNING"
         application, module_name = _load_application(project_root)
         host = "0.0.0.0" if bool(allow_lan) else "127.0.0.1"
-        server = make_server(
-            host,
-            port,
-            application,
-            server_class=_BoundedThreadingWSGIServer,
-            handler_class=_QuietRequestHandler,
-        )
+        try:
+            server = make_server(
+                host,
+                port,
+                application,
+                server_class=_BoundedThreadingWSGIServer,
+                handler_class=_QuietRequestHandler,
+            )
+        except BaseException:
+            sys.modules.pop(module_name, None)
+            root = os.path.realpath(project_root)
+            if root in sys.path:
+                sys.path.remove(root)
+            raise
         thread = threading.Thread(
             target=server.serve_forever,
             kwargs={"poll_interval": 0.25},
