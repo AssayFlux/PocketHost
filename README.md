@@ -76,7 +76,9 @@ The project starts with a focused goal: make it possible to select a website, ru
 | **SIMPLE MODE** | Choose a site, review its settings and start or stop hosting with minimal configuration. |
 | **ADVANCED MODE** | Configure the HTTP port and optional LAN exposure; inspect engine limits and live session traffic. Domains, routing and runtime controls remain future work. |
 
-## IMPLEMENTATION STATUS\n\n**Latest source additions (CI pending):** single-range HTTP media seeking (`206`/`416`, open-ended and suffix ranges) and Android 13+ notification permission onboarding. The local preview URL now follows the configured port. These changes are committed but not build-verified until the current GitHub Actions run completes.
+## IMPLEMENTATION STATUS
+
+**Latest source additions (CI pending):** single-range HTTP media seeking (`206`/`416`, open-ended and suffix ranges) and Android 13+ notification permission onboarding. The local preview URL now follows the configured port. These changes are committed but not build-verified until the current GitHub Actions run completes.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
