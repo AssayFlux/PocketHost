@@ -84,7 +84,7 @@ class HostingService : Service() {
                         }
                         if (stopping || !statePreferences.getBoolean("tunnel_enabled", false)) break
                         retry++
-                        val delayMs = (5_000L shl (retry - 1)).coerceAtMost(60_000L)
+                        val delayMs = when (retry) { 1 -> 5_000L; 2 -> 10_000L; 3 -> 20_000L; 4 -> 40_000L; else -> 60_000L }
                         val retryMessage = "Cloudflare Tunnel disconnected · retry $retry/5 in ${delayMs / 1_000}s"
                         updateStatus(retryMessage)
                         manager.notify(1, notification(retryMessage))
