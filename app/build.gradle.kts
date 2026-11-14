@@ -12,7 +12,7 @@ val releaseSigningReady = listOf(releaseKeystorePath, releaseStorePassword, rele
     .all { !it.isNullOrBlank() }
 val buildRustAndroid by tasks.registering(Exec::class) {
     workingDir = rustDir.asFile
-    commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-o",
+    commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86_64", "-o",
         layout.buildDirectory.dir("generated/rust/jniLibs").get().asFile.absolutePath, "build", "--release")
     inputs.dir(rustDir)
     outputs.dir(layout.buildDirectory.dir("generated/rust/jniLibs"))
@@ -26,7 +26,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
     signingConfigs {
@@ -62,4 +63,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }
