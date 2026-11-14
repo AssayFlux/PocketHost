@@ -64,6 +64,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - uses: android-actions/setup-android@v3
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0 emulator ndk;27.2.12479018 system-images;android-26;default;x86_64 system-images;android-35;default;x86_64"
