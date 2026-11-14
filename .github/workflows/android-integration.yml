@@ -1,0 +1,135 @@
+name: PocketHost Android integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_emulators:
+        description: Run API 26, 33 and 35 emulator instrumentation after APK build
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pockethost-android-integration-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cloudflared-android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools ndk;27.2.12479018"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Build pinned cloudflared for Android ABIs
+        run: bash scripts/build-cloudflared-android.sh
+      - name: Verify Android ELF architectures
+        run: |
+          file app/src/main/jniLibs/*/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/arm64-v8a/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/armeabi-v7a/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/x86_64/libcloudflared.so
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: |
+            app/src/main/jniLibs/*/libcloudflared.so
+            app/src/main/assets/licenses/cloudflared/**
+          if-no-files-found: error
+          retention-days: 7
+
+  android-apk:
+    needs: cloudflared-android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018"
+      - name: Configure NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build debug APK
+        run: gradle :app:assembleDebug
+      - name: Verify APK contents and ABI libraries
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -l "$APK" | grep -E 'lib/(arm64-v8a|armeabi-v7a|x86_64)/lib(cloudflared|pockethost)\.so'
+          sha256sum "$APK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  android-emulator-smoke:
+    if: inputs.run_emulators
+    needs: cloudflared-android
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [26, 33, 35]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 emulator ndk;27.2.12479018 system-images;android-26;default;x86_64 system-images;android-33;default;x86_64 system-images;android-35;default;x86_64"
+      - name: Configure NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -memory 2048
+          emulator-boot-timeout: 900
+          script: gradle :app:connectedDebugAndroidTest
