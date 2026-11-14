@@ -85,7 +85,7 @@ private fun PocketHostDashboard() {
     var requests by remember { mutableLongStateOf(0L) }
     var bytesServed by remember { mutableLongStateOf(0L) }
     var activeConnections by remember { mutableLongStateOf(0L) }
-    var recentEvents by remember { mutableStateOf(OperationalLog.read(context, 8)) }
+    var recentEvents by remember { mutableStateOf(emptyList<OperationalLog.Entry>()) }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
@@ -125,7 +125,7 @@ private fun PocketHostDashboard() {
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
             preferences.getString("service_status", null)?.let { status = it }
-            recentEvents = OperationalLog.read(context, 8)
+            recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 8) }
             delay(1_000)
         }
     }
