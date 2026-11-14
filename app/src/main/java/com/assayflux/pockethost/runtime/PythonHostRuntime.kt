@@ -19,17 +19,20 @@ object PythonHostRuntime {
         return Python.getInstance()
     }
 
+    @Synchronized
     fun start(context: Context, projectRoot: String, port: Int, allowLan: Boolean = false): String {
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
         return python(context).getModule("pockethost_runtime")
             .callAttr("start", projectRoot, port, allowLan).toString()
     }
 
+    @Synchronized
     fun stop(context: Context): String {
         if (!Python.isStarted()) return "STOPPED"
         return Python.getInstance().getModule("pockethost_runtime").callAttr("stop").toString()
     }
 
+    @Synchronized
     fun status(context: Context): String {
         if (!Python.isStarted()) return "STOPPED"
         return Python.getInstance().getModule("pockethost_runtime").callAttr("status").toString()
