@@ -53,6 +53,8 @@ object CloudflareTokenStore {
     fun clear(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(TOKEN_KEY).commit()
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        if (keyStore.containsAlias(KEY_ALIAS)) keyStore.deleteEntry(KEY_ALIAS)
     }
 
     private fun getOrCreateKey(): SecretKey {
