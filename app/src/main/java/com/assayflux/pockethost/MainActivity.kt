@@ -530,7 +530,7 @@ private fun PocketHostDashboard() {
                     }
                 }
                 Text(if (advancedMode) "ADVANCED MODE · ENGINE DETAILS" else "SIMPLE MODE · SAFE STATIC SITE HOSTING", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Public tunnel, Python and Node.js are not available in this build. LAN access is optional and limited to your local network.", color = Slate, fontSize = 11.sp)
+                Text("Cloudflare Tunnel integration is under validation. Python WSGI is available; Node.js hosting and remote console control are not yet implemented. Public access requires a configured Cloudflare hostname and an access policy for private content.", color = Slate, fontSize = 11.sp)
                 Text("AssayFlux PocketHost · v0.1.0", color = Slate, fontSize = 11.sp)
             }
         }
