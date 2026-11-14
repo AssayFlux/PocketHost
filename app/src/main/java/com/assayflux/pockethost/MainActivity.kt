@@ -47,7 +47,10 @@ private fun PocketHostDashboard() {
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Ready to configure your first website.") }
-    var importedSummary by remember { mutableStateOf("Bundled sample website is available.") }
+    var importedSummary by remember {
+        mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
+    }
 
     LaunchedEffect(Unit) {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -55,6 +58,23 @@ private fun PocketHostDashboard() {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
             preferences.getString("service_status", null)?.let { status = it }
             delay(1_000)
+        }
+    }
+
+    val zipPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            importing = true
+            status = "Inspecting ZIP archive…"
+            scope.launch {
+                val result = runCatching { withContext(Dispatchers.IO) { SiteImporter.importZip(context, uri) } }
+                result.onSuccess { report ->
+                    importedSummary = "ZIP imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
+                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                        .putString("site_summary", importedSummary).apply()
+                    status = "ZIP website deployed locally. Start hosting to preview it."
+                }.onFailure { error -> status = error.message ?: "ZIP import failed." }
+                importing = false
+            }
         }
     }
 
@@ -69,7 +89,9 @@ private fun PocketHostDashboard() {
                     withContext(Dispatchers.IO) { SiteImporter.importTree(context, uri) }
                 }
                 result.onSuccess { report ->
-                    importedSummary = "Imported ${report.fileCount} files · ${report.totalBytes / 1024} KB"
+                    importedSummary = "Folder imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
+                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                        .putString("site_summary", importedSummary).apply()
                     status = "Website deployed locally. Start hosting to preview it."
                 }.onFailure { error ->
                     status = error.message ?: "Website import failed."
@@ -137,6 +159,11 @@ private fun PocketHostDashboard() {
                             enabled = !hosting && !importing,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text(if (importing) "Importing website…" else "Choose website folder") }
+                        OutlinedButton(
+                            onClick = { zipPicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+                            enabled = !hosting && !importing,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Import website ZIP") }
                         Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = Slate, fontSize = 11.sp)
                     }
                 }
