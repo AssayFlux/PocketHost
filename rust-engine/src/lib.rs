@@ -1,6 +1,7 @@
 use bytes::Bytes;
-use http_body_util::Full;
-use hyper::body::Incoming;
+use futures_util::StreamExt;
+use http_body_util::{combinators::UnsyncBoxBody, BodyExt, Full, StreamBody};
+use hyper::body::{Frame, Incoming};
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
@@ -15,18 +16,23 @@ use std::thread::JoinHandle;
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
+use tokio_util::io::ReaderStream;
 
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
-const MAX_CONNECTIONS: usize = 64;
+const MAX_CONNECTIONS: usize = 32;
+type ResponseBody = UnsyncBoxBody<Bytes, std::io::Error>;
 
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
 fn engine() -> &'static Mutex<Option<RunningEngine>> { ENGINE.get_or_init(|| Mutex::new(None)) }
 
-fn text_response(status: StatusCode, mime: &'static str, body: &'static str) -> Response<Full<Bytes>> {
+fn full_body(bytes: Bytes) -> ResponseBody {
+    Full::new(bytes).map_err(|never| match never {}).boxed_unsync()
+}
+fn text_response(status: StatusCode, mime: &'static str, body: &'static str) -> Response<ResponseBody> {
     Response::builder().status(status).header("content-type", mime)
         .header("x-content-type-options", "nosniff")
-        .body(Full::new(Bytes::from_static(body.as_bytes()))).expect("response")
+        .body(full_body(Bytes::from_static(body.as_bytes()))).expect("response")
 }
 fn mime_type(path: &Path) -> &'static str {
     match path.extension().and_then(|v| v.to_str()).unwrap_or("").to_ascii_lowercase().as_str() {
@@ -54,23 +60,31 @@ fn mime_type(path: &Path) -> &'static str {
         _ => "application/octet-stream",
     }
 }
-async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<Bytes>>, std::convert::Infallible> {
-    if req.method() != Method::GET && req.method() != Method::HEAD {
-        return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
+fn request_relative_path(raw_path: &str) -> Result<PathBuf, StatusCode> {
+    let decoded = percent_decode_str(raw_path).decode_utf8()
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    if decoded.contains('\0') || decoded.contains('\\') {
+        return Err(StatusCode::FORBIDDEN);
     }
-    let decoded = match percent_decode_str(req.uri().path()).decode_utf8() {
-        Ok(value) => value.into_owned(),
-        Err(_) => return Ok(text_response(StatusCode::BAD_REQUEST, "text/plain; charset=utf-8", "Invalid URL encoding")),
-    };
     let mut relative = PathBuf::new();
     for part in Path::new(decoded.trim_start_matches('/')).components() {
         match part {
             Component::Normal(value) => relative.push(value),
             Component::CurDir => {},
-            _ => return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden")),
+            _ => return Err(StatusCode::FORBIDDEN),
         }
     }
     if relative.as_os_str().is_empty() { relative.push("index.html"); }
+    Ok(relative)
+}
+async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+    if req.method() != Method::GET && req.method() != Method::HEAD {
+        return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
+    }
+    let relative = match request_relative_path(req.uri().path()) {
+        Ok(path) => path,
+        Err(status) => return Ok(text_response(status, "text/plain; charset=utf-8", "Invalid or forbidden path")),
+    };
     let canonical = match tokio::fs::canonicalize(root.join(relative)).await {
         Ok(path) => path,
         Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
@@ -86,19 +100,21 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<By
         return Ok(text_response(StatusCode::PAYLOAD_TOO_LARGE, "text/plain; charset=utf-8", "File exceeds the 50 MB serving limit"));
     }
     let body = if req.method() == Method::HEAD {
-        Bytes::new()
+        full_body(Bytes::new())
     } else {
-        match tokio::fs::read(&canonical).await {
-            Ok(data) => Bytes::from(data),
+        let file = match tokio::fs::File::open(&canonical).await {
+            Ok(file) => file,
             Err(_) => return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error")),
-        }
+        };
+        let chunks = ReaderStream::new(file).map(|chunk| chunk.map(|bytes| Frame::data(bytes)));
+        StreamBody::new(chunks).boxed_unsync()
     };
     Ok(Response::builder().status(StatusCode::OK)
         .header("content-type", mime_type(&canonical))
         .header("content-length", metadata.len())
         .header("x-content-type-options", "nosniff")
         .header("cache-control", "no-cache")
-        .body(Full::new(body)).expect("file response"))
+        .body(body).expect("file response"))
 }
 
 async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Receiver<()>) {
@@ -218,5 +234,17 @@ mod tests {
         assert_eq!(mime_type(Path::new("font.woff2")), "font/woff2");
         assert_eq!(mime_type(Path::new("app.wasm")), "application/wasm");
         assert_eq!(mime_type(Path::new("video.mp4")), "video/mp4");
+    }
+    #[test]
+    fn resolves_safe_request_paths() {
+        assert_eq!(request_relative_path("/").unwrap(), PathBuf::from("index.html"));
+        assert_eq!(request_relative_path("/assets/app.js").unwrap(), PathBuf::from("assets/app.js"));
+    }
+    #[test]
+    fn rejects_traversal_and_invalid_utf8_paths() {
+        assert_eq!(request_relative_path("/%2e%2e/private").unwrap_err(), StatusCode::FORBIDDEN);
+        assert_eq!(request_relative_path("/%FF").unwrap_err(), StatusCode::BAD_REQUEST);
+        assert_eq!(request_relative_path("/%00secret").unwrap_err(), StatusCode::FORBIDDEN);
+        assert_eq!(request_relative_path("/..%5cprivate").unwrap_err(), StatusCode::FORBIDDEN);
     }
 }
