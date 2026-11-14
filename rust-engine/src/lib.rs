@@ -10,10 +10,10 @@ use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{mpsc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, JoinSet};
 
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
@@ -67,39 +67,78 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<By
         .header("x-content-type-options", "nosniff").header("cache-control", "no-cache")
         .body(Full::new(body)).expect("file response"))
 }
+
 async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Receiver<()>) {
+    let mut connections = JoinSet::new();
     loop {
         tokio::select! {
-            _ = &mut stop => break,
+            _ = &mut stop => {
+                connections.abort_all();
+                while connections.join_next().await.is_some() {}
+                break;
+            },
             accepted = listener.accept() => {
                 let Ok((stream, _peer)) = accepted else { continue };
                 let site_root = root.clone();
-                tokio::spawn(async move {
+                connections.spawn(async move {
                     let service = service_fn(move |req| serve(site_root.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
             }
+            Some(_) = connections.join_next(), if !connections.is_empty() => {}
         }
     }
 }
+
 fn start_engine(root: &str, port: u16) -> Result<(), String> {
     let root = std::fs::canonicalize(root).map_err(|e| format!("Invalid site directory: {e}"))?;
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
+
     // Phase 0 deliberately binds to loopback. LAN/public exposure is not enabled.
-    let listener = std::net::TcpListener::bind(("127.0.0.1", port)).map_err(|e| format!("Cannot bind port {port}: {e}"))?;
+    let listener = std::net::TcpListener::bind(("127.0.0.1", port))
+        .map_err(|e| format!("Cannot bind port {port}: {e}"))?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
     let (stop_tx, stop_rx) = oneshot::channel();
+    let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
+
     let thread = std::thread::Builder::new().name("pockethost-engine".into()).spawn(move || {
-        let Ok(runtime) = tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build() else { return; };
-        let Ok(listener) = TcpListener::from_std(listener) else { return; };
+        let runtime = match tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build() {
+            Ok(runtime) => runtime,
+            Err(error) => {
+                let _ = ready_tx.send(Err(format!("Cannot create async runtime: {error}")));
+                return;
+            }
+        };
+        let listener = match TcpListener::from_std(listener) {
+            Ok(listener) => listener,
+            Err(error) => {
+                let _ = ready_tx.send(Err(format!("Cannot initialize listener: {error}")));
+                return;
+            }
+        };
+        if ready_tx.send(Ok(())).is_err() { return; }
         runtime.block_on(accept_loop(listener, root, stop_rx));
     }).map_err(|e| format!("Cannot start engine thread: {e}"))?;
-    *state = Some(RunningEngine { stop: stop_tx, thread });
-    Ok(())
+
+    match ready_rx.recv() {
+        Ok(Ok(())) => {
+            *state = Some(RunningEngine { stop: stop_tx, thread });
+            Ok(())
+        }
+        Ok(Err(error)) => {
+            let _ = thread.join();
+            Err(error)
+        }
+        Err(_) => {
+            let _ = thread.join();
+            Err("Engine thread exited before startup completed".into())
+        }
+    }
 }
+
 fn stop_engine() -> Result<(), String> {
     let running = engine().lock().map_err(|_| "Engine state unavailable".to_string())?.take();
     if let Some(running) = running {
@@ -138,5 +177,6 @@ mod tests {
         assert_eq!(mime_type(Path::new("index.html")), "text/html; charset=utf-8");
         assert_eq!(mime_type(Path::new("site.css")), "text/css; charset=utf-8");
         assert_eq!(mime_type(Path::new("app.js")), "text/javascript; charset=utf-8");
+        assert_eq!(mime_type(Path::new("font.woff2")), "font/woff2");
     }
 }
