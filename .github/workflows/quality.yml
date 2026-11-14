@@ -111,7 +111,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: pockethost-cloudflared-android-jni
-          path: app/src/main/jniLibs
+          path: app/src/main
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
