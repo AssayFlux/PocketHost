@@ -38,7 +38,10 @@ class HostingService : Service() {
         val result = if (NativeEngine.status() == "RUNNING") "OK"
             else NativeEngine.start(site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false))
         if (result == "OK") {
-            updateStatus(if (statePreferences.getBoolean("allow_lan", false)) "LAN server ready on port ${statePreferences.getInt("port", 8080)}. All devices on this Wi-Fi can access the website." else "Local server ready at 127.0.0.1:${statePreferences.getInt("port", 8080)}")
+            val readyMessage = if (statePreferences.getBoolean("allow_lan", false)) "LAN server ready on port ${statePreferences.getInt("port", 8080)}. All devices on this Wi-Fi can access the website." else "Local server ready at 127.0.0.1:${statePreferences.getInt("port", 8080)}"
+            val notificationHidden = Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            updateStatus(if (notificationHidden) "$readyMessage. Notification permission is off; Android may hide the service notification from the notification drawer." else readyMessage)
             getSystemService(NotificationManager::class.java).notify(
                 1, notification(if (statePreferences.getBoolean("allow_lan", false)) "LAN hosting · port ${statePreferences.getInt("port", 8080)}" else "Local hosting · 127.0.0.1:${statePreferences.getInt("port", 8080)}")
             )
