@@ -17,6 +17,10 @@
 - Loopback listener by default; explicit LAN opt-in.
 - LAN IPv4 address discovery for local preview when available.
 - Website import summary persisted across app restarts.
+- Embedded CPython 3.11 via Chaquopy, with Android 8+ ARMv7/ARM64 ABI support.
+- Python WSGI project import from SAF with staged activation, root `wsgi.py` validation, 5,000-file / 50 MiB / depth-32 limits, and rejection of common secret files.
+- Bounded threaded WSGI HTTP server (maximum 16 concurrent worker threads), loopback default, optional LAN bind following the explicit LAN setting, and lifecycle controls in the foreground hosting service.
+- Python host-side syntax and WSGI lifecycle tests; a minimal starter app under `examples/python-wsgi/`.
 
 ### Rust static engine
 - Tokio + Hyper asynchronous static HTTP server.
@@ -50,14 +54,15 @@
 - CI debug APK artifact upload.
 - Manual signed-release workflow with keystore secrets supplied through GitHub Actions; APK signature verification is part of the workflow.
 
-## Latest source changes (CI pending)
+## Latest source changes
 
 - `cf608ca`: added bounded single-byte-range HTTP responses and range parser tests.
 - `bf894cb`: added Android 13+ notification permission onboarding and corrected preview/startup port handling.
 - Added Android 8+ / 4 GB+ compatibility target, ARMv7 + ARM64 phone builds and x86_64 emulator ABI.
 - Added native-engine instrumentation smoke test intended for Android API 26, API 33 and API 35 emulators.
 - Reduced the Rust engine default concurrent-connection cap to 16 for entry-level devices.
-- The latest changes are committed but not build-verified until CI completes.
+- Embedded Python 3.11 WSGI runtime, Python project importer, lifecycle controls, example and host-side tests have been added.
+- Latest Python runtime implementation commit: `7305a5d` (follow-up fixes are in subsequent commits).
 
 ## Latest verified build
 
@@ -79,7 +84,7 @@
 - DNS/domain mapping and external-network validation.
 - Authenticated management API and connected TypeScript console.
 - Multi-site hosting and host-based routing.
-- Python runtime and Node.js runtime.
+- Node.js runtime.
 - Reverse proxy and per-site backend routing.
 - Persistent analytics across engine restarts.
 - Structured logs, filtering, rotation and redacted diagnostics export.
@@ -99,8 +104,10 @@ See [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for keystore creation, secret names
 - LAN mode is opt-in and binds to all local interfaces. There is no visitor authentication; only enable it on a trusted network.
 - Cloudflare Tunnel and public hosting are not available.
 - The TypeScript console is a visual foundation, not a connected management client.
+- Python WSGI supports a root `wsgi.py` exposing `application`; no arbitrary `requirements.txt` installation or general native-wheel compatibility is provided.
 - Imported website content is served as static files; it is not executed by the Rust static server.
-- Python and Node.js runtimes are not included.
+- Embedded Python WSGI preview is available for trusted code only; it is not sandboxed and is not a production multi-tenant runtime.
+- Node.js runtime is not included.
 - Android foreground-service behaviour and vendor battery policies require representative physical-device validation across the supported device class.
 - A foreground service does not guarantee 24/7 uptime.
 
