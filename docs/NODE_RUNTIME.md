@@ -36,6 +36,8 @@ Source references:
 
 The archive digest is taken from the GitHub release asset metadata. The implementation pipeline must verify the downloaded archive against this exact digest before extraction. It must also verify each extracted ELF's ABI, minimum Android API and 16 KB page-size compatibility. Do not commit the binary archive or extracted `libnode.so` files to Git.
 
+The **full** variant is the initial candidate because PocketHost should not silently remove common Node capabilities such as `node:sqlite`, Inspector or built-in TypeScript type stripping. The corresponding lite archive is smaller (71,981,976 bytes compressed) but omits those features. The full archive is already 112,853,733 bytes compressed; the extracted and per-ABI APK size must be measured before committing to an APK packaging strategy. Do not trade away a feature silently to reduce APK size.
+
 ## Non-negotiable mobile constraints
 
 1. **One Node instance per process.** The runtime cannot be started twice in the same process. PocketHost must run it in a dedicated Android service process, not in the main UI or Rust engine process.
@@ -43,7 +45,7 @@ The archive digest is taken from the GitHub release asset metadata. The implemen
 3. **Lifecycle isolation.** A single user application is active at a time in the first Node implementation. The Android supervisor must detect runtime process death, stop/recreate the dedicated service process, and never attempt to initialize a second Node instance in the same process.
 4. **Android filesystem environment.** Before Node starts, set `TMPDIR` to PocketHost's cache directory, `HOME` and working directory to the imported project/app-private data area, and `NODE_COMPILE_CACHE` to a cache subdirectory. Never assume `/tmp` exists.
 5. **Memory controls.** Set a conservative V8 heap ceiling using `NODE_OPTIONS` and a configurable PocketHost memory budget. The 4 GB device baseline must be tested under concurrent static hosting, Python hosting and Android UI load. Node must be disabled by default and loaded only when explicitly enabled.
-6. **Project dependency model.** Dependencies must be installed or bundled during project preparation. Native addons must be ABI-compatible Android builds. Arbitrary install scripts, native compilation and desktop-only dependencies cannot be promised.
+6. **Project dependency model.** Dependencies must be installed or bundled during project preparation. The embedded runtime archive does not by itself provide a desktop npm installation environment. Native addons must be ABI-compatible Android builds. Arbitrary install scripts, native compilation and desktop-only dependencies cannot be promised.
 7. **No public exposure by default.** Node origin binds to loopback. It is routed through the Rust engine only after per-site routing and access policy are implemented.
 
 ## Planned PocketHost integration boundary
