@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.HttpURLConnection
+import java.net.Socket
 import java.net.ServerSocket
 import java.net.URL
 
@@ -26,16 +26,15 @@ class NativeEngineSmokeTest {
             assertEquals("OK", NativeEngine.start(root.absolutePath, port, false))
             assertEquals("RUNNING", NativeEngine.status())
 
-            val connection = URL("http://127.0.0.1:$port/").openConnection() as HttpURLConnection
-            connection.connectTimeout = 5_000
-            connection.readTimeout = 5_000
-            try {
-                assertEquals(200, connection.responseCode)
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                assertEquals("PocketHost Android compatibility smoke test", body)
-            } finally {
-                connection.disconnect()
+            val response = Socket().use { socket ->
+                socket.soTimeout = 5_000
+                socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
+                socket.getOutputStream().write("GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n".toByteArray())
+                socket.getOutputStream().flush()
+                socket.getInputStream().bufferedReader().use { it.readText() }
             }
+            assertTrue(response.startsWith("HTTP/1.1 200"))
+            assertTrue(response.contains("PocketHost Android compatibility smoke test"))
             assertTrue(NativeEngine.requestCount() >= 1L)
         } finally {
             NativeEngine.stop()
