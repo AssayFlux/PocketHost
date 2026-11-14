@@ -92,7 +92,18 @@ object CloudflareTunnelRuntime {
                 }
             }
             if (child.isAlive && currentState == "CONNECTING") {
-                onEvent("Cloudflare Tunnel is still connecting. Check the network and tunnel configuration.")
+                onEvent("Cloudflare Tunnel did not become ready within 30 seconds. Restarting the connector.")
+                child.destroy()
+                if (!runCatching { child.waitFor(3, TimeUnit.SECONDS) }.getOrDefault(false)) {
+                    child.destroyForcibly()
+                    runCatching { child.waitFor(2, TimeUnit.SECONDS) }
+                }
+                synchronized(this) {
+                    if (process === child) {
+                        process = null
+                        currentState = "ERROR"
+                    }
+                }
             }
         }, "PocketHost-Cloudflare-Readiness").start()
         return currentState
