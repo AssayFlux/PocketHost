@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -29,6 +30,8 @@ import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.tunnel.CloudflareTokenStore
+import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -89,6 +92,9 @@ private fun PocketHostDashboard() {
     var pythonPortText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("python_port", 8081).toString()) }
     var pythonProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "python-project/wsgi.py").isFile) "Python WSGI project imported." else "No Python project imported.") }
     var pythonHosting by remember { mutableStateOf(runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)) }
+    var cloudflareTokenText by remember { mutableStateOf("") }
+    var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
+    var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -115,6 +121,7 @@ private fun PocketHostDashboard() {
             bytesServed = runCatching { NativeEngine.bytesServed() }.getOrDefault(0L)
             activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
+            tunnelStatus = CloudflareTunnelRuntime.status()
             preferences.getString("service_status", null)?.let { status = it }
             delay(1_000)
         }
@@ -330,6 +337,106 @@ private fun PocketHostDashboard() {
                             ) { Text("Rollback previous deployment") }
                             Text("${previousReleases.size} previous release(s) retained · latest first", color = Slate, fontSize = 11.sp)
                         }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("CLOUDFLARE TUNNEL", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            when (tunnelStatus) {
+                                "CONNECTED" -> "Tunnel connected to Cloudflare."
+                                "CONNECTING" -> "Tunnel process started; waiting for an active edge connection."
+                                "ERROR" -> "Tunnel process stopped with an error. Check the service status."
+                                else -> if (cloudflareTokenSaved) "Named tunnel token is encrypted on this device." else "No tunnel token saved."
+                            },
+                            color = Slate, fontSize = 12.sp
+                        )
+                        OutlinedTextField(
+                            value = cloudflareTokenText,
+                            onValueChange = { cloudflareTokenText = it },
+                            label = { Text("Cloudflare named-tunnel token") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            enabled = tunnelStatus != "CONNECTED" && tunnelStatus != "CONNECTING",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    runCatching { CloudflareTokenStore.save(context, cloudflareTokenText) }
+                                        .onSuccess {
+                                            cloudflareTokenText = ""
+                                            cloudflareTokenSaved = true
+                                            status = "Cloudflare token encrypted with Android Keystore."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not save Cloudflare token." }
+                                },
+                                enabled = cloudflareTokenText.isNotBlank() && tunnelStatus != "CONNECTED" && tunnelStatus != "CONNECTING"
+                            ) { Text("Save token securely") }
+                            OutlinedButton(
+                                onClick = {
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("tunnel_enabled", true).apply()
+                                    if (hosting) {
+                                        scope.launch {
+                                            val result = runCatching {
+                                                val token = CloudflareTokenStore.read(context)
+                                                    ?: error("Save a Cloudflare tunnel token first.")
+                                                withContext(Dispatchers.IO) {
+                                                    CloudflareTunnelRuntime.start(context, token) { event ->
+                                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                                            .edit().putString("service_status", event).apply()
+                                                    }
+                                                }
+                                            }
+                                            result.onSuccess { tunnelStatus = it; status = "Cloudflare Tunnel $it." }
+                                                .onFailure { status = it.message ?: "Cloudflare Tunnel failed to start." }
+                                        }
+                                    } else if (cloudflareTokenSaved) {
+                                        startHosting(false)
+                                    } else {
+                                        status = "Save a Cloudflare tunnel token first."
+                                    }
+                                },
+                                enabled = tunnelStatus != "CONNECTED" && tunnelStatus != "CONNECTING"
+                            ) { Text("Start tunnel") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("tunnel_enabled", false).apply()
+                                    scope.launch {
+                                        tunnelStatus = withContext(Dispatchers.IO) { CloudflareTunnelRuntime.stop() }
+                                        status = "Cloudflare Tunnel stopped. Static hosting remains available."
+                                    }
+                                },
+                                enabled = tunnelStatus == "CONNECTED" || tunnelStatus == "CONNECTING" || tunnelStatus == "ERROR"
+                            ) { Text("Stop tunnel") }
+                            OutlinedButton(
+                                onClick = {
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("tunnel_enabled", false).apply()
+                                    CloudflareTokenStore.clear(context)
+                                    cloudflareTokenSaved = false
+                                    status = "Encrypted Cloudflare token removed from this device."
+                                },
+                                enabled = cloudflareTokenSaved && tunnelStatus == "STOPPED"
+                            ) { Text("Remove token") }
+                        }
+                        Text(
+                            "Create a remotely managed tunnel in Cloudflare Zero Trust, then configure its Public Hostname origin as http://127.0.0.1:${portText.toIntOrNull() ?: 8080}. DNS and hostname setup remain in the Cloudflare dashboard.",
+                            color = Slate, fontSize = 10.sp
+                        )
+                        Text(
+                            "Public exposure is not visitor-authenticated by PocketHost. Add Cloudflare Access before exposing private sites. Tunnel connector and ABI support still require physical-device validation.",
+                            color = Slate, fontSize = 10.sp
+                        )
                     }
                 }
 
