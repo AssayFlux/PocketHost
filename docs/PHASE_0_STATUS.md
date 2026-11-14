@@ -2,12 +2,14 @@
 
 **Last updated:** 2026-11-14  
 **Branch:** `main`  
-**Release state:** Development prototype. Not approved for public production hosting.\n**Compatibility target:** Android 8.0 (API 26)+, 4 GB RAM minimum target, ARMv7 + ARM64 phone ABIs; x86_64 for emulator tests.
+**Release state:** Development prototype. Not approved for public production hosting.
+**Compatibility target:** Android 8.0 (API 26)+, 4 GB RAM minimum target, ARMv7 + ARM64 phone ABIs; x86_64 for emulator tests.
 
 ## Implemented
 
 ### Android application
-- Native Kotlin + Jetpack Compose application.\n- Minimum Android API 26 (Android 8.0); ARMv7 and ARM64 native phone builds, plus x86_64 emulator ABI.
+- Native Kotlin + Jetpack Compose application.
+- Minimum Android API 26 (Android 8.0); ARMv7 and ARM64 native phone builds, plus x86_64 emulator ABI.
 - Simple and Advanced dashboard modes.
 - User-started foreground hosting service with persistent notification and status reporting.
 - JNI bridge for Rust lifecycle and session metrics.
@@ -52,7 +54,10 @@
 
 - `cf608ca`: added bounded single-byte-range HTTP responses and range parser tests.
 - `bf894cb`: added Android 13+ notification permission onboarding and corrected preview/startup port handling.
-- The changes above are committed to `main`; their workflow run must pass before they are marked build-verified.
+- Added Android 8+ / 4 GB+ compatibility target, ARMv7 + ARM64 phone builds and x86_64 emulator ABI.
+- Added native-engine instrumentation smoke test intended for Android API 26 and API 35 emulators.
+- Reduced the Rust engine default concurrent-connection cap to 16 for entry-level devices.
+- The latest changes are committed but not build-verified until CI completes.
 
 ## Latest verified build
 
@@ -67,8 +72,7 @@
 
 ## Not implemented / not verified
 
-- Physical Vivo Y95 installation and acceptance testing.
-- Exact Vivo Y95 Android version, ABI and firmware confirmation.
+- Representative physical-device acceptance testing across Android 8+ and 4 GB+ phones, including ARMv7 and ARM64 models.
 - Real-device tests for service lifecycle, folder/ZIP import, rollback, LAN access, Wi-Fi transitions, battery and thermal behaviour.
 - Cloudflare Tunnel Android connector and named-tunnel lifecycle.
 - Cloudflare token onboarding and secure credential storage.
