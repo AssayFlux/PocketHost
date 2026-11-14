@@ -40,7 +40,7 @@
 
 **AssayFlux PocketHost** is an in-development Android application designed to turn a compatible Android phone into a compact website-hosting appliance—without requiring Termux or root access.
 
-The project starts with a focused goal: make it possible to select a website, run a local hosting engine, observe its status and, in a later phase, expose it securely through a managed tunnel. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
+The project starts with static hosting and an embedded Python WSGI backend. Public exposure through a managed tunnel, Node.js hosting and remote management are separate engineering milestones and must not be treated as available until implemented and tested. The native application is built with Kotlin, while the hosting core is written in Rust. A TypeScript-based browser console is being developed as a companion interface.
 
 > **Hosting should be understandable, controllable and transparent—even when the server fits in your pocket.**
 
@@ -104,7 +104,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | Python / Node.js backends | Not implemented | FUTURE |
 | Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds, API 26, API 33 and API 35 emulator smoke tests | CI PENDING |
 
-**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel and public hosting are not available.
+**Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.\n\n**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel and public hosting are not available.
 
 ## ENGINEERING ARCHITECTURE
 

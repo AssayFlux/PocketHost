@@ -17,6 +17,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --manifest-path rust-engine/Cargo.toml
 
+  python-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check Python syntax
+        run: python -m py_compile app/src/main/python/pockethost_runtime.py examples/python-wsgi/wsgi.py
+      - name: Test WSGI lifecycle
+        run: python -m unittest discover -s tests/python -v
+
   android:
     runs-on: ubuntu-latest
     steps:
@@ -25,6 +37,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - uses: android-actions/setup-android@v3
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018"
@@ -61,6 +76,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - uses: android-actions/setup-android@v3
         with:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0 emulator ndk;27.2.12479018 system-images;android-26;default;x86_64 system-images;android-35;default;x86_64"

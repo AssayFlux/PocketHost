@@ -8,10 +8,12 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import com.assayflux.pockethost.engine.NativeEngine
+import com.assayflux.pockethost.runtime.PythonHostRuntime
 import java.io.File
 
 class HostingService : Service() {
     private val channelId = "pockethost-hosting"
+    @Volatile private var stopping = false
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
 
     override fun onCreate() {
@@ -38,13 +40,42 @@ class HostingService : Service() {
         val result = if (NativeEngine.status() == "RUNNING") "OK"
             else NativeEngine.start(site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false))
         if (result == "OK") {
-            val readyMessage = if (statePreferences.getBoolean("allow_lan", false)) "LAN server ready on port ${statePreferences.getInt("port", 8080)}. All devices on this Wi-Fi can access the website." else "Local server ready at 127.0.0.1:${statePreferences.getInt("port", 8080)}"
+            val pythonEnabled = statePreferences.getBoolean("python_enabled", false)
+            val host = if (statePreferences.getBoolean("allow_lan", false)) "LAN" else "loopback"
+            val staticPort = statePreferences.getInt("port", 8080)
+            val baseMessage = "$host static server ready on port $staticPort"
+            val initialMessage = if (pythonEnabled) "$baseMessage · Starting Python WSGI…" else baseMessage
             val notificationHidden = Build.VERSION.SDK_INT >= 33 &&
                 checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-            updateStatus(if (notificationHidden) "$readyMessage. Notification permission is off; Android may hide the service notification from the notification drawer." else readyMessage)
-            getSystemService(NotificationManager::class.java).notify(
-                1, notification(if (statePreferences.getBoolean("allow_lan", false)) "LAN hosting · port ${statePreferences.getInt("port", 8080)}" else "Local hosting · 127.0.0.1:${statePreferences.getInt("port", 8080)}")
-            )
+            updateStatus(if (notificationHidden) "$initialMessage. Notification permission is off; Android may hide the service notification from the notification drawer." else initialMessage)
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(1, notification("$host hosting · port $staticPort"))
+            if (pythonEnabled) {
+                Thread({
+                    if (stopping) return@Thread
+                    val projectRoot = statePreferences.getString("python_project_root", File(filesDir, "python-project").absolutePath)
+                        ?: File(filesDir, "python-project").absolutePath
+                    val pythonResult = runCatching {
+                        PythonHostRuntime.start(
+                            this,
+                            projectRoot,
+                            statePreferences.getInt("python_port", 8081),
+                            statePreferences.getBoolean("allow_lan", false)
+                        )
+                    }.getOrElse { "ERROR: ${it.message ?: "Python runtime failed"}" }
+                    if (stopping) {
+                        runCatching { PythonHostRuntime.stop(this) }
+                        return@Thread
+                    }
+                    val pythonMessage = when (pythonResult) {
+                        "RUNNING", "ALREADY_RUNNING" -> " · Python WSGI on port ${statePreferences.getInt("python_port", 8081)}"
+                        else -> " · Python runtime error: $pythonResult"
+                    }
+                    val updatedMessage = "$baseMessage$pythonMessage"
+                    updateStatus(updatedMessage)
+                    manager.notify(1, notification(updatedMessage))
+                }, "PocketHost-Python-Startup").start()
+            }
         } else {
             updateStatus("Hosting failed: $result")
             getSystemService(NotificationManager::class.java).notify(
@@ -56,6 +87,8 @@ class HostingService : Service() {
     }
 
     override fun onDestroy() {
+        stopping = true
+        runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
         if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {
             updateStatus("Hosting stopped.")

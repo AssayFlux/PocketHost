@@ -27,10 +27,13 @@ import androidx.core.content.ContextCompat
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
+import com.assayflux.pockethost.storage.PythonProjectImporter
+import com.assayflux.pockethost.runtime.PythonHostRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -83,6 +86,9 @@ private fun PocketHostDashboard() {
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
     }
     var previousReleases by remember { mutableStateOf(SiteImporter.listReleases(context)) }
+    var pythonPortText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("python_port", 8081).toString()) }
+    var pythonProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "python-project/wsgi.py").isFile) "Python WSGI project imported." else "No Python project imported.") }
+    var pythonHosting by remember { mutableStateOf(runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -108,6 +114,7 @@ private fun PocketHostDashboard() {
             requests = runCatching { NativeEngine.requestCount() }.getOrDefault(0L)
             bytesServed = runCatching { NativeEngine.bytesServed() }.getOrDefault(0L)
             activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
+            pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             preferences.getString("service_status", null)?.let { status = it }
             delay(1_000)
         }
@@ -150,6 +157,23 @@ private fun PocketHostDashboard() {
                 }.onFailure { error ->
                     status = error.message ?: "Website import failed."
                 }
+                importing = false
+            }
+        }
+    }
+
+    val pythonProjectPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+        if (uri != null) {
+            importing = true
+            status = "Validating Python WSGI project…"
+            scope.launch {
+                val result = runCatching { withContext(Dispatchers.IO) { PythonProjectImporter.importTree(context, uri) } }
+                result.onSuccess { report ->
+                    pythonProjectSummary = "Python project imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
+                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                        .putString("python_project_root", report.projectDirectory.absolutePath).apply()
+                    status = "Python project is ready. Start the Python backend to run its wsgi.py application."
+                }.onFailure { error -> status = error.message ?: "Python project import failed." }
                 importing = false
             }
         }
@@ -306,6 +330,76 @@ private fun PocketHostDashboard() {
                             ) { Text("Rollback previous deployment") }
                             Text("${previousReleases.size} previous release(s) retained · latest first", color = Slate, fontSize = 11.sp)
                         }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("PYTHON BACKEND · CPYTHON 3.11", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text(pythonProjectSummary, color = Slate, fontSize = 12.sp)
+                        OutlinedButton(
+                            onClick = { pythonProjectPicker.launch(null) },
+                            enabled = !importing && !pythonHosting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Import Python WSGI project") }
+                        OutlinedTextField(
+                            value = pythonPortText,
+                            onValueChange = { value -> if (value.length <= 5 && value.all(Char::isDigit)) pythonPortText = value },
+                            label = { Text("Python HTTP port") },
+                            enabled = !pythonHosting,
+                            singleLine = true
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = {
+                                    val port = pythonPortText.toIntOrNull()
+                                    val staticPort = portText.toIntOrNull() ?: 8080
+                                    val root = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                        .getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
+                                        ?: File(context.filesDir, "python-project").absolutePath
+                                    if (port == null || port !in 1024..65535 || port == staticPort) {
+                                        status = "Choose a Python port from 1024 to 65535, different from the static server port."
+                                    } else if (!File(root, "wsgi.py").isFile) {
+                                        status = "Import a Python project containing wsgi.py first."
+                                    } else {
+                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                            .putBoolean("python_enabled", true).putInt("python_port", port).apply()
+                                        if (hosting) {
+                                            scope.launch {
+                                                val started = runCatching {
+                                                    withContext(Dispatchers.IO) { PythonHostRuntime.start(context, root, port, allowLan) }
+                                                }
+                                                started.onSuccess { status = "Python WSGI backend $it on port $port." }
+                                                    .onFailure { status = it.message ?: "Python backend failed to start." }
+                                            }
+                                        } else {
+                                            startHosting(false)
+                                        }
+                                    }
+                                },
+                                enabled = !pythonHosting && !importing
+                            ) { Text("Start Python") }
+                            OutlinedButton(
+                                onClick = {
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("python_enabled", false).apply()
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) { runCatching { PythonHostRuntime.stop(context) } }
+                                        pythonHosting = false
+                                        status = "Python backend stopped. Static hosting remains available."
+                                    }
+                                },
+                                enabled = pythonHosting
+                            ) { Text("Stop Python") }
+                        }
+                        if (pythonHosting) Text(
+                            if (allowLan && lanAddress != null) "Python preview: http://$lanAddress:$pythonPortText" else "Python preview: http://127.0.0.1:$pythonPortText",
+                            color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
+                        )
+                        Text("Runs trusted WSGI applications from wsgi.py. Loopback by default; LAN access follows the explicit hosting setting. Python project code runs with app privileges.", color = Slate, fontSize = 10.sp)
                     }
                 }
 
