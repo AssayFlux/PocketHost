@@ -55,7 +55,7 @@
 - `cf608ca`: added bounded single-byte-range HTTP responses and range parser tests.
 - `bf894cb`: added Android 13+ notification permission onboarding and corrected preview/startup port handling.
 - Added Android 8+ / 4 GB+ compatibility target, ARMv7 + ARM64 phone builds and x86_64 emulator ABI.
-- Added native-engine instrumentation smoke test intended for Android API 26 and API 35 emulators.
+- Added native-engine instrumentation smoke test intended for Android API 26, API 33 and API 35 emulators.
 - Reduced the Rust engine default concurrent-connection cap to 16 for entry-level devices.
 - The latest changes are committed but not build-verified until CI completes.
 
