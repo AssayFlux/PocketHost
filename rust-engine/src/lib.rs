@@ -3,8 +3,8 @@ use http_body_util::Full;
 use hyper::body::Incoming;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
-use hyper_util::rt::TokioIo;
-use hyper_util::server::conn::http1::Builder;
+use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::server::conn::auto::Builder;
 use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
@@ -15,14 +15,10 @@ use std::thread::JoinHandle;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 
-struct RunningEngine {
-    stop: oneshot::Sender<()>,
-    thread: JoinHandle<()>,
-}
+struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
-fn engine() -> &'static Mutex<Option<RunningEngine>> {
-    ENGINE.get_or_init(|| Mutex::new(None))
-}
+fn engine() -> &'static Mutex<Option<RunningEngine>> { ENGINE.get_or_init(|| Mutex::new(None)) }
+
 fn text_response(status: StatusCode, mime: &'static str, body: &'static str) -> Response<Full<Bytes>> {
     Response::builder().status(status).header("content-type", mime)
         .header("x-content-type-options", "nosniff")
@@ -30,21 +26,12 @@ fn text_response(status: StatusCode, mime: &'static str, body: &'static str) -> 
 }
 fn mime_type(path: &Path) -> &'static str {
     match path.extension().and_then(|v| v.to_str()).unwrap_or("").to_ascii_lowercase().as_str() {
-        "html" | "htm" => "text/html; charset=utf-8",
-        "css" => "text/css; charset=utf-8",
-        "js" | "mjs" => "text/javascript; charset=utf-8",
-        "json" => "application/json",
-        "svg" => "image/svg+xml",
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "webp" => "image/webp",
-        "gif" => "image/gif",
-        "ico" => "image/x-icon",
-        "txt" => "text/plain; charset=utf-8",
-        "pdf" => "application/pdf",
-        "woff" => "font/woff",
-        "woff2" => "font/woff2",
-        _ => "application/octet-stream",
+        "html" | "htm" => "text/html; charset=utf-8", "css" => "text/css; charset=utf-8",
+        "js" | "mjs" => "text/javascript; charset=utf-8", "json" => "application/json",
+        "svg" => "image/svg+xml", "png" => "image/png", "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp", "gif" => "image/gif", "ico" => "image/x-icon",
+        "txt" => "text/plain; charset=utf-8", "pdf" => "application/pdf",
+        "woff" => "font/woff", "woff2" => "font/woff2", _ => "application/octet-stream",
     }
 }
 async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<Bytes>>, std::convert::Infallible> {
@@ -76,10 +63,8 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Full<By
         Err(_) => return Ok(text_response(StatusCode::INTERNAL_SERVER_ERROR, "text/plain; charset=utf-8", "Read error")),
     };
     let body = if req.method() == Method::HEAD { Bytes::new() } else { Bytes::from(data) };
-    Ok(Response::builder().status(StatusCode::OK)
-        .header("content-type", mime_type(&canonical))
-        .header("x-content-type-options", "nosniff")
-        .header("cache-control", "no-cache")
+    Ok(Response::builder().status(StatusCode::OK).header("content-type", mime_type(&canonical))
+        .header("x-content-type-options", "nosniff").header("cache-control", "no-cache")
         .body(Full::new(body)).expect("file response"))
 }
 async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Receiver<()>) {
@@ -91,7 +76,8 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Re
                 let site_root = root.clone();
                 tokio::spawn(async move {
                     let service = service_fn(move |req| serve(site_root.clone(), req));
-                    let _ = Builder::new().serve_connection(TokioIo::new(stream), service).await;
+                    let builder = Builder::new(TokioExecutor::new());
+                    let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
             }
         }
@@ -102,10 +88,8 @@ fn start_engine(root: &str, port: u16) -> Result<(), String> {
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
-
     // Phase 0 deliberately binds to loopback. LAN/public exposure is not enabled.
-    let listener = std::net::TcpListener::bind(("127.0.0.1", port))
-        .map_err(|e| format!("Cannot bind port {port}: {e}"))?;
+    let listener = std::net::TcpListener::bind(("127.0.0.1", port)).map_err(|e| format!("Cannot bind port {port}: {e}"))?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
     let (stop_tx, stop_rx) = oneshot::channel();
     let thread = std::thread::Builder::new().name("pockethost-engine".into()).spawn(move || {
@@ -127,11 +111,8 @@ fn stop_engine() -> Result<(), String> {
 fn to_jstring(env: &mut JNIEnv, value: String) -> jstring {
     env.new_string(value).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
 }
-
 #[no_mangle]
-pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_start(
-    mut env: JNIEnv, _class: JClass, root: JString, port: jint
-) -> jstring {
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_start(mut env: JNIEnv, _class: JClass, root: JString, port: jint) -> jstring {
     let result = (|| {
         let root: String = env.get_string(&root).map_err(|e| e.to_string())?.into();
         if !(1024..=65535).contains(&port) { return Err("Port must be 1024–65535".to_string()); }
@@ -141,19 +122,14 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_start(
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
 }
 #[no_mangle]
-pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_stop(
-    mut env: JNIEnv, _class: JClass
-) -> jstring {
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_stop(mut env: JNIEnv, _class: JClass) -> jstring {
     to_jstring(&mut env, stop_engine().map(|_| "OK".to_string()).unwrap_or_else(|e| e))
 }
 #[no_mangle]
-pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_status(
-    mut env: JNIEnv, _class: JClass
-) -> jstring {
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_status(mut env: JNIEnv, _class: JClass) -> jstring {
     let running = engine().lock().map(|s| s.is_some()).unwrap_or(false);
     to_jstring(&mut env, if running { "RUNNING".into() } else { "STOPPED".into() })
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
