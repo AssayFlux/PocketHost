@@ -1,4 +1,8 @@
 name: PocketHost quality
+concurrency:
+  group: pockethost-quality-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
