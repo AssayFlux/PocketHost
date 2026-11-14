@@ -230,7 +230,11 @@ fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
                 return;
             }
         };
-        let listener = match TcpListener::from_std(listener) {
+        // Tokio I/O resources must be created while the runtime is entered.
+        // Constructing TcpListener::from_std outside an entered runtime panics
+        // on Android (and can terminate the native engine thread before JNI
+        // receives its readiness signal).
+        let listener = match runtime.block_on(async { TcpListener::from_std(listener) }) {
             Ok(listener) => listener,
             Err(error) => {
                 let _ = ready_tx.send(Err(format!("Cannot initialize listener: {error}")));
