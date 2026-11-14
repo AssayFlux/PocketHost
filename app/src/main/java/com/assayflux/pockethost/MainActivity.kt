@@ -82,13 +82,13 @@ private fun PocketHostDashboard() {
     }
     var previousReleases by remember { mutableStateOf(SiteImporter.listReleases(context)) }
 
-    val startHosting: () -> Unit = {
+    val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, intent)
             else context.startService(intent)
         }.onSuccess {
-            status = "Starting local server on port ${portText.toIntOrNull() ?: 8080}…"
+            status = if (notificationDenied) "Starting hosting. Android notification permission is denied, so the ongoing service notification may be hidden from the notification drawer." else "Starting local server on port ${portText.toIntOrNull() ?: 8080}…"
         }.onFailure {
             status = it.message ?: "Could not start hosting service."
         }
@@ -96,8 +96,7 @@ private fun PocketHostDashboard() {
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) startHosting()
-        else status = "Notification permission is required for PocketHost's visible hosting status. Enable it in Android settings, then try again."
+        startHosting(notificationDenied = !granted)
     }
 
     LaunchedEffect(Unit) {
