@@ -47,6 +47,13 @@ android {
             if (releaseSigningReady) signingConfig = signingConfigs.getByName("release")
         }
     }
+    packaging {
+        jniLibs {
+            // cloudflared is an Android PIE executable packaged beside native libraries;
+            // extraction gives ProcessBuilder a real executable path on API 26+.
+            useLegacyPackaging = true
+        }
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
