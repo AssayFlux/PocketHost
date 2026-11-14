@@ -16,6 +16,7 @@ import java.io.File
 class HostingService : Service() {
     private val channelId = "pockethost-hosting"
     @Volatile private var stopping = false
+    @Volatile private var tunnelSupervisorActive = false
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
 
     override fun onCreate() {
@@ -52,13 +53,15 @@ class HostingService : Service() {
             updateStatus(if (notificationHidden) "$initialMessage. Notification permission is off; Android may hide the service notification from the notification drawer." else initialMessage)
             val manager = getSystemService(NotificationManager::class.java)
             manager.notify(1, notification("$host hosting · port $staticPort"))
-            if (statePreferences.getBoolean("tunnel_enabled", false)) {
+            if (statePreferences.getBoolean("tunnel_enabled", false) && !tunnelSupervisorActive) {
+                tunnelSupervisorActive = true
                 Thread({
-                    if (stopping) return@Thread
+                    if (stopping) { tunnelSupervisorActive = false; return@Thread }
                     val tunnelToken = runCatching { CloudflareTokenStore.read(this) }.getOrNull()
                     if (tunnelToken.isNullOrBlank()) {
                         updateStatus("$baseMessage · Cloudflare Tunnel token is missing or cannot be decrypted.")
                         manager.notify(1, notification("Cloudflare Tunnel token unavailable"))
+                        tunnelSupervisorActive = false
                         return@Thread
                     }
                     var retry = 0
@@ -93,6 +96,7 @@ class HostingService : Service() {
                     if (!stopping && statePreferences.getBoolean("tunnel_enabled", false)) {
                         updateStatus("Cloudflare Tunnel stopped after five restart attempts. Check the token and network.")
                     }
+                    tunnelSupervisorActive = false
                 }, "PocketHost-Cloudflare-Startup").start()
             }
             if (pythonEnabled) {
