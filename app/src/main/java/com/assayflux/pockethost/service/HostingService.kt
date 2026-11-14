@@ -36,11 +36,11 @@ class HostingService : Service() {
         }
 
         val result = if (NativeEngine.status() == "RUNNING") "OK"
-            else NativeEngine.start(site.absolutePath, 8080, statePreferences.getBoolean("allow_lan", false))
+            else NativeEngine.start(site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false))
         if (result == "OK") {
-            updateStatus(if (statePreferences.getBoolean("allow_lan", false)) "LAN server ready on port 8080. All devices on this Wi-Fi can access the website." else "Local server ready at 127.0.0.1:8080")
+            updateStatus(if (statePreferences.getBoolean("allow_lan", false)) "LAN server ready on port ${statePreferences.getInt("port", 8080)}. All devices on this Wi-Fi can access the website." else "Local server ready at 127.0.0.1:${statePreferences.getInt("port", 8080)}")
             getSystemService(NotificationManager::class.java).notify(
-                1, notification(if (statePreferences.getBoolean("allow_lan", false)) "LAN hosting · port 8080" else "Local hosting · 127.0.0.1:8080")
+                1, notification(if (statePreferences.getBoolean("allow_lan", false)) "LAN hosting · port ${statePreferences.getInt("port", 8080)}" else "Local hosting · 127.0.0.1:${statePreferences.getInt("port", 8080)}")
             )
         } else {
             updateStatus("Hosting failed: $result")

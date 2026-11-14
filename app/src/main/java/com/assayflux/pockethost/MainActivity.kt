@@ -66,6 +66,8 @@ private fun PocketHostDashboard() {
     val scope = rememberCoroutineScope()
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
+    var advancedMode by remember { mutableStateOf(false) }
+    var portText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080).toString()) }
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
     val lanAddress = remember(allowLan, hosting) { if (allowLan) localLanAddress() else null }
     var status by remember { mutableStateOf("Ready to configure your first website.") }
@@ -135,6 +137,41 @@ private fun PocketHostDashboard() {
                 Text("DESIGNED BY ASSAYFLUX", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Text("PocketHost", color = Teal, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 Text("Your website. Your device. Your control.", color = Slate)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
+                    FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
+                }
+                if (advancedMode) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVER CONFIGURATION", color = Teal, fontWeight = FontWeight.SemiBold)
+                            OutlinedTextField(
+                                value = portText,
+                                onValueChange = { value -> if (value.length <= 5 && value.all(Char::isDigit)) portText = value },
+                                label = { Text("HTTP port") },
+                                enabled = !hosting,
+                                singleLine = true
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    val port = portText.toIntOrNull()
+                                    if (port == null || port !in 1024..65535) {
+                                        status = "Choose a port between 1024 and 65535."
+                                    } else {
+                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                            .putInt("port", port).apply()
+                                        status = "Server port saved. Start hosting to apply it."
+                                    }
+                                },
+                                enabled = !hosting
+                            ) { Text("Save server settings") }
+                            Text("Engine limits: 32 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = Slate, fontSize = 11.sp)
+                        }
+                    }
+                }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -217,7 +254,7 @@ private fun PocketHostDashboard() {
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("LOCAL PREVIEW", fontWeight = FontWeight.SemiBold, color = Teal)
-                        Text(if (allowLan && lanAddress != null) "http://$lanAddress:8080" else "http://127.0.0.1:8080", color = Teal)
+                        Text(if (allowLan && lanAddress != null) "http://$lanAddress:$portText" else "http://127.0.0.1:$portText", color = Teal)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Allow local network access", color = Teal, fontWeight = FontWeight.SemiBold)
@@ -229,7 +266,7 @@ private fun PocketHostDashboard() {
                                     .putBoolean("allow_lan", enabled).apply()
                             }, enabled = !hosting)
                         }
-                        Text(if (allowLan) "LAN mode enabled · port 8080 · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
+                        Text(if (allowLan) "LAN mode enabled · port $portText · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
                         OutlinedButton(
                             onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:8080"))) },
                             enabled = hosting
@@ -237,7 +274,7 @@ private fun PocketHostDashboard() {
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                Text("PHASE 1 · SAFE STATIC SITE IMPORT", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(if (advancedMode) "ADVANCED MODE · ENGINE DETAILS" else "SIMPLE MODE · SAFE STATIC SITE HOSTING", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("Public tunnel, Python and Node.js are not available in this build. LAN access is optional and limited to your local network.", color = Slate, fontSize = 11.sp)
                 Text("AssayFlux PocketHost · v0.1.0", color = Slate, fontSize = 11.sp)
             }
