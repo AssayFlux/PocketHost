@@ -1,6 +1,8 @@
 package com.assayflux.pockethost
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -79,6 +81,24 @@ private fun PocketHostDashboard() {
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
     }
     var previousReleases by remember { mutableStateOf(SiteImporter.listReleases(context)) }
+
+    val startHosting: () -> Unit = {
+        val intent = Intent(context, HostingService::class.java)
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, intent)
+            else context.startService(intent)
+        }.onSuccess {
+            status = "Starting local server on port ${portText.toIntOrNull() ?: 8080}…"
+        }.onFailure {
+            status = it.message ?: "Could not start hosting service."
+        }
+    }
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) startHosting()
+        else status = "Notification permission is required for PocketHost's visible hosting status. Enable it in Android settings, then try again."
+    }
 
     LaunchedEffect(Unit) {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -191,14 +211,12 @@ private fun PocketHostDashboard() {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
                                 onClick = {
-                                    val intent = Intent(context, HostingService::class.java)
-                                    runCatching {
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, intent)
-                                        else context.startService(intent)
-                                    }.onSuccess {
-                                        status = "Starting local server on port 8080…"
-                                    }.onFailure {
-                                        status = it.message ?: "Could not start hosting service."
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        startHosting()
                                     }
                                 },
                                 enabled = !hosting && !importing
@@ -299,7 +317,7 @@ private fun PocketHostDashboard() {
                         }
                         Text(if (allowLan) "LAN mode enabled · port $portText · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
                         OutlinedButton(
-                            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:8080"))) },
+                            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:${portText.toIntOrNull() ?: 8080}"))) },
                             enabled = hosting
                         ) { Text("Open preview") }
                     }
