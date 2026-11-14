@@ -18,6 +18,8 @@ _server = None
 _thread = None
 _module_name = None
 _project_root = None
+MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024
+SOCKET_TIMEOUT_SECONDS = 15
 
 
 class _BoundedThreadingWSGIServer(ThreadingMixIn, WSGIServer):
@@ -25,6 +27,11 @@ class _BoundedThreadingWSGIServer(ThreadingMixIn, WSGIServer):
     allow_reuse_address = True
     request_queue_size = 32
     max_workers = 16
+
+    def get_request(self):
+        request, client_address = super().get_request()
+        request.settimeout(SOCKET_TIMEOUT_SECONDS)
+        return request, client_address
 
     def __init__(self, *args, **kwargs):
         self._slots = threading.BoundedSemaphore(self.max_workers)
@@ -45,6 +52,26 @@ class _BoundedThreadingWSGIServer(ThreadingMixIn, WSGIServer):
             super().process_request_thread(request, client_address)
         finally:
             self._slots.release()
+
+
+class _RequestBodyLimit:
+    def __init__(self, application):
+        self.application = application
+
+    def __call__(self, environ, start_response):
+        raw_length = environ.get("CONTENT_LENGTH", "")
+        try:
+            length = int(raw_length) if raw_length else 0
+        except (TypeError, ValueError):
+            start_response("400 Bad Request", [("Content-Length", "0")])
+            return [b""]
+        if length < 0:
+            start_response("400 Bad Request", [("Content-Length", "0")])
+            return [b""]
+        if length > MAX_REQUEST_BODY_BYTES:
+            start_response("413 Payload Too Large", [("Content-Length", "0")])
+            return [b""]
+        return self.application(environ, start_response)
 
 
 class _QuietRequestHandler(WSGIRequestHandler):
@@ -81,7 +108,7 @@ def _load_application(project_root: str):
         application = getattr(module, "application", None)
         if not callable(application):
             raise TypeError("wsgi.py must expose a callable named application.")
-        return application, name
+        return _RequestBodyLimit(application), name
     except BaseException:
         sys.modules.pop(name, None)
         if previous is not None:
@@ -126,6 +153,9 @@ def start(project_root: str, port: int, allow_lan: bool = False) -> str:
         except BaseException:
             server.server_close()
             sys.modules.pop(module_name, None)
+            root = os.path.realpath(project_root)
+            if root in sys.path:
+                sys.path.remove(root)
             raise
         _server, _thread, _module_name = server, thread, module_name
         _project_root = os.path.realpath(project_root)
