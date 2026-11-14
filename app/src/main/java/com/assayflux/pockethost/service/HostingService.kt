@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import com.assayflux.pockethost.engine.NativeEngine
+import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
@@ -150,6 +151,12 @@ class HostingService : Service() {
 
     private fun updateStatus(value: String) {
         statePreferences.edit().putString("service_status", value).apply()
+        val level = when {
+            value.contains("error", ignoreCase = true) || value.contains("failed", ignoreCase = true) -> "ERROR"
+            value.contains("retry", ignoreCase = true) || value.contains("denied", ignoreCase = true) -> "WARN"
+            else -> "INFO"
+        }
+        OperationalLog.record(this, level, "SERVICE_STATUS", value)
     }
 
     private fun notification(text: String): Notification =
