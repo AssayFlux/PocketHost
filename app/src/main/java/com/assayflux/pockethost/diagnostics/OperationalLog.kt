@@ -60,6 +60,20 @@ object OperationalLog {
         }.getOrDefault(emptyList())
     }
 
+    fun export(context: Context, destination: android.net.Uri): Boolean = runCatching {
+        val directory = File(context.applicationContext.filesDir, DIRECTORY)
+        val files = (RETAINED_FILES downTo 1).map { File(directory, "$CURRENT.$it") } +
+            File(directory, CURRENT)
+        val output = context.contentResolver.openOutputStream(destination)
+            ?: error("Cannot open the selected export destination.")
+        output.use { stream ->
+            files.filter { it.isFile }.forEach { file ->
+                file.inputStream().use { input -> input.copyTo(stream) }
+            }
+        }
+        true
+    }.getOrDefault(false)
+
     private fun rotate(directory: File, current: File) {
         File(directory, "$CURRENT.$RETAINED_FILES").delete()
         for (index in RETAINED_FILES - 1 downTo 1) {
