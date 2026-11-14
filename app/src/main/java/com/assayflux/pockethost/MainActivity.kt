@@ -357,9 +357,11 @@ private fun PocketHostDashboard() {
                             Button(
                                 onClick = {
                                     val port = pythonPortText.toIntOrNull()
-                                    val staticPort = portText.toIntOrNull() ?: 8080
-                                    val root = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
-                                        .getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
+                                    val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                    // Compare against the port actually persisted for the running static engine,
+                                    // not an unsaved value currently typed into the Advanced Mode field.
+                                    val staticPort = preferences.getInt("port", 8080)
+                                    val root = preferences.getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
                                         ?: File(context.filesDir, "python-project").absolutePath
                                     if (port == null || port !in 1024..65535 || port == staticPort) {
                                         status = "Choose a Python port from 1024 to 65535, different from the static server port."
