@@ -10,7 +10,7 @@
 
 ## 1. Product definition
 
-AssayFlux PocketHost is a standalone native Android application for importing, deploying and hosting websites from the phone. The initial target is the user's Vivo Y95. The application must not depend on Termux.
+AssayFlux PocketHost is a standalone native Android application for importing, deploying and hosting websites from the phone. The compatibility baseline is Android 8.0 (API 26) and newer on smartphones with at least 4 GB RAM. The app must support ARMv7 (32-bit) and ARM64 (64-bit) Android devices and must not depend on Termux. Android emulator x86_64 is included for automated compatibility testing.
 
 The first usable product is static hosting with local preview, lifecycle controls and safe deployments. Public hosting is enabled only after an Android-compatible Cloudflare Tunnel connector is proven. Python and Node.js are optional later-stage runtimes.
 
@@ -250,7 +250,7 @@ Python and Node applications execute under the Android app's OS identity unless 
 
 ## 9. Reliability and device constraints
 
-The exact Vivo Y95 variant, Android version, ABI, memory and storage must be recorded before finalizing minSdk/NDK/ABI decisions. A likely configuration is not a verified configuration.
+The declared baseline is Android 8.0 (API 26)+ and 4 GB RAM. Android 8.0 is the minimum API, not a promise that every vendor firmware behaves identically. Release acceptance uses a representative compatibility matrix: API 26, API 28, API 33, API 34 and current API; ARMv7 and ARM64; 4 GB RAM minimum and higher-memory devices. Automated emulator tests cover API 26 and current Android. Physical-device sampling remains necessary for vendor-specific background and battery policies.
 
 ### Resource controls
 - Bounded worker/thread counts.
