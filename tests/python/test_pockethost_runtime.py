@@ -33,9 +33,22 @@ class PythonHostRuntimeTest(unittest.TestCase):
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
                     self.assertEqual(200, response.status)
                     self.assertEqual(b"PocketHost WSGI test", response.read())
+                oversized = urllib.request.Request(
+                    f"http://127.0.0.1:{port}/",
+                    data=b"x" * (runtime.MAX_REQUEST_BODY_BYTES + 1),
+                    method="POST",
+                )
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(oversized, timeout=5)
+                self.assertEqual(413, error.exception.code)
             finally:
                 self.assertEqual("STOPPED", runtime.stop())
             self.assertEqual("STOPPED", runtime.status())
+
+    def test_rejects_invalid_port(self):
+        with tempfile.TemporaryDirectory() as project:
+            with self.assertRaisesRegex(ValueError, "1024"):
+                runtime.start(project, 80)
 
     def test_requires_root_wsgi_entrypoint(self):
         with tempfile.TemporaryDirectory() as project:
