@@ -116,6 +116,7 @@ class ManagementApiSecurityTest {
         assertEquals(403, request("POST", "/api/v1/resources",
             JSONObject().put("pythonMaxWorkers", 4).put("nodeHeapMb", 128).toString(), authorization = operatorToken).first)
         assertEquals(204, request("DELETE", "/api/v1/auth/accounts/" + username, authorization = ownerToken).first)
+        assertEquals(401, request("GET", "/api/v1/status", authorization = operatorToken).first)
         assertEquals(401, request("POST", "/api/v1/auth/login",
             JSONObject().put("username", username).put("password", password).toString()).first)
     }

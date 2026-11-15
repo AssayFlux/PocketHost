@@ -242,6 +242,16 @@ object ManagementApiServer {
             else { sessions.remove(tokenHash(raw)); null }
         } }
         if (session == null) return 401 to JSONObject().put("error", "unauthorized")
+        if (session.role == "OPERATOR") {
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val stillActive = runCatching {
+                HostAccountStore.list(context).any { it.role == "OPERATOR" && it.username.equals(session.username, true) }
+            }.getOrDefault(false)
+            if (!stillActive) {
+                if (token != null) synchronized(sessions) { sessions.remove(tokenHash(token)) }
+                return 401 to JSONObject().put("error", "operator_account_revoked")
+            }
+        }
         if (method == "DELETE" && path == "/api/v1/session") {
             synchronized(sessions) { sessions.remove(tokenHash(token!!)) }
             return 204 to JSONObject()
