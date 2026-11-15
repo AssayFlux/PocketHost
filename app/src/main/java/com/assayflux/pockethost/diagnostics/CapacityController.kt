@@ -12,6 +12,7 @@ import java.time.Instant
 object CapacityController {
     private const val PREFS = "pockethost_capacity"
     private const val DEFAULT_SAFE_LIMIT = 4
+    private const val KEY_OPTIONAL_RUNTIMES_SUSPENDED = "capacity_optional_runtimes_suspended"
     @Volatile private var lastHealthState = "NORMAL"
     @Volatile private var recoveryUntilElapsed = 0L
 
@@ -107,7 +108,11 @@ object CapacityController {
         val limit = (baseLimit * factor).toInt().coerceAtLeast(1).coerceAtMost(16)
         // Enforce protective policy on every tick, not only on state transitions: a user
         // must not be able to restart an optional runtime while the device remains critical.
-        if (state == "PROTECTIVE" || state == "EMERGENCY") suspendOptionalRuntimes(context)
+        if (state == "PROTECTIVE" || state == "EMERGENCY") {
+            suspendOptionalRuntimes(context)
+        } else if (state == "NORMAL") {
+            resumeOptionalRuntimes(context)
+        }
         if (state != lastHealthState) {
             lastHealthState = state
             OperationalLog.record(context, if (state == "NORMAL" || state == "RECOVERY") "INFO" else "WARN",
@@ -121,11 +126,79 @@ object CapacityController {
         val pythonWasEnabled = prefs.getBoolean("python_enabled", false)
         val nodeWasEnabled = prefs.getBoolean("node_enabled", false)
         if (!pythonWasEnabled && !nodeWasEnabled) return
-        prefs.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).commit()
-        if (pythonWasEnabled) runCatching { PythonHostRuntime.stop(context) }
-        if (nodeWasEnabled) runCatching { NodeHostRuntime.stop(context) }
-        OperationalLog.record(context, "WARN", "OPTIONAL_RUNTIMES_SUSPENDED",
-            "Python/Node were disabled to preserve static hosting during critical device pressure. Re-enable them manually after recovery.")
+        // Preserve owner intent; this marker distinguishes an automatic safety stop
+        // from a deliberate user stop.
+        val firstSuspension = !prefs.getBoolean(KEY_OPTIONAL_RUNTIMES_SUSPENDED, false)
+        prefs.edit().putBoolean(KEY_OPTIONAL_RUNTIMES_SUSPENDED, true).commit()
+        if (pythonWasEnabled && runCatching { PythonHostRuntime.status(context) }.getOrNull() != "STOPPED") {
+            runCatching { PythonHostRuntime.stop(context) }
+        }
+        if (nodeWasEnabled && runCatching { NodeHostRuntime.status(context) }.getOrNull() !in setOf("STOPPED", "ERROR")) {
+            runCatching { NodeHostRuntime.stop(context) }
+        }
+        if (firstSuspension) OperationalLog.record(context, "WARN", "OPTIONAL_RUNTIMES_SUSPENDED",
+            "Python/Node were temporarily stopped to preserve static hosting during critical device pressure. Their enabled preferences are retained for automatic recovery.")
+    }
+
+    private fun resumeOptionalRuntimes(context: Context) {
+        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_OPTIONAL_RUNTIMES_SUSPENDED, false)) return
+        val pythonWanted = prefs.getBoolean("python_enabled", false)
+        val nodeWanted = prefs.getBoolean("node_enabled", false)
+        var allRecovered = true
+
+        if (pythonWanted) {
+            val current = runCatching { PythonHostRuntime.status(context) }.getOrNull()
+            if (current == null) {
+                allRecovered = false
+            } else if (current == "STOPPED") {
+                val root = prefs.getString("python_project_root",
+                    java.io.File(context.filesDir, "python-project").absolutePath)
+                    ?: java.io.File(context.filesDir, "python-project").absolutePath
+                val routes = runCatching { com.assayflux.pockethost.sites.SiteRegistry.pythonHostnameMap(context) }
+                    .getOrElse { allRecovered = false; org.json.JSONObject() }
+                val started = runCatching {
+                    if (routes.length() > 0) PythonHostRuntime.startSites(context, routes.toString(),
+                        prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false))
+                    else PythonHostRuntime.start(context, root, prefs.getInt("python_port", 8081),
+                        prefs.getBoolean("allow_lan", false))
+                }
+                if (started.isFailure) {
+                    allRecovered = false
+                    OperationalLog.record(context, "ERROR", "PYTHON_RECOVERY_FAILED",
+                        started.exceptionOrNull()?.message ?: "Python could not be restarted after capacity recovery.")
+                }
+            } else if (current != "RUNNING") {
+                allRecovered = false
+            }
+        }
+
+        if (nodeWanted) {
+            val current = runCatching { NodeHostRuntime.status(context) }.getOrNull()
+            if (current == null) {
+                allRecovered = false
+            } else if (current == "STOPPED" || current == "ERROR") {
+                val root = prefs.getString("node_project_root",
+                    java.io.File(context.filesDir, "node-project-default").absolutePath)
+                    ?: java.io.File(context.filesDir, "node-project-default").absolutePath
+                val started = runCatching { NodeHostRuntime.start(context, root, prefs.getInt("node_port", 3000)) }
+                if (started.isFailure) {
+                    allRecovered = false
+                    OperationalLog.record(context, "ERROR", "NODE_RECOVERY_FAILED",
+                        started.exceptionOrNull()?.message ?: "Node.js could not be restarted after capacity recovery.")
+                } else {
+                    allRecovered = false // STARTING is not proof of readiness; retry on the next health tick.
+                }
+            } else if (current != "RUNNING") {
+                allRecovered = false
+            }
+        }
+
+        if (allRecovered) {
+            prefs.edit().putBoolean(KEY_OPTIONAL_RUNTIMES_SUSPENDED, false).commit()
+            OperationalLog.record(context, "INFO", "OPTIONAL_RUNTIMES_RECOVERED",
+                "Previously enabled optional runtimes have recovered after device health returned to NORMAL.")
+        }
     }
 
     fun snapshot(context: Context): JSONObject {
