@@ -96,21 +96,23 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          apks=(app/build/outputs/apk/debug/*.apk)
-          test \${#apks[@]} -eq 3
-          for apk in "\${apks[@]}"; do
+          count=0
+          for apk in app/build/outputs/apk/debug/*.apk; do
+            count=$((count + 1))
             case "$apk" in
               *arm64-v8a*) abi=arm64-v8a ;;
               *armeabi-v7a*) abi=armeabi-v7a ;;
               *x86_64*) abi=x86_64 ;;
               *) echo "Unexpected APK: $apk"; exit 1 ;;
             esac
-            unzip -l "$apk" | grep -q "lib/$abi/libnode.so"
-            unzip -l "$apk" | grep -q "lib/$abi/libnodebridge.so"
-            unzip -l "$apk" | grep -q "lib/$abi/libpockethost.so"
-            unzip -l "$apk" | grep -q "lib/$abi/libcloudflared.so"
+            unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libnode.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libnodebridge.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libpockethost.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libcloudflared.so" "$RUNNER_TEMP/apk-contents.txt"
             sha256sum "$apk"
           done
+          test "$count" -eq 3
       - uses: actions/upload-artifact@v4
         with:
           name: pockethost-debug-apks
