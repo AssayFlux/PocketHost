@@ -91,15 +91,15 @@ class PythonHostRuntimeTest(unittest.TestCase):
     def test_multi_site_wsgi_routes_by_host_header(self):
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
             pathlib.Path(first, "wsgi.py").write_text(
-                "def application(environ, start_response):\\n"
-                "    body = b'alpha'\\n"
-                "    start_response('200 OK', [('Content-Length', str(len(body)))])\\n"
-                "    return [body]\\n", encoding="utf-8")
+                "def application(environ, start_response):\n"
+                "    body = b'alpha'\n"
+                "    start_response('200 OK', [('Content-Length', str(len(body)))])\n"
+                "    return [body]\n", encoding="utf-8")
             pathlib.Path(second, "wsgi.py").write_text(
-                "def application(environ, start_response):\\n"
-                "    body = b'beta'\\n"
-                "    start_response('200 OK', [('Content-Length', str(len(body)))])\\n"
-                "    return [body]\\n", encoding="utf-8")
+                "def application(environ, start_response):\n"
+                "    body = b'beta'\n"
+                "    start_response('200 OK', [('Content-Length', str(len(body)))])\n"
+                "    return [body]\n", encoding="utf-8")
             with socket.socket() as probe:
                 probe.bind(("127.0.0.1", 0))
                 port = probe.getsockname()[1]
@@ -117,7 +117,7 @@ class PythonHostRuntimeTest(unittest.TestCase):
     def test_multi_site_rejects_invalid_hostname(self):
         with tempfile.TemporaryDirectory() as project:
             pathlib.Path(project, "wsgi.py").write_text(
-                "def application(environ, start_response):\\n    return [b'ok']\\n", encoding="utf-8")
+                "def application(environ, start_response):\n    return [b'ok']\n", encoding="utf-8")
             with socket.socket() as probe:
                 probe.bind(("127.0.0.1", 0))
                 port = probe.getsockname()[1]
