@@ -40,7 +40,7 @@
 
 **AssayFlux PocketHost** is an in-development Android application designed to turn a compatible Android phone into a compact website-hosting appliance—without requiring Termux or root access.
 
-The project provides static hosting, an embedded Python WSGI preview backend and an Android-targeted Cloudflare Tunnel connector built from pinned upstream source. The connector binaries and encrypted token lifecycle are integrated in source; physical-device and external-hostname validation remain open. Node.js hosting, multi-site routing and the authenticated remote-management API are not yet implemented. The native application is built with Kotlin, the hosting core is written in Rust, and a TypeScript browser console is currently a disconnected visual scaffold.
+The source now includes Rust static hosting and host-based multi-site routing, embedded Python WSGI and Node.js 24 runtimes, a paired loopback management API, a connected TypeScript console, per-runtime metrics and resource ceilings, encrypted static-site backup, diagnostics, and the Cloudflare Tunnel lifecycle. Source integration is ahead of device acceptance: native build, emulator/physical-device runtime, background execution, memory-pressure and external hostname tests are still required before a production launch.
 
 > **Hosting should be understandable, controllable and transparent—even when the server fits in your pocket.**
 
@@ -61,10 +61,10 @@ The project provides static hosting, an embedded Python WSGI preview backend and
 </tr>
 <tr>
 <td align="center"><img src="https://api.iconify.design/lucide/route.svg?color=%23B18B5E" width="30" alt=""><br><strong>DOMAINS & TUNNELLING</strong><br><sub>Android-targeted cloudflared binaries, encrypted token storage and connector lifecycle controls are integrated. Users must create the remotely managed tunnel and Public Hostname in Cloudflare; real-device and external-network validation remain required before public release.</sub></td>
-<td align="center"><img src="https://api.iconify.design/lucide/network.svg?color=%23B18B5E" width="30" alt=""><br><strong>MULTI-SITE ROUTING</strong><br><sub>Local preview and advanced configuration are present. Multi-site host-based routing and reverse-proxy rules are not yet implemented.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/network.svg?color=%23B18B5E" width="30" alt=""><br><strong>MULTI-SITE ROUTING</strong><br><sub>Rust routes static sites by hostname and reverse-proxies registered Python WSGI and Node.js origins over loopback.</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="https://api.iconify.design/lucide/terminal.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL PYTHON RUNTIME</strong><br><sub>Embedded CPython 3.11 WSGI preview backend is implemented for trusted code; it is not sandboxed or production-ready.</sub></td>
+<td align="center"><img src="https://api.iconify.design/lucide/terminal.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL PYTHON RUNTIME</strong><br><sub>Embedded CPython 3.11 WSGI runtime supports multiple hostname routes, bounded workers, request metrics and loopback-by-default operation. Trusted code only; it is not a security sandbox.</sub></td>
 <td align="center"><img src="https://api.iconify.design/lucide/code-2.svg?color=%23B18B5E" width="30" alt=""><br><strong>OPTIONAL NODE.JS RUNTIME</strong><br><sub>Not implemented. A maintained Android-compatible Node.js runtime and process supervisor still need to be selected and integrated.</sub></td>
 </tr>
 </table>
