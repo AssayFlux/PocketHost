@@ -209,9 +209,8 @@ class HostingService : Service() {
     }
 
     private fun startWakeLockRefresh() {
-        if (wakeLockMonitorActive) return
+        if (stopping || wakeLockMonitorActive) return
         wakeLockMonitorActive = true
-        if (stopping) return
         val monitor = Thread({
             try {
                 while (!stopping && statePreferences.getBoolean("keep_awake", false)) {
