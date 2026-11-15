@@ -131,7 +131,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, 'backup') || contains(github.event.pull_request.title, 'runtime') || (contains(github.event.pull_request.title, 'security') || contains(github.event.pull_request.title, 'management'))))
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, 'backup') || contains(github.event.pull_request.title, 'runtime') || contains(github.event.pull_request.title, 'security') || contains(github.event.pull_request.title, 'management')))
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
@@ -175,3 +175,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -memory 2048
           emulator-boot-timeout: 900
           script: gradle clean :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
+      - name: Upload Android instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-test-results-api-${{ matrix.api-level }}
+          path: |
+            app/build/reports/androidTests/connected/debug/**
+            app/build/outputs/androidTest-results/connected/**
+          if-no-files-found: ignore
+          retention-days: 7
