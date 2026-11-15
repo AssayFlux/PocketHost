@@ -52,7 +52,9 @@ object ManagementApiServer {
     @Synchronized fun start(context: Context): String {
         if (listener?.isClosed == false) return "RUNNING"
         appContext = context.applicationContext
-        val socket = ServerSocket(PORT, 16, java.net.InetAddress.getByName("127.0.0.1"))
+        val socket = ServerSocket()
+        socket.reuseAddress = true
+        socket.bind(java.net.InetSocketAddress(java.net.InetAddress.getByName("127.0.0.1"), PORT), 16)
         listener = socket
         acceptThread = Thread({
             while (!socket.isClosed) {
@@ -68,7 +70,10 @@ object ManagementApiServer {
     }
 
     @Synchronized fun stop() {
-        runCatching { listener?.close() }
+        val oldListener = listener
+        val oldThread = acceptThread
+        runCatching { oldListener?.close() }
+        if (oldThread != null && oldThread !== Thread.currentThread()) runCatching { oldThread.join(500) }
         listener = null
         acceptThread = null
         synchronized(sessions) { sessions.clear() }
