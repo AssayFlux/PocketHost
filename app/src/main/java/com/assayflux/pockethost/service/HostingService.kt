@@ -23,6 +23,8 @@ class HostingService : Service() {
     @Volatile private var stopping = false
     @Volatile private var tunnelSupervisorActive = false
     @Volatile private var metricsMonitorActive = false
+    @Volatile private var pythonSupervisorActive = false
+    @Volatile private var pythonSupervisorThread: Thread? = null
     @Volatile private var wakeLockMonitorActive = false
     @Volatile private var wakeLockMonitor: Thread? = null
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
@@ -125,31 +127,49 @@ class HostingService : Service() {
                     tunnelSupervisorActive = false
                 }, "PocketHost-Cloudflare-Startup").start()
             }
-            if (pythonEnabled) {
-                Thread({
-                    if (stopping) return@Thread
-                    val projectRoot = statePreferences.getString("python_project_root", File(filesDir, "python-project").absolutePath)
-                        ?: File(filesDir, "python-project").absolutePath
-                    val pythonResult = runCatching {
-                        PythonHostRuntime.start(
-                            this,
-                            projectRoot,
-                            statePreferences.getInt("python_port", 8081),
-                            statePreferences.getBoolean("allow_lan", false)
-                        )
-                    }.getOrElse { "ERROR: ${it.message ?: "Python runtime failed"}" }
-                    if (stopping) {
+            if (pythonEnabled && !pythonSupervisorActive) {
+                pythonSupervisorActive = true
+                val projectRoot = statePreferences.getString("python_project_root", File(filesDir, "python-project").absolutePath)
+                    ?: File(filesDir, "python-project").absolutePath
+                val pythonPort = statePreferences.getInt("python_port", 8081)
+                val allowLan = statePreferences.getBoolean("allow_lan", false)
+                val supervisor = Thread({
+                    var failures = 0
+                    while (!stopping && statePreferences.getBoolean("python_enabled", false)) {
+                        val current = runCatching { PythonHostRuntime.status(this) }.getOrDefault("ERROR")
+                        if (current == "RUNNING") {
+                            failures = 0
+                            try { Thread.sleep(3_000) } catch (_: InterruptedException) { break }
+                            continue
+                        }
+                        val result = runCatching {
+                            PythonHostRuntime.start(this, projectRoot, pythonPort, allowLan)
+                        }.getOrElse { "ERROR: ${it.message ?: "Python runtime failed"}" }
+                        if (result == "RUNNING" || result == "ALREADY_RUNNING") {
+                            failures = 0
+                            val message = "$baseMessage · Python WSGI supervised on port $pythonPort"
+                            updateStatus(message)
+                            manager.notify(1, notification(message))
+                            try { Thread.sleep(3_000) } catch (_: InterruptedException) { break }
+                        } else {
+                            failures++
+                            OperationalLog.record(this, "WARN", "PYTHON_RUNTIME_RESTART", "Python runtime start attempt $failures failed: $result")
+                            val message = "$baseMessage · Python runtime unavailable (attempt $failures/5)"
+                            updateStatus(message)
+                            manager.notify(1, notification(message))
+                            if (failures >= 5) break
+                            val delay = (5_000L shl (failures - 1)).coerceAtMost(60_000L)
+                            try { Thread.sleep(delay) } catch (_: InterruptedException) { break }
+                        }
+                    }
+                    if (stopping || !statePreferences.getBoolean("python_enabled", false)) {
                         runCatching { PythonHostRuntime.stop(this) }
-                        return@Thread
                     }
-                    val pythonMessage = when (pythonResult) {
-                        "RUNNING", "ALREADY_RUNNING" -> " · Python WSGI on port ${statePreferences.getInt("python_port", 8081)}"
-                        else -> " · Python runtime error: $pythonResult"
-                    }
-                    val updatedMessage = "$baseMessage$pythonMessage"
-                    updateStatus(updatedMessage)
-                    manager.notify(1, notification(updatedMessage))
-                }, "PocketHost-Python-Startup").start()
+                    pythonSupervisorActive = false
+                    pythonSupervisorThread = null
+                }, "PocketHost-Python-Supervisor")
+                pythonSupervisorThread = supervisor
+                supervisor.start()
             }
         } else {
             updateStatus("Hosting failed: $result")
@@ -168,6 +188,7 @@ class HostingService : Service() {
         runCatching {
             MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
         }
+        pythonSupervisorThread?.interrupt()
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
         releaseWakeLock()
