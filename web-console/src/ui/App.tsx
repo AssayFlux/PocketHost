@@ -5,6 +5,7 @@ type DeviceStatus = { state: string; apiVersion: string; runtimes: Runtime[] };
 type Metrics = { sampledAt: string; sources: Array<{ source: string; requests: number; bytesServed: number; scopeNote?: string }> };
 type Site = { id: string; name: string; runtime: string; hostnames: string[]; state: string };
 type LogEntry = { timestamp: string; level: string; event: string; message: string };
+type ResourceLimits = { pythonMaxWorkers: number; nodeHeapMb: number; deviceTotalMemoryBytes: number; deviceAvailableMemoryBytes: number; note: string };
 
 const defaultApi = "http://127.0.0.1:17841";
 const storedToken = () => { try { return localStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
@@ -19,6 +20,9 @@ export function App() {
   const [sites, setSites] = useState<Site[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [tunnel, setTunnel] = useState<{ state: string; configured: boolean } | null>(null);
+  const [resources, setResources] = useState<ResourceLimits | null>(null);
+  const [pythonWorkers, setPythonWorkers] = useState(8);
+  const [nodeHeap, setNodeHeap] = useState(192);
   const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
   const [busy, setBusy] = useState(false);
 
