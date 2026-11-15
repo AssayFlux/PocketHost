@@ -62,3 +62,8 @@ The CI pipeline runs Python syntax checks and host-side WSGI lifecycle tests. An
 ## Future work
 
 Before calling Python production-ready, add explicit resource quotas, reliable request timeouts, safe dependency management, per-project isolation, structured access/error logs, device-level acceptance tests and a reviewed public-access security model.
+
+
+## Trusted-code start gate
+
+PocketHost requires an explicit local acknowledgement before starting Python. The acknowledgement is stored on-device and can be revoked; revocation stops optional runtimes. This is a guard against accidental execution, **not a sandbox**. Python still runs with the Android app UID and privileges. Never import or execute untrusted projects. Do not expose public Python hosting for arbitrary third-party code until OS-backed isolation and network/filesystem restrictions are implemented and independently reviewed.

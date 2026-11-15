@@ -124,6 +124,7 @@ private fun PocketHostDashboard() {
     var nodePortText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000).toString()) }
     var nodeProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "node-project-default/package.json").isFile) "Node project imported." else "No Node project imported.") }
     var nodeHosting by remember { mutableStateOf(NodeHostRuntime.status(context) == "RUNNING") }
+    var trustedRuntimeCodeAck by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("trusted_runtime_code_ack", false)) }
     var hostnameText by remember { mutableStateOf("") }
     var hostnameRuntime by remember { mutableStateOf("static") }
     var cloudflareTokenText by remember { mutableStateOf("") }
@@ -801,6 +802,44 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4DF))
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("TRUSTED APPLICATION CODE ONLY", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("Python and Node applications execute with PocketHost's Android app privileges. A separate process or V8 heap limit is NOT a security sandbox. Never run code you do not own or trust. Strong OS-backed sandboxing is not implemented yet.", color = Slate, fontSize = 11.sp)
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("I understand and will run trusted code only", color = Teal, fontWeight = FontWeight.SemiBold)
+                                Text("Required before either optional runtime can start.", color = Slate, fontSize = 10.sp)
+                            }
+                            Switch(checked = trustedRuntimeCodeAck, onCheckedChange = { accepted ->
+                                trustedRuntimeCodeAck = accepted
+                                val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                prefs.edit().putBoolean("trusted_runtime_code_ack", accepted).apply()
+                                if (!accepted) {
+                                    prefs.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).apply()
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            runCatching { PythonHostRuntime.stop(context) }
+                                            runCatching { NodeHostRuntime.stop(context) }
+                                        }
+                                        pythonHosting = false
+                                        nodeHosting = false
+                                        if (hosting) {
+                                            runCatching { NativeEngine.stop() }
+                                            startHosting(false)
+                                        }
+                                    }
+                                    status = "Optional runtimes stopped. Static hosting remains available."
+                                }
+                            })
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -960,7 +999,7 @@ private fun PocketHostDashboard() {
                             }, enabled = nodeHosting) { Text("Stop Node.js") }
                         }
                         if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Runs one Node.js application in an isolated Android process. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = Slate, fontSize = 10.sp)
+                        Text("Runs one Node.js application in a separate Android process under the same app security identity. This is not a sandbox. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = Slate, fontSize = 10.sp)
                     }
                 }
 

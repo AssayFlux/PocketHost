@@ -70,6 +70,10 @@ object SiteRegistry {
 
     fun pythonHostnameMap(context: Context): JSONObject {
         val roots = JSONObject()
+        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        val runtimeAllowed = prefs.getBoolean("trusted_runtime_code_ack", false) &&
+            prefs.getBoolean("python_enabled", false)
+        if (!runtimeAllowed) return roots
         list(context).filter { it.enabled && it.runtime == "python-wsgi" }.forEach { site ->
             site.hostnames.forEach { hostname -> roots.put(hostname, File(site.root).canonicalPath) }
         }
@@ -78,7 +82,18 @@ object SiteRegistry {
 
     fun hostRoutingJson(context: Context, pythonPort: Int, nodePort: Int): JSONObject {
         val routes = JSONObject()
-        list(context).filter { it.enabled }.forEach { site ->
+        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        val trustedCodeAcknowledged = prefs.getBoolean("trusted_runtime_code_ack", false)
+        val pythonEnabled = trustedCodeAcknowledged && prefs.getBoolean("python_enabled", false)
+        val nodeEnabled = trustedCodeAcknowledged && prefs.getBoolean("node_enabled", false)
+        list(context).filter { site ->
+            site.enabled && when (site.runtime) {
+                "static" -> true
+                "python-wsgi" -> pythonEnabled
+                "node" -> nodeEnabled
+                else -> false
+            }
+        }.forEach { site ->
             val target = when (site.runtime) {
                 "static" -> JSONObject().put("runtime", "static").put("root", File(site.root).canonicalPath)
                 "python-wsgi" -> JSONObject().put("runtime", "python-wsgi").put("port", pythonPort)

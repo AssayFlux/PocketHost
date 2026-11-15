@@ -11,6 +11,7 @@ import java.io.File
 object NodeHostRuntime {
     @Synchronized
     fun start(context: Context, projectRoot: String, port: Int = NodeHostingService.DEFAULT_PORT): String {
+        RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Node port must be between 1024 and 65535." }
         val root = File(projectRoot).canonicalFile
         require(root.isDirectory) { "Node project directory does not exist." }

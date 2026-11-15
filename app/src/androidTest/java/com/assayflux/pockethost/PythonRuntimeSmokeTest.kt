@@ -25,6 +25,8 @@ class PythonRuntimeSmokeTest {
                 "    return [body]\n"
         )
         val port = ServerSocket(0).use { it.localPort }
+        val prefs = context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("trusted_runtime_code_ack", true).commit()
 
         try {
             assertEquals("RUNNING", PythonHostRuntime.start(context, root.absolutePath, port))
@@ -42,6 +44,7 @@ class PythonRuntimeSmokeTest {
             assertTrue(response.contains("PocketHost embedded Python is ready"))
         } finally {
             assertEquals("STOPPED", PythonHostRuntime.stop(context))
+            prefs.edit().putBoolean("trusted_runtime_code_ack", false).commit()
             root.deleteRecursively()
         }
         assertEquals("STOPPED", PythonHostRuntime.status(context))

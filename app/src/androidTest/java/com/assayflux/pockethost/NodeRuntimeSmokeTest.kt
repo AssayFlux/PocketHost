@@ -30,6 +30,8 @@ class NodeRuntimeSmokeTest {
     fun cleanup() {
         runCatching { NativeEngine.stop() }
         runCatching { NodeHostRuntime.stop(context) }
+        context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("trusted_runtime_code_ack", false).commit()
         project.deleteRecursively()
     }
 
@@ -80,6 +82,8 @@ class NodeRuntimeSmokeTest {
                 ".listen(Number(process.env.PORT),'0.0.0.0');\n"
         )
 
+        context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("trusted_runtime_code_ack", true).commit()
         assertEquals("STARTING", NodeHostRuntime.start(context, project.absolutePath, 3000))
         val deadline = System.currentTimeMillis() + 60_000
         while (System.currentTimeMillis() < deadline && NodeHostRuntime.status(context) != "RUNNING") {

@@ -16,6 +16,7 @@ import com.assayflux.pockethost.diagnostics.CapacityController
 import com.assayflux.pockethost.diagnostics.TelemetryStore
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.runtime.NodeHostRuntime
+import com.assayflux.pockethost.runtime.RuntimeTrustGate
 import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.management.RemoteControlAgent
 import com.assayflux.pockethost.sites.SiteRegistry
@@ -68,6 +69,12 @@ class HostingService : Service() {
         }
 
         val engineAlreadyRunning = NativeEngine.status() == "RUNNING"
+            if (!RuntimeTrustGate.isAcknowledged(this) &&
+                (statePreferences.getBoolean("python_enabled", false) || statePreferences.getBoolean("node_enabled", false))) {
+                statePreferences.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).commit()
+                OperationalLog.record(this, "WARN", "OPTIONAL_RUNTIMES_BLOCKED",
+                    "Python/Node startup was blocked because trusted-code acknowledgement is absent. Static hosting remains available.")
+            }
         val registeredRoutes = SiteRegistry.hostRoutingJson(
             this, statePreferences.getInt("python_port", 8081), statePreferences.getInt("node_port", 3000)
         ).toString()

@@ -166,3 +166,17 @@ The following first implementations were added directly to the Android/Rust/Type
 **Important limitations:** telemetry is a low-frequency device snapshot, not a complete profiler or reliable per-process CPU accounting. The CPU percentage is aggregate device utilization and can be unavailable during the first sample. This is a static GET concurrency smoke benchmark, not a complete Capacity Lab. It does not measure Python/Node, external Cloudflare/network throughput, sustained multi-hour thermal behavior, p99, CPU/RPS graphs or arbitrary website workloads. The limiter is a concurrency admission ceiling, not a full rate/fairness/queue governor. Daily reports do not yet contain complete uptime, battery, latency, tunnel or financial metrics. Quality CI [43688959461](https://github.com/AssayFlux/PocketHost/actions/runs/43688959461) passed all six jobs on exact main SHA `c6e07a7248a123aac757a7358dc2df13caec9e86` (Rust, Node runtime, Python runtime, TypeScript console, control plane and Android Kotlin plus Android-test source compilation). This workflow does not package APKs or run emulator instrumentation. Physical-device, emulator instrumentation and external Cloudflare hostname validation remain pending.
 
 **Still not implemented/approved:** OS-enforced per-project runtime UID sandbox and network/filesystem isolation; full Rust-native rate/fairness/queue Resource Governor and long-duration device acceptance; PSP payment integration, webhook inbox, encrypted payment ledger and reconciliation; hash-chained signed audit checkpoints and optional blockchain anchoring; external Cloudflare hostname validation; deployed remote control plane; physical-device acceptance; signed release. Do not run untrusted Python/Node projects or accept live payments under the current architecture.
+
+
+## 2026-11-15 follow-up — optional-runtime trust interlock
+
+- Added a persistent, explicit owner acknowledgement in Advanced Mode before Python or Node can start.
+- Enforced the acknowledgement inside both runtime start APIs, so local management API and lifecycle-supervisor calls cannot bypass the guard.
+- Startup recovery clears stale Python/Node enable flags if acknowledgement is absent; static hosting remains available.
+- Host routing omits Python/Node routes unless acknowledgement and the corresponding runtime-enabled flag are both present.
+- Revoking acknowledgement disables both optional runtimes, stops them and restarts the Rust origin with the remaining static routes.
+- Updated Python/Node documentation to state clearly that the Node `:node` process shares the app UID and is not a security sandbox.
+- Capacity Lab can now be run again after a completed or failed run; concurrent attempts still return the active result.
+- Updated Android runtime smoke tests to explicitly opt into trusted-code execution.
+
+**This is a safety interlock, not sandboxing.** Untrusted Python/Node remains prohibited. OS-enforced UID/process isolation, filesystem and network confinement, and enforceable CPU/memory quotas remain release blockers. PSP payments, signed tamper-evident audit/blockchain anchoring, complete operational reports, full Rust rate/fairness/queue governance, physical-device acceptance and signed release are still not integrated.

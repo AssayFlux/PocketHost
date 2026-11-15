@@ -149,7 +149,7 @@ object CapacityLab {
     @Volatile private var latest = JSONObject().put("state", "NOT_RUN")
 
     @Synchronized fun start(context: Context, port: Int): JSONObject {
-        if (running || latest.optString("state") != "NOT_RUN") return latest
+        if (running) return latest
         require(port in 1024..65535)
         running = true
         latest = JSONObject().put("state", "RUNNING").put("startedAt", Instant.now().toString())

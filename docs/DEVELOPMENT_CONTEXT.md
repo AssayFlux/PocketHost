@@ -28,7 +28,7 @@ Always fetch current default branch, latest commit, open PRs, relevant source fi
 9. Rust is the central HTTP/request engine.
 10. Kotlin + Jetpack Compose owns Android UX, permissions, lifecycle and services.
 11. TypeScript is the authored React/Vite console language; do not switch source to JavaScript.
-12. Python and Node are optional trusted application runtimes until a real security sandbox is implemented and independently validated.
+12. Python and Node are optional trusted application runtimes. A local acknowledgement gate blocks accidental starts and revocation stops them, but this is not a sandbox; OS-backed isolation must be implemented and independently validated before untrusted code is accepted.
 13. Target Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 and ARM64 phones; x86_64 for emulator.
 14. Product goal is budget-conscious hosting for small sites/development/modest workloads, not cloud-region reliability.
 15. UI direction is fixed: PocketHost teal `#24434A`, bronze `#B18B5E`, ivory `#F6F4EF`, slate `#657174`; modern clear cards and restrained accents. Keep the Android dashboard vertically scrollable on small screens, retain Simple/Advanced modes, and show the 16-connection engine ceiling accurately.

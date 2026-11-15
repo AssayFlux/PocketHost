@@ -59,3 +59,8 @@ Gradle downloads the archive only during the native build, checks the complete S
 - [Embedding environment requirements](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/EMBEDDING.md)
 - [Mobile API compatibility](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/FAQ.md)
 - [Build instructions](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/BUILDING.md)
+
+
+## Trusted-code start gate
+
+PocketHost requires an explicit local acknowledgement before starting Node.js. The acknowledgement is stored on-device and can be revoked; revocation stops optional runtimes. The dedicated `:node` process shares the app security identity and filesystem/network privileges: it is **not** an isolated UID or security sandbox. A V8 heap limit is not a hard process-memory or CPU quota. Never execute untrusted projects or expose arbitrary third-party code publicly until OS-backed isolation and network/filesystem restrictions are implemented and independently reviewed.

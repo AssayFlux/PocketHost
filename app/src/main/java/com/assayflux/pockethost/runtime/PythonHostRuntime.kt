@@ -31,6 +31,7 @@ object PythonHostRuntime {
 
     @Synchronized
     fun start(context: Context, projectRoot: String, port: Int, allowLan: Boolean = false): String {
+        RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
         configure(context)
         return python(context).getModule("pockethost_runtime")
@@ -39,6 +40,7 @@ object PythonHostRuntime {
 
     @Synchronized
     fun startSites(context: Context, hostnameRootsJson: String, port: Int, allowLan: Boolean = false): String {
+        RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
         configure(context)
         return python(context).getModule("pockethost_runtime")
