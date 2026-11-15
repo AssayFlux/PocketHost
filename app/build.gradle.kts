@@ -9,6 +9,12 @@ plugins {
     id("com.chaquo.python")
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
+val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+val requestedAbi = providers.gradleProperty("pockethostAbi").orNull
+val selectedAbis = if (requestedAbi == null) supportedAbis else {
+    require(requestedAbi in supportedAbis) { "Unsupported PocketHost ABI: $requestedAbi" }
+    listOf(requestedAbi)
+}
 val nodeRuntimeDir = layout.buildDirectory.dir("generated/node-runtime")
 val prepareNodeRuntime by tasks.registering {
     val output = nodeRuntimeDir
@@ -98,6 +104,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += selectedAbis }
         externalNativeBuild {
             cmake {
                 arguments += listOf("-DNODE_SDK_DIR=" + nodeRuntimeDir.get().asFile.absolutePath, "-DANDROID_STL=c++_shared")
@@ -111,14 +118,6 @@ android {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
             version = "3.22.1"
-        }
-    }
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
-            isUniversalApk = false
         }
     }
     signingConfigs {
