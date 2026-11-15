@@ -106,14 +106,16 @@ class _MetricsMiddleware:
                         _metrics["errors"] += 1
                     raise
                 finally:
-                    close = getattr(iterable, "close", None)
-                    if close:
-                        close()
-                    with _metrics_lock:
-                        if failed:
-                            _metrics["errors"] += 1
-                        _metrics["active"] = max(0, _metrics["active"] - 1)
-                        _metrics["last_request_ms"] = int((time.monotonic() - started) * 1000)
+                    try:
+                        close = getattr(iterable, "close", None)
+                        if close:
+                            close()
+                    finally:
+                        with _metrics_lock:
+                            if failed:
+                                _metrics["errors"] += 1
+                            _metrics["active"] = max(0, _metrics["active"] - 1)
+                            _metrics["last_request_ms"] = int((time.monotonic() - started) * 1000)
             return counted()
 
         try:
