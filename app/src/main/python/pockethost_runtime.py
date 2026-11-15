@@ -7,6 +7,7 @@ Imported project code is untrusted executable code and runs with the app's privi
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 import threading
@@ -238,3 +239,7 @@ def metrics() -> dict:
     """Return process-local WSGI counters, not OS-enforced resource limits."""
     with _metrics_lock:
         return dict(_metrics)
+
+
+def metrics_json() -> str:
+    return json.dumps(metrics(), separators=(",", ":"))
