@@ -151,6 +151,46 @@ class ManagementApiSecurityTest {
     }
 
     @Test
+    fun passwordChangeRotatesSessionsAndInvalidatesOldPassword() {
+        val challenge = JSONObject(request("POST", "/api/v1/pair/challenge", "{}").second)
+        val code = ManagementApiServer.pendingApprovalCode()!!
+        assertEquals(true, ManagementApiServer.approvePairing(code))
+        val ownerToken = JSONObject(request("POST", "/api/v1/pair/complete",
+            JSONObject().put("challengeId", challenge.getString("challengeId")).put("code", code).toString()).second)
+            .getString("accessToken")
+        if (!com.assayflux.pockethost.management.HostAccountStore.hasOwner(context)) {
+            assertEquals(201, request("POST", "/api/v1/auth/accounts",
+                JSONObject().put("username", "hostowner").put("password", "PocketHost-Owner-Password-42").put("role", "OWNER").toString(),
+                authorization = ownerToken).first)
+        }
+        val username = "passchange_" + System.nanoTime().toString().takeLast(8)
+        val oldPassword = "PocketHost-Old-Password-42"
+        val newPassword = "PocketHost-New-Password-84"
+        assertEquals(201, request("POST", "/api/v1/auth/accounts",
+            JSONObject().put("username", username).put("password", oldPassword).put("role", "OPERATOR").toString(),
+            authorization = ownerToken).first)
+        val firstSession = JSONObject(request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", username).put("password", oldPassword).toString()).second)
+        val secondSession = JSONObject(request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", username).put("password", oldPassword).toString()).second)
+        val firstToken = firstSession.getString("accessToken")
+        val secondToken = secondSession.getString("accessToken")
+        val changed = request("POST", "/api/v1/auth/password",
+            JSONObject().put("currentPassword", oldPassword).put("newPassword", newPassword).toString(),
+            authorization = firstToken)
+        assertEquals(200, changed.first)
+        val replacement = JSONObject(changed.second).getString("accessToken")
+        assertEquals(401, request("GET", "/api/v1/status", authorization = firstToken).first)
+        assertEquals(401, request("GET", "/api/v1/status", authorization = secondToken).first)
+        assertEquals(200, request("GET", "/api/v1/status", authorization = replacement).first)
+        assertEquals(401, request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", username).put("password", oldPassword).toString()).first)
+        assertEquals(200, request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", username).put("password", newPassword).toString()).first)
+        assertEquals(204, request("DELETE", "/api/v1/auth/accounts/" + username, authorization = ownerToken).first)
+    }
+
+    @Test
     fun loginRejectsInvalidCredentials() {
         val response = request("POST", "/api/v1/auth/login",
             JSONObject().put("username", "missing-account").put("password", "not-a-valid-password").toString())

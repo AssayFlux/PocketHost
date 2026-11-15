@@ -47,7 +47,7 @@ object ManagementApiServer {
     @Volatile private var acceptThread: Thread? = null
     @Volatile private var appContext: Context? = null
     @Volatile private var pending: Pairing? = null
-    private data class Session(val expiresAt: Long, val username: String, val role: String)
+    private data class Session(val expiresAt: Long, val username: String, val role: String, val deviceApprovedPairing: Boolean = false)
     private val sessions = HashMap<String, Session>()
     private val loginAttempts = HashMap<String, Pair<Long, Int>>()
 
@@ -212,7 +212,7 @@ object ManagementApiServer {
                 return 401 to JSONObject().put("error", "invalid_pairing_code")
             }
             val token = randomToken(32)
-            synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + SESSION_SECONDS, "owner", "OWNER") }
+            synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + SESSION_SECONDS, "owner", "OWNER", deviceApprovedPairing = true) }
             pending = null
             return 200 to JSONObject().put("accessToken", token).put("expiresAt", Instant.now().epochSecond + SESSION_SECONDS)
         }
@@ -266,6 +266,54 @@ object ManagementApiServer {
         }
         if (method == "GET" && path == "/api/v1/auth/me")
             return 200 to JSONObject().put("username", session.username).put("role", session.role).put("expiresAt", session.expiresAt)
+        if (method == "POST" && path == "/api/v1/auth/recover-owner") {
+            if (session.role != "OWNER" || !session.deviceApprovedPairing)
+                return 403 to JSONObject().put("error", "device_approved_pairing_required")
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val ownerUsername = runCatching {
+                HostAccountStore.recoverOwnerPassword(context, body.optString("newPassword").toCharArray())
+            }.getOrElse { return 400 to JSONObject().put("error", it.message ?: "owner_recovery_failed") }
+                ?: return 404 to JSONObject().put("error", "owner_account_not_found")
+            // Recovery revokes every existing Owner and pairing session before issuing
+            // a fresh session for the recovered Owner identity.
+            synchronized(sessions) {
+                sessions.entries.removeAll { it.value.role == "OWNER" }
+            }
+            val replacement = randomToken(32)
+            val expiry = Instant.now().epochSecond + SESSION_SECONDS
+            synchronized(sessions) {
+                sessions[tokenHash(replacement)] = Session(expiry, ownerUsername, "OWNER")
+            }
+            OperationalLog.record(context, "WARN", "HOST_OWNER_PASSWORD_RECOVERED",
+                "Owner credentials reset through locally approved device pairing; prior Owner sessions revoked.")
+            return 200 to JSONObject().put("accessToken", replacement).put("expiresAt", expiry)
+                .put("username", ownerUsername).put("role", "OWNER")
+        }
+        if (method == "POST" && path == "/api/v1/auth/password") {
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val changed = runCatching {
+                HostAccountStore.changePassword(
+                    context,
+                    session.username,
+                    body.optString("currentPassword").toCharArray(),
+                    body.optString("newPassword").toCharArray()
+                )
+            }.getOrElse { return 400 to JSONObject().put("error", it.message ?: "password_change_failed") }
+            if (!changed) return 401 to JSONObject().put("error", "invalid_current_password")
+            // A password change revokes every old session for this account, then returns
+            // one replacement credential so the current console can continue securely.
+            synchronized(sessions) {
+                sessions.entries.removeAll { it.value.username.equals(session.username, true) }
+            }
+            val replacement = randomToken(32)
+            val expiry = Instant.now().epochSecond + SESSION_SECONDS
+            synchronized(sessions) {
+                sessions[tokenHash(replacement)] = Session(expiry, session.username, session.role)
+            }
+            OperationalLog.record(context, "INFO", "HOST_ACCOUNT_PASSWORD_CHANGED",
+                "actor=" + session.username + "; prior sessions revoked")
+            return 200 to JSONObject().put("accessToken", replacement).put("expiresAt", expiry)
+        }
         if (path == "/api/v1/auth/accounts") {
             if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
             val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")

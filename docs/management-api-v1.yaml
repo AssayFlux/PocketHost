@@ -57,6 +57,29 @@ paths:
           description: Session revoked
         '401':
           description: Unauthorized
+  /auth/password:
+    post:
+      summary: Change the authenticated account password and rotate its sessions
+      description: Requires the current account password. On success, all prior sessions for that account are revoked and one replacement bearer token is returned.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, minLength: 12, maxLength: 128, format: password }
+      responses:
+        '200':
+          description: Password changed; prior sessions revoked and replacement token returned
+        '400':
+          description: New password does not meet policy
+        '401':
+          description: Current password is incorrect
+        '503':
+          description: Device management service unavailable
   /status:
     get:
       summary: Read Android service and runtime state

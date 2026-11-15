@@ -21,6 +21,8 @@ export function App() {
   const [approvalCode, setApprovalCode] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [accountUsername, setAccountUsername] = useState("");
   const [accountPassword, setAccountPassword] = useState("");
   const [hostIdentity, setHostIdentity] = useState<{ username: string; role: string } | null>(null);
@@ -133,6 +135,25 @@ export function App() {
       setMessage(needsOwnerSetup ? "Owner account created. Use these credentials for future logins." : "Operator account created.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create host account."); }
     finally { setBusy(false); }
+  }
+
+  async function changeHostPassword() {
+    setBusy(true);
+    try {
+      const result = await request<{ accessToken: string }>("/api/v1/auth/password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      sessionStorage.setItem("pockethost_device_token", result.accessToken);
+      setToken(result.accessToken);
+      setCurrentPassword("");
+      setNewPassword("");
+      setMessage("Password changed. Other sessions for this account were revoked.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not change password.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function revokeHostAccount(username: string) {
@@ -287,6 +308,13 @@ export function App() {
       {token && hostIdentity && <section className="panel">
         <div className="panel-heading"><h3>Host access</h3><span className="muted-tag">{hostIdentity.role}</span></div>
         <p>Signed in as <strong>{hostIdentity.username}</strong>. Operators can inspect device data, operate sites and adjust capacity. Sensitive configuration and account administration remain Owner-only.</p>
+        <div className="section-heading"><div><span className="eyebrow">ACCOUNT SECURITY</span><h2>Change your password</h2></div></div>
+        <div className="resource-panel">
+          <label>Current password<input type="password" autoComplete="current-password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} /></label>
+          <label>New password<input type="password" autoComplete="new-password" value={newPassword} onChange={event => setNewPassword(event.target.value)} placeholder="At least 12 characters" /></label>
+          <button disabled={busy || currentPassword.length === 0 || newPassword.length < 12}
+            onClick={() => void changeHostPassword()}>Change password and revoke other sessions</button>
+        </div>
         {hostIdentity.role === "OWNER" && <>
           <div className="section-heading"><div><span className="eyebrow">TEAM ACCESS</span><h2>{needsOwnerSetup ? "Create the Owner account" : "Manage Operators"}</h2></div></div>
           {needsOwnerSetup && <p>Set a unique Owner username and password of at least 12 characters. Credentials are stored encrypted on the phone.</p>}
