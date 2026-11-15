@@ -40,6 +40,7 @@ services:
     networks: [private]
 
   caddy:
+    profiles: ["public"]
     image: caddy:2
     restart: unless-stopped
     depends_on: [control-plane]
@@ -53,6 +54,14 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+    networks: [private]
+
+  cloudflared:
+    profiles: ["cloudflare"]
+    image: cloudflare/cloudflared:2026.11.0
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${POCKETHOST_CONTROL_TUNNEL_TOKEN:-}
+    depends_on: [control-plane]
     networks: [private]
 
 volumes:
