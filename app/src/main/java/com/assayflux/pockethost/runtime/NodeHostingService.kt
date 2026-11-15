@@ -38,7 +38,8 @@ class NodeHostingService : Service() {
         val root = intent?.getStringExtra(EXTRA_ROOT)
         val entry = intent?.getStringExtra(EXTRA_ENTRY)
         val port = intent?.getIntExtra(EXTRA_PORT, DEFAULT_PORT) ?: DEFAULT_PORT
-        if (root.isNullOrBlank() || entry.isNullOrBlank() || port !in 1024..65535) {
+        val heapLimitMb = intent?.getIntExtra(EXTRA_HEAP_MB, DEFAULT_HEAP_MB) ?: DEFAULT_HEAP_MB
+        if (root.isNullOrBlank() || entry.isNullOrBlank() || port !in 1024..65535 || heapLimitMb !in 96..512) {
             setState("ERROR", "Invalid Node runtime configuration.")
             stopSelf(startId)
             return START_NOT_STICKY
@@ -57,7 +58,7 @@ class NodeHostingService : Service() {
 
         val worker = Thread({
             try {
-                val result = NodeBridge.start(rootFile.absolutePath, entryFile.absolutePath, cacheDir.absolutePath, port)
+                val result = NodeBridge.start(rootFile.absolutePath, entryFile.absolutePath, cacheDir.absolutePath, port, heapLimitMb)
                 if (!stopping) setState(if (result == 0) "STOPPED" else "ERROR", "Node.js exited with code $result.")
             } catch (error: Throwable) {
                 if (!stopping) {
@@ -148,6 +149,8 @@ class NodeHostingService : Service() {
         const val EXTRA_ROOT = "project_root"
         const val EXTRA_ENTRY = "entry_file"
         const val EXTRA_PORT = "port"
+        const val EXTRA_HEAP_MB = "heap_limit_mb"
+        const val DEFAULT_HEAP_MB = 192
         const val DEFAULT_PORT = 3000
         private const val CHANNEL = "pockethost-node"
         private const val NOTIFICATION_ID = 2
