@@ -84,7 +84,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 
 ## IMPLEMENTATION STATUS
 
-**Latest source additions:** embedded CPython 3.11 WSGI hosting, a bounded 16-worker Python HTTP server, staged Python project import, a minimal WSGI example and host-side lifecycle tests. The latest recorded CI run passed Rust, Python, TypeScript, cloudflared cross-compilation, Android debug APK compilation and API 26 emulator smoke. API 33 was still running at last check. API 35's emulator runner failed with adb broken-pipe errors after emulator boot, before a valid test result. See [implementation status](docs/PHASE_0_STATUS.md) for the exact validation snapshot. The Python backend has not yet passed physical-device acceptance testing.
+**Latest source additions:** portable passphrase-encrypted static-site backup/restore (AES-256-GCM), authenticated-before-activation restore validation, a user-exported diagnostics ZIP and a bounded renewable CPU wake-lock lease. No APK was built for these changes. The last recorded CI snapshot predates this batch, so source-compilation results for the latest commits are still pending. See [implementation status](docs/PHASE_0_STATUS.md) for the exact validation boundary.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
@@ -97,7 +97,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | TypeScript console | React + TypeScript + Vite visual scaffold; no authenticated management API connection yet | FOUNDATION |
 | Site folder import | SAF import with staging, sensitive-file checks and bounded size/count/depth | CI VERIFIED · DEVICE PENDING |
 | ZIP import | Compressed and uncompressed size caps, path validation and staged activation | CI VERIFIED · DEVICE PENDING |
-| Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | CI VERIFIED · DEVICE PENDING |
+| Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | SOURCE IMPLEMENTED · DEVICE PENDING |\n| Encrypted website backup | Portable AES-256-GCM passphrase-protected static-site backup; authenticated and validated before restore activation | SOURCE IMPLEMENTED · CI PENDING |\n| Diagnostics | Redacted rotating logs, JSONL export and user-controlled diagnostics ZIP; no project files or tunnel token | SOURCE IMPLEMENTED · CI PENDING |
 | LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
 | Cloudflare Tunnel | Android-targeted cloudflared, encrypted token storage and reconnect supervisor in source; external hostname and physical-device tests remain | INTEGRATED · VALIDATION PENDING |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
@@ -107,7 +107,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 
 **Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.
 
-**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, and session traffic counters are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
+**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, persistent traffic aggregates, encrypted static-site backup/restore and diagnostics export are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
 
 ## ENGINEERING ARCHITECTURE
 
