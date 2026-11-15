@@ -25,7 +25,8 @@ export function App() {
   const [newPassword, setNewPassword] = useState("");
   const [accountUsername, setAccountUsername] = useState("");
   const [accountPassword, setAccountPassword] = useState("");
-  const [hostIdentity, setHostIdentity] = useState<{ username: string; role: string } | null>(null);
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [hostIdentity, setHostIdentity] = useState<{ username: string; role: string; deviceApprovedPairing?: boolean } | null>(null);
   const [hostAccounts, setHostAccounts] = useState<Array<{ username: string; role: string; createdAt: number }>>([]);
   const [needsOwnerSetup, setNeedsOwnerSetup] = useState(false);
   const [status, setStatus] = useState<DeviceStatus | null>(null);
@@ -115,13 +116,31 @@ export function App() {
   }
 
   async function loadHostIdentity() {
-    const me = await request<{ username: string; role: string }>("/api/v1/auth/me");
+    const me = await request<{ username: string; role: string; deviceApprovedPairing?: boolean }>("/api/v1/auth/me");
     setHostIdentity(me);
     if (me.role === "OWNER") {
       const result = await request<{ items: Array<{ username: string; role: string; createdAt: number }> }>("/api/v1/auth/accounts");
       setHostAccounts(result.items || []);
       setNeedsOwnerSetup(!(result.items || []).some(account => account.role === "OWNER"));
     } else { setHostAccounts([]); setNeedsOwnerSetup(false); }
+  }
+
+  async function recoverOwnerPassword() {
+    setBusy(true);
+    try {
+      const result = await request<{ accessToken: string; username: string; role: string }>("/api/v1/auth/recover-owner", {
+        method: "POST", body: JSON.stringify({ newPassword: recoveryPassword }),
+      });
+      sessionStorage.setItem("pockethost_device_token", result.accessToken);
+      setToken(result.accessToken);
+      setHostIdentity({ username: result.username, role: result.role, deviceApprovedPairing: false });
+      setRecoveryPassword("");
+      setMessage("Owner password recovered. All previous Owner and pairing sessions were revoked.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Owner recovery failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function createHostAccount() {
@@ -315,6 +334,14 @@ export function App() {
           <button disabled={busy || currentPassword.length === 0 || newPassword.length < 12}
             onClick={() => void changeHostPassword()}>Change password and revoke other sessions</button>
         </div>
+        {hostIdentity.deviceApprovedPairing && !needsOwnerSetup && <section className="panel">
+          <div className="panel-heading"><h3>Owner account recovery</h3><span className="muted-tag">DEVICE APPROVAL</span></div>
+          <p>This browser session was approved directly on the Android phone. Set a new Owner password to recover access. All existing Owner and pairing sessions will be revoked.</p>
+          <div className="resource-panel">
+            <label>New Owner password<input type="password" autoComplete="new-password" value={recoveryPassword} onChange={event => setRecoveryPassword(event.target.value)} placeholder="At least 12 characters" /></label>
+            <button disabled={busy || recoveryPassword.length < 12} onClick={() => void recoverOwnerPassword()}>Recover Owner account</button>
+          </div>
+        </section>}
         {hostIdentity.role === "OWNER" && <>
           <div className="section-heading"><div><span className="eyebrow">TEAM ACCESS</span><h2>{needsOwnerSetup ? "Create the Owner account" : "Manage Operators"}</h2></div></div>
           {needsOwnerSetup && <p>Set a unique Owner username and password of at least 12 characters. Credentials are stored encrypted on the phone.</p>}

@@ -57,6 +57,28 @@ paths:
           description: Session revoked
         '401':
           description: Unauthorized
+  /auth/recover-owner:
+    post:
+      summary: Recover the Owner password through an on-device approved pairing session
+      description: Only a short-lived session created by a pairing challenge explicitly approved in the Android app can call this route. A successful recovery revokes every Owner and pairing session and returns a new Owner bearer token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
+              properties:
+                newPassword: { type: string, minLength: 12, maxLength: 128, format: password }
+      responses:
+        '200':
+          description: Owner password recovered; previous Owner and pairing sessions revoked
+        '400':
+          description: New password does not meet policy
+        '403':
+          description: Device-approved pairing session required
+        '404':
+          description: No Owner account exists to recover
   /auth/password:
     post:
       summary: Change the authenticated account password and rotate its sessions

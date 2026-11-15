@@ -191,6 +191,50 @@ class ManagementApiSecurityTest {
     }
 
     @Test
+    fun ownerRecoveryRequiresFreshDeviceApprovedPairing() {
+        fun approvedPairingToken(): String {
+            val challenge = JSONObject(request("POST", "/api/v1/pair/challenge", "{}").second)
+            val code = ManagementApiServer.pendingApprovalCode()!!
+            assertEquals(true, ManagementApiServer.approvePairing(code))
+            return JSONObject(request("POST", "/api/v1/pair/complete",
+                JSONObject().put("challengeId", challenge.getString("challengeId")).put("code", code).toString()).second)
+                .getString("accessToken")
+        }
+
+        val pairingToken = approvedPairingToken()
+        if (!com.assayflux.pockethost.management.HostAccountStore.hasOwner(context)) {
+            assertEquals(201, request("POST", "/api/v1/auth/accounts",
+                JSONObject().put("username", "hostowner").put("password", "PocketHost-Owner-Password-42").put("role", "OWNER").toString(),
+                authorization = pairingToken).first)
+        }
+        val ownerUsername = com.assayflux.pockethost.management.HostAccountStore.list(context)
+            .first { it.role == "OWNER" }.username
+        val recoveredPassword = "PocketHost-Recovered-Owner-84"
+        val recovery = request("POST", "/api/v1/auth/recover-owner",
+            JSONObject().put("newPassword", recoveredPassword).toString(), authorization = pairingToken)
+        assertEquals(200, recovery.first)
+        val recoveredToken = JSONObject(recovery.second).getString("accessToken")
+        assertEquals(401, request("GET", "/api/v1/status", authorization = pairingToken).first)
+        assertEquals(200, request("GET", "/api/v1/status", authorization = recoveredToken).first)
+
+        val login = JSONObject(request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", ownerUsername).put("password", recoveredPassword).toString()).second)
+        val normalOwnerToken = login.getString("accessToken")
+        assertEquals(403, request("POST", "/api/v1/auth/recover-owner",
+            JSONObject().put("newPassword", "PocketHost-Another-Password-99").toString(),
+            authorization = normalOwnerToken).first)
+
+        // Restore the emulator's conventional test credential so other instrumentation
+        // cases remain independent regardless of test execution order. Pairing is rate-limited
+        // to one challenge every three seconds.
+        Thread.sleep(3_100)
+        val resetPairing = approvedPairingToken()
+        assertEquals(200, request("POST", "/api/v1/auth/recover-owner",
+            JSONObject().put("newPassword", "PocketHost-Owner-Password-42").toString(),
+            authorization = resetPairing).first)
+    }
+
+    @Test
     fun loginRejectsInvalidCredentials() {
         val response = request("POST", "/api/v1/auth/login",
             JSONObject().put("username", "missing-account").put("password", "not-a-valid-password").toString())

@@ -54,7 +54,9 @@ Keep the phone ventilated, monitor battery/temperature/storage and use conservat
 
 Password verifiers use PBKDF2-HMAC-SHA256; the account registry is encrypted with Android Keystore AES-GCM. Browser tokens are tab-scoped; device sessions expire after 12 hours and are revocable.
 
-Biometric unlock is not yet implemented. Never expose the management API through the public website hostname.
+The management console supports changing your current password. A successful change revokes all other sessions for that account and returns a replacement session for the current browser. If the Owner password is lost, request a fresh pairing challenge and approve it directly in the Android app; the device-approved pairing session can reset the Owner password and invalidates all prior Owner/pairing sessions. Ordinary logged-in Owner sessions cannot invoke this recovery route.
+
+Native biometric app-launch unlock is a separate local UI gate. It does not replace Owner/Operator API authentication or protect against a compromised Android operating system. Never expose the management API through the public website hostname.
 
 
 ## Current repository evidence snapshot — 2026-11-15

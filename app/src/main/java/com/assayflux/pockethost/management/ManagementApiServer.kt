@@ -265,7 +265,8 @@ object ManagementApiServer {
             return 204 to JSONObject()
         }
         if (method == "GET" && path == "/api/v1/auth/me")
-            return 200 to JSONObject().put("username", session.username).put("role", session.role).put("expiresAt", session.expiresAt)
+            return 200 to JSONObject().put("username", session.username).put("role", session.role)
+                .put("expiresAt", session.expiresAt).put("deviceApprovedPairing", session.deviceApprovedPairing)
         if (method == "POST" && path == "/api/v1/auth/recover-owner") {
             if (session.role != "OWNER" || !session.deviceApprovedPairing)
                 return 403 to JSONObject().put("error", "device_approved_pairing_required")
