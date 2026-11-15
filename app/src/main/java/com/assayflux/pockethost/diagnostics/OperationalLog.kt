@@ -86,6 +86,13 @@ object OperationalLog {
         true
     }.getOrDefault(false)
 
+    @Synchronized
+    fun clear(context: Context) {
+        val directory = File(context.applicationContext.filesDir, DIRECTORY)
+        directory.listFiles()?.filter { it.name == CURRENT || it.name.startsWith("$CURRENT.") }
+            ?.forEach { it.delete() }
+    }
+
     private fun rotate(directory: File, current: File) {
         File(directory, "$CURRENT.$RETAINED_FILES").delete()
         for (index in RETAINED_FILES - 1 downTo 1) {

@@ -48,6 +48,7 @@ import com.assayflux.pockethost.diagnostics.TelemetryStore
 import com.assayflux.pockethost.diagnostics.DeviceTelemetry
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
+import com.assayflux.pockethost.storage.SiteFileManager
 import com.assayflux.pockethost.storage.PythonProjectImporter
 import com.assayflux.pockethost.storage.NodeProjectImporter
 import com.assayflux.pockethost.storage.SiteBackupManager
@@ -106,6 +107,15 @@ private fun PocketHostDashboard() {
     var selectedTab by remember { mutableStateOf("Dashboard") }
     var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
+    var showClearLogsConfirmation by remember { mutableStateOf(false) }
+    var siteFileRefresh by remember { mutableIntStateOf(0) }
+    var showCreateSiteFile by remember { mutableStateOf(false) }
+    var newSiteFilePath by remember { mutableStateOf("new-page.html") }
+    var newSiteFileContent by remember { mutableStateOf("") }
+    var editingSiteFilePath by remember { mutableStateOf<String?>(null) }
+    var editingSiteFileContent by remember { mutableStateOf("") }
+    var pendingDeleteSiteFile by remember { mutableStateOf<String?>(null) }
+    var pendingIndexSiteFile by remember { mutableStateOf<String?>(null) }
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
     var advancedMode by remember { mutableStateOf(false) }
@@ -704,6 +714,28 @@ private fun PocketHostDashboard() {
                             onClick = { diagnosticsExportPicker.launch("pockethost-diagnostics.zip") },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Export diagnostics bundle") }
+                        OutlinedButton(onClick = { showClearLogsConfirmation = true },
+                            enabled = recentEvents.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                            Text("Clear logs")
+                        }
+                        if (showClearLogsConfirmation) {
+                            AlertDialog(
+                                onDismissRequest = { showClearLogsConfirmation = false },
+                                title = { Text("Clear operational logs?") },
+                                text = { Text("This permanently removes the app's retained operational event log files from this device. Export them first if you need a copy.") },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        OperationalLog.clear(context)
+                                        recentEvents = emptyList()
+                                        logFilter = ""
+                                        logFilterMode = "All"
+                                        status = "Operational logs cleared."
+                                        showClearLogsConfirmation = false
+                                    }) { Text("Clear logs") }
+                                },
+                                dismissButton = { TextButton(onClick = { showClearLogsConfirmation = false }) { Text("Cancel") } }
+                            )
+                        }
                     }
                 }
 
@@ -718,26 +750,44 @@ private fun PocketHostDashboard() {
                         Text("WEBSITE", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
                         Text(importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                         val siteRoot = File(context.filesDir, "site")
-                        val siteFiles = remember(importedSummary) {
-                            if (siteRoot.isDirectory) siteRoot.walkTopDown().maxDepth(8).filter { it.isFile }.take(100).toList()
-                            else emptyList()
-                        }
-                        Text("Site files", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        val siteFiles = remember(importedSummary, siteFileRefresh) { SiteFileManager.list(context) }
+                        Text("Site files and folders", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        OutlinedButton(onClick = { showCreateSiteFile = true }, enabled = !hosting && !importing,
+                            modifier = Modifier.fillMaxWidth()) { Text("New text file") }
                         if (siteFiles.isEmpty()) {
                             Text("No imported site files yet. Choose a folder or ZIP to deploy your website.", color = palette.onSurfaceVariant)
                         } else {
-                            siteFiles.forEach { file ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                    Text("▤", Modifier.padding(end = 8.dp), color = palette.onSurfaceVariant)
-                                    Text(file.relativeTo(siteRoot).path, Modifier.weight(1f), color = palette.onSurface,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("${formatBytes(file.length())} · ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(file.lastModified()))}",
-                                        color = palette.onSurfaceVariant, maxLines = 1)
+                            siteFiles.forEach { entry ->
+                                Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                        Text(if (entry.isDirectory) "▣" else "▤", Modifier.padding(end = 8.dp), color = palette.onSurfaceVariant)
+                                        Text(entry.relativePath, Modifier.weight(1f), color = palette.onSurface,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(if (entry.isDirectory) "Folder" else formatBytes(entry.size), color = palette.onSurfaceVariant)
+                                    }
+                                    if (!entry.isDirectory) {
+                                        Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(entry.lastModified)),
+                                            color = palette.onSurfaceVariant)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            OutlinedButton(onClick = {
+                                                runCatching { SiteFileManager.readText(context, entry.relativePath) }
+                                                    .onSuccess { editingSiteFilePath = entry.relativePath; editingSiteFileContent = it }
+                                                    .onFailure { status = it.message ?: "This file cannot be edited as text." }
+                                            }, enabled = !hosting && entry.isEditable) { Text("Edit") }
+                                            if (entry.relativePath.endsWith(".html", true) || entry.relativePath.endsWith(".htm", true)) {
+                                                OutlinedButton(onClick = { pendingIndexSiteFile = entry.relativePath },
+                                                    enabled = !hosting) { Text("Set as index") }
+                                            }
+                                            OutlinedButton(onClick = { pendingDeleteSiteFile = entry.relativePath },
+                                                enabled = !hosting) { Text("Delete") }
+                                        }
+                                    }
                                 }
+                                Divider(color = palette.outline)
                             }
                         }
-                        Text(if (File(siteRoot, "index.html").isFile) "Entry page: index.html" else "No index.html found at the site root yet.", color = palette.onSurfaceVariant)
+                        Text(if (SiteFileManager.hasIndex(context)) "Entry page: index.html" else "No index.html found at the site root yet.", color = palette.onSurfaceVariant)
                         OutlinedButton(
                             onClick = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },
                             enabled = hosting,
@@ -793,6 +843,86 @@ private fun PocketHostDashboard() {
                         }
                     }
                 }
+
+                    if (showCreateSiteFile) {
+                        AlertDialog(
+                            onDismissRequest = { showCreateSiteFile = false },
+                            title = { Text("Create text file") },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    OutlinedTextField(value = newSiteFilePath, onValueChange = { newSiteFilePath = it },
+                                        label = { Text("Relative file path") }, singleLine = true)
+                                    OutlinedTextField(value = newSiteFileContent, onValueChange = { newSiteFileContent = it },
+                                        label = { Text("File contents") }, minLines = 4, maxLines = 8)
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    runCatching { SiteFileManager.createText(context, newSiteFilePath, newSiteFileContent) }
+                                        .onSuccess {
+                                            siteFileRefresh++
+                                            newSiteFilePath = "new-page.html"
+                                            newSiteFileContent = ""
+                                            status = "Text file created."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not create the file." }
+                                    showCreateSiteFile = false
+                                }) { Text("Create") }
+                            },
+                            dismissButton = { TextButton(onClick = { showCreateSiteFile = false }) { Text("Cancel") } }
+                        )
+                    }
+                    editingSiteFilePath?.let { path ->
+                        AlertDialog(
+                            onDismissRequest = { editingSiteFilePath = null },
+                            title = { Text("Edit $path") },
+                            text = {
+                                OutlinedTextField(value = editingSiteFileContent, onValueChange = { editingSiteFileContent = it },
+                                    modifier = Modifier.fillMaxWidth(), minLines = 6, maxLines = 12)
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    runCatching { SiteFileManager.writeText(context, path, editingSiteFileContent) }
+                                        .onSuccess { siteFileRefresh++; status = "File saved." }
+                                        .onFailure { status = it.message ?: "Could not save the file." }
+                                    editingSiteFilePath = null
+                                }) { Text("Save") }
+                            },
+                            dismissButton = { TextButton(onClick = { editingSiteFilePath = null }) { Text("Cancel") } }
+                        )
+                    }
+                    pendingDeleteSiteFile?.let { path ->
+                        AlertDialog(
+                            onDismissRequest = { pendingDeleteSiteFile = null },
+                            title = { Text("Delete file?") },
+                            text = { Text("Delete $path permanently from the imported website?") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    runCatching { SiteFileManager.deleteFile(context, path) }
+                                        .onSuccess { siteFileRefresh++; status = "File deleted." }
+                                        .onFailure { status = it.message ?: "Could not delete the file." }
+                                    pendingDeleteSiteFile = null
+                                }) { Text("Delete") }
+                            },
+                            dismissButton = { TextButton(onClick = { pendingDeleteSiteFile = null }) { Text("Cancel") } }
+                        )
+                    }
+                    pendingIndexSiteFile?.let { path ->
+                        AlertDialog(
+                            onDismissRequest = { pendingIndexSiteFile = null },
+                            title = { Text("Set website entry page?") },
+                            text = { Text("Copy $path to the website root as index.html? An existing index.html will be replaced.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    runCatching { SiteFileManager.setIndex(context, path) }
+                                        .onSuccess { siteFileRefresh++; status = "Website entry page updated to index.html." }
+                                        .onFailure { status = it.message ?: "Could not set the entry page." }
+                                    pendingIndexSiteFile = null
+                                }) { Text("Set index.html") }
+                            },
+                            dismissButton = { TextButton(onClick = { pendingIndexSiteFile = null }) { Text("Cancel") } }
+                        )
+                    }
 
                 }
                 if (selectedTab == "Settings") {
