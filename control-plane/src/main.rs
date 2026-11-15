@@ -176,14 +176,14 @@ async fn device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (Statu
     row.map(|r| r.get("id")).ok_or((StatusCode::UNAUTHORIZED, "invalid_device_token".into()))
 }
 
-async fn audit(s: &AppState, action: &str, target: &str, details: Value) -> Result<(), (StatusCode, String)> {
-    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES('admin',$1,$2,$3)")
-        .bind(action).bind(target).bind(details).execute(&s.db).await.map_err(internal)?;
+async fn audit(s: &AppState, actor: &str, action: &str, target: &str, details: Value) -> Result<(), (StatusCode, String)> {
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(actor).bind(action).bind(target).bind(details).execute(&s.db).await.map_err(internal)?;
     Ok(())
 }
 
 async fn list_audit(State(s): State<AppState>, headers: HeaderMap) -> Result<Json<Vec<Value>>, (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let _role = admin(&headers, &s).await?;
     let rows = sqlx::query("SELECT id,actor,action,target,details,created_at FROM audit_events ORDER BY created_at DESC LIMIT 200")
         .fetch_all(&s.db).await.map_err(internal)?;
     Ok(Json(rows.into_iter().map(|r| json!({
@@ -244,7 +244,7 @@ async fn delete_device(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
     }
-    audit(&s, "device.revoke", &id.to_string(), json!({})).await?;
+    audit(&s, &role, "device.revoke", &id.to_string(), json!({})).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -282,7 +282,7 @@ async fn put_config(
         .bind(json!({"version":next,"config":committed_config}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, "config.update", &id.to_string(), json!({"version":next})).await?;
+    audit(&s, &role, "config.update", &id.to_string(), json!({"version":next})).await?;
     Ok(Json(ConfigView { version: row.get("version"), config: row.get("config"), updated_at: row.get("updated_at") }))
 }
 
@@ -301,7 +301,7 @@ async fn queue_command(
     let result = sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) SELECT $1,id,$2,$3 FROM devices WHERE id=$4")
         .bind(command_id).bind(input.kind).bind(input.payload).bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "device_not_found".into())); }
-    audit(&s, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
+    audit(&s, &role, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"commandId":command_id,"state":"queued"}))))
 }
 
@@ -336,7 +336,7 @@ async fn upload_site_archive(
         .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, "site.deploy.queue", &id.to_string(), json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()})).await?;
+    audit(&s, &role, "site.deploy.queue", &id.to_string(), json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len(),"state":"queued"}))))
 }
 
@@ -399,7 +399,7 @@ async fn acknowledge(
     let result = sqlx::query("UPDATE device_commands SET state=$3,result=$4,acknowledged_at=now() WHERE id=$1 AND device_id=$2 AND state='delivered'")
         .bind(command).bind(id).bind(state).bind(input.result).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "command_not_found_or_already_acknowledged".into())); }
-    audit(&s, "command.acknowledge", &command.to_string(), json!({"deviceId":id,"state":state})).await?;
+    audit(&s, "device", "command.acknowledge", &command.to_string(), json!({"deviceId":id,"state":state})).await?;
     Ok(Json(json!({"acknowledged":true,"state":state})))
 }
 
