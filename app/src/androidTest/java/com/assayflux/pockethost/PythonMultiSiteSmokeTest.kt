@@ -26,10 +26,15 @@ class PythonMultiSiteSmokeTest {
         val preferences = context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
         val hadOld = preferences.contains("python_max_workers")
         val oldWorkers = preferences.getInt("python_max_workers", 8)
+        val hadTrustAck = preferences.contains("trusted_runtime_code_ack")
+        val oldTrustAck = preferences.getBoolean("trusted_runtime_code_ack", false)
         val port = ServerSocket(0).use { it.localPort }
 
         try {
-            preferences.edit().putInt("python_max_workers", 2).commit()
+            preferences.edit()
+                .putInt("python_max_workers", 2)
+                .putBoolean("trusted_runtime_code_ack", true)
+                .commit()
             val routes = JSONObject()
                 .put("a.pockethost.test", first.absolutePath)
                 .put("b.pockethost.test", second.absolutePath)
@@ -41,8 +46,11 @@ class PythonMultiSiteSmokeTest {
             assertEquals(2, metrics.getInt("worker_limit"))
         } finally {
             PythonHostRuntime.stop(context)
-            if (hadOld) preferences.edit().putInt("python_max_workers", oldWorkers).commit()
-            else preferences.edit().remove("python_max_workers").commit()
+            val restore = preferences.edit()
+            if (hadOld) restore.putInt("python_max_workers", oldWorkers) else restore.remove("python_max_workers")
+            if (hadTrustAck) restore.putBoolean("trusted_runtime_code_ack", oldTrustAck)
+            else restore.remove("trusted_runtime_code_ack")
+            restore.commit()
             first.deleteRecursively()
             second.deleteRecursively()
         }
