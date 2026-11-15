@@ -113,7 +113,7 @@ Implement a provider-neutral payment integration boundary:
 - Define retention, deletion, data residency, tax/invoice and dispute evidence policies with legal/accounting review for launch jurisdictions.
 - Fail safely if the phone is offline: provider webhook retries must be acknowledged only after durable event persistence; reconcile missed events after reconnect. Do not promise payment availability when the phone or network is offline.
 
-## 8. Tamper-evident audit and optional blockchain anchoring
+## 8. Conventional tamper-evident audit
 
 Use a conventional append-only audit log as the source of truth. Each event includes event ID, sequence, UTC timestamp, actor/device, action, target, outcome, reason, correlation ID and redacted metadata. Link records using a cryptographic hash chain; periodically sign checkpoints with a key protected by Android Keystore or a remote KMS. Detect missing, reordered or modified records during verification.
 
@@ -195,7 +195,7 @@ Use monotonic time for durations and UTC wall-clock timestamps for durable event
 
 ### Phase E — Payments and audit
 - PSP adapter, webhook verification, idempotency, reconciliation, encrypted ledger, audit chain and backup/restore.
-- Optional checkpoint anchoring to blockchain after privacy review.
+- Local checkpoint verification and signed checkpoint export.
 - Security assessment and legal/PCI scope review before accepting live payments.
 
 ### Phase F — Operational maturity
@@ -213,7 +213,7 @@ Use monotonic time for durations and UTC wall-clock timestamps for durable event
 - SSRF/DNS rebinding and private-address egress attempts are blocked by policy.
 - Payment webhook invalid signature, stale timestamp, duplicate, replay and out-of-order events are safely handled.
 - Payment reconciliation detects missing/duplicate/mismatched events.
-- Audit chain tampering, deletion and reordering are detected; offline blockchain anchoring resumes later.
+- Audit chain tampering, deletion and reordering are detected; signed checkpoints can be verified offline.
 - Logs redact secrets and payment data; rotation cannot exhaust storage; daily report is reproducible.
 - Backup restore verifies encryption, integrity, schema migration and payment-ledger consistency.
 - External HTTPS checks confirm public hostnames route only to website origins, never management endpoints.

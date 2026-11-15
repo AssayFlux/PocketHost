@@ -45,7 +45,7 @@ The owner already has a domain and Cloudflare Tunnel. Reuse the existing named t
 | Remote control plane | Rust/Axum + PostgreSQL | Optional remote device registry, command queue, roles and audit | Serving the user's website |
 | Resource Governor (planned) | Rust policy engine + Android telemetry | Safe admission budgets, throttling, queues and recovery | Claiming to reserve CPU or override Android |
 | Payment adapter (planned) | Provider-neutral service boundary | PSP sessions, verified events, reconciliation and ledger | Raw card processing/storage |
-| Audit service (planned) | Append-only hash-chained records | Integrity and accountability | Treating blockchain as proof that events are truthful |
+| Audit service (planned) | Append-only hash-chained records and signed checkpoints | Integrity and accountability | Treating cryptographic integrity as proof that source events were truthful |
 
 TypeScript is the authored console language; browser bundles emit JavaScript as required by browsers.
 
@@ -133,7 +133,7 @@ Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTI
 - Use a payment provider's hosted/tokenized checkout; never store PAN/CVV/PIN.
 - Verify raw-body webhook signatures, timestamps, idempotency and replay; reconcile provider events.
 - Store an encrypted event ledger with provider references and integer minor-unit amounts.
-- Keep append-only hash-chained audit records; optional blockchain stores only batched checkpoint hashes.
+- Keep append-only hash-chained audit records and signed checkpoints with local verification; no blockchain or distributed-ledger integration.
 - No PCI/security certification claim without qualified independent assessment.
 
 ## 8. Logs, reporting and recovery (partially implemented; expansion planned)

@@ -55,7 +55,7 @@ Provide Simple and Advanced modes, presets and custom settings. Schedules such a
 Separate website traffic from management. Protect credentials. Restrict network and filesystem access. Treat Python/Node code as trusted until strong per-project isolation is proven. Use payment providers rather than handling card data. Do not claim PCI compliance without assessment.
 
 ### 9. Auditable operations
-Keep bounded, redacted operational logs, daily reports, tamper-evident audit records and recoverable backups. Optional blockchain anchoring may verify audit checkpoints; it must not store personal or payment information and must not become a hosting dependency.
+Keep bounded, redacted operational logs, daily reports, conventional tamper-evident audit records and recoverable backups. Use local hash chaining and signed checkpoints; blockchain and distributed-ledger technology are excluded.
 
 ### 10. Honest availability
 A phone is not a cloud region. Battery, heat, Doze, OEM process management, mobile network, carrier NAT, storage and power outages affect availability. Explain degraded states and never promise unlimited traffic or 24/7 uptime.
@@ -97,7 +97,7 @@ The interface should feel modern, calm and operational—not like a generic deve
 - General-purpose Linux, root access, Docker or arbitrary shell hosting.
 - Public multi-tenant execution of hostile code without a reviewed sandbox.
 - Storing card numbers, CVVs, PINs or payment secrets in website projects.
-- Putting personal/payment data or full audit logs on a blockchain.
+- Introducing blockchain or distributed-ledger dependencies into the hosting product.
 - Claiming PCI compliance or security certification without independent evidence.
 
 ## Decision filter
