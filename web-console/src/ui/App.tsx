@@ -1,24 +1,132 @@
-const metrics = [
-  { label: "Published sites", value: "—", note: "Connect a device to load sites" },
-  { label: "Requests today", value: "—", note: "Waiting for device metrics" },
-  { label: "Data served", value: "—", note: "No telemetry received" },
-];
-const nav = ["Overview", "Websites", "Deployments", "Traffic", "Logs", "Settings"];
+import { useCallback, useEffect, useState } from "react";
+
+type Runtime = { name: string; state: string; detail?: string };
+type DeviceStatus = { state: string; apiVersion: string; runtimes: Runtime[] };
+type Metrics = { sampledAt: string; sources: Array<{ source: string; requests: number; bytesServed: number; scopeNote?: string }> };
+
+const defaultApi = "http://127.0.0.1:17841";
+const storedToken = () => { try { return localStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
+
 export function App() {
+  const [apiBase, setApiBase] = useState(() => localStorage.getItem("pockethost_api_base") || defaultApi);
+  const [token, setToken] = useState(storedToken);
+  const [challengeId, setChallengeId] = useState("");
+  const [approvalCode, setApprovalCode] = useState("");
+  const [status, setStatus] = useState<DeviceStatus | null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
+  const [busy, setBusy] = useState(false);
+
+  const request = useCallback(async (path: string, init: RequestInit = {}) => {
+    const response = await fetch(apiBase.replace(/\/$/, "") + path, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
+      cache: "no-store",
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) throw new Error(data.error || `Device API returned ${response.status}`);
+    return data;
+  }, [apiBase, token]);
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [nextStatus, nextMetrics] = await Promise.all([
+        request("/api/v1/status"),
+        request("/api/v1/metrics"),
+      ]);
+      setStatus(nextStatus);
+      setMetrics(nextMetrics);
+      setMessage("Secure device session active. Metrics are labelled by their actual source.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not reach the device.");
+      if (error instanceof Error && error.message === "unauthorized") {
+        setToken("");
+        localStorage.removeItem("pockethost_device_token");
+      }
+    }
+  }, [request, token]);
+
+  useEffect(() => {
+    if (!token) return;
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3000);
+    return () => window.clearInterval(timer);
+  }, [refresh, token]);
+
+  async function beginPairing() {
+    setBusy(true);
+    try {
+      localStorage.setItem("pockethost_api_base", apiBase);
+      const result = await request("/api/v1/pair/challenge", { method: "POST", body: "{}" });
+      setChallengeId(result.challengeId);
+      setMessage("A six-digit approval code is now displayed in the PocketHost Android app. Approve this browser only if you initiated this request.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Pairing request failed.");
+    } finally { setBusy(false); }
+  }
+
+  async function completePairing() {
+    setBusy(true);
+    try {
+      const result = await request("/api/v1/pair/complete", {
+        method: "POST",
+        body: JSON.stringify({ challengeId, code: approvalCode }),
+      });
+      localStorage.setItem("pockethost_device_token", result.accessToken);
+      setToken(result.accessToken);
+      setApprovalCode("");
+      setChallengeId("");
+      setMessage("Device paired. Your bearer token is stored in this browser profile.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Pairing failed.");
+    } finally { setBusy(false); }
+  }
+
+  async function revoke() {
+    setBusy(true);
+    try {
+      await request("/api/v1/session", { method: "DELETE" });
+      setMessage("This browser session has been revoked on the device.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Session revocation failed.");
+    } finally {
+      localStorage.removeItem("pockethost_device_token");
+      setToken("");
+      setStatus(null);
+      setMetrics(null);
+      setBusy(false);
+    }
+  }
+
+  const bytes = (value: number) => value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1048576).toFixed(1)} MB`;
+
   return <main className="app-shell">
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">P</span><div><strong>PocketHost</strong><small>BY ASSAYFLUX</small></div></div>
       <div className="workspace-label">WORKSPACE</div>
-      <nav aria-label="Console sections">{nav.map((item, i) => <a className={i === 0 ? "nav-item active" : "nav-item"} href="#preview" key={item}><span className="nav-dot">{["◈","▣","↗","⌁","≡","⚙"][i]}</span>{item}</a>)}</nav>
-      <div className="sidebar-bottom"><span className="connection-dot" /> Device not connected <small>Connect from PocketHost Android</small></div>
+      <nav aria-label="Console sections"><a className="nav-item active" href="#overview">◈ Overview</a><a className="nav-item" href="#runtimes">▣ Runtimes</a><a className="nav-item" href="#metrics">⌁ Metrics</a><a className="nav-item" href="#connection">⚙ Connection</a></nav>
+      <div className="sidebar-bottom"><span className="connection-dot" /> {token ? "Paired device session" : "Device not paired"}<small>Loopback management API · v1</small></div>
     </aside>
-    <section className="main-panel" id="preview">
-      <header className="topbar"><div><span className="eyebrow">ASSAYFLUX / CONTROL PLANE</span><h1>Overview</h1><p>Manage your websites and hosting environment.</p></div><span className="device-pill"><i /> No device connected</span></header>
-      <section className="notice"><div className="notice-icon">i</div><div><strong>Console preview</strong><p>This interface is a visual foundation. It is not connected to an Android device or management API yet. Live controls are intentionally unavailable.</p></div></section>
-      <section className="metric-grid">{metrics.map(m => <article className="metric-card" key={m.label}><span>{m.label}</span><strong>{m.value}</strong><small>{m.note}</small></article>)}</section>
-      <div className="section-heading"><div><span className="eyebrow">HOSTING</span><h2>Your websites</h2></div><span className="muted-tag">DEVICE DATA UNAVAILABLE</span></div>
-      <section className="empty-state"><div className="empty-icon">⌘</div><h3>Connect PocketHost to get started</h3><p>Your deployed sites, domains, deployment history and traffic will appear here after a secure management connection is implemented.</p><span className="outline-chip">Static hosting foundation</span></section>
-      <section className="lower-grid"><article className="panel"><div className="panel-heading"><h3>Hosting status</h3><span className="status-muted">Not connected</span></div><div className="status-line"><span>Rust engine</span><strong>—</strong></div><div className="status-line"><span>Cloudflare Tunnel</span><strong>Not available</strong></div><div className="status-line"><span>Python / Node.js</span><strong>Not available</strong></div></article><article className="panel"><div className="panel-heading"><h3>System design</h3><span className="muted-tag">POCKETHOST 0.1.0</span></div><div className="stack-row"><b>Android</b><span>Kotlin · Jetpack Compose</span></div><div className="stack-row"><b>Engine</b><span>Rust · Tokio · Hyper</span></div><div className="stack-row"><b>Console</b><span>React · TypeScript</span></div></article></section>
+    <section className="main-panel" id="overview">
+      <header className="topbar"><div><span className="eyebrow">ASSAYFLUX / CONTROL PLANE</span><h1>Device overview</h1><p>Live status from your PocketHost Android device.</p></div><span className="device-pill"><i /> {token ? "Session active" : "Not connected"}</span></header>
+      <section className="notice"><div className="notice-icon">i</div><div><strong>Device connection</strong><p>{message}</p></div></section>
+      {!token && <section className="panel" id="connection">
+        <div className="panel-heading"><h3>Secure device pairing</h3><span className="muted-tag">DEVICE APPROVAL REQUIRED</span></div>
+        <label>Management API address<input value={apiBase} onChange={e => setApiBase(e.target.value)} spellCheck={false} /></label>
+        <button disabled={busy} onClick={beginPairing}>Request pairing code</button>
+        {challengeId && <div className="pair-complete"><p>Enter the code shown in the Android app after approving this request.</p><input aria-label="Device approval code" value={approvalCode} onChange={e => setApprovalCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="6-digit code" /><button disabled={busy || approvalCode.length !== 6} onClick={completePairing}>Complete pairing</button></div>}
+      </section>}
+      <section className="metric-grid" id="metrics">
+        <article className="metric-card"><span>Rust static requests</span><strong>{metrics?.sources.find(x => x.source === "rust-static")?.requests.toLocaleString() ?? "—"}</strong><small>Persisted device counter</small></article>
+        <article className="metric-card"><span>Static data served</span><strong>{metrics ? bytes(metrics.sources.find(x => x.source === "rust-static")?.bytesServed ?? 0) : "—"}</strong><small>Rust static server only</small></article>
+        <article className="metric-card"><span>Last sample</span><strong>{metrics ? new Date(metrics.sampledAt).toLocaleTimeString() : "—"}</strong><small>Device-reported timestamp</small></article>
+      </section>
+      <div className="section-heading" id="runtimes"><div><span className="eyebrow">DEVICE RUNTIMES</span><h2>Runtime health</h2></div><span className="muted-tag">{status?.state ?? "NOT CONNECTED"}</span></div>
+      <section className="lower-grid"><article className="panel"><div className="panel-heading"><h3>Runtime status</h3><span className="status-muted">{status ? "Live device data" : "Waiting for pairing"}</span></div>
+        {(status?.runtimes ?? [{ name: "rust-static", state: "—" }, { name: "python", state: "—" }, { name: "node", state: "—" }]).map(runtime => <div className="status-line" key={runtime.name}><span>{runtime.name}</span><strong>{runtime.state}</strong></div>)}
+      </article><article className="panel"><div className="panel-heading"><h3>Session controls</h3><span className="muted-tag">LOCAL DEVICE</span></div><p>Revoking this session invalidates its bearer credential on the device.</p><button className="danger-button" disabled={!token || busy} onClick={revoke}>Revoke this session</button><p className="scope-note">Node.js currently reports unavailable until its native Android runtime is integrated. Python and Node request/resource metrics are not yet implemented.</p></article></section>
       <footer>Designed by AssayFlux <span>·</span> Your website. Your device. Your control.</footer>
     </section>
   </main>;
