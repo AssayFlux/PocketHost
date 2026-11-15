@@ -9,6 +9,7 @@ type Device = {
 };
 type Config = { version: number; config: Record<string, unknown>; updated_at: string };
 type AuditEntry = { id: number; actor: string; action: string; target: string; details: Record<string, unknown>; createdAt: string };
+type ControlUser = { id: string; name: string; role: "editor" | "viewer"; active: boolean };
 
 const initialPayloads: Record<string, string> = {
   site_action: JSON.stringify({ siteId: "my-site", action: "stop" }, null, 2),
@@ -22,6 +23,10 @@ export function RemoteControlPlane() {
   const [deviceName, setDeviceName] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [users, setUsers] = useState<ControlUser[]>([]);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"editor" | "viewer">("viewer");
+  const [newUserToken, setNewUserToken] = useState("");
   const [selected, setSelected] = useState("");
   const [issuedToken, setIssuedToken] = useState("");
   const [configText, setConfigText] = useState('{"pythonMaxWorkers":8,"nodeHeapMb":192,"tunnelEnabled":false}');
@@ -94,6 +99,30 @@ export function RemoteControlPlane() {
     finally { setBusy(false); }
   }
 
+  async function loadUsers() {
+    setBusy(true);
+    try { setUsers(await request<ControlUser[]>("/v1/admin/users")); setMessage("Team accounts loaded."); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Only the owner can manage team accounts."); }
+    finally { setBusy(false); }
+  }
+
+  async function createUser() {
+    setBusy(true); setNewUserToken("");
+    try {
+      const created = await request<{ id: string; name: string; role: string; token: string }>("/v1/admin/users", { method: "POST", body: JSON.stringify({ name: newUserName, role: newUserRole }) });
+      setNewUserToken(created.token); setNewUserName(""); await loadUsers();
+      setMessage("Team account created. Copy its token; it is displayed only once.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create team account."); }
+    finally { setBusy(false); }
+  }
+
+  async function revokeUser(user: ControlUser) {
+    if (!window.confirm("Revoke " + user.name + "? Their API token will stop working immediately.")) return;
+    setBusy(true);
+    try { await request<void>("/v1/admin/users/" + encodeURIComponent(user.id), { method: "DELETE" }); setUsers(items => items.filter(item => item.id !== user.id)); setMessage("Team account revoked."); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Could not revoke account."); }
+    finally { setBusy(false); }
+  }
   async function revokeDevice(device: Device) {
     if (!window.confirm(`Revoke ${device.name}? Its device token and queued commands will be invalidated.`)) return;
     setBusy(true);
@@ -204,6 +233,15 @@ export function RemoteControlPlane() {
       </article>
     </div>}
     <p className="scope-note">The backend does not access phone files directly and exposes no shell command endpoint. Site deployment still uses the native import workflow; remote archive deployment is not yet supported.</p>
+    <div className="section-heading"><div><span className="eyebrow">ACCESS CONTROL</span><h2>Team permissions</h2></div><span className="muted-tag">OWNER MANAGED</span></div>
+    <div className="resource-panel">
+      <p>Owner credentials can create revocable Editor and Viewer accounts. Editors can manage devices and deployments; Viewers can inspect device state, configuration and audit history.</p>
+      <label>Account name<input value={newUserName} onChange={event => setNewUserName(event.target.value)} placeholder="Team member" /></label>
+      <label>Permission role<select value={newUserRole} onChange={event => setNewUserRole(event.target.value as "editor" | "viewer")}><option value="viewer">Viewer · read only</option><option value="editor">Editor · manage devices</option></select></label>
+      <div className="site-actions"><button disabled={busy || !newUserName.trim()} onClick={createUser}>Create account</button><button disabled={busy} onClick={loadUsers}>Load team</button></div>
+      {newUserToken && <div className="notice"><strong>One-time team token</strong><code>{newUserToken}</code><button onClick={() => void navigator.clipboard.writeText(newUserToken)}>Copy token</button></div>}
+      {users.map(user => <div className="status-line" key={user.id}><span><strong>{user.name}</strong><small>{user.role} · {user.active ? "Active" : "Revoked"}</small></span><button className="danger-button" disabled={busy || !user.active} onClick={() => void revokeUser(user)}>Revoke</button></div>)}
+    </div>
     <div className="section-heading"><div><span className="eyebrow">SECURITY & GOVERNANCE</span><h2>Audit history</h2></div><span className="muted-tag">LATEST 200 EVENTS</span></div>
     <div className="resource-panel">
       {auditEntries.length === 0 ? <p>No audit events recorded yet.</p> : auditEntries.map(entry => <div className="status-line" key={entry.id}>
