@@ -21,8 +21,14 @@ class HostingService : Service() {
     @Volatile private var stopping = false
     @Volatile private var tunnelSupervisorActive = false
     @Volatile private var metricsMonitorActive = false
+    @Volatile private var wakeLockMonitorActive = false
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
     private var hostingWakeLock: PowerManager.WakeLock? = null
+
+    companion object {
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
+        private const val WAKE_LOCK_REFRESH_MS = 5 * 60 * 1000L
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -189,12 +195,42 @@ class HostingService : Service() {
                 "AssayFlux: PocketHostHosting"
             ).apply {
                 setReferenceCounted(false)
-                acquire()
+                // A bounded lease prevents a leaked lock from holding the CPU forever
+                // if service teardown is interrupted. The supervisor renews it only
+                // while this foreground service remains active.
+                acquire(WAKE_LOCK_TIMEOUT_MS)
             }
-            OperationalLog.record(this, "INFO", "WAKE_LOCK_ACQUIRED", "Optional CPU wake lock enabled while hosting.")
+            startWakeLockRefresh()
+            OperationalLog.record(this, "INFO", "WAKE_LOCK_ACQUIRED", "Optional CPU wake lock enabled with a renewable ten-minute lease.")
         }.onFailure {
             OperationalLog.record(this, "WARN", "WAKE_LOCK_UNAVAILABLE", it.message ?: "Could not acquire CPU wake lock.")
         }
+    }
+
+    private fun startWakeLockRefresh() {
+        if (wakeLockMonitorActive) return
+        wakeLockMonitorActive = true
+        Thread({
+            try {
+                while (!stopping && statePreferences.getBoolean("keep_awake", false)) {
+                    Thread.sleep(WAKE_LOCK_REFRESH_MS)
+                    if (stopping || !statePreferences.getBoolean("keep_awake", false)) break
+                    synchronized(this@HostingService) {
+                        hostingWakeLock?.let { lock ->
+                            if (stopping) return@synchronized
+                            runCatching { lock.acquire(WAKE_LOCK_TIMEOUT_MS) }
+                                .onFailure {
+                                    OperationalLog.record(this, "WARN", "WAKE_LOCK_RENEWAL_FAILED", it.message ?: "Could not renew CPU wake lock.")
+                                }
+                        }
+                    }
+                }
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } finally {
+                wakeLockMonitorActive = false
+            }
+        }, "PocketHost-WakeLock-Lease").start()
     }
 
     private fun releaseWakeLock() {
