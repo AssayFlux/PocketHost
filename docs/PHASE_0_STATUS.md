@@ -3,7 +3,7 @@
 > **Current reconciliation — 2026-11-16**
 >
 > - **Current main:** `eee3b82d8071fdb06acb4cea0393dfebab2fc869`. PRs #48–#62 are merged.
-> - **Quality CI:** PR #62 head quality run [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs. Fresh main quality run [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) is in progress.
+> - **Quality CI:** PR #62 head quality run [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs. Fresh main quality run [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) passed all six jobs.
 > - **Android build:** main integration run [43769131790](https://github.com/AssayFlux/PocketHost/actions/runs/43769131790) passed cloudflared Android build and is assembling ARM64, ARMv7 and x86_64 debug APKs. Emulator smoke is skipped on push events. PR-triggered run [43769116977](https://github.com/AssayFlux/PocketHost/actions/runs/43769116977) remains pending. Previous main artifact [14168200339](https://github.com/AssayFlux/PocketHost/actions/runs/43728985708/artifacts/14168200339) predates PR #62.
 > - **Management API:** route dispatch no longer serializes health and authentication behind all configuration writes; pairing/login state has dedicated locks, login verification is capped at two concurrent slots, and concurrent health behavior has an instrumentation regression test.
 > - **Runtime filesystem boundary:** Python/Node project roots must resolve beneath PocketHost app-private directories; canonical path and symlink-escape tests cover `files`, `cache`, `noBackup` and `codeCache`. This is not an OS sandbox; Python and Node still run with the app UID.
