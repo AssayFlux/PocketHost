@@ -1,15 +1,15 @@
-# PocketHost UI Design
+# AssayFlux Pocket Host — UI Design
 
 **Status:** Design specification recorded; screen implementation is gated on owner approval.
-**Product identity:** AssayFlux PocketHost. “Phone Web Host” describes the use case and does not rename the application.
+**Product identity:** AssayFlux Pocket Host (repository: `AssayFlux/PocketHost`). “Phone Web Host” describes the use case and does not rename the application.
 **Authority:** This document is the single source of truth for PocketHost UI implementation. Read it before implementing each screen. If a design decision changes, update this document in the same commit as the corresponding UI code.
 
 ## 1. Precedence and existing product decisions
 
 This specification is layered on top of the owner's earlier PocketHost instructions. Earlier instructions take precedence wherever there is a conflict.
 
-- Keep the product/repository/app identity **AssayFlux PocketHost**. Do not rename it to “Phone Web Host”.
-- Preserve the established PocketHost teal/bronze/ivory visual identity and existing icon style. The navy palette proposed in this brief is recorded below as a proposed alternative, but is **not active** unless the owner explicitly approves replacing the earlier palette.
+- The user-approved app display name is **AssayFlux Pocket Host**. The GitHub repository remains `AssayFlux/PocketHost`; do not rename repository paths, package IDs, modules or technical identifiers without separate approval. “Phone Web Host” describes the use case, not the app name.
+- The owner explicitly approved replacing the earlier teal/bronze/ivory palette with the navy palette in the 2026-11-15 brief. The navy palette below is now active. Preserve the existing icon style unless a separate change is approved.
 - Preserve the existing native Android architecture: Kotlin and Jetpack Compose, no Termux and no root; Rust remains the HTTP engine; TypeScript remains the management-console language.
 - Do not add features, change existing code, or rename things without owner approval. A UI control must not imply that a backend capability exists when it does not.
 - Ask before major product or architecture decisions.
@@ -19,13 +19,11 @@ This specification is layered on top of the owner's earlier PocketHost instructi
 
 ### 2.1 Active styling
 
-Use the established PocketHost visual identity already present in the product and repository: restrained teal, bronze and ivory; clean, modern, intuitive, WhatsApp-like information hierarchy; existing icon style. Do not perform an unrelated color refresh.
+Use the owner-approved classic, clean, timeless visual system: light theme by default, optional dark theme, no gradients, neon or glass effects. The navy palette below is authoritative. Keep the interface calm, readable, practical and consistent. Use system sans-serif typography for body text and monospace for URLs, IP addresses, ports and logs. Use clear hierarchy, strong contrast, generous spacing and recognizable controls.
 
-Keep the interface calm, readable, practical and consistent. Use system sans-serif typography for body text and monospace for URLs, IP addresses, ports and logs. Use clear hierarchy, strong contrast, generous spacing and recognizable controls.
+### 2.2 Active palette and dimensions
 
-### 2.2 Proposed style from the 2026-11-15 brief (requires approval to supersede earlier palette)
-
-The owner supplied this classic, clean, timeless alternative:
+The owner approved this palette on 2026-11-15:
 - Light theme by default, optional dark theme.
 - No gradients, neon or glass effects.
 - Background `#F7F7F5`; cards `#FFFFFF`; text `#1C1C1C`; secondary text `#6B6B6B`; accent navy `#1F3A5F`; success `#2E7D32`; error `#C62828`; warning `#B26A00`; border `#E2E2DE`.
@@ -34,12 +32,12 @@ The owner supplied this classic, clean, timeless alternative:
 - Tap targets at least 48dp; text at least 14sp.
 - Minimal 150–200ms animations.
 
-The spacing, sizing, accessibility and motion requirements above may be used where compatible with the active PocketHost theme. Switching the active palette to the proposed navy palette requires explicit owner approval.
+These palette, spacing, sizing, accessibility and motion requirements are active.
 
 ## 3. Navigation
 
 - Bottom navigation destinations: **Dashboard**, **Files**, **Logs**, **Settings**.
-- Top app bar: **AssayFlux PocketHost** on the left and a server-status indicator/dot on the right.
+- Top app bar: **AssayFlux Pocket Host** on the left and a server-status indicator/dot on the right.
 - Keep navigation usable with gesture and three-button system navigation.
 - Preserve state appropriately when switching tabs; do not discard in-progress user input unexpectedly.
 - Use labels with icons; never rely on icon-only navigation or actions where a text label is practical.
@@ -156,4 +154,5 @@ Do not claim a configuration was tested unless a test or inspection actually ran
 
 ## 10. Change Log
 
-- **2026-11-15:** Initial UI specification recorded from the owner's Phone Web Host design brief. Preserved earlier PocketHost product identity, teal/bronze/ivory palette and modern intuitive layout because the brief's navy palette conflicts with earlier instructions. No UI implementation authorized by this document alone.
+- **2026-11-15:** Initial UI specification recorded from the owner's Phone Web Host design brief.
+- **2026-11-15:** Owner explicitly approved the classic navy palette and set the app display name to **AssayFlux Pocket Host**. Repository name and technical identifiers remain unchanged. UI implementation is still gated on the owner's Dashboard approval.
