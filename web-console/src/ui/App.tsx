@@ -84,6 +84,28 @@ export function App() {
     } finally { setBusy(false); }
   }
 
+  async function siteAction(site: Site, action: "start" | "stop") {
+    setBusy(true);
+    try {
+      await request("/api/v1/sites/" + encodeURIComponent(site.id) + "/actions", {
+        method: "POST", body: JSON.stringify({ action }),
+      });
+      await refresh();
+      setMessage(site.name + ": " + action + " request completed.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Site action failed."); }
+    finally { setBusy(false); }
+  }
+
+  async function tunnelAction(action: "start" | "stop") {
+    setBusy(true);
+    try {
+      const result = await request("/api/v1/tunnel/actions", { method: "POST", body: JSON.stringify({ action }) });
+      setTunnel(current => ({ configured: current?.configured ?? false, state: result.state }));
+      setMessage("Cloudflare Tunnel: " + result.state);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Tunnel action failed."); }
+    finally { setBusy(false); }
+  }
+
   async function revoke() {
     setBusy(true);
     try {
@@ -124,6 +146,10 @@ export function App() {
         <article className="metric-card"><span>Last sample</span><strong>{metrics ? new Date(metrics.sampledAt).toLocaleTimeString() : "—"}</strong><small>Device-reported timestamp</small></article>
       </section>
       <div className="section-heading" id="runtimes"><div><span className="eyebrow">DEVICE RUNTIMES</span><h2>Runtime health</h2></div><span className="muted-tag">{status?.state ?? "NOT CONNECTED"}</span></div>
+      <section className="lower-grid">
+        <article className="panel"><div className="panel-heading"><h3>Cloudflare Tunnel</h3><span className="muted-tag">{tunnel?.state ?? "UNKNOWN"}</span></div><p>{tunnel?.configured ? "Encrypted tunnel token is configured on the Android device." : "No tunnel token is configured."}</p><div className="site-actions"><button disabled={busy || !tunnel?.configured} onClick={() => tunnelAction("start")}>Start tunnel</button><button disabled={busy} onClick={() => tunnelAction("stop")}>Stop tunnel</button></div></article>
+        <article className="panel"><div className="panel-heading"><h3>Recent operations</h3><span className="muted-tag">{logs.length} EVENTS</span></div>{logs.slice(0,8).map((entry,i)=><div className="log-line" key={entry.timestamp+i}><strong>{entry.level}</strong><span>{entry.event}</span><small>{entry.message}</small></div>)}</article>
+      </section>
       <section className="lower-grid"><article className="panel"><div className="panel-heading"><h3>Runtime status</h3><span className="status-muted">{status ? "Live device data" : "Waiting for pairing"}</span></div>
         {(status?.runtimes ?? [{ name: "rust-static", state: "—" }, { name: "python", state: "—" }, { name: "node", state: "—" }]).map(runtime => <div className="status-line" key={runtime.name}><span>{runtime.name}</span><strong>{runtime.state}</strong></div>)}
       </article><article className="panel"><div className="panel-heading"><h3>Session controls</h3><span className="muted-tag">LOCAL DEVICE</span></div><p>Revoking this session invalidates its bearer credential on the device.</p><button className="danger-button" disabled={!token || busy} onClick={revoke}>Revoke this session</button><p className="scope-note">Node.js currently reports unavailable until its native Android runtime is integrated. Python and Node request/resource metrics are not yet implemented.</p></article></section>
