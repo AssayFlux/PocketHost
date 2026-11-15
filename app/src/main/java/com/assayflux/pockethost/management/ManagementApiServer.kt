@@ -266,6 +266,31 @@ object ManagementApiServer {
         }
         if (method == "GET" && path == "/api/v1/auth/me")
             return 200 to JSONObject().put("username", session.username).put("role", session.role).put("expiresAt", session.expiresAt)
+        if (method == "POST" && path == "/api/v1/auth/password") {
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val changed = runCatching {
+                HostAccountStore.changePassword(
+                    context,
+                    session.username,
+                    body.optString("currentPassword").toCharArray(),
+                    body.optString("newPassword").toCharArray()
+                )
+            }.getOrElse { return 400 to JSONObject().put("error", it.message ?: "password_change_failed") }
+            if (!changed) return 401 to JSONObject().put("error", "invalid_current_password")
+            // A password change revokes every old session for this account, then returns
+            // one replacement credential so the current console can continue securely.
+            synchronized(sessions) {
+                sessions.entries.removeAll { it.value.username.equals(session.username, true) }
+            }
+            val replacement = randomToken(32)
+            val expiry = Instant.now().epochSecond + SESSION_SECONDS
+            synchronized(sessions) {
+                sessions[tokenHash(replacement)] = Session(expiry, session.username, session.role)
+            }
+            OperationalLog.record(context, "INFO", "HOST_ACCOUNT_PASSWORD_CHANGED",
+                "actor=" + session.username + "; prior sessions revoked")
+            return 200 to JSONObject().put("accessToken", replacement).put("expiresAt", expiry)
+        }
         if (path == "/api/v1/auth/accounts") {
             if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
             val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
