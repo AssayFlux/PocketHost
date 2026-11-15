@@ -77,6 +77,7 @@ class ApplicationBackupCustomRootTest {
             }.exceptionOrNull()
             assertNotNull("A duplicate-host restore must fail validation and trigger rollback.", failure)
             assertEquals("<h1>preserve-on-failure</h1>", File(customRoot, "index.html").readText())
+            assertEquals("<h1>default</h1>", File(siteRoot, "index.html").readText())
             assertEquals(listOf(siteId), SiteRegistry.list(context).map { it.id })
             assertEquals(listOf(hostname), SiteRegistry.list(context).single().hostnames)
         } finally {
