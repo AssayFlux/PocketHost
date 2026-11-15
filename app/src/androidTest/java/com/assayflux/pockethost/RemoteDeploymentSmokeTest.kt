@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.management.RemoteControlAgent
+import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.storage.SiteImporter
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -15,6 +16,7 @@ import java.util.zip.ZipOutputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -33,6 +35,45 @@ class RemoteDeploymentSmokeTest {
         assertFalse("Raw remote token must never be persisted", stored.contains(token))
         RemoteControlAgent.clear(context)
         assertFalse(RemoteControlAgent.isConfigured(context))
+    }
+
+    @Test
+    fun remoteResourceConfigurationKeepsStaticHostingOnline() {
+        val site = File(context.filesDir, "remote-config-smoke").apply { mkdirs() }
+        File(site, "index.html").writeText("static-origin-stays-online")
+        val port = ServerSocket(0).use { it.localPort }
+        val prefs = context.getSharedPreferences("pockethost_state", 0)
+        val oldWorkers = prefs.getInt("python_max_workers", 8)
+        val oldHeap = prefs.getInt("node_heap_mb", 192)
+        try {
+            assertEquals("OK", NativeEngine.start(site.absolutePath, port, false))
+            val result = ManagementApiServer.executeRemoteCommand(
+                context,
+                "apply_config",
+                JSONObject().put("config", JSONObject()
+                    .put("pythonMaxWorkers", 6)
+                    .put("nodeHeapMb", 256))
+            )
+            assertEquals(200, result.optInt("status"))
+            assertEquals(6, prefs.getInt("python_max_workers", -1))
+            assertEquals(256, prefs.getInt("node_heap_mb", -1))
+            assertTrue("Remote configuration must not stop the Rust static server",
+                result.optJSONObject("body")?.optJSONArray("applied") != null &&
+                    NativeEngine.status() == "RUNNING")
+            val response = Socket("127.0.0.1", port).use { socket ->
+                socket.soTimeout = 5_000
+                socket.getOutputStream().write(
+                    "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".toByteArray()
+                )
+                socket.getOutputStream().flush()
+                socket.getInputStream().bufferedReader().use { it.readText() }
+            }
+            assertTrue(response.contains("static-origin-stays-online"))
+        } finally {
+            NativeEngine.stop()
+            prefs.edit().putInt("python_max_workers", oldWorkers).putInt("node_heap_mb", oldHeap).commit()
+            site.deleteRecursively()
+        }
     }
 
     @Test

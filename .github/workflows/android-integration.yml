@@ -126,6 +126,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Emulator instrumentation is memory-heavy; serialize the three virtual
+      # devices to avoid starving the Android test process on hosted runners.
+      max-parallel: 1
       matrix:
         api-level: [26, 33, 35]
     steps:

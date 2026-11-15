@@ -110,14 +110,17 @@ class NodeHostingService : Service() {
     } catch (_: Exception) { false }
 
     private fun sampleMetrics() {
-        val root = activeProjectRoot ?: return
+        if (stopping) return
+        activeProjectRoot ?: return
         val file = File(noBackupFilesDir, "node-runtime/metrics.json")
         val metrics = runCatching { if (file.isFile) JSONObject(file.readText()) else JSONObject() }.getOrDefault(JSONObject())
         metrics.put("source", "node")
             .put("processPssKb", Debug.getPss())
             .put("nativeHeapBytes", Debug.getNativeHeapAllocatedSize())
             .put("sampledAt", System.currentTimeMillis())
-        NodeRuntimeStateStore.update(this, metrics = metrics)
+        // Metrics are best-effort; lock contention or service shutdown must not kill
+        // the isolated Node process or prevent the readiness monitor from exiting.
+        runCatching { NodeRuntimeStateStore.update(this, metrics = metrics) }
     }
 
     private fun setState(state: String, detail: String) {
