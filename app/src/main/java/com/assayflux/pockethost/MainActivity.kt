@@ -128,6 +128,8 @@ private fun PocketHostDashboard() {
     var newSiteFileContent by remember { mutableStateOf("") }
     var editingSiteFilePath by remember { mutableStateOf<String?>(null) }
     var editingSiteFileContent by remember { mutableStateOf("") }
+    var renamingSiteFilePath by remember { mutableStateOf<String?>(null) }
+    var renamedSiteFilePath by remember { mutableStateOf("") }
     var pendingDeleteSiteFile by remember { mutableStateOf<String?>(null) }
     var pendingIndexSiteFile by remember { mutableStateOf<String?>(null) }
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
@@ -313,6 +315,25 @@ private fun PocketHostDashboard() {
                     previousReleases = SiteImporter.listReleases(context)
                     status = "ZIP website deployed locally. Start hosting to preview it."
                 }.onFailure { error -> status = error.message ?: "ZIP import failed." }
+                importing = false
+            }
+        }
+    }
+
+    val singleFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            importing = true
+            status = "Uploading website file…"
+            scope.launch {
+                val result = runCatching {
+                    withContext(Dispatchers.IO) { SiteFileManager.importFile(context, uri) }
+                }
+                result.onSuccess { entry ->
+                    siteFileRefresh++
+                    status = "Uploaded ${entry.relativePath} (${formatBytes(entry.size)})."
+                }.onFailure { error ->
+                    status = error.message ?: "Individual file upload failed."
+                }
                 importing = false
             }
         }
@@ -825,6 +846,8 @@ private fun PocketHostDashboard() {
                         Text("Site files and folders", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(onClick = { showCreateSiteFile = true }, enabled = !hosting && !importing,
                             modifier = Modifier.fillMaxWidth()) { Text("New text file") }
+                        OutlinedButton(onClick = { singleFilePicker.launch(arrayOf("*/*")) }, enabled = !hosting && !importing,
+                            modifier = Modifier.fillMaxWidth()) { Text("Upload individual file") }
                         if (siteFiles.isEmpty()) {
                             Text("No imported site files yet. Choose a folder or ZIP to deploy your website.", color = palette.onSurfaceVariant)
                         } else {
@@ -842,6 +865,10 @@ private fun PocketHostDashboard() {
                                             color = palette.onSurfaceVariant)
                                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             OutlinedButton(onClick = {
+                                                renamingSiteFilePath = entry.relativePath
+                                                renamedSiteFilePath = entry.relativePath
+                                            }, enabled = !hosting) { Text("Rename") }
+                                            OutlinedButton(onClick = {
                                                 runCatching { SiteFileManager.readText(context, entry.relativePath) }
                                                     .onSuccess { editingSiteFilePath = entry.relativePath; editingSiteFileContent = it }
                                                     .onFailure { status = it.message ?: "This file cannot be edited as text." }
@@ -853,6 +880,11 @@ private fun PocketHostDashboard() {
                                             OutlinedButton(onClick = { pendingDeleteSiteFile = entry.relativePath },
                                                 enabled = !hosting) { Text("Delete") }
                                         }
+                                    } else {
+                                        OutlinedButton(onClick = {
+                                            renamingSiteFilePath = entry.relativePath
+                                            renamedSiteFilePath = entry.relativePath
+                                        }, enabled = !hosting) { Text("Rename folder") }
                                     }
                                 }
                                 Divider(color = palette.outline)
@@ -941,6 +973,36 @@ private fun PocketHostDashboard() {
                                 }) { Text("Create") }
                             },
                             dismissButton = { TextButton(onClick = { showCreateSiteFile = false }) { Text("Cancel") } }
+                        )
+                    }
+                    renamingSiteFilePath?.let { sourcePath ->
+                        AlertDialog(
+                            onDismissRequest = { renamingSiteFilePath = null },
+                            title = { Text("Rename website entry") },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("Enter the new relative path. The destination must be inside an existing website folder and cannot overwrite another entry.")
+                                    OutlinedTextField(
+                                        value = renamedSiteFilePath,
+                                        onValueChange = { renamedSiteFilePath = it },
+                                        label = { Text("New relative path") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    runCatching { SiteFileManager.renameEntry(context, sourcePath, renamedSiteFilePath) }
+                                        .onSuccess {
+                                            siteFileRefresh++
+                                            status = "Website entry renamed."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not rename the website entry." }
+                                    renamingSiteFilePath = null
+                                }, enabled = renamedSiteFilePath.isNotBlank() && renamedSiteFilePath != sourcePath) { Text("Rename") }
+                            },
+                            dismissButton = { TextButton(onClick = { renamingSiteFilePath = null }) { Text("Cancel") } }
                         )
                     }
                     editingSiteFilePath?.let { path ->

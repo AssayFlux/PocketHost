@@ -18,6 +18,7 @@ Start here, in this order:
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
 - [Control-plane Deployment](CONTROL_PLANE_DEPLOYMENT.md)
+- [Website Deployment Guide](WEBSITE_DEPLOYMENT.md)
 - [Site Backup](SITE_BACKUP.md)
 - [Release Signing](RELEASE_SIGNING.md)
 

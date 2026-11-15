@@ -27,7 +27,7 @@ Make reliable, transparent and affordable self-hosting accessible to people with
 - Existing user-owned domain and Cloudflare Tunnel must be reused, not recreated.
 - Remote control plane is optional and separately deployed.
 
-Read [North Star](docs/NORTH_STAR.md), [Roadmap](docs/ROADMAP.md), and [Development Context](docs/DEVELOPMENT_CONTEXT.md) before making architectural changes.
+Read the [Website Deployment Guide](docs/WEBSITE_DEPLOYMENT.md) for framework/language compatibility and build-output instructions. Also read [North Star](docs/NORTH_STAR.md), [Roadmap](docs/ROADMAP.md), and [Development Context](docs/DEVELOPMENT_CONTEXT.md) before making architectural changes.
 
 ## Capacity and operations
 
