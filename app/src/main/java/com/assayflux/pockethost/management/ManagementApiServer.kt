@@ -273,7 +273,13 @@ object ManagementApiServer {
                     }
                 }
             } ?: return 429 to JSONObject().put("error", "login_rate_limited")
-            val account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
+            var account: HostAccountStore.Account? = null
+            var verificationFailed = false
+            try {
+                account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
+            } catch (_: Exception) {
+                verificationFailed = true
+            }
             synchronized(loginAttemptsLock) {
                 throttle.inFlight = (throttle.inFlight - 1).coerceAtLeast(0)
                 if (account == null) {
@@ -289,6 +295,7 @@ object ManagementApiServer {
                     loginAttempts.remove(normalizedUsername, throttle)
                 }
             }
+            if (verificationFailed) return 503 to JSONObject().put("error", "credential_store_unavailable")
             if (account == null) return 401 to JSONObject().put("error", "invalid_credentials")
             val token = randomToken(32)
             val expiry = now + SESSION_SECONDS
