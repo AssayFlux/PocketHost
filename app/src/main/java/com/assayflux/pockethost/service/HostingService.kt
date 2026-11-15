@@ -22,6 +22,7 @@ class HostingService : Service() {
     @Volatile private var tunnelSupervisorActive = false
     @Volatile private var metricsMonitorActive = false
     @Volatile private var wakeLockMonitorActive = false
+    @Volatile private var wakeLockMonitor: Thread? = null
     private val statePreferences by lazy { getSharedPreferences("pockethost_state", MODE_PRIVATE) }
     private var hostingWakeLock: PowerManager.WakeLock? = null
 
@@ -210,7 +211,8 @@ class HostingService : Service() {
     private fun startWakeLockRefresh() {
         if (wakeLockMonitorActive) return
         wakeLockMonitorActive = true
-        Thread({
+        if (stopping) return
+        val monitor = Thread({
             try {
                 while (!stopping && statePreferences.getBoolean("keep_awake", false)) {
                     Thread.sleep(WAKE_LOCK_REFRESH_MS)
@@ -229,11 +231,17 @@ class HostingService : Service() {
                 Thread.currentThread().interrupt()
             } finally {
                 wakeLockMonitorActive = false
+                wakeLockMonitor = null
             }
-        }, "PocketHost-WakeLock-Lease").start()
+        }, "PocketHost-WakeLock-Lease")
+        wakeLockMonitor = monitor
+        monitor.start()
     }
 
+    @Synchronized
     private fun releaseWakeLock() {
+        wakeLockMonitor?.interrupt()
+        wakeLockMonitor = null
         runCatching {
             hostingWakeLock?.let { lock ->
                 if (lock.isHeld) lock.release()
