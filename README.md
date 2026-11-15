@@ -97,7 +97,9 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | TypeScript console | React + TypeScript + Vite visual scaffold; no authenticated management API connection yet | FOUNDATION |
 | Site folder import | SAF import with staging, sensitive-file checks and bounded size/count/depth | CI VERIFIED · DEVICE PENDING |
 | ZIP import | Compressed and uncompressed size caps, path validation and staged activation | CI VERIFIED · DEVICE PENDING |
-| Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | SOURCE IMPLEMENTED · DEVICE PENDING |\n| Encrypted website backup | Portable AES-256-GCM passphrase-protected static-site backup; authenticated and validated before restore activation | SOURCE IMPLEMENTED · CI PENDING |\n| Diagnostics | Redacted rotating logs, JSONL export and user-controlled diagnostics ZIP; no project files or tunnel token | SOURCE IMPLEMENTED · CI PENDING |
+| Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | SOURCE IMPLEMENTED · DEVICE PENDING |
+| Encrypted website backup | Portable AES-256-GCM passphrase-protected static-site backup; authenticated and validated before restore activation | SOURCE IMPLEMENTED · CI PENDING |
+| Diagnostics | Redacted rotating logs, JSONL export and user-controlled diagnostics ZIP; no project files or tunnel token | SOURCE IMPLEMENTED · CI PENDING |
 | LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
 | Cloudflare Tunnel | Android-targeted cloudflared, encrypted token storage and reconnect supervisor in source; external hostname and physical-device tests remain | INTEGRATED · VALIDATION PENDING |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
