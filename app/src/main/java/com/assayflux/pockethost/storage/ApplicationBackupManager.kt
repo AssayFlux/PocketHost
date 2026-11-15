@@ -187,10 +187,25 @@ object ApplicationBackupManager {
             var pythonTouched = false
             var nodeTouched = false
             try {
-                replaceRuntimeDirectory(pythonStage.takeIf { hasPython }, activePython, File(backupDir, "python-project"))
-                    .also { pythonTouched = true }
-                replaceRuntimeDirectory(nodeStage.takeIf { hasNode }, activeNode, File(backupDir, "node-project-default"))
-                    .also { nodeTouched = true }
+                val previousPython = File(backupDir, "python-project")
+                if (activePython.exists()) {
+                    if (!activePython.renameTo(previousPython)) throw IOException("Could not preserve the previous Python project.")
+                    pythonTouched = true
+                }
+                if (hasPython) {
+                    pythonTouched = true
+                    if (!pythonStage.renameTo(activePython)) throw IOException("Could not activate the restored Python project.")
+                }
+
+                val previousNode = File(backupDir, "node-project-default")
+                if (activeNode.exists()) {
+                    if (!activeNode.renameTo(previousNode)) throw IOException("Could not preserve the previous Node.js project.")
+                    nodeTouched = true
+                }
+                if (hasNode) {
+                    nodeTouched = true
+                    if (!nodeStage.renameTo(activeNode)) throw IOException("Could not activate the restored Node.js project.")
+                }
 
                 FileInputStream(staticZip).use { SiteImporter.importZipStream(context, it) }
                 staticImported = true
@@ -559,16 +574,6 @@ object ApplicationBackupManager {
                 }
             }
             visit(root, "")
-        }
-    }
-
-    private fun replaceRuntimeDirectory(staged: File?, active: File, backup: File) {
-        if (active.exists() && !active.renameTo(backup)) {
-            throw IOException("Could not preserve the previous runtime project: ${active.name}")
-        }
-        if (staged != null && staged.exists() && !staged.renameTo(active)) {
-            if (backup.exists()) backup.renameTo(active)
-            throw IOException("Could not activate restored runtime project: ${active.name}")
         }
     }
 
