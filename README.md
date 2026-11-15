@@ -6,7 +6,7 @@ AssayFlux Pocket Host turns an Android phone into a small website host. It runs 
 
 No Termux. No root. No mandatory VPS. The existing domain and named Cloudflare Tunnel can be reused.
 
-> **Current status:** integrated development build. PRs #48–#51 are merged. The six-job quality checks passed on PR #48, #49, #50 and #51. The latest app-source three-ABI debug APK bundle is available as [artifact 14165701365](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844/artifacts/14165701365); emulator instrumentation and physical-device acceptance remain open. This is not a production-approved or signed release.
+> **Current status:** integrated development build. PRs #48–#59 are merged. Main quality run 43725437551 passed six jobs; the latest main Android build and API 26/33/35 backup restore regression are still running. The current app-source build is not yet a production-signed release. Emulator and physical-device acceptance remain open. This is not a production-approved or signed release.
 
 ## What is included
 
