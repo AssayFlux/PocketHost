@@ -563,6 +563,7 @@ object ApplicationBackupManager {
                     target.parentFile?.let { if (!it.exists() && !it.mkdirs()) throw IOException("Could not create a restore folder.") }
                     if (target.exists()) throw IOException("The backup contains a duplicate archive path.")
                     counters.files++
+                    val root = parts[0]
                     if (root in rootFiles) {
                         rootFiles[root] = (rootFiles[root] ?: 0) + 1
                         val rootFileLimit = if (root == "node") 10_000 else 5_000
@@ -571,7 +572,6 @@ object ApplicationBackupManager {
                         }
                     }
                     if (counters.files > MAX_FILES) throw IOException("The backup contains too many files.")
-                    val root = parts[0]
                     var entryBytes = 0L
                     target.outputStream().buffered().use { output ->
                         val buffer = ByteArray(32 * 1024)
