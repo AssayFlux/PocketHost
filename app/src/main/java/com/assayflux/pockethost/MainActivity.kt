@@ -735,6 +735,16 @@ private fun PocketHostDashboard() {
                                 val current = SiteRegistry.list(context).firstOrNull { it.id == id }
                                 SiteRegistry.put(context, SiteRegistry.Site(id, name, hostnameRuntime, root,
                                     (current?.hostnames.orEmpty() + host).distinct(), true))
+                                if (preferences.getBoolean("python_enabled", false)) {
+                                    runCatching { PythonHostRuntime.stop(context) }
+                                    val pythonHosts = SiteRegistry.pythonHostnameMap(context)
+                                    val pythonRoot = preferences.getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
+                                        ?: File(context.filesDir, "python-project").absolutePath
+                                    if (pythonHosts.length() > 0) PythonHostRuntime.startSites(context, pythonHosts.toString(),
+                                        preferences.getInt("python_port", 8081), preferences.getBoolean("allow_lan", false))
+                                    else PythonHostRuntime.start(context, pythonRoot, preferences.getInt("python_port", 8081),
+                                        preferences.getBoolean("allow_lan", false))
+                                }
                                 if (hosting) {
                                     MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed())
                                     NativeEngine.stop()
