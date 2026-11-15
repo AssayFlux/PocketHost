@@ -132,10 +132,12 @@ async fn register_device(
     }
     let id = Uuid::new_v4();
     let token = new_token();
+    let mut tx = s.db.begin().await.map_err(internal)?;
     sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,$2,$3)")
-        .bind(id).bind(name).bind(token_hash(&token)).execute(&s.db).await.map_err(internal)?;
+        .bind(id).bind(name).bind(token_hash(&token)).execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO device_configs(device_id,config) VALUES($1,'{}'::jsonb)")
-        .bind(id).execute(&s.db).await.map_err(internal)?;
+        .bind(id).execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
     Ok((StatusCode::CREATED, Json(RegisteredDevice {
         id, name: name.to_owned(), device_token: token,
         warning: "Store this token securely. It is shown only once.",
