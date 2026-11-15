@@ -244,13 +244,19 @@ object ApplicationBackupManager {
     }
 
     private fun requireAllRuntimesStopped(context: Context) {
-        if (runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) {
+        val nativeStatus = runCatching { NativeEngine.status() }
+            .getOrElse { throw IOException("Could not verify static hosting status.", it) }
+        if (nativeStatus != "STOPPED") {
             throw IOException("Stop static hosting before exporting or restoring a full app backup.")
         }
-        if (runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)) {
+        val pythonStatus = runCatching { PythonHostRuntime.status(context) }
+            .getOrElse { throw IOException("Could not verify Python runtime status.", it) }
+        if (pythonStatus != "STOPPED") {
             throw IOException("Stop the Python runtime before exporting or restoring a full app backup.")
         }
-        if (runCatching { NodeHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)) {
+        val nodeStatus = runCatching { NodeHostRuntime.status(context) }
+            .getOrElse { throw IOException("Could not verify Node.js runtime status.", it) }
+        if (nodeStatus != "STOPPED") {
             throw IOException("Stop the Node.js runtime before exporting or restoring a full app backup.")
         }
     }
