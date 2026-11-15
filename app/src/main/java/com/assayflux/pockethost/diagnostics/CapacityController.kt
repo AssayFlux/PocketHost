@@ -146,12 +146,22 @@ object CapacityController {
 /** A bounded local HTTP workload sweep. It never runs while hosting is stopped. */
 object CapacityLab {
     @Volatile private var running = false
+    @Volatile private var cancelRequested = false
     @Volatile private var latest = JSONObject().put("state", "NOT_RUN")
+
+    @Synchronized fun cancel(): JSONObject {
+        if (running) {
+            cancelRequested = true
+            latest = JSONObject().put("state", "CANCELLING")
+        }
+        return latest
+    }
 
     @Synchronized fun start(context: Context, port: Int): JSONObject {
         if (running) return latest
         require(port in 1024..65535)
         running = true
+        cancelRequested = false
         latest = JSONObject().put("state", "RUNNING").put("startedAt", Instant.now().toString())
         Thread({
             try {
@@ -159,12 +169,25 @@ object CapacityLab {
                 val results = JSONArray()
                 var safe = 1
                 var hasSafeLevel = false
+                var stopReason = "completed"
                 for (level in levels) {
+                    if (cancelRequested) { stopReason = "user_cancelled"; break }
                     val memory = android.app.ActivityManager.MemoryInfo()
                     context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
                     val thermal = if (android.os.Build.VERSION.SDK_INT >= 29)
                         context.getSystemService(android.os.PowerManager::class.java).currentThermalStatus else 0
-                    if (memory.lowMemory || thermal >= 4) break
+                    val battery = runCatching {
+                        context.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+                    }.getOrNull()
+                    val batteryLevel = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                    val batteryScale = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+                    val batteryPercent = if (batteryLevel >= 0 && batteryScale > 0) batteryLevel * 100 / batteryScale else -1
+                    val batteryStatus = battery?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
+                    val charging = batteryStatus == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                        batteryStatus == android.os.BatteryManager.BATTERY_STATUS_FULL
+                    if (memory.lowMemory) { stopReason = "low_memory"; break }
+                    if (thermal >= 4) { stopReason = "severe_thermal"; break }
+                    if (batteryPercent in 0..10 && !charging) { stopReason = "low_battery"; break }
                     val executor = java.util.concurrent.Executors.newFixedThreadPool(level)
                     val latencies = java.util.Collections.synchronizedList(mutableListOf<Long>())
                     val failures = java.util.concurrent.atomic.AtomicInteger(0)
@@ -202,16 +225,25 @@ object CapacityLab {
                         .put("errors", failures.get()).put("p95LatencyMs", p95).put("elapsedMs", elapsed).put("withinSafeThreshold", ok))
                     if (ok) { safe = level; hasSafeLevel = true } else break
                 }
-                val result = JSONObject().put("state", if (hasSafeLevel) "COMPLETE" else "INCONCLUSIVE")
-                    .put("completedAt", Instant.now().toString()).put("safeConcurrency", if (hasSafeLevel) safe else JSONObject.NULL)
+                val cancelled = cancelRequested || stopReason == "user_cancelled"
+                val result = JSONObject().put("state", when {
+                    cancelled -> "CANCELLED"
+                    hasSafeLevel -> "COMPLETE"
+                    else -> "INCONCLUSIVE"
+                })
+                    .put("completedAt", Instant.now().toString())
+                    .put("safeConcurrency", if (hasSafeLevel && !cancelled) safe else JSONObject.NULL)
+                    .put("stopReason", stopReason)
                     .put("levels", results)
                     .put("workload", "Loopback GET / against the active static Rust origin; bounded request sweep.")
-                    .put("threshold", "Zero errors and p95 latency <= 750 ms; aborted on Android low-memory or severe thermal status.")
-                if (hasSafeLevel) {
+                    .put("threshold", "Zero errors and p95 latency <= 750 ms; stopped on user cancellation, Android low-memory, severe thermal status or <=10% battery while not charging.")
+                if (cancelled) {
+                    OperationalLog.record(context, "INFO", "CAPACITY_BENCHMARK_CANCELLED", "Capacity benchmark cancelled by the owner; previous calibration retained.")
+                } else if (hasSafeLevel) {
                     CapacityController.calibrate(context, safe, result)
                     OperationalLog.record(context, "INFO", "CAPACITY_BENCHMARK_COMPLETED", "Safe concurrency ceiling measured at $safe for the local static GET workload.")
                 } else {
-                    OperationalLog.record(context, "WARN", "CAPACITY_BENCHMARK_INCONCLUSIVE", "The lowest concurrency level did not meet the benchmark threshold; prior calibration was retained.")
+                    OperationalLog.record(context, "WARN", "CAPACITY_BENCHMARK_INCONCLUSIVE", "The workload did not establish a safe concurrency ceiling; prior calibration was retained.")
                 }
                 latest = result
             } catch (error: Exception) {

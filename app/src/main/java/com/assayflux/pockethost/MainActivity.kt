@@ -665,6 +665,12 @@ private fun PocketHostDashboard() {
                                 .onFailure { status = it.message ?: "Benchmark could not start." }
                         }, enabled = hosting && capacityBenchmark.optString("state") != "RUNNING",
                             modifier = Modifier.fillMaxWidth()) { Text(if (capacityBenchmark.optString("state") == "RUNNING") "Benchmark running…" else "Measure safe capacity") }
+                        if (capacityBenchmark.optString("state") == "RUNNING" || capacityBenchmark.optString("state") == "CANCELLING") {
+                            OutlinedButton(onClick = {
+                                capacityBenchmark = CapacityLab.cancel()
+                                status = "Stopping the capacity benchmark safely…"
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancel benchmark") }
+                        }
                         Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
                             color = palette.onSurfaceVariant, fontSize = 14.sp)
                         val benchmarkLevels = capacityBenchmark.optJSONArray("levels")
