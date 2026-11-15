@@ -40,9 +40,10 @@ object DailyOperationsReport {
     @Synchronized fun refreshCurrent(context: Context, day: String, requests: Long, bytes: Long) {
         val prefs = context.getSharedPreferences("pockethost_daily_reports", Context.MODE_PRIVATE)
         val now = Instant.now().epochSecond
-        if (now - prefs.getLong("last_snapshot_at", 0L) < 3600L) return
+        val directory = File(context.applicationContext.filesDir, "reports/daily")
+        val destination = File(directory, "$day.json")
+        if (destination.exists() && now - prefs.getLong("last_snapshot_at", 0L) < 3600L) return
         runCatching {
-            val directory = File(context.applicationContext.filesDir, "reports/daily")
             if (!directory.exists()) directory.mkdirs()
             val entries = OperationalLog.read(context, 500).filter { it.timestamp.startsWith(day) }
             val report = JSONObject().put("date", day).put("generatedAt", Instant.now().toString())
@@ -54,13 +55,21 @@ object DailyOperationsReport {
                         .put("level", e.level).put("event", e.event).put("message", e.message)) }
                 })
                 .put("scope", "Hourly snapshot of aggregate static-engine counters and retained redacted events; not financial records.")
-            val destination = File(directory, "$day.json")
             val temporary = File(directory, ".$day.current.tmp")
             temporary.writeText(report.toString(2), Charsets.UTF_8)
             if (!temporary.renameTo(destination)) { temporary.copyTo(destination, overwrite = true); temporary.delete() }
             prefs.edit().putLong("last_snapshot_at", now).apply()
         }
     }
+
+
+    fun exportLatest(context: Context, destination: android.net.Uri): Boolean = runCatching {
+        val report = list(context).firstOrNull() ?: error("No daily report is available yet.")
+        val output = context.contentResolver.openOutputStream(destination)
+            ?: error("Cannot open the selected report destination.")
+        output.use { it.write(report.toString(2).toByteArray(Charsets.UTF_8)) }
+        true
+    }.getOrDefault(false)
 
     fun list(context: Context): List<JSONObject> = runCatching {
         File(context.applicationContext.filesDir, "reports/daily").listFiles()

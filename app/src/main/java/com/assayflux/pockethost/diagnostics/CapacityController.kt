@@ -2,6 +2,8 @@ package com.assayflux.pockethost.diagnostics
 
 import android.content.Context
 import com.assayflux.pockethost.engine.NativeEngine
+import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.runtime.NodeHostRuntime
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -11,6 +13,7 @@ object CapacityController {
     private const val PREFS = "pockethost_capacity"
     private const val DEFAULT_SAFE_LIMIT = 16
     @Volatile private var lastHealthState = "NORMAL"
+    @Volatile private var recoveryUntilElapsed = 0L
 
     private fun healthFactor(context: Context): Pair<Double, String> {
         val memory = android.app.ActivityManager.MemoryInfo()
@@ -28,12 +31,21 @@ object CapacityController {
         val batteryStatus = battery?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
         val charging = batteryStatus == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
             batteryStatus == android.os.BatteryManager.BATTERY_STATUS_FULL
+        val emergency = thermal >= 5 || freeBytes < 128L * 1024L * 1024L
         val critical = memory.lowMemory || memory.availMem < memory.totalMem / 20L ||
             thermal >= 4 || freeBytes < 256L * 1024L * 1024L
         val constrained = thermal >= 3 || memory.availMem < memory.totalMem / 8L ||
             freeBytes < 1024L * 1024L * 1024L || (batteryPercent <= 10 && !charging)
-        val state = if (critical) "PROTECTIVE" else if (constrained) "CONSTRAINED" else "NORMAL"
-        return (if (critical) 0.1 else if (constrained) 0.5 else 1.0) to state
+        if (emergency) { recoveryUntilElapsed = 0L; return 0.05 to "EMERGENCY" }
+        if (critical) { recoveryUntilElapsed = 0L; return 0.1 to "PROTECTIVE" }
+        if (constrained) { recoveryUntilElapsed = 0L; return 0.5 to "CONSTRAINED" }
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (lastHealthState in setOf("CONSTRAINED", "PROTECTIVE", "EMERGENCY") && recoveryUntilElapsed == 0L) {
+            recoveryUntilElapsed = now + 30_000L
+        }
+        if (recoveryUntilElapsed > now) return 0.75 to "RECOVERY"
+        recoveryUntilElapsed = 0L
+        return 1.0 to "NORMAL"
     }
 
     @Synchronized fun tick(context: Context): JSONObject {
@@ -91,10 +103,23 @@ object CapacityController {
         val limit = (baseLimit * factor).toInt().coerceAtLeast(1).coerceAtMost(16)
         if (state != lastHealthState) {
             lastHealthState = state
-            OperationalLog.record(context, if (state == "NORMAL") "INFO" else "WARN",
+            if (state == "PROTECTIVE" || state == "EMERGENCY") suspendOptionalRuntimes(context)
+            OperationalLog.record(context, if (state == "NORMAL" || state == "RECOVERY") "INFO" else "WARN",
                 "CAPACITY_HEALTH_STATE", "Automatic admission protection state changed to $state.")
         }
         runCatching { NativeEngine.setCapacityLimit(limit) }
+    }
+
+    private fun suspendOptionalRuntimes(context: Context) {
+        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        val pythonWasEnabled = prefs.getBoolean("python_enabled", false)
+        val nodeWasEnabled = prefs.getBoolean("node_enabled", false)
+        if (!pythonWasEnabled && !nodeWasEnabled) return
+        prefs.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).commit()
+        if (pythonWasEnabled) runCatching { PythonHostRuntime.stop(context) }
+        if (nodeWasEnabled) runCatching { NodeHostRuntime.stop(context) }
+        OperationalLog.record(context, "WARN", "OPTIONAL_RUNTIMES_SUSPENDED",
+            "Python/Node were disabled to preserve static hosting during critical device pressure. Re-enable them manually after recovery.")
     }
 
     fun snapshot(context: Context): JSONObject {

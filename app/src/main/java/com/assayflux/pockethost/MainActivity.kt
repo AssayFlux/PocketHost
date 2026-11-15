@@ -193,6 +193,17 @@ private fun PocketHostDashboard() {
         }
     }
 
+    val dailyReportExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val exported = withContext(Dispatchers.IO) { DailyOperationsReport.exportLatest(context, uri) }
+                status = if (exported) "Latest daily operations report exported." else "Could not export the daily report."
+            }
+        }
+    }
+
     val diagnosticsExportPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
     ) { uri: Uri? ->
@@ -535,6 +546,11 @@ private fun PocketHostDashboard() {
                                 .onSuccess { capacityInfo = it; status = "30% capacity schedule started." }
                                 .onFailure { status = it.message ?: "Capacity schedule rejected." }
                         }, modifier = Modifier.fillMaxWidth()) { Text("Schedule 30% capacity") }
+                        OutlinedButton(onClick = {
+                            runCatching { CapacityController.schedule(context, capacityPercent.toInt(), capacityDuration.toInt()) }
+                                .onSuccess { capacityInfo = it; status = "Selected capacity profile scheduled." }
+                                .onFailure { status = it.message ?: "Capacity schedule rejected." }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Schedule selected profile") }
                         Button(onClick = {
                             runCatching { capacityBenchmark = CapacityLab.start(context, portText.toIntOrNull() ?: 8080) }
                                 .onFailure { status = it.message ?: "Benchmark could not start." }
@@ -569,6 +585,10 @@ private fun PocketHostDashboard() {
                             color = Slate, fontSize = 11.sp)
                         Text("Automatic health state: ${capacityInfo.optString("healthState", "NORMAL")}. Daily reports retained: ${DailyOperationsReport.list(context).size}. The percentage controls admission concurrency, not CPU usage or a guaranteed visitor count. Android can still stop the app.",
                             color = Slate, fontSize = 10.sp)
+                        OutlinedButton(onClick = { dailyReportExportPicker.launch("pockethost-daily-report.json") },
+                            enabled = DailyOperationsReport.list(context).isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                            Text("Export latest daily report")
+                        }
                     }
                 }
 
