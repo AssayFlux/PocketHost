@@ -1,6 +1,7 @@
 use axum::{
-    extract::{Path, State},
-    http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode},
+    body::Bytes,
+    extract::{DefaultBodyLimit, Path, State},
+    http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode, Response},
     routing::{get, post, put},
     Json, Router,
 };
@@ -9,6 +10,7 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::{fs, path::PathBuf};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -223,6 +225,61 @@ async fn queue_command(
     Ok((StatusCode::ACCEPTED, Json(json!({"commandId":command_id,"state":"queued"}))))
 }
 
+async fn upload_site_archive(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, body: Bytes,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    admin(&headers, &s)?;
+    if body.is_empty() || body.len() > 50 * 1024 * 1024 {
+        return Err((StatusCode::PAYLOAD_TOO_LARGE, "archive_must_be_1_to_50_mib".into()));
+    }
+    if !body.starts_with(b"PK\\x03\\x04") && !body.starts_with(b"PK\\x05\\x06") {
+        return Err((StatusCode::BAD_REQUEST, "invalid_zip_archive".into()));
+    }
+    let sha = hex::encode(Sha256::digest(&body));
+    let artifact_id = Uuid::new_v4();
+    let root = PathBuf::from(std::env::var("POCKETHOST_ARTIFACT_DIR").unwrap_or_else(|_| "./artifacts".into()));
+    fs::create_dir_all(&root).map_err(internal)?;
+    let path = root.join(format!("{artifact_id}.zip"));
+    fs::write(&path, &body).map_err(internal)?;
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let exists = sqlx::query("SELECT id FROM devices WHERE id=$1").bind(id)
+        .fetch_optional(&mut *tx).await.map_err(internal)?;
+    if exists.is_none() {
+        let _ = fs::remove_file(&path);
+        return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
+    }
+    sqlx::query("INSERT INTO device_artifacts(id,device_id,sha256,byte_size,storage_path) VALUES($1,$2,$3,$4,$5)")
+        .bind(artifact_id).bind(id).bind(&sha).bind(body.len() as i64)
+        .bind(path.to_string_lossy().to_string()).execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) VALUES($1,$2,'deploy_site',$3)")
+        .bind(Uuid::new_v4()).bind(id)
+        .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::ACCEPTED, Json(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len(),"state":"queued"}))))
+}
+
+async fn download_artifact(
+    State(s): State<AppState>, headers: HeaderMap, Path(artifact): Path<Uuid>,
+) -> Result<Response<axum::body::Body>, (StatusCode, String)> {
+    let device = device_id(&headers, &s).await?;
+    let row = sqlx::query("SELECT storage_path,sha256 FROM device_artifacts WHERE id=$1 AND device_id=$2")
+        .bind(artifact).bind(device).fetch_optional(&s.db).await.map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, "artifact_not_found".into()))?;
+    let path: String = row.get("storage_path");
+    let expected: String = row.get("sha256");
+    let bytes = fs::read(path).map_err(internal)?;
+    if hex::encode(Sha256::digest(&bytes)) != expected {
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "artifact_integrity_check_failed".into()));
+    }
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(CONTENT_TYPE, "application/zip")
+        .header("Cache-Control", "no-store")
+        .body(axum::body::Body::from(bytes))
+        .map_err(internal)
+}
+
 async fn poll_commands(
     State(s): State<AppState>, headers: HeaderMap,
 ) -> Result<Json<Vec<CommandView>>, (StatusCode, String)> {
@@ -287,10 +344,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
         .route("/v1/admin/devices/:id/commands", post(queue_command))
+        .route("/v1/admin/devices/:id/artifacts", post(upload_site_archive))
         .route("/v1/device/commands", get(poll_commands))
+        .route("/v1/device/artifacts/:artifact", get(download_artifact))
         .route("/v1/device/heartbeat", post(heartbeat))
         .route("/v1/device/commands/:command/ack", post(acknowledge))
         .with_state(state)
+        .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
+        .layer(cors)
         .layer(TraceLayer::new_for_http());
     let address = std::env::var("POCKETHOST_CONTROL_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&address).await?;
