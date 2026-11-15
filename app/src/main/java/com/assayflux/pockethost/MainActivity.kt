@@ -1525,7 +1525,7 @@ private fun PocketHostDashboard() {
                             Text("Cloudflare provides public HTTPS; the phone origin remains local HTTP.", color = palette.onSurfaceVariant)
                             Text("No built-in visitor password yet. Use Cloudflare Access for private sites.", color = palette.onSurfaceVariant)
                             Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
-                            OutlinedButton(onClick = { selectedTab = "Files" }, modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
                                 Text("Open backup and restore")
                             }
                         }
