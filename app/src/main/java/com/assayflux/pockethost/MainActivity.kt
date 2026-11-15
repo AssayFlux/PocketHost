@@ -172,6 +172,7 @@ private fun PocketHostDashboard() {
     var capacityInfo by remember { mutableStateOf(CapacityController.snapshot(context)) }
     var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot(context)) }
     var capacityDuration by remember { mutableStateOf("180") }
+    var selectedCapacityConcurrency by remember { mutableIntStateOf(-1) }
     var deviceTelemetry by remember { mutableStateOf(DeviceTelemetry.snapshot(context)) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
@@ -694,7 +695,16 @@ private fun PocketHostDashboard() {
                                         end = Offset(size.width * (750f / maxLatency), top + rowHeight * 0.7f), strokeWidth = 2f)
                                 }
                             }
-                            Text("Bars show p95 milliseconds; vertical marker = 750 ms acceptance threshold. Concurrency levels: ${chartRows.joinToString { it.first.toString() }}.",
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                chartRows.forEach { row ->
+                                    FilterChip(selected = selectedCapacityConcurrency == row.first,
+                                        onClick = { selectedCapacityConcurrency = if (selectedCapacityConcurrency == row.first) -1 else row.first },
+                                        label = { Text("${row.first}x", fontSize = 12.sp) })
+                                }
+                            }
+                            val selectedPoint = chartRows.firstOrNull { it.first == selectedCapacityConcurrency }
+                            Text(selectedPoint?.let { "Concurrency ${it.first} · p95 latency ${it.second} ms" }
+                                ?: "Select a concurrency point to inspect its p95 latency. Bars show measured milliseconds; marker = 750 ms benchmark threshold.",
                                 color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                         Text("Device: ${deviceTelemetry.optString("manufacturer")} ${deviceTelemetry.optString("model")} · Android API ${deviceTelemetry.optInt("androidApi")} · ${deviceTelemetry.optInt("cpuCores")} CPU cores",
