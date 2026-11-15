@@ -7,168 +7,171 @@
 
 ## 1. Product definition
 
-PocketHost is a standalone native Android application that hosts websites from the phone itself. It is designed for Android 8.0 (API 26)+, a 4 GB RAM baseline and ARMv7/ARM64 phones, without Termux or root.
+PocketHost is a standalone native Android application that hosts websites from the phone itself. It targets Android 8.0 (API 26)+, a 4 GB RAM baseline and ARMv7/ARM64 phones, without Termux or root.
 
-The phone is the origin server. Rust is the central HTTP engine. Kotlin owns Android lifecycle and the native UI. Cloudflare Tunnel provides outbound public connectivity. Python WSGI and Node.js are optional trusted application runtimes. A TypeScript/React console manages the local device. An independently hosted Rust/PostgreSQL service can optionally provide remote management.
+The phone is the website origin. Rust is the central HTTP engine. Kotlin owns Android lifecycle and native UI. TypeScript/React is the management console. Cloudflare Tunnel provides outbound public connectivity. Python WSGI and Node.js are optional trusted application runtimes. An independently hosted Rust/PostgreSQL control plane is optional remote management only.
 
-The existing domain and Cloudflare Tunnel are already configured by the project owner. The implementation should reuse that setup and verify the hostname-to-origin mapping; it must not instruct the owner to create a duplicate tunnel.
+The owner already has a domain and Cloudflare Tunnel. Reuse the existing named tunnel; verify the Public Hostname maps to the Rust website listener. Never create a duplicate or route public traffic to the management API.
 
-## 2. Product outcomes
+## 2. Product modes and user journeys
 
 ### Simple Mode
-- Import a static website from a folder or ZIP.
-- Validate and stage the deployment before activation.
-- Preview locally, start/stop hosting and see understandable service state.
-- Connect through the configured Cloudflare Tunnel and verify the public hostname.
-- Update and roll back without losing the active release.
+- Import a static site from folder/ZIP.
+- Validate and stage before activation.
+- Preview locally; start/stop with clear service state.
+- Use the existing tunnel and verify public HTTPS externally.
+- Update, rollback and inspect a daily summary.
 
 ### Advanced Mode
-- Manage multiple sites and hostnames.
-- Configure static, Python WSGI and Node.js routes.
-- Inspect per-source metrics, logs and health.
-- Adjust bounded worker and V8 heap settings.
-- Manage tunnel state, encrypted credentials, backup and diagnostics.
-- Pair the TypeScript console with the local API.
-- Optionally pair the device with the remote control plane.
+- Manage multiple sites/hostnames and routing.
+- Configure trusted Python WSGI and Node apps.
+- Set per-site budgets, concurrency, rate and timeouts.
+- View hardware health, capacity benchmarks, graphs, logs and alerts.
+- Configure backup, retention, schedules and remote management.
+- Review payment records only when a PSP integration has been deliberately enabled.
 
-## 3. Technology responsibilities
+## 3. Architecture and responsibility boundaries
 
-| Layer | Technology | Ownership |
-|---|---|---|
-| Android UI | Kotlin + Jetpack Compose | UX, permissions, SAF, lifecycle |
-| Background operation | Android Foreground Service | User-visible hosting lifecycle |
-| Central hosting engine | Rust | HTTP serving, hostname routing, reverse proxy, request policy and metrics |
-| Async runtime | Tokio | Engine concurrency |
-| HTTP stack | Hyper | Static HTTP and runtime proxy |
-| Kotlin/Rust boundary | JNI | Coarse-grained lifecycle/configuration/status calls |
-| Local console | React + TypeScript + Vite | Browser-based device management |
-| Python | CPython 3.11 via Chaquopy | One trusted WSGI app at a time |
-| Node.js | Pinned Node 24.22.1 mobile SDK | One trusted app in dedicated `:node` process |
-| Tunnel | Android-targeted cloudflared | Outbound Cloudflare connection |
-| Optional remote control plane | Rust/Axum + PostgreSQL | Device registry, commands, team roles and audit |
-| Secrets | Android Keystore + encrypted storage | Device-bound token protection |
+| Layer | Technology | Owns | Must not own |
+|---|---|---|---|
+| Android app | Kotlin + Jetpack Compose | UI, SAF, permissions, lifecycle, notifications, device telemetry | HTTP request routing logic duplicated from Rust |
+| Hosting service | Android foreground service | User-visible host lifecycle, runtime/tunnel supervision | Unbounded background work |
+| Core engine | Rust, Tokio, Hyper | HTTP ingress, host routing, static serving, reverse proxy, request admission, metrics | Android permission/UI concerns |
+| JNI | Kotlin/C++/Rust boundary | Versioned coarse-grained start/stop/config/status | Per-request callbacks |
+| Local console | TypeScript, React, Vite | Owner-facing local management | Secret-bearing unauthenticated public endpoints |
+| Python | CPython 3.11 / Chaquopy | One WSGI application | Arbitrary untrusted multi-tenant code |
+| Node.js | Pinned Node 24 mobile SDK | One active embedded app in `:node` process | Desktop process manager assumptions |
+| Tunnel | cloudflared | Outbound Cloudflare connection | Visitor authorization or overload control |
+| Remote control plane | Rust/Axum + PostgreSQL | Optional remote device registry, command queue, roles and audit | Serving the user's website |
+| Resource Governor (planned) | Rust policy engine + Android telemetry | Safe admission budgets, throttling, queues and recovery | Claiming to reserve CPU or override Android |
+| Payment adapter (planned) | Provider-neutral service boundary | PSP sessions, verified events, reconciliation and ledger | Raw card processing/storage |
+| Audit service (planned) | Append-only hash-chained records | Integrity and accountability | Treating blockchain as proof that events are truthful |
 
-TypeScript is the authored language for the web console. Browser builds emit JavaScript as required by browsers; that does not change the TypeScript source policy.
+TypeScript is the authored console language; browser bundles emit JavaScript as required by browsers.
 
-## 4. Request and control paths
+## 4. Traffic and control paths
 
-### Website request path
-
+### Website traffic
 ```text
-Visitor
-  -> Cloudflare DNS / HTTPS edge
-  -> existing named Cloudflare Tunnel
-  -> phone-local Rust listener
-  -> hostname router
-  -> static site OR loopback Python WSGI OR loopback Node app
-  -> response through tunnel
+Visitor → Cloudflare edge → existing named tunnel → Rust listener on phone
+        → hostname/site router → static files OR loopback Python/Node upstream
+        → response through tunnel
 ```
 
-The Public Hostname must target the Rust website listener. Never route it to the local management API. The management API is loopback-only and uses a separate pairing/session model.
+Rust is the only intended public ingress. The Cloudflare Public Hostname must target the Rust website port, never the loopback management API. Tunnel connectivity is not visitor authentication; use Cloudflare Access for private sites.
 
-### Local management path
-
+### Local management
 ```text
-Browser console (allowed origin)
-  -> pairing challenge
-  -> owner approves six-digit code in Android app
-  -> short-lived bearer session
-  -> loopback management API
-  -> Android service / Rust engine / runtime supervisors
+PocketHost Console → pairing challenge → owner approval in Android app
+                  → expiring bearer session → loopback Management API
+                  → Android service / Rust engine / runtime supervisors
 ```
 
-### Optional remote management path
-
+### Optional remote management
 ```text
-TypeScript console
-  -> HTTPS
-  -> optional Rust/PostgreSQL control plane
-  <- outbound HTTPS polling / heartbeat from phone agent
-  -> authenticated allowlisted command
-  -> on-device validation and execution
-  -> acknowledgement and audit event
+Remote console ↔ HTTPS control plane ↔ PostgreSQL
+                         ↑ outbound polling / heartbeat
+                    Android phone agent
 ```
 
-The remote control plane is not the website origin. Current deployment automation requires a separate Linux/Docker host. The basic phone-hosting product must not depend on this service being deployed.
+The control plane is not required for local hosting or Cloudflare connectivity. Its source tree is not proof of deployment.
 
-## 5. Runtime contracts and limitations
+## 5. Current runtime contracts
 
-### Static site
-- Rust serves GET/HEAD, streams files, supports byte ranges and MIME types.
-- Normalize and validate hostnames and paths.
-- Reject traversal and unknown hosts.
-- Bound concurrent connections, response sizes and timeouts.
-- Keep static hosting independent from Python/Node availability.
+### Static website
+Rust serves GET/HEAD, streams files, supports ranges/MIME, canonicalizes paths, validates hosts and bounds connections. Static hosting must remain available when optional runtimes fail or are reconfigured.
 
 ### Python WSGI
 - CPython 3.11 via Chaquopy.
-- Root `wsgi.py` must export callable `application`.
-- One active WSGI application; 2–16 bounded worker threads.
-- No automatic `pip install`, ASGI/WebSockets or hostile-code sandbox.
-- Imported code runs with the PocketHost app UID.
+- Root `wsgi.py` exports callable `application`.
+- One active application; bounded 2–16 worker threads.
+- No automatic pip install, ASGI/WebSockets or hard CPU/RAM quota.
+- Runs with PocketHost app UID: trusted code only; not a sandbox.
+- See [Python Runtime](PYTHON_RUNTIME.md).
 
 ### Node.js
-- Pinned `fogtape/nodejs-mobile` `v24.22.1-0` / upstream Node 24.22.1.
-- JNI `node::Start` bridge and isolated Android `:node` service/process.
-- One active Node application/process.
-- Dependencies must be prebundled; no on-device npm install, PM2, cluster or ordinary desktop child-process workflow.
-- TCP listeners are constrained to loopback by the metrics preload; this is not a complete network sandbox.
-- V8 old-space limit 96–512 MiB is not a hard total-RSS quota.
-- Node projects execute with PocketHost's app UID and must be trusted.
+- Pinned `fogtape/nodejs-mobile` `v24.22.1-0`, upstream Node 24.22.1.
+- JNI `node::Start`; dedicated Android `:node` process.
+- One active app; dependencies prebundled; no normal npm install/PM2/cluster/desktop child process.
+- TCP loopback preload is not a complete network sandbox.
+- V8 old-space 96–512 MiB is not a hard RSS/CPU quota.
+- Runs with PocketHost app UID: trusted code only; not a sandbox.
+- See [Node Runtime](NODE_RUNTIME.md).
 
-## 6. Security model
+## 6. Adaptive hardware and capacity architecture (planned)
 
-- Local hosting listener defaults to loopback; LAN exposure is explicit opt-in.
-- Management API is never a public website route.
-- Pairing challenges are short-lived, rate-limited and owner-approved.
-- Browser sessions are bearer tokens held in sessionStorage, expire after 12 hours and are individually revocable.
-- Tunnel and remote device credentials are encrypted with Android Keystore-backed keys.
-- Imported archives are size/path/count/depth validated and activated through staged releases.
-- Logs and diagnostics must redact credentials and avoid exporting website content.
-- Python/Node user code is trusted-only; neither is a hostile-code sandbox.
-- Cloudflare Tunnel encrypts the path to the edge but does not authenticate visitors. Use Cloudflare Access for private sites.
-- The remote control plane stores token hashes, uses role checks and command allowlists; still requires route-level security tests and deployment hardening.
+### Telemetry
+Android collects device profile, RAM/PSS, storage, battery/charging, thermal state, CPU/core data and network changes where APIs permit. Rust contributes RPS, connection/concurrency, queue, latency, errors, bytes and per-site/runtime counters. Every sample includes timestamp, source, interval and validity; unknown values remain unknown.
 
-## 7. Reliability and resource policy
+### Capacity Lab
+Run controlled loopback tests for static cached/uncached, response sizes, concurrency and optional trusted runtimes. Record throughput, p50/p95/p99 latency, errors, CPU, memory, thermal and battery impact. Stop on safety thresholds. Persist benchmark version and device/app/workload metadata.
 
-The Android foreground service improves continuity but cannot guarantee 24/7 uptime. OEM battery policies, Doze, thermal throttling, low-memory kills, mobile-network changes and user force-stop remain relevant.
+Display separately:
+- Observed peak under a named test.
+- Sustainable safe capacity under thermal, memory and latency bounds.
+- Current admission budget after live health reductions and owner-selected percentage.
 
-Required engineering behavior:
-- Bounded worker/thread and connection counts.
-- Explicit timeouts and bounded request/archive sizes.
-- Lazy runtime startup and bounded restart backoff.
-- Clean stop and process recreation for embedded Node.
-- Recover tunnel after transient network loss.
-- Preserve active static site when optional runtime configuration changes.
-- Redact and rotate operational logs.
-- Surface degraded/error states with a safe next action.
-- Measure memory, CPU, storage, battery and thermal behavior on representative phones.
+Do not convert this into an unconditional visitor-count guarantee.
 
-## 8. Validation strategy
+### Resource Governor
+Rust policy state machine: NORMAL → CONSTRAINED → PROTECTIVE → RECOVERY, with EMERGENCY stop behavior. Use bounded queues, per-site/per-route limits, fair scheduling, circuit breakers, bounded drain, cooldown and hysteresis. Keep emergency reserve for management and log persistence. Unknown critical telemetry reduces admission rather than assuming spare capacity.
 
-Validation is staged and evidence-based:
-1. Source tests and static checks.
-2. Android native/Kotlin compilation.
-3. ABI-specific APK packaging and native-library inspection.
-4. Emulator instrumentation on API 26, 33 and 35.
-5. Physical ARMv7/ARM64 phone testing.
-6. External Cloudflare hostname checks from a separate network.
-7. Security review and failure/recovery tests.
-8. Signed release, upgrade verification and checksums.
+### Schedules
+Capacity percentage means a fraction of calibrated safe capacity. Support presets and custom schedules, including Development at 30% for three hours, with expiry and restoration. It is not a CPU-utilization control or an OS reservation.
 
-A green quality workflow does not imply emulator or physical-device acceptance. An emulator does not replace the Vivo Y95, Moto G54 or an ARMv7 device.
+Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md).
 
-## 9. Repository map
+## 7. Security architecture and release boundaries
 
-- `app/`: native Android app, services, local API, runtime supervisors and import/backup.
-- `rust-engine/`: phone-side Rust hosting engine.
-- `web-console/`: TypeScript/React console.
-- `control-plane/`: optional remote Rust/PostgreSQL service.
-- `tests/`: Python and Node host-side smoke tests.
+- Separate public website traffic from local/remote administration.
+- Pairing and session authorization for local management; route-level auth tests required.
+- Protect credentials with Android Keystore or a suitable remote secrets manager.
+- Validate imported archives, paths, sizes, counts and activation boundaries.
+- Python/Node are trusted-code only until distinct UID isolation, filesystem/network confinement and enforceable quotas are proven.
+- Prevent runtime access to management endpoints, payment secrets, other projects and private network targets.
+- Do not expose LAN mode without an explicit owner decision and clear visitor-auth limitations.
+- Use a payment provider's hosted/tokenized checkout; never store PAN/CVV/PIN.
+- Verify raw-body webhook signatures, timestamps, idempotency and replay; reconcile provider events.
+- Store an encrypted event ledger with provider references and integer minor-unit amounts.
+- Keep append-only hash-chained audit records; optional blockchain stores only batched checkpoint hashes.
+- No PCI/security certification claim without qualified independent assessment.
+
+## 8. Logs, reporting and recovery (planned expansion)
+
+Structured redacted logs cover access summaries, runtime lifecycle, device health, tunnel, config changes, deployments, backups, security and payment events. Apply rotation, bounded retention, storage reserve and secret redaction before persistence.
+
+Daily reports summarize uptime, traffic, latency, errors, resource/thermal trends, restarts, tunnel state, deployments, security events and reconciled payment totals. Reports and audit records must survive app restart and support export/restore.
+
+## 9. Website performance principles
+
+- Correct ETag/Last-Modified, conditional GET, range and MIME handling.
+- Stream large files and bound connection pools/queues.
+- Compression only where benchmarked beneficial.
+- Keep-alive and timeouts; no unbounded buffering.
+- Cache immutable fingerprinted assets safely.
+- Health/readiness endpoints separate from public site routes.
+- Site-level failure containment, staged activation and rollback.
+- WebSocket/streaming only with bounded sessions and tested resource accounting.
+- CDN guidance for large media; phone storage is not durable object storage.
+- Claim HTTP/2/HTTP/3 only after end-to-end evidence.
+
+## 10. Repository boundaries
+
+- `app/`: Android UI, lifecycle, management API, import, backup, runtime/tunnel supervisors.
+- `rust-engine/`: on-device HTTP engine and future Resource Governor.
+- `web-console/`: TypeScript/React local console.
+- `control-plane/`: optional Rust/PostgreSQL remote management.
+- `tests/`: host-side Python/Node smoke tests and future integration tests.
 - `scripts/`: native build helpers.
 - `.github/workflows/`: quality, Android integration, signed release and optional control-plane deployment.
-- `docs/`: architecture, runtime contracts, deployment and acceptance.
+- `docs/`: canonical product, architecture, roadmap, status, security and acceptance records.
 
-## 10. Current engineering status
+## 11. Engineering execution order
 
-See [PHASE_0_STATUS.md](PHASE_0_STATUS.md) for the commit-specific CI state and remaining gates, and [COMPLETION_MILESTONE.md](COMPLETION_MILESTONE.md) for the release checklist. These status documents take precedence over roadmap language in older design discussions.
+Follow [ROADMAP.md](ROADMAP.md). Do not start payment acceptance before the security foundations. Do not enable untrusted code before runtime isolation. Do not claim adaptive capacity before calibration and governor acceptance. Static hosting must remain independently usable throughout.
+
+## 12. Validation and source of truth
+
+Validation sequence: unit/static checks → Android source compile → ABI APK packaging → API 26/33/35 emulator instrumentation → physical ARMv7/ARM64 devices → external Cloudflare hostname checks → security/fault/load tests → signed release and upgrade verification.
+
+The latest exact status and evidence live in [PHASE_0_STATUS.md](PHASE_0_STATUS.md). Release definition lives in [COMPLETION_MILESTONE.md](COMPLETION_MILESTONE.md). [DEVELOPMENT_CONTEXT.md](DEVELOPMENT_CONTEXT.md) is the mandatory handoff for every future coding session.

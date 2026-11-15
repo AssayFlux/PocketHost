@@ -10,137 +10,130 @@
   <a href="https://github.com/AssayFlux/PocketHost/actions/workflows/android-integration.yml"><img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/android-integration.yml?branch=main&style=flat-square&label=Android%20integration" alt="Android integration"></a>
 </p>
 
-**AssayFlux PocketHost** is a native Android application that turns a compatible smartphone into a compact website-hosting origin. The phone runs the website; Rust handles HTTP serving and routing; Kotlin manages Android lifecycle and controls; optional embedded Python and Node.js runtimes run trusted application code. A browser console provides local device management, while an optional remote control plane supports management when the phone is away.
+**AssayFlux PocketHost** turns a compatible Android phone into a compact website origin. The phone hosts the website; Rust owns HTTP serving and routing; Kotlin manages Android lifecycle and native controls; TypeScript powers the management console. Optional Python and Node.js runtimes execute trusted application code. Cloudflare Tunnel provides outbound connectivity. An optional remote control plane manages devices but never replaces the phone as the website origin.
 
-> **Project status: integrated development build — not yet production approved.** Source components are present and the quality workflow has passed on the current implementation batch. Emulator execution, physical-device acceptance, external hostname verification and the production security review remain release gates. See [the live status record](docs/PHASE_0_STATUS.md).
+> **Status: integrated development build — not production approved.** Existing source is substantially integrated, but physical-device, public-domain, overload, runtime-isolation and security acceptance gates remain. The adaptive capacity, payments and operations workstream is specified in [PR #14](https://github.com/AssayFlux/PocketHost/pull/14); specification is not implementation. See [current status](docs/PHASE_0_STATUS.md).
 
-## Product goals
+## North Star
 
-- Standalone Android app. No Termux, root, or traditional web-hosting subscription required for the phone's hosting role.
-- Android 8.0 (API 26)+ baseline and 4 GB RAM target.
-- ARMv7 and ARM64 phone architectures; x86_64 emulator support.
-- Static website hosting first, with optional Python WSGI and Node.js application runtimes.
-- Simple and Advanced operating modes.
-- Rust-based HTTP engine, multi-host routing and reverse proxy.
-- Local TypeScript/React management console and authenticated pairing.
-- Optional remote management through an independently deployed control-plane service.
-- Cloudflare Tunnel for outbound public connectivity.
+Make reliable, transparent and affordable self-hosting accessible to people with limited budgets or no need for large cloud services. PocketHost should make a phone's real capacity understandable, automatically protect it from overload, and keep the basic static website workflow simple.
 
-A phone is not a dedicated server. Battery, heat, mobile-network conditions, Android Doze, vendor process management, memory pressure and storage availability can interrupt hosting. PocketHost does not promise unlimited traffic or guaranteed 24/7 uptime.
+- Phone is the website server; local hosting must not require a VPS.
+- No Termux and no root.
+- Android 8.0 / API 26+; target a 4 GB RAM baseline; ARMv7 and ARM64 phones.
+- Static websites first; optional Python WSGI and Node.js for trusted code.
+- Rust central engine; Kotlin Android app; TypeScript/React console.
+- Simple and Advanced modes, extensive but safe customization.
+- Existing user-owned domain and Cloudflare Tunnel must be reused, not recreated.
+- Remote control plane is optional and separately deployed.
+
+Read [North Star](docs/NORTH_STAR.md), [Roadmap](docs/ROADMAP.md), and [Development Context](docs/DEVELOPMENT_CONTEXT.md) before making architectural changes.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  USER["Site owner"] --> APP["Native Android app · Kotlin / Compose"]
-  APP --> SVC["Foreground HostingService"]
-  SVC <--> JNI["JNI bridge"]
-  JNI <--> RUST["Rust · Tokio / Hyper"]
-  RUST --> STATIC["Static site roots"]
-  RUST --> PY["Python WSGI · loopback"]
-  RUST --> NODE["Node.js 24 · isolated :node process"]
-  CONSOLE["TypeScript / React console"] <-->|"paired local API"| API["Android management API"]
-  API <--> APP
-  TUNNEL["Cloudflare Tunnel"] <-->|"outbound tunnel"| RUST
-  AGENT["Optional remote agent"] <-->|"outbound HTTPS polling"| CP["Optional remote control plane"]
-  APP --> AGENT
+  V[Visitors] --> CF[Cloudflare edge / HTTPS]
+  CF <--> T[Existing named Cloudflare Tunnel]
+  T <--> R[Rust HTTP engine on Android phone]
+  R --> S[Static site roots]
+  R --> P[Python WSGI · loopback · trusted code]
+  R --> N[Node.js · loopback · trusted code]
+  A[Kotlin / Jetpack Compose] --> H[Android HostingService]
+  H <--> R
+  C[TypeScript / React console] <--> M[Paired loopback management API]
+  M <--> A
+  A <--> O[Optional outbound remote-management agent]
+  O <--> CP[Optional Rust / PostgreSQL control plane]
+  G[Resource Governor · planned] --> R
+  G --> P
+  G --> N
 ```
 
-| Layer | Implementation | Responsibility |
+The website request path and administration path are separate. The Cloudflare Public Hostname must point to the Rust website listener, never the local management API. Cloudflare Tunnel does not itself authenticate visitors; use Cloudflare Access for private sites.
+
+## Technology responsibilities
+
+| Layer | Technology | Responsibility |
 |---|---|---|
-| Android app | Kotlin, Jetpack Compose | UI, storage access, permissions, lifecycle and notifications |
-| Hosting engine | Rust, Tokio, Hyper | Static HTTP, hostname routing, reverse proxy and engine metrics |
-| Native bridge | JNI | Coarse-grained Kotlin/Rust control |
-| Python | CPython 3.11 via Chaquopy | Trusted WSGI application; one active app |
-| Node.js | Node.js 24.22.1 mobile SDK | Trusted bundled app in a dedicated Android process |
-| Local console | TypeScript, React, Vite | Authenticated local device management |
-| Public connectivity | cloudflared Android-targeted build | Outbound connection from phone to Cloudflare edge |
-| Remote management | Rust/Axum + PostgreSQL | Optional device registry, command queue, team roles and audit history |
+| Android app | Kotlin, Jetpack Compose | UX, permissions, storage, lifecycle and notifications |
+| Hosting engine | Rust, Tokio, Hyper | Static HTTP, hostname routing, reverse proxy, request limits and metrics |
+| Native boundary | JNI | Coarse-grained Kotlin/Rust lifecycle and status |
+| Python | CPython 3.11 via Chaquopy | One trusted WSGI app; preview feature |
+| Node.js | Pinned Node 24 mobile SDK | One trusted app in dedicated `:node` process |
+| Console | TypeScript, React, Vite | Local device management |
+| Connectivity | Android-targeted cloudflared | Outbound Cloudflare connection |
+| Remote management | Rust/Axum + PostgreSQL | Optional device registry, commands, roles and audit |
 
-The phone remains the website origin. The remote control plane is a separate optional management service; it does **not** serve the websites and is not required for local hosting or the phone's Cloudflare Tunnel connection.
+## Source capability snapshot
 
-## Current capabilities in source
-
-| Area | Source implementation | Important boundary |
+| Area | Current source status | Limitation / evidence still needed |
 |---|---|---|
-| Static hosting | Rust HTTP server, GET/HEAD, streaming, ranges, MIME, canonicalized paths | Physical-device performance and security testing remain |
-| Multi-site | Hostname registry and static/Python/Node route selection | Node supports one active project/process |
-| Python | Embedded CPython 3.11 WSGI, bounded worker pool and metrics | Root `wsgi.py`; no automatic pip install; trusted code only |
-| Node.js | Pinned Node 24.22.1 mobile SDK, JNI bridge, dedicated `:node` process, supervisor and metrics | Prebundle dependencies; no normal child-process/npm-install workflow |
-| Site deployment | SAF folder/ZIP import, validation, staged releases and rollback | Archive and upgrade edge cases need full acceptance |
-| Local management | Pairing challenge, session bearer auth, site/runtime/tunnel/resource/log/metrics endpoints | Sessions are in-memory and expire after 12 hours |
-| Browser console | TypeScript/React console backed by the local API | Must be served from an allowed origin and paired by the owner |
-| Cloudflare | Android-targeted cloudflared builds, encrypted token storage and reconnect lifecycle | Tunnel process state is not proof that the public hostname serves correctly |
-| Backups | Passphrase-protected encrypted static-site backup | Does not include Python/Node projects, settings or deployment history |
-| Diagnostics | User-exported redacted logs and device diagnostics | Review bundle before sharing |
-| Remote management | Optional Rust/PostgreSQL control plane, outbound phone agent, queued commands, device registry, team roles and audit events | Requires a separately reachable API deployment; not the website origin |
+| Static hosting | Integrated Rust engine; GET/HEAD, streaming, ranges, MIME and path checks | Physical performance, security and external-domain acceptance |
+| Multi-site | Host registry and static/Python/Node routing | End-to-end conflict and isolation tests |
+| Python | CPython 3.11 WSGI preview runtime | Trusted code only; no strong sandbox or hard CPU/RAM quotas |
+| Node.js | Node 24.22.1 mobile SDK, JNI and dedicated process | Trusted code only; process boundary is not a security sandbox |
+| Local management | Loopback API, pairing and expiring sessions | Full endpoint abuse/security validation |
+| Console | TypeScript/React connected to local API | Browser-origin and device end-to-end tests |
+| Cloudflare | Android connector build, encrypted token and reconnect supervision | Reuse configured tunnel; verify public HTTPS from another network |
+| Backup | Encrypted static-site backup | Does not yet cover all runtime/configuration/payment data |
+| Remote management | Optional backend and phone agent source | Not deployed or real-device verified merely by existing source |
+| Adaptive capacity | Specification in PR #14 | Telemetry, benchmark, governor and schedules not yet implemented |
+| Payment ledger | Security requirements specified in PR #14 | No live payment-processing or PCI-compliance claim |
+| Blockchain audit | Optional hash-checkpoint design specified | Not implemented; never store sensitive data on-chain |
 
-### Operating modes
+## Adaptive capacity: intended product behavior
 
-- **Simple Mode:** guided static-site import, preview, hosting start/stop and tunnel controls.
-- **Advanced Mode:** site/hostname configuration, Python and Node projects, resource limits, logs, diagnostics, backup/restore and optional remote-control pairing.
+PocketHost will detect hardware and live device health, benchmark realistic workloads, and calculate a conservative **sustainable safe capacity**. It will display measured throughput/latency/concurrency graphs and distinguish observed peak from safe operating capacity.
 
-## Domain and Cloudflare
+A Resource Governor will reduce admission, bound queues, throttle expensive routes, return controlled 429/503 responses and recover gradually as the phone cools or memory returns. Owners will be able to schedule profiles such as **30% of calibrated safe capacity for 3 hours**. This is a share of measured safe budget, not a claim of 30% CPU usage or a guaranteed visitor count.
 
-PocketHost supports a Cloudflare-managed named tunnel. If you already created the tunnel, connected the domain and configured its Public Hostname, **reuse that setup**; do not create a duplicate tunnel merely to follow generic setup instructions.
+Full requirements and acceptance criteria: [Adaptive Capacity, Security, Payments and Operations](docs/ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md).
 
-The Android app still needs the corresponding connector token configured securely in its Tunnel settings. The hostname's origin must point to the PocketHost Rust listener, not to the management API. Confirm the exact origin/port in your Cloudflare Public Hostname rule. For private content, configure Cloudflare Access; tunnel encryption is not visitor authentication.
+## Security and payments
 
-A configured tunnel, a connected tunnel process and a publicly verified website are three different states. Production acceptance requires a request from an external network to return the expected site content over valid HTTPS. See [Cloudflare Tunnel guide](docs/CLOUDFLARE_TUNNEL.md).
+Security must be designed into each boundary. Python and Node currently execute with PocketHost's app UID; neither is a hostile-code sandbox. Strong project isolation, filesystem/network restrictions and OS-enforced resource limits are release-blocking before accepting untrusted workloads.
 
-## Compatibility and resource boundaries
+For payments, integrate a reputable payment service provider using hosted/tokenized checkout and signed, replay-resistant webhooks. Store provider transaction references and an encrypted durable event ledger, never raw card numbers or CVVs. Use append-only hash-chained audit records; optional blockchain anchoring may publish checkpoint hashes only. Do not claim PCI compliance without qualified assessment.
 
-- Minimum Android API: 26 (Android 8.0).
-- Intended baseline: 4 GB RAM.
-- Native ABIs: `armeabi-v7a`, `arm64-v8a`, and `x86_64` for emulator testing.
-- Python WSGI worker setting: 2–16.
-- Node V8 old-space setting: 96–512 MiB.
-- These runtime settings are not hard OS memory/CPU quotas. Android may terminate processes under pressure.
-- Python and Node projects execute with PocketHost's application UID. Neither runtime is a hostile-code sandbox or multi-tenant isolation boundary.
-- Node projects must arrive with dependencies bundled. Native addons must match Android ABI and Node ABI.
-- LAN mode is an explicit exposure choice and has no visitor authentication.
+## Product constraints
 
-## Validation snapshot
+A phone is not a cloud region. Battery, heat, Android Doze/OEM process management, memory, storage, carrier NAT, mobile data caps and network outages affect availability. PocketHost must never promise unlimited traffic or guaranteed 24/7 uptime. Capacity is workload-specific and must be measured on the actual device.
 
-The quality workflow passed on the current `main` commit before this documentation-only branch. Android integration run [43677996409](https://github.com/AssayFlux/PocketHost/actions/runs/43677996409) completed successfully for cloudflared, ABI APK assembly and API 26/33/35 emulator instrumentation on an earlier source SHA. The more recent Node-locking integration run [43678133737](https://github.com/AssayFlux/PocketHost/actions/runs/43678133737) has also completed cloudflared and ABI APK jobs; API 26 was still running and API 33/35 were queued at the last check. The documentation PR's own CI is also running. Always check the linked run for the exact commit before treating a gate as passed.
+## Documentation map
 
-- [Quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml)
-- [Android integration workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/android-integration.yml)
-- [Detailed status and remaining gates](docs/PHASE_0_STATUS.md)
-- [Device and production acceptance checklist](docs/REMOTE_CONTROL_ACCEPTANCE.md)
-
-## Documentation
-
-| Document | Purpose |
+| Document | Why it exists |
 |---|---|
-| [North Star](docs/NORTH_STAR.md) | Product goals and non-goals |
-| [Master engineering plan](docs/MASTER_PLAN.md) | Architecture and implementation direction |
-| [Implementation status](docs/PHASE_0_STATUS.md) | Source truth, CI evidence and unverified items |
-| [Completion milestone](docs/COMPLETION_MILESTONE.md) | Remaining work and definition of done |
-| [Cloudflare Tunnel](docs/CLOUDFLARE_TUNNEL.md) | Reusing a named tunnel and public-hostname checks |
-| [Python runtime](docs/PYTHON_RUNTIME.md) | WSGI project contract and limitations |
-| [Node runtime](docs/NODE_RUNTIME.md) | SDK provenance, integration and limitations |
-| [Site backup](docs/SITE_BACKUP.md) | Backup format and restore boundaries |
-| [Remote control acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md) | Backend, phone and end-to-end acceptance |
-| [Control-plane deployment](docs/CONTROL_PLANE_DEPLOYMENT.md) | Optional independent management backend |
-| [Release signing](docs/RELEASE_SIGNING.md) | Secure APK signing |
+| [North Star](docs/NORTH_STAR.md) | Product vision, principles, non-goals and decision filter |
+| [Roadmap](docs/ROADMAP.md) | Sequenced product work, priorities and release gates |
+| [Master Plan](docs/MASTER_PLAN.md) | System architecture, module contracts and technical design |
+| [Development Context](docs/DEVELOPMENT_CONTEXT.md) | Canonical handoff and rules for every future contributor/assistant |
+| [Implementation Status](docs/PHASE_0_STATUS.md) | Commit-specific source and validation evidence |
+| [Completion Milestone](docs/COMPLETION_MILESTONE.md) | Definition of done and release checklist |
+| [Adaptive Capacity & Security](docs/ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md) | Hardware intelligence, governor, payments, audit and logs |
+| [Python Runtime](docs/PYTHON_RUNTIME.md) | WSGI contract and security limitations |
+| [Node Runtime](docs/NODE_RUNTIME.md) | SDK provenance, runtime contract and limitations |
+| [Cloudflare Tunnel](docs/CLOUDFLARE_TUNNEL.md) | Reuse and verify the existing tunnel |
+| [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md) | Device, backend and external acceptance |
+| [Control-plane Deployment](docs/CONTROL_PLANE_DEPLOYMENT.md) | Optional management backend deployment |
+| [Release Signing](docs/RELEASE_SIGNING.md) | Signed APK release process |
 
 ## Build overview
 
-A clean native build requires JDK 17, Android SDK 35, NDK 27.2.12479018, CMake 3.22.1, Rust stable with Android targets, `cargo-ndk`, Go 1.27.4 for cloudflared and network access to retrieve the pinned Node mobile SDK. The console requires Node.js/npm.
+Build prerequisites: JDK 17, Android SDK 35, NDK 27.2.12479018, CMake 3.22.1, Rust stable with Android targets, cargo-ndk, Go 1.27.4 for cloudflared and Node.js/npm for the console. The pinned Node mobile SDK is retrieved during native builds.
 
-Source compilation without assembling APKs:
+Compile Android sources without APK packaging:
 
 ```bash
 gradle :app:externalNativeBuildDebug :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin
 ```
 
-Full ABI APK packaging and emulator instrumentation are handled by [Android integration CI](.github/workflows/android-integration.yml). Signed release builds require the secrets described in [release signing](docs/RELEASE_SIGNING.md).
+Use the [Android integration workflow](.github/workflows/android-integration.yml) for ABI APK assembly and emulator instrumentation. See [release signing](docs/RELEASE_SIGNING.md) before producing release APKs.
 
 ## Security disclosure
 
-Do not expose the local management API to the public internet. Do not import code you do not trust. Do not treat LAN mode or a public tunnel as an authentication layer. Never commit tunnel tokens, remote-control tokens, database credentials, SSH keys, signing keys or generated `.env` files. The separate control plane has its own deployment and security requirements.
+Never expose the local management API publicly. Never import untrusted code under the current runtime model. Do not place tunnel/payment/control-plane tokens, signing keys or database credentials in website roots, source control or logs. Review diagnostic exports before sharing.
 
 ## License
 
-See [LICENSE](LICENSE) and the third-party notices bundled under `app/src/main/assets/licenses/`.
+See [LICENSE](LICENSE) and third-party notices under `app/src/main/assets/licenses/`.
