@@ -266,3 +266,6 @@ PocketHost now includes a separately deployable Rust + PostgreSQL management bac
 See [remote-control deployment](control-plane/README.md), [API contract](control-plane/openapi.yaml), and [backend source](control-plane/src/main.rs).
 
 The remote configuration contract supports Python worker ceiling, Node V8 heap ceiling and tunnel enabled state. Resource changes restart only affected runtime processes while preserving the Rust static server. Typed commands support site start/stop, tunnel start/stop and runtime restart. Website ZIP deployment (50 MiB maximum) uses authenticated device-scoped downloads, SHA-256 verification and the atomic on-device importer. The control plane supports Owner, Editor and Viewer roles plus a latest-200 audit view. See [remote integration acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md) for deployment, disconnection, archive recovery, Cloudflare and physical-device validation. Physical ARMv7/ARM64 and public-hostname acceptance still require actual hardware and Cloudflare infrastructure; CI emulator results do not substitute for those tests. Remote management requires an online phone with PocketHost hosting service running and a deployed HTTPS control plane.
+
+
+For production backend deployment through a protected GitHub Actions environment, see [Control Plane deployment setup](docs/CONTROL_PLANE_DEPLOYMENT.md).
