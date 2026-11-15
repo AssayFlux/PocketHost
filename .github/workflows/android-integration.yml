@@ -12,7 +12,7 @@ on:
       - "settings.gradle.kts"
       - "gradle/**"
       - ".github/workflows/android-integration.yml"
-  # Emulator instrumentation is opt-in; physical-device acceptance is owner-run.
+  # Emulator instrumentation is opt-in generally; backup changes run the API 26/33/35 regression matrix.
   pull_request:
     branches: [main]
   # Full ABI APK build can also be requested manually.
@@ -131,7 +131,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_emulators
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, 'backup'))
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
