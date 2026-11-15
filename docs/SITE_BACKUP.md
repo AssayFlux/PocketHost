@@ -46,3 +46,7 @@ Credentials remain device-bound and must be configured independently on a replac
 - Keep the backup file and passphrase separately; anyone with both can recover the included project source.
 - Treat Python and Node project backups as executable source code and do not share them with untrusted parties. Secret values embedded inside ordinary source/config files cannot be detected reliably; review project contents before sharing.
 - Keep an independent copy of important backups. A successful export does not replace an off-device disaster-recovery copy.
+### Project-root compatibility
+
+- Active Python and Node project roots must be inside Pocket Host app-private storage. They are packaged and restored into the standard `python-project` and `node-project-default` locations; hostname routes are remapped to those restored roots.
+- The main static website root is backed up. A registered static site that points to a separate custom directory is currently rejected with an explicit error rather than silently omitted; add support for arbitrary static roots before relying on full backups for that configuration.
