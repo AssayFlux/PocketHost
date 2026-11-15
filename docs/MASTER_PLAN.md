@@ -98,13 +98,13 @@ Rust serves GET/HEAD, streams files, supports ranges/MIME, canonicalizes paths, 
 - Runs with PocketHost app UID: trusted code only; not a sandbox.
 - See [Node Runtime](NODE_RUNTIME.md).
 
-## 6. Adaptive hardware and capacity architecture (planned)
+## 6. Adaptive hardware and capacity architecture (partially implemented)
 
 ### Telemetry
-Android collects device profile, RAM/PSS, storage, battery/charging, thermal state, CPU/core data and network changes where APIs permit. Rust contributes RPS, connection/concurrency, queue, latency, errors, bytes and per-site/runtime counters. Every sample includes timestamp, source, interval and validity; unknown values remain unknown.
+**Implemented first pass:** Android records versioned low-frequency snapshots of manufacturer/model, API/ABIs/CPU cores, aggregate CPU utilization sampled from /proc/stat, RAM/PSS/heaps, storage, battery/temperature, thermal state and network transport. Samples are bounded in a two-file history and are also read live while hosting is idle. Rust contributes request/byte totals, active connections and rejected connections. This is not yet a complete RPS/queue/latency/per-site telemetry pipeline. Every sample includes timestamp and schema version; unavailable values remain null.
 
 ### Capacity Lab
-Run controlled loopback tests for static cached/uncached, response sizes, concurrency and optional trusted runtimes. Record throughput, p50/p95/p99 latency, errors, CPU, memory, thermal and battery impact. Stop on safety thresholds. Persist benchmark version and device/app/workload metadata.
+**Implemented first pass:** a bounded loopback static GET sweep tests concurrency levels 1, 2, 4, 8, 12 and 16, records sample/error counts, elapsed time and p95 latency, and stores the last result with the calibrated ceiling. It stops escalating on errors, p95 above 750 ms, Android low-memory or severe thermal status. The provisional ceiling is four concurrent connections until calibration. It does not yet test response-size/cache classes, Python/Node, throughput, p50/p99 or sustained multi-hour behavior. Expand to controlled workloads for static cached/uncached, response sizes, concurrency and optional trusted runtimes. Record throughput, p50/p95/p99 latency, errors, CPU, memory, thermal and battery impact. Stop on safety thresholds. Persist benchmark version and device/app/workload metadata.
 
 Display separately:
 - Observed peak under a named test.
@@ -114,10 +114,10 @@ Display separately:
 Do not convert this into an unconditional visitor-count guarantee.
 
 ### Resource Governor
-Rust policy state machine: NORMAL → CONSTRAINED → PROTECTIVE → RECOVERY, with EMERGENCY stop behavior. Use bounded queues, per-site/per-route limits, fair scheduling, circuit breakers, bounded drain, cooldown and hysteresis. Keep emergency reserve for management and log persistence. Unknown critical telemetry reduces admission rather than assuming spare capacity.
+**Implemented first pass:** Android derives NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY and EMERGENCY from fresh CPU load, memory, storage, battery and thermal signals. It reduces the effective connection ceiling and repeatedly suspends optional Python/Node runtimes in PROTECTIVE/EMERGENCY while preserving the Rust static origin. Rust enforces a dynamic 1–16 concurrent-connection cap and returns HTTP 503 with Retry-After when the cap is reached. **Still required:** move policy decisions into Rust, add request-rate limits, bounded waiting queues, per-site/per-route budgets, fair scheduling, circuit breakers, bounded drain, cooldown and independently validated hysteresis. Keep emergency reserve for management and log persistence. Unknown critical telemetry reduces admission rather than assuming spare capacity.
 
 ### Schedules
-Capacity percentage means a fraction of calibrated safe capacity. Support presets and custom schedules, including Development at 30% for three hours, with expiry and restoration. It is not a CPU-utilization control or an OS reservation.
+Capacity percentage means a fraction of calibrated safe capacity. The app supports 1–100% profiles and timed schedules from 1–1440 minutes, including 30% for three hours, with expiry and restoration of the previous profile. The provisional ceiling is four until the first successful benchmark. This is not a CPU-utilization control or an OS reservation.
 
 Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md).
 
@@ -136,11 +136,9 @@ Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTI
 - Keep append-only hash-chained audit records; optional blockchain stores only batched checkpoint hashes.
 - No PCI/security certification claim without qualified independent assessment.
 
-## 8. Logs, reporting and recovery (planned expansion)
+## 8. Logs, reporting and recovery (partially implemented; expansion planned)
 
-Structured redacted logs cover access summaries, runtime lifecycle, device health, tunnel, config changes, deployments, backups, security and payment events. Apply rotation, bounded retention, storage reserve and secret redaction before persistence.
-
-Daily reports summarize uptime, traffic, latency, errors, resource/thermal trends, restarts, tunnel state, deployments, security events and reconciled payment totals. Reports and audit records must survive app restart and support export/restore.
+**Implemented first pass:** redacted operational event logs rotate within bounded app-private files. Daily snapshots store aggregate static-engine requests/bytes and retained redacted events, refresh hourly, archive the previous day at rollover, retain up to 90 reports and export the latest JSON report. Device telemetry history is separately bounded. **Still required:** complete uptime, latency, network throughput, tunnel, deployment, security and financial reconciliation reporting; storage reserve policies; tamper-evident audit; encrypted report backup/restore.
 
 ## 9. Website performance principles
 
