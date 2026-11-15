@@ -131,10 +131,10 @@ flowchart TB
     TUNNEL["CLOUDFLARE TUNNEL"] --> LOOP
     classDef native fill:#24434A,color:#F6F4EF,stroke:#B18B5E,stroke-width:2px;
     classDef engine fill:#1D292B,color:#F6F4EF,stroke:#B18B5E,stroke-width:2px;
-    classDef planned fill:#657174,color:#FFFFFF,stroke:#B18B5E,stroke-dasharray:5 5;
+    classDef integrated fill:#657174,color:#FFFFFF,stroke:#B18B5E,stroke-width:1px;
     class APP,SERVICE,JNI,API native;
     class CORE,STATIC,LOOP,ROUTER engine;
-    class CONSOLE,TUNNEL,PY,NODE planned;
+    class CONSOLE,TUNNEL,PY,NODE engine;
 ~~~
 
 ### Technology responsibilities
@@ -219,6 +219,8 @@ The Android build and physical-device behaviour must be verified independently. 
 | docs/PHASE_0_STATUS.md | Current prototype status and build prerequisites |
 | docs/PYTHON_RUNTIME.md | Embedded Python WSGI setup, limits and security |
 | docs/CLOUDFLARE_TUNNEL.md | Android tunnel connector, token handling and setup |
+| docs/NODE_RUNTIME.md | Embedded Node.js 24 integration, lifecycle, constraints and validation |
+| docs/management-api-v1.yaml | Implemented paired device-management API contract |
 | .github/workflows/ | Automated quality and build workflows |
 
 ## CONTRIBUTING
@@ -229,13 +231,13 @@ Contributions should keep implementation and evidence aligned.
 2. Keep Android-specific code in the native layer and portable hosting logic in Rust where practical.
 3. Include tests or reproducible validation steps with behaviour changes.
 4. Document platform limitations, security assumptions and unverified paths.
-5. Never describe planned tunnel, runtime or public-hosting functionality as available until it has been implemented and tested.
+5. Separate source integration, CI evidence, emulator evidence and physical-device acceptance; never claim one proves the others.
 
 ## SECURITY & DEPLOYMENT NOTICE
 
-PocketHost is an early development project. The static server is loopback-only by default; optional LAN mode has no visitor authentication and must be restricted to a trusted network. It does not provide the complete security controls required for public hosting. Before any public exposure, the project needs a reviewed authentication model, request and connection limits, robust path and file handling, safe deployment/rollback, tunnel lifecycle handling, logging, and physical-device/network testing.
+PocketHost remains an engineering build. The Rust front door is loopback-only by default; optional LAN mode has no visitor authentication and must be restricted to a trusted network. A paired management API protects device controls, but it is not visitor authentication for hosted websites. Imported Python and Node projects execute with the app UID and are not sandboxed. Public exposure still requires a security review, Cloudflare Access where private content is involved, physical-device validation and external-network testing.
 
-Cloudflare Tunnel is an external connectivity service, not a fully self-hosted network edge. PocketHost's connector uses an encrypted-at-rest named-tunnel token, but visitor authentication is not implemented in the origin server; configure Cloudflare Access before exposing private sites. Its use would still depend on Cloudflare infrastructure and applicable service terms.
+Cloudflare Tunnel is an external connectivity service, not a fully self-hosted network edge. PocketHost's connector uses an encrypted-at-rest named-tunnel token. Configure Cloudflare Access before exposing private sites; tunnel connection status alone is not proof of hostname reachability. Its use depends on Cloudflare infrastructure and applicable service terms.
 
 ## LICENSE
 
