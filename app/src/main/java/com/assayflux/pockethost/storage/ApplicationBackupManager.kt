@@ -83,22 +83,27 @@ object ApplicationBackupManager {
             val files = context.filesDir
             val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             val site = File(files, "site").canonicalFile
-            val python = File(
+            val pythonInput = File(
                 preferences.getString("python_project_root", File(files, "python-project").absolutePath)
                     ?: File(files, "python-project").absolutePath
-            ).canonicalFile
-            val node = File(
+            )
+            val nodeInput = File(
                 preferences.getString("node_project_root", File(files, "node-project-default").absolutePath)
                     ?: File(files, "node-project-default").absolutePath
-            ).canonicalFile
+            )
+            if (java.nio.file.Files.isSymbolicLink(pythonInput.toPath()) ||
+                java.nio.file.Files.isSymbolicLink(nodeInput.toPath())) {
+                throw IOException("Python and Node project roots cannot be symbolic links.")
+            }
+            val python = pythonInput.canonicalFile
+            val node = nodeInput.canonicalFile
             val privateRoot = files.canonicalFile.toPath()
             val sitePath = site.toPath()
             val pythonPath = python.toPath()
             val nodePath = node.toPath()
             if (!pythonPath.startsWith(privateRoot) || !nodePath.startsWith(privateRoot) ||
                 python == files.canonicalFile || node == files.canonicalFile ||
-                java.nio.file.Files.isSymbolicLink(python.toPath()) ||
-                java.nio.file.Files.isSymbolicLink(node.toPath())) {
+                false) {
                 throw IOException("Python and Node project folders must be real directories inside Pocket Host private storage.")
             }
             if (pythonPath.startsWith(sitePath) || sitePath.startsWith(pythonPath) ||
