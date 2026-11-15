@@ -334,3 +334,15 @@ def metrics() -> dict:
 
 def metrics_json() -> str:
     return json.dumps(metrics(), separators=(",", ":"))
+
+
+def configure(max_workers: int = 8) -> None:
+    """Set the bounded WSGI worker count before a server is started."""
+    workers = int(max_workers)
+    if workers < 2 or workers > 16:
+        raise ValueError("Python worker limit must be between 2 and 16.")
+    with _lock:
+        if _server is not None:
+            raise RuntimeError("Stop Python hosting before changing worker limits.")
+        _BoundedThreadingWSGIServer.max_workers = workers
+        _metrics["worker_limit"] = workers
