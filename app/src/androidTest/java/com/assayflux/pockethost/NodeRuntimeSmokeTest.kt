@@ -12,8 +12,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 @RunWith(AndroidJUnit4::class)
 class NodeRuntimeSmokeTest {
@@ -39,7 +37,8 @@ class NodeRuntimeSmokeTest {
         )
         File(project, "server.js").writeText(
             "const http=require('node:http');\n" +
-                "http.createServer((req,res)=>res.end('node-smoke:'+process.version))" +
+                "http.createServer((req,res)=>{const body='node-smoke:'+process.version;" +
+                "res.writeHead(200,{'Content-Length':Buffer.byteLength(body)});res.end(body);})" +
                 ".listen(Number(process.env.PORT),'0.0.0.0');\n"
         )
 
@@ -55,12 +54,15 @@ class NodeRuntimeSmokeTest {
             JSONObject().put("runtime", "node").put("port", 3000)).toString()
         assertEquals("OK", NativeEngine.startMultiSite(siteRoot.absolutePath, routes, 18080, false))
 
-        val connection = URL("http://127.0.0.1:18080/").openConnection() as HttpURLConnection
-        connection.connectTimeout = 5_000
-        connection.readTimeout = 10_000
-        connection.setRequestProperty("Host", "node-smoke.local")
-        val body = connection.inputStream.bufferedReader().use { it.readText() }
-        connection.disconnect()
+        val body = java.net.Socket("127.0.0.1", 18080).use { socket ->
+            socket.soTimeout = 10_000
+            socket.getOutputStream().write(
+                "GET / HTTP/1.1\r\nHost: node-smoke.local\r\nConnection: close\r\n\r\n"
+                    .toByteArray(Charsets.ISO_8859_1)
+            )
+            socket.getOutputStream().flush()
+            socket.getInputStream().bufferedReader().readText()
+        }
         assertTrue("Unexpected Node response: $body", body.contains("node-smoke:v24."))
 
         assertEquals("OK", NativeEngine.stop())
