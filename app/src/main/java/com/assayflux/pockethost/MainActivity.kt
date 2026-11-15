@@ -34,6 +34,7 @@ import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
 import com.assayflux.pockethost.storage.SiteBackupManager
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -112,6 +113,7 @@ private fun PocketHostDashboard() {
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
+    var pendingPairingCode by remember { mutableStateOf<String?>(null) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -142,6 +144,7 @@ private fun PocketHostDashboard() {
             activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
+            pendingPairingCode = ManagementApiServer.pendingApprovalCode()
             preferences.getString("service_status", null)?.let { status = it }
             recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
             delay(1_000)
@@ -286,6 +289,20 @@ private fun PocketHostDashboard() {
                 Text("DESIGNED BY ASSAYFLUX", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Text("PocketHost", color = Teal, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 Text("Your website. Your device. Your control.", color = Slate)
+                if (pendingPairingCode != null) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("CONSOLE PAIRING REQUEST", color = Teal, fontWeight = FontWeight.Bold)
+                            Text("Code: $pendingPairingCode", color = Teal, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Only approve this if you initiated pairing from your own trusted browser.", color = Slate)
+                            Button(onClick = {
+                                val approved = ManagementApiServer.approvePairing(pendingPairingCode.orEmpty())
+                                if (approved) { status = "Management console pairing approved."; pendingPairingCode = null }
+                                else status = "Pairing request expired. Start pairing again."
+                            }) { Text("Approve console pairing") }
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
                     FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
