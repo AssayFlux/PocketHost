@@ -33,9 +33,9 @@ Read [North Star](docs/NORTH_STAR.md), [Roadmap](docs/ROADMAP.md), and [Developm
 
 - Collect versioned device telemetry: model/API/ABIs/CPU cores, sampled CPU load, RAM/PSS/heaps, storage, battery/temperature, thermal state and network transport.
 - Run a bounded loopback static GET benchmark while hosting is active.
-- Store a device/workload-specific safe concurrency ceiling and apply a 1–100% admission profile.
+- Start with a conservative provisional ceiling of four connections until the first benchmark, then store a device/workload-specific safe concurrency ceiling and apply a 1–100% admission profile.
 - Schedule a temporary 30% profile for three hours; expiry restores the previous profile.
-- Automatically reduce the admission ceiling under critical memory/storage/thermal pressure and constrained battery/thermal conditions; suspend optional Python/Node runtimes in protective/emergency states while preserving static hosting.
+- Automatically reduce the admission ceiling under high CPU load, critical memory/storage/thermal pressure and constrained battery conditions; suspend optional Python/Node runtimes in protective/emergency states while preserving static hosting.
 - Reject excess connections with an explicit HTTP 503 and Retry-After response instead of silently dropping them.
 - Archive daily aggregate traffic and redacted operational-event summaries with bounded 90-report retention.
 

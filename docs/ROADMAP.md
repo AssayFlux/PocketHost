@@ -64,7 +64,7 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 **Priority: P0**
 
-**Implementation update:** a first admission limiter applies the calibrated connection ceiling and 1–100% profile in Rust; excess accepted sockets receive HTTP 503 with Retry-After. The Android app and TypeScript console support manual profiles, custom timed schedules and the 30%-for-180-minutes workflow with automatic expiry/restore. Android memory, storage, battery and thermal signals drive NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY and EMERGENCY admission states; protective/emergency states suspend optional Python/Node runtimes while preserving the Rust static origin. This remains a device-side first governor: it lacks Rust-native rate limiting, per-site fairness, bounded waiting queues and graceful in-flight drain.
+**Implementation update:** a first admission limiter applies the calibrated connection ceiling and 1–100% profile in Rust; excess accepted sockets receive HTTP 503 with Retry-After. The Android app and TypeScript console support manual profiles, custom timed schedules and the 30%-for-180-minutes workflow with automatic expiry/restore. Android CPU load, memory, storage, battery and thermal signals drive NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY and EMERGENCY admission states; protective/emergency states suspend optional Python/Node runtimes while preserving the Rust static origin. This remains a device-side first governor: it lacks Rust-native rate limiting, per-site fairness, bounded waiting queues and graceful in-flight drain.
 
 1. Rust Resource Governor with NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY and EMERGENCY states.
 2. Global/per-site/per-route concurrency and rate budgets.

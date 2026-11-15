@@ -86,7 +86,7 @@ Do not jump to blockchain before tamper-evident audit. Do not enable live paymen
 - Never advertise a universal maximum visitor count.
 - Measure named workloads: static cached/uncached, payload sizes, concurrency, optional Python/Node.
 - Report observed peak, sustainable safe capacity and current admission budget separately.
-- Capacity percentage means a percentage of calibrated sustainable safe budget, further reduced by live health. It is not CPU utilization and does not reserve hardware resources.
+- Capacity percentage means a percentage of calibrated sustainable safe budget, further reduced by live CPU, memory, storage, battery and thermal health. Before the first benchmark, use a conservative provisional ceiling of four concurrent connections. It is not CPU utilization and does not reserve hardware resources.
 - Owner can schedule 30% for 3 hours; schedule expires and restores previous profile.
 - Governor states: NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY, EMERGENCY.
 - Use bounded queues, controlled 429/503, hysteresis, graceful drain and cooldown.

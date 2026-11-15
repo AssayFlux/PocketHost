@@ -19,6 +19,13 @@ import java.time.Instant
 /** Low-cost device profile and live health sample. Unavailable values remain JSON null. */
 object DeviceTelemetry {
     private var previousCpu: Pair<Long, Long>? = null
+    @Volatile private var latestCpuPercent: Double? = null
+    @Volatile private var latestCpuAtElapsed: Long = 0L
+
+    fun latestCpuUsagePercent(): Double? {
+        val age = android.os.SystemClock.elapsedRealtime() - latestCpuAtElapsed
+        return if (latestCpuAtElapsed > 0L && age in 0..90_000L) latestCpuPercent else null
+    }
 
     @Synchronized fun snapshot(context: Context): JSONObject {
         val app = context.applicationContext
@@ -48,6 +55,10 @@ object DeviceTelemetry {
             else -> "other"
         }
         val cpu = cpuUsagePercent()
+        if (cpu != null) {
+            latestCpuPercent = cpu
+            latestCpuAtElapsed = android.os.SystemClock.elapsedRealtime()
+        }
         return JSONObject()
             .put("schemaVersion", 1)
             .put("sampledAt", Instant.now().toString())

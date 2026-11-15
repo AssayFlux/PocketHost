@@ -46,7 +46,7 @@ Static hosting must work independently of Python, Node.js, remote management and
 Do not invent a maximum visitor count. Discover hardware, benchmark representative workloads, calculate sustainable safe capacity and show the workload and test conditions. A measured safe envelope is more useful than a theoretical peak.
 
 ### 6. Protect the device automatically
-A Resource Governor must adapt to memory pressure, thermal state, battery, storage and observed queue/latency. It must bound queues, throttle, reject gracefully and recover with hysteresis. It must never promise to override Android's own process-kill decisions.
+A Resource Governor must adapt to CPU load, memory pressure, thermal state, battery, storage and observed queue/latency. It must bound queues, throttle, reject gracefully and recover with hysteresis. It must never promise to override Android's own process-kill decisions.
 
 ### 7. Owner control without unsafe defaults
 Provide Simple and Advanced modes, presets and custom settings. Schedules such as 30% capacity for three hours must be first-class. Capacity percentages refer to the calibrated safe budget, not raw CPU utilization.

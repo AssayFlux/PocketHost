@@ -71,7 +71,7 @@
 - [x] First concurrency admission cap and HTTP 503/Retry-After rejection are implemented; bounded waiting queues and rate/fairness policies remain NOT IMPLEMENTED.
 - [ ] Critical management/logging reserve survives visitor overload under stress.
 - [ ] 30% capacity profile source workflow exists; three-hour wall-clock, process-restart and restoration acceptance remain NOT TESTED.
-- [x] Initial device-side health derating and protective runtime suspension are implemented; physical hysteresis/recovery acceptance remains NOT TESTED.
+- [x] Initial CPU/memory/storage/battery/thermal device-side health derating and protective runtime suspension are implemented; physical hysteresis/recovery acceptance remains NOT TESTED.
 
 ## Security, payments and audit acceptance
 
