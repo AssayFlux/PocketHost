@@ -3,115 +3,117 @@ info:
   title: PocketHost Device Management API
   version: 1.0.0
   description: |
-    Versioned, paired-client API served by the PocketHost Android app.
-    The implementation must bind to 127.0.0.1 by default. LAN access is a
-    separate explicit opt-in and must use authenticated pairing.
+    Loopback-only Android management API. Pairing requires local approval in
+    the PocketHost app. Bearer sessions are held in memory, expire after 12
+    hours and are individually revocable. Browser CORS is limited to localhost
+    development and explicit AssayFlux console origins. This API does not
+    provide backup/restore or diagnostics-file transfer; those remain native
+    Android user-mediated flows.
 servers:
   - url: http://127.0.0.1:17841/api/v1
-    description: Local device API (planned default port; implementation must detect conflicts)
 security:
   - DeviceBearer: []
 paths:
   /health:
     get:
       security: []
-      summary: Read non-sensitive API health and version
+      summary: Read non-sensitive API health
       responses:
         '200':
-          description: API health
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Health'
+          description: API ready
   /pair/challenge:
     post:
       security: []
       summary: Request a short-lived pairing challenge
       responses:
         '201':
-          description: Challenge created; Android app must display/approve it
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PairChallenge'
+          description: Challenge created; approve its six-digit code in the Android app
         '429':
-          $ref: '#/components/responses/RateLimited'
+          description: Pairing rate limit exceeded
   /pair/complete:
     post:
       security: []
-      summary: Complete a user-approved one-time pairing challenge
+      summary: Complete an approved pairing challenge
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PairComplete'
+              type: object
+              required: [challengeId, code]
+              properties:
+                challengeId: { type: string }
+                code: { type: string, pattern: '^[0-9]{6}$' }
       responses:
         '200':
-          description: Device bearer credential issued once
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PairSession'
+          description: One-time bearer token issued
         '401':
-          $ref: '#/components/responses/Unauthorized'
-        '410':
-          description: Challenge expired or already consumed
+          description: Challenge not approved, invalid, expired or exhausted
   /session:
     delete:
-      summary: Revoke the current paired session
+      summary: Revoke the current browser session
       responses:
         '204':
           description: Session revoked
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Unauthorized
   /status:
     get:
-      summary: Read current hosting and runtime status
+      summary: Read Android service and runtime state
       responses:
         '200':
-          description: Device status
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceStatus'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Current runtime states
   /sites:
     get:
-      summary: List configured websites
+      summary: List registered sites
       responses:
         '200':
-          description: Site list
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Site'
+          description: Registered site list
+    post:
+      summary: Create or update a hostname-to-project mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, name, root]
+              properties:
+                id: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' }
+                name: { type: string, maxLength: 80 }
+                root: { type: string, description: Must be an existing directory in PocketHost private storage }
+                runtime: { type: string, enum: [static, python-wsgi, node], default: static }
+                hostnames:
+                  type: array
+                  maxItems: 100
+                  items: { type: string }
+                enabled: { type: boolean, default: true }
+      responses:
+        '201':
+          description: Site mapping saved
+        '400':
+          description: Invalid site configuration
   /sites/{siteId}:
-    get:
-      summary: Read one site's configuration and state
+    delete:
       parameters:
-        - $ref: '#/components/parameters/SiteId'
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string }
+      summary: Remove a registered site mapping
       responses:
-        '200':
-          description: Site
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Site'
+        '204':
+          description: Site removed
         '404':
           description: Site not found
   /sites/{siteId}/actions:
     post:
-      summary: Start or stop a site's configured host
       parameters:
-        - $ref: '#/components/parameters/SiteId'
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string }
+      summary: Start or stop a registered runtime
       requestBody:
         required: true
         content:
@@ -120,68 +122,64 @@ paths:
               type: object
               required: [action]
               properties:
-                action:
-                  type: string
-                  enum: [start, stop, restart]
+                action: { type: string, enum: [start, stop] }
       responses:
+        '200':
+          description: Action completed or stop accepted
         '202':
-          description: Action accepted; query status for final state
+          description: Runtime start accepted; poll status
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Unsupported action
         '404':
           description: Site not found
+        '501':
+          description: Runtime action not implemented for this runtime
+  /resources:
+    get:
+      summary: Read per-runtime resource ceilings and device memory
+      responses:
+        '200':
+          description: Resource configuration
+    post:
+      summary: Set bounded Python worker and Node V8 heap limits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pythonMaxWorkers, nodeHeapMb]
+              properties:
+                pythonMaxWorkers: { type: integer, minimum: 2, maximum: 16 }
+                nodeHeapMb: { type: integer, minimum: 96, maximum: 512 }
+      responses:
+        '200':
+          description: Limits saved; stop and restart runtimes to apply
+        '400':
+          description: Limits outside supported range
+        '409':
+          description: Stop Python and Node before changing limits
   /metrics:
     get:
-      summary: Read source-scoped metrics
+      summary: Read metrics with runtime source attribution
       responses:
         '200':
-          description: Metrics with explicit source attribution
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Metrics'
+          description: Runtime metrics and device memory
   /logs:
     get:
-      summary: Read bounded redacted operational logs
-      parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 500
-            default: 100
-        - in: query
-          name: level
-          schema:
-            type: string
-            enum: [DEBUG, INFO, WARN, ERROR]
+      summary: Read recent redacted operational events
       responses:
         '200':
-          description: Log events
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/LogEvent'
+          description: Bounded event list
   /tunnel:
     get:
-      summary: Read tunnel connector state (not proof of public reachability)
+      summary: Read Cloudflare Tunnel state and token-configured flag
       responses:
         '200':
-          description: Tunnel status
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TunnelStatus'
+          description: Tunnel state
   /tunnel/actions:
     post:
-      summary: Enable or disable the configured tunnel
+      summary: Start or stop the configured Cloudflare Tunnel
       requestBody:
         required: true
         content:
@@ -190,170 +188,17 @@ paths:
               type: object
               required: [action]
               properties:
-                action:
-                  type: string
-                  enum: [connect, disconnect]
+                action: { type: string, enum: [start, stop] }
       responses:
-        '202':
-          description: Action accepted
-  /backups:
-    post:
-      summary: Create a backup using an explicit selection; secrets excluded by default
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [siteIds]
-              properties:
-                siteIds:
-                  type: array
-                  items:
-                    type: string
-                includeSiteConfiguration:
-                  type: boolean
-                  default: true
-      responses:
-        '202':
-          description: Backup job accepted
-  /backups/restore:
-    post:
-      summary: Validate and transactionally restore an uploaded backup
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [archiveId, passphrase]
-              properties:
-                archiveId:
-                  type: string
-                passphrase:
-                  type: string
-                  writeOnly: true
-      responses:
-        '202':
-          description: Restore job accepted
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /diagnostics:
-    post:
-      summary: Generate a redacted diagnostics export
-      responses:
-        '202':
-          description: Diagnostics job accepted
+        '200':
+          description: Tunnel action returned a state
+        '409':
+          description: Tunnel token not configured
+        '503':
+          description: Tunnel could not be started
 components:
   securitySchemes:
     DeviceBearer:
       type: http
       scheme: bearer
       bearerFormat: opaque
-  parameters:
-    SiteId:
-      in: path
-      name: siteId
-      required: true
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 64
-  responses:
-    Unauthorized:
-      description: Missing, invalid, expired, or revoked credential
-    RateLimited:
-      description: Request rate limit exceeded
-    BadRequest:
-      description: Invalid request
-  schemas:
-    Health:
-      type: object
-      required: [status, apiVersion]
-      properties:
-        status:
-          type: string
-          enum: [ok, degraded]
-        apiVersion:
-          type: string
-          const: v1
-    PairChallenge:
-      type: object
-      required: [challengeId, code, expiresAt]
-      properties:
-        challengeId: { type: string }
-        code: { type: string, description: Short-lived code shown for user approval }
-        expiresAt: { type: string, format: date-time }
-    PairComplete:
-      type: object
-      required: [challengeId, proof]
-      properties:
-        challengeId: { type: string }
-        proof: { type: string }
-    PairSession:
-      type: object
-      required: [accessToken, expiresAt, scopes]
-      properties:
-        accessToken: { type: string, writeOnly: true }
-        expiresAt: { type: string, format: date-time }
-        scopes:
-          type: array
-          items: { type: string }
-    DeviceStatus:
-      type: object
-      required: [state, apiVersion, runtimes]
-      properties:
-        state:
-          type: string
-          enum: [stopped, starting, local, connecting, public, degraded, recovering, error]
-        apiVersion: { type: string }
-        runtimes:
-          type: array
-          items:
-            type: object
-            required: [name, state]
-            properties:
-              name: { type: string, enum: [rust-static, python, node] }
-              state: { type: string }
-              detail: { type: string }
-    Site:
-      type: object
-      required: [id, name, state, hostnames]
-      properties:
-        id: { type: string }
-        name: { type: string }
-        state: { type: string, enum: [stopped, starting, running, degraded, error] }
-        hostnames:
-          type: array
-          items: { type: string }
-        runtime: { type: string, enum: [static, python-wsgi, node] }
-    Metrics:
-      type: object
-      required: [sources, sampledAt]
-      properties:
-        sampledAt: { type: string, format: date-time }
-        sources:
-          type: array
-          items:
-            type: object
-            required: [source, requests, bytesServed]
-            properties:
-              source: { type: string, enum: [rust-static, python-wsgi, node, cloudflare-tunnel] }
-              requests: { type: integer, minimum: 0 }
-              bytesServed: { type: integer, minimum: 0 }
-              scopeNote: { type: string }
-    LogEvent:
-      type: object
-      required: [timestamp, level, message]
-      properties:
-        timestamp: { type: string, format: date-time }
-        level: { type: string, enum: [DEBUG, INFO, WARN, ERROR] }
-        message: { type: string, maxLength: 1000 }
-        siteId: { type: string }
-    TunnelStatus:
-      type: object
-      required: [state, externalReachability]
-      properties:
-        state: { type: string, enum: [stopped, connecting, connected, degraded, error] }
-        externalReachability: { type: string, enum: [unknown, verified, failed] }
-        hostname: { type: string }
