@@ -60,6 +60,18 @@ object OperationalLog {
         }.getOrDefault(emptyList())
     }
 
+    @Synchronized
+    fun appendArchivesToZip(context: Context, zip: java.util.zip.ZipOutputStream) {
+        val directory = File(context.applicationContext.filesDir, DIRECTORY)
+        val files = (RETAINED_FILES downTo 1).map { File(directory, "$CURRENT.$it") } +
+            File(directory, CURRENT)
+        files.filter { it.isFile }.forEach { file ->
+            zip.putNextEntry(java.util.zip.ZipEntry("operations/${file.name}"))
+            file.inputStream().use { input -> input.copyTo(zip) }
+            zip.closeEntry()
+        }
+    }
+
     fun export(context: Context, destination: android.net.Uri): Boolean = runCatching {
         val directory = File(context.applicationContext.filesDir, DIRECTORY)
         val files = (RETAINED_FILES downTo 1).map { File(directory, "$CURRENT.$it") } +
