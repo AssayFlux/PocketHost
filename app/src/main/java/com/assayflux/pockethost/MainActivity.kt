@@ -306,6 +306,7 @@ private fun PocketHostDashboard() {
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("queuedConnections", NativeEngine.queuedConnections())
                 .put("rateLimitedRequests", NativeEngine.rateLimitedRequests())
+                .put("siteLimitRejections", NativeEngine.siteLimitRejections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections()) }
             capacityBenchmark = CapacityLab.snapshot(context)
             val telemetryNow = android.os.SystemClock.elapsedRealtime()
