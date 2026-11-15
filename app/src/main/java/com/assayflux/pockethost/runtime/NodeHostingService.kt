@@ -57,7 +57,7 @@ class NodeHostingService : Service() {
 
         val worker = Thread({
             try {
-                val result = NodeBridge.start(rootFile.absolutePath, entryFile.absolutePath, port)
+                val result = NodeBridge.start(rootFile.absolutePath, entryFile.absolutePath, cacheDir.absolutePath, port)
                 if (!stopping) setState(if (result == 0) "STOPPED" else "ERROR", "Node.js exited with code $result.")
             } catch (error: Throwable) {
                 if (!stopping) {
