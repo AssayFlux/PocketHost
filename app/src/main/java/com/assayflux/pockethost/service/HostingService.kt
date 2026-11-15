@@ -140,7 +140,8 @@ class HostingService : Service() {
                 val supervisor = Thread({
                     var failures = 0
                     while (!stopping && statePreferences.getBoolean("node_enabled", false)) {
-                        if (NodeHostRuntime.status(this) == "RUNNING") {
+                        val nodeState = NodeHostRuntime.status(this)
+                        if (nodeState == "RUNNING" || nodeState == "STARTING") {
                             failures = 0
                             try { Thread.sleep(3_000) } catch (_: InterruptedException) { break }
                             continue
