@@ -31,6 +31,13 @@ object MetricsStore {
         val byteDelta = if (bytesServed >= previousBytes) bytesServed - previousBytes else bytesServed
         val today = LocalDate.now().toString()
         val storedDay = prefs.getString("day", null)
+        if (storedDay != null && storedDay != today) {
+            DailyOperationsReport.archivePreviousDay(
+                context, storedDay,
+                prefs.getLong("today_requests", 0L),
+                prefs.getLong("today_bytes", 0L)
+            )
+        }
         val todayRequests = if (storedDay == today) prefs.getLong("today_requests", 0L) else 0L
         val todayBytes = if (storedDay == today) prefs.getLong("today_bytes", 0L) else 0L
 

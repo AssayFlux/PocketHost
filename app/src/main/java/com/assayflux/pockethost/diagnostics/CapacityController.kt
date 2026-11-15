@@ -171,13 +171,17 @@ object CapacityLab {
                                 val begin = System.nanoTime()
                                 try {
                                     val connection = java.net.URL("http://127.0.0.1:$port/").openConnection() as java.net.HttpURLConnection
-                                    connection.connectTimeout = 1_500
-                                    connection.readTimeout = 1_500
-                                    connection.requestMethod = "GET"
-                                    val code = connection.responseCode
-                                    if (code !in 200..299) failures.incrementAndGet()
-                                    connection.inputStream.use { input -> val buffer = ByteArray(4096); while (input.read(buffer) >= 0) {} }
-                                    connection.disconnect()
+                                    try {
+                                        connection.connectTimeout = 1_500
+                                        connection.readTimeout = 1_500
+                                        connection.requestMethod = "GET"
+                                        val code = connection.responseCode
+                                        if (code !in 200..299) failures.incrementAndGet()
+                                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                                        stream?.use { input -> val buffer = ByteArray(4096); while (input.read(buffer) >= 0) {} }
+                                    } finally {
+                                        connection.disconnect()
+                                    }
                                 } catch (_: Exception) { failures.incrementAndGet() }
                                 finally { latencies.add((System.nanoTime() - begin) / 1_000_000L) }
                             }
