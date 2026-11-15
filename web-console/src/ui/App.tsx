@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 type Runtime = { name: string; state: string; detail?: string };
 type DeviceStatus = { state: string; apiVersion: string; runtimes: Runtime[] };
 type Metrics = { sampledAt: string; sources: Array<{ source: string; requests: number; bytesServed: number; scopeNote?: string }> };
+type Site = { id: string; name: string; runtime: string; hostnames: string[]; state: string };
+type LogEntry = { timestamp: string; level: string; event: string; message: string };
 
 const defaultApi = "http://127.0.0.1:17841";
 const storedToken = () => { try { return localStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
@@ -14,6 +16,9 @@ export function App() {
   const [approvalCode, setApprovalCode] = useState("");
   const [status, setStatus] = useState<DeviceStatus | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [tunnel, setTunnel] = useState<{ state: string; configured: boolean } | null>(null);
   const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
   const [busy, setBusy] = useState(false);
 
@@ -32,12 +37,15 @@ export function App() {
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const [nextStatus, nextMetrics] = await Promise.all([
-        request("/api/v1/status"),
-        request("/api/v1/metrics"),
+      const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel] = await Promise.all([
+        request("/api/v1/status"), request("/api/v1/metrics"), request("/api/v1/sites"),
+        request("/api/v1/logs"), request("/api/v1/tunnel"),
       ]);
       setStatus(nextStatus);
       setMetrics(nextMetrics);
+      setSites(nextSites.items || []);
+      setLogs(nextLogs.items || []);
+      setTunnel(nextTunnel);
       setMessage("Secure device session active. Metrics are labelled by their actual source.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not reach the device.");
@@ -118,6 +126,9 @@ export function App() {
       setToken("");
       setStatus(null);
       setMetrics(null);
+      setSites([]);
+      setLogs([]);
+      setTunnel(null);
       setBusy(false);
     }
   }
@@ -140,6 +151,10 @@ export function App() {
         <button disabled={busy} onClick={beginPairing}>Request pairing code</button>
         {challengeId && <div className="pair-complete"><p>Enter the code shown in the Android app after approving this request.</p><input aria-label="Device approval code" value={approvalCode} onChange={e => setApprovalCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="6-digit code" /><button disabled={busy || approvalCode.length !== 6} onClick={completePairing}>Complete pairing</button></div>}
       </section>}
+      <div className="section-heading"><div><span className="eyebrow">SITE REGISTRY</span><h2>Configured websites</h2></div><span className="muted-tag">{sites.length} REGISTERED</span></div>
+      <section className="panel">
+        {sites.length === 0 ? <p>No registered websites yet. Import a project and assign its hostname in the Android app.</p> : sites.map(site => <div className="status-line" key={site.id}><span><strong>{site.name}</strong><small className="site-hosts">{site.hostnames.join(", ") || "No hostname assigned"}</small></span><span className="site-actions"><strong>{site.runtime} · {site.state}</strong><button disabled={busy} onClick={() => siteAction(site, "start")}>Start</button><button disabled={busy} onClick={() => siteAction(site, "stop")}>Stop</button></span></div>)}
+      </section>
       <section className="metric-grid" id="metrics">
         <article className="metric-card"><span>Rust static requests</span><strong>{metrics?.sources.find(x => x.source === "rust-static")?.requests.toLocaleString() ?? "—"}</strong><small>Persisted device counter</small></article>
         <article className="metric-card"><span>Static data served</span><strong>{metrics ? bytes(metrics.sources.find(x => x.source === "rust-static")?.bytesServed ?? 0) : "—"}</strong><small>Rust static server only</small></article>
@@ -152,7 +167,7 @@ export function App() {
       </section>
       <section className="lower-grid"><article className="panel"><div className="panel-heading"><h3>Runtime status</h3><span className="status-muted">{status ? "Live device data" : "Waiting for pairing"}</span></div>
         {(status?.runtimes ?? [{ name: "rust-static", state: "—" }, { name: "python", state: "—" }, { name: "node", state: "—" }]).map(runtime => <div className="status-line" key={runtime.name}><span>{runtime.name}</span><strong>{runtime.state}</strong></div>)}
-      </article><article className="panel"><div className="panel-heading"><h3>Session controls</h3><span className="muted-tag">LOCAL DEVICE</span></div><p>Revoking this session invalidates its bearer credential on the device.</p><button className="danger-button" disabled={!token || busy} onClick={revoke}>Revoke this session</button><p className="scope-note">Node.js currently reports unavailable until its native Android runtime is integrated. Python and Node request/resource metrics are not yet implemented.</p></article></section>
+      </article><article className="panel"><div className="panel-heading"><h3>Session controls</h3><span className="muted-tag">LOCAL DEVICE</span></div><p>Revoking this session invalidates its bearer credential on the device.</p><button className="danger-button" disabled={!token || busy} onClick={revoke}>Revoke this session</button><p className="scope-note">Python and Node metrics are process-local and include runtime-specific request counters and memory samples when those runtimes are active.</p></article></section>
       <footer>Designed by AssayFlux <span>·</span> Your website. Your device. Your control.</footer>
     </section>
   </main>;
