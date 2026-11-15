@@ -6,7 +6,7 @@ AssayFlux Pocket Host turns an Android phone into a small website host. It runs 
 
 No Termux. No root. No mandatory VPS. The existing domain and named Cloudflare Tunnel can be reused.
 
-> **Current status:** integrated development build. PR #48 and #49 source changes are merged and their six-job quality checks passed. Current-source ABI APK packaging is running; the emulator and physical-device acceptance gates remain open. This is not a production-approved or signed release.
+> **Current status:** integrated development build. PRs #48–#51 are merged. The six-job quality checks passed on PR #48, #49, #50 and #51. The latest app-source three-ABI debug APK bundle is available as [artifact 14165701365](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844/artifacts/14165701365); emulator instrumentation and physical-device acceptance remain open. This is not a production-approved or signed release.
 
 ## What is included
 
@@ -64,7 +64,7 @@ The public hostname must point to the Rust website listener. It must never point
 ## Build and validation
 
 - Repository: [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)
-- Latest main: `bf22b10c22f5c2f77058acee7905595b7edd3e81`
+- Latest main: `1453e7a6d7b4e9d00ef7721cf88b7bafe00cc8e7`
 - [Quality CI](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Android source compilation.
 - [Android integration build](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed. [Download the ARM64, ARMv7 and x86_64 debug APK bundle](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620). The workflow verified all three APKs contain Node, Node bridge, Rust engine and cloudflared native libraries. Emulator instrumentation is skipped by design; physical-device acceptance is owner-run.
 - Debug APKs are not signed production releases. Release signing requires owner-controlled signing material.
