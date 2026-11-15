@@ -51,6 +51,7 @@ object ManagementApiServer {
     private val sessions = HashMap<String, Session>()
     private val pairingLock = Any()
     private val loginAttemptsLock = Any()
+    private val mutationLock = Any()
     private data class LoginThrottle(var windowStartedAt: Long, var failures: Int = 0, var inFlight: Int = 0)
     private val loginAttempts = HashMap<String, LoginThrottle>()
 
@@ -195,6 +196,19 @@ object ManagementApiServer {
     }
 
     private fun route(method: String, path: String, authorization: String?, body: JSONObject): Pair<Int, JSONObject> {
+        // Keep expensive authentication and health checks independent from configuration
+        // writes. Other mutations remain serialized so route/site state cannot interleave.
+        val independentRequest = method == "GET" && path == "/api/v1/health" ||
+            path.startsWith("/api/v1/auth/") ||
+            path == "/api/v1/pair/challenge" || path == "/api/v1/pair/complete"
+        return if (independentRequest) {
+            routeUnlocked(method, path, authorization, body)
+        } else {
+            synchronized(mutationLock) { routeUnlocked(method, path, authorization, body) }
+        }
+    }
+
+    private fun routeUnlocked(method: String, path: String, authorization: String?, body: JSONObject): Pair<Int, JSONObject> {
         if (method == "GET" && path == "/api/v1/health")
             return 200 to JSONObject().put("status", "ok").put("apiVersion", "v1")
         if (method == "POST" && path == "/api/v1/pair/challenge") {
