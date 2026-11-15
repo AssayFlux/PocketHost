@@ -51,7 +51,8 @@ object ManagementApiServer {
     private val sessions = HashMap<String, Session>()
     private val pairingLock = Any()
     private val loginAttemptsLock = Any()
-    private val loginAttempts = HashMap<String, Pair<Long, Int>>()
+    private data class LoginThrottle(var windowStartedAt: Long, var failures: Int = 0, var inFlight: Int = 0)
+    private val loginAttempts = HashMap<String, LoginThrottle>()
 
     private data class Pairing(val id: String, val code: String, val expires: Long, @Volatile var approved: Boolean = false, var attempts: Int = 0)
     @Volatile private var lastChallengeAt = 0L
@@ -202,7 +203,7 @@ object ManagementApiServer {
                 if (now - challengeWindowAt >= 60) { challengeWindowAt = now; challengeWindowCount = 0 }
                 challengeWindowCount++
                 if (challengeWindowCount > 10 || now - lastChallengeAt < 3)
-                    return@synchronized 429 to JSONObject().put("error", "pairing_rate_limited")
+                    return@synchronized (429 to JSONObject().put("error", "pairing_rate_limited"))
                 lastChallengeAt = now
                 val id = randomToken(12)
                 val code = (100000 + random.nextInt(900000)).toString()
@@ -216,10 +217,10 @@ object ManagementApiServer {
                 val p = pending
                 if (p == null || p.expires <= Instant.now().epochSecond || p.id != body.optString("challengeId") ||
                     !p.approved || p.attempts >= 5)
-                    return@synchronized 401 to JSONObject().put("error", "pairing_not_approved")
+                    return@synchronized (401 to JSONObject().put("error", "pairing_not_approved"))
                 if (p.code != body.optString("code")) {
                     p.attempts++
-                    return@synchronized 401 to JSONObject().put("error", "invalid_pairing_code")
+                    return@synchronized (401 to JSONObject().put("error", "invalid_pairing_code"))
                 }
                 val token = randomToken(32)
                 synchronized(sessions) {
@@ -235,30 +236,60 @@ object ManagementApiServer {
             val username = body.optString("username").trim()
             val normalizedUsername = username.lowercase()
             val now = Instant.now().epochSecond
-            val allowed = synchronized(loginAttemptsLock) {
-                val attempts = loginAttempts[normalizedUsername]
-                if (attempts != null && now - attempts.first < 60 && attempts.second >= 8) {
-                    false
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val throttle = synchronized(loginAttemptsLock) {
+                loginAttempts.entries.removeAll {
+                    now - it.value.windowStartedAt >= 60 && it.value.inFlight == 0
+                }
+                if (username.length > 32) {
+                    LoginThrottle(now) // Invalid oversized names are not retained in the bounded map.
                 } else {
-                    // Reserve an attempt before doing the deliberately expensive password
-                    // derivation so concurrent requests cannot bypass the per-user limit.
-                    val count = if (attempts != null && now - attempts.first < 60) attempts.second + 1 else 1
-                    loginAttempts.entries.removeAll { now - it.value.first >= 60 }
-                    if (username.length <= 32) {
-                        if (loginAttempts.size >= 256 && normalizedUsername !in loginAttempts) {
-                            val oldest = loginAttempts.minByOrNull { it.value.first }?.key
+                    var state = loginAttempts[normalizedUsername]
+                    if (state == null) {
+                        if (loginAttempts.size >= 256) {
+                            val oldest = loginAttempts.entries
+                                .filter { it.value.inFlight == 0 }
+                                .minByOrNull { it.value.windowStartedAt }?.key
                             if (oldest != null) loginAttempts.remove(oldest)
                         }
-                        loginAttempts[normalizedUsername] = now to count
+                        if (loginAttempts.size >= 256) {
+                            null
+                        } else {
+                            state = LoginThrottle(now)
+                            loginAttempts[normalizedUsername] = state
+                            state.inFlight++
+                            state
+                        }
+                    } else if (now - state.windowStartedAt >= 60 && state.inFlight == 0) {
+                        state.windowStartedAt = now
+                        state.failures = 0
+                        state.inFlight++
+                        state
+                    } else if (state.failures >= 8) {
+                        null
+                    } else {
+                        state.inFlight++
+                        state
                     }
-                    true
+                }
+            } ?: return 429 to JSONObject().put("error", "login_rate_limited")
+            val account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
+            synchronized(loginAttemptsLock) {
+                throttle.inFlight = (throttle.inFlight - 1).coerceAtLeast(0)
+                if (account == null) {
+                    if (now - throttle.windowStartedAt >= 60 && throttle.inFlight == 0) {
+                        throttle.windowStartedAt = now
+                        throttle.failures = 0
+                    }
+                    throttle.failures++
+                } else {
+                    throttle.failures = 0
+                }
+                if (throttle.inFlight == 0 && throttle.failures == 0 && username.length <= 32) {
+                    loginAttempts.remove(normalizedUsername, throttle)
                 }
             }
-            if (!allowed) return 429 to JSONObject().put("error", "login_rate_limited")
-            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
-            val account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
             if (account == null) return 401 to JSONObject().put("error", "invalid_credentials")
-            synchronized(loginAttemptsLock) { loginAttempts.remove(normalizedUsername) }
             val token = randomToken(32)
             val expiry = now + SESSION_SECONDS
             synchronized(sessions) { sessions[tokenHash(token)] = Session(expiry, account.username, account.role) }
