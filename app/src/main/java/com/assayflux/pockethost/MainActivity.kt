@@ -1073,7 +1073,7 @@ private fun PocketHostDashboard() {
                             enabled = !hosting && !pythonHosting && !nodeHosting && !importing && backupPassphrase.length >= 12,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Restore encrypted full app backup") }
-                        Text("Includes website files, optional Python/Node projects, hostname routes and safe port settings. Secrets, accounts and tunnel tokens are excluded. Restored runtimes stay stopped until you approve trusted code.", color = palette.onSurfaceVariant, fontSize = 13.sp)
+                        Text("Includes website files, optional Python/Node projects, hostname routes and safe port settings. Device credentials and common secret files are excluded. Review source for embedded secrets before sharing. Restored runtimes stay stopped until you approve trusted code.", color = palette.onSurfaceVariant, fontSize = 13.sp)
                         if (previousReleases.isNotEmpty()) {
                             OutlinedButton(
                                 onClick = {
