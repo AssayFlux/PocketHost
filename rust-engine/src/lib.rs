@@ -307,7 +307,6 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
         response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
         return Ok(response);
     }
-    REQUESTS.fetch_add(1, Ordering::Relaxed);
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
@@ -323,6 +322,7 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
     if let SiteTarget::Proxy { port } = &selected_target {
         return proxy_request(req, *port).await;
     }
+    REQUESTS.fetch_add(1, Ordering::Relaxed);
     let selected_root = match selected_target {
         SiteTarget::Static(path) => path,
         SiteTarget::Proxy { .. } => unreachable!(),
