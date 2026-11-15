@@ -49,6 +49,8 @@ object ManagementApiServer {
     @Volatile private var pending: Pairing? = null
     private data class Session(val expiresAt: Long, val username: String, val role: String, val deviceApprovedPairing: Boolean = false)
     private val sessions = HashMap<String, Session>()
+    private val pairingLock = Any()
+    private val loginAttemptsLock = Any()
     private val loginAttempts = HashMap<String, Pair<Long, Int>>()
 
     private data class Pairing(val id: String, val code: String, val expires: Long, @Volatile var approved: Boolean = false, var attempts: Int = 0)
@@ -84,24 +86,27 @@ object ManagementApiServer {
         listener = null
         acceptThread = null
         synchronized(sessions) { sessions.clear() }
-        pending = null
-        // A stopped listener has no active clients; start a fresh rate-limit window
-        // when the local management service is explicitly restarted.
-        lastChallengeAt = 0L
-        challengeWindowAt = 0L
-        challengeWindowCount = 0
+        synchronized(pairingLock) {
+            pending = null
+            // A stopped listener has no active clients; start a fresh rate-limit window
+            // when the local management service is explicitly restarted.
+            lastChallengeAt = 0L
+            challengeWindowAt = 0L
+            challengeWindowCount = 0
+        }
+        synchronized(loginAttemptsLock) { loginAttempts.clear() }
     }
 
-    @Synchronized fun pendingApprovalCode(): String? {
-        val p = pending ?: return null
-        return if (p.expires > Instant.now().epochSecond && !p.approved) p.code else null
+    fun pendingApprovalCode(): String? = synchronized(pairingLock) {
+        val p = pending
+        if (p != null && p.expires > Instant.now().epochSecond && !p.approved) p.code else null
     }
 
-    @Synchronized fun approvePairing(code: String): Boolean {
-        val p = pending ?: return false
-        if (p.expires <= Instant.now().epochSecond || p.code != code) return false
+    fun approvePairing(code: String): Boolean = synchronized(pairingLock) {
+        val p = pending ?: return@synchronized false
+        if (p.expires <= Instant.now().epochSecond || p.code != code) return@synchronized false
         p.approved = true
-        return true
+        true
     }
 
     private fun handle(socket: Socket) {
@@ -188,60 +193,77 @@ object ManagementApiServer {
         throw IllegalArgumentException("Headers too large")
     }
 
-    @Synchronized private fun route(method: String, path: String, authorization: String?, body: JSONObject): Pair<Int, JSONObject> {
+    private fun route(method: String, path: String, authorization: String?, body: JSONObject): Pair<Int, JSONObject> {
         if (method == "GET" && path == "/api/v1/health")
             return 200 to JSONObject().put("status", "ok").put("apiVersion", "v1")
         if (method == "POST" && path == "/api/v1/pair/challenge") {
-            val now = Instant.now().epochSecond
-            if (now - challengeWindowAt >= 60) { challengeWindowAt = now; challengeWindowCount = 0 }
-            challengeWindowCount++
-            if (challengeWindowCount > 10 || now - lastChallengeAt < 3)
-                return 429 to JSONObject().put("error", "pairing_rate_limited")
-            lastChallengeAt = now
-            val id = randomToken(12)
-            val code = (100000 + random.nextInt(900000)).toString()
-            pending = Pairing(id, code, Instant.now().epochSecond + 120)
-            return 201 to JSONObject().put("challengeId", id).put("expiresAt", pending!!.expires)
+            return synchronized(pairingLock) {
+                val now = Instant.now().epochSecond
+                if (now - challengeWindowAt >= 60) { challengeWindowAt = now; challengeWindowCount = 0 }
+                challengeWindowCount++
+                if (challengeWindowCount > 10 || now - lastChallengeAt < 3)
+                    return@synchronized 429 to JSONObject().put("error", "pairing_rate_limited")
+                lastChallengeAt = now
+                val id = randomToken(12)
+                val code = (100000 + random.nextInt(900000)).toString()
+                val pairing = Pairing(id, code, now + 120)
+                pending = pairing
+                201 to JSONObject().put("challengeId", id).put("expiresAt", pairing.expires)
+            }
         }
         if (method == "POST" && path == "/api/v1/pair/complete") {
-            val p = pending
-            if (p == null || p.expires <= Instant.now().epochSecond || p.id != body.optString("challengeId") ||
-                !p.approved || p.attempts >= 5) return 401 to JSONObject().put("error", "pairing_not_approved")
-            if (p.code != body.optString("code")) {
-                p.attempts++
-                return 401 to JSONObject().put("error", "invalid_pairing_code")
+            return synchronized(pairingLock) {
+                val p = pending
+                if (p == null || p.expires <= Instant.now().epochSecond || p.id != body.optString("challengeId") ||
+                    !p.approved || p.attempts >= 5)
+                    return@synchronized 401 to JSONObject().put("error", "pairing_not_approved")
+                if (p.code != body.optString("code")) {
+                    p.attempts++
+                    return@synchronized 401 to JSONObject().put("error", "invalid_pairing_code")
+                }
+                val token = randomToken(32)
+                synchronized(sessions) {
+                    sessions[tokenHash(token)] = Session(Instant.now().epochSecond + SESSION_SECONDS,
+                        "owner", "OWNER", deviceApprovedPairing = true)
+                }
+                pending = null
+                200 to JSONObject().put("accessToken", token)
+                    .put("expiresAt", Instant.now().epochSecond + SESSION_SECONDS)
             }
-            val token = randomToken(32)
-            synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + SESSION_SECONDS, "owner", "OWNER", deviceApprovedPairing = true) }
-            pending = null
-            return 200 to JSONObject().put("accessToken", token).put("expiresAt", Instant.now().epochSecond + SESSION_SECONDS)
         }
         if (method == "POST" && path == "/api/v1/auth/login") {
             val username = body.optString("username").trim()
+            val normalizedUsername = username.lowercase()
             val now = Instant.now().epochSecond
-            val attempts = loginAttempts[username.lowercase()]
-            if (attempts != null && now - attempts.first < 60 && attempts.second >= 8)
-                return 429 to JSONObject().put("error", "login_rate_limited")
+            val allowed = synchronized(loginAttemptsLock) {
+                val attempts = loginAttempts[normalizedUsername]
+                if (attempts != null && now - attempts.first < 60 && attempts.second >= 8) {
+                    false
+                } else {
+                    // Reserve an attempt before doing the deliberately expensive password
+                    // derivation so concurrent requests cannot bypass the per-user limit.
+                    val count = if (attempts != null && now - attempts.first < 60) attempts.second + 1 else 1
+                    loginAttempts.entries.removeAll { now - it.value.first >= 60 }
+                    if (username.length <= 32) {
+                        if (loginAttempts.size >= 256 && normalizedUsername !in loginAttempts) {
+                            val oldest = loginAttempts.minByOrNull { it.value.first }?.key
+                            if (oldest != null) loginAttempts.remove(oldest)
+                        }
+                        loginAttempts[normalizedUsername] = now to count
+                    }
+                    true
+                }
+            }
+            if (!allowed) return 429 to JSONObject().put("error", "login_rate_limited")
             val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
             val account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
-            if (account == null) {
-                val count = if (attempts != null && now - attempts.first < 60) attempts.second + 1 else 1
-                // Bound attacker-controlled username keys so repeated login attempts cannot
-                // grow this in-memory throttle map without limit. Expired entries are pruned
-                // first; when still full, evict the oldest window before inserting.
-                loginAttempts.entries.removeAll { now - it.value.first >= 60 }
-                if (loginAttempts.size >= 256 && username.lowercase() !in loginAttempts) {
-                    val oldest = loginAttempts.minByOrNull { it.value.first }?.key
-                    if (oldest != null) loginAttempts.remove(oldest)
-                }
-                if (username.length <= 32) loginAttempts[username.lowercase()] = now to count
-                return 401 to JSONObject().put("error", "invalid_credentials")
-            }
-            loginAttempts.remove(username.lowercase())
+            if (account == null) return 401 to JSONObject().put("error", "invalid_credentials")
+            synchronized(loginAttemptsLock) { loginAttempts.remove(normalizedUsername) }
             val token = randomToken(32)
             val expiry = now + SESSION_SECONDS
             synchronized(sessions) { sessions[tokenHash(token)] = Session(expiry, account.username, account.role) }
-            return 200 to JSONObject().put("accessToken", token).put("expiresAt", expiry).put("username", account.username).put("role", account.role)
+            return 200 to JSONObject().put("accessToken", token).put("expiresAt", expiry)
+                .put("username", account.username).put("role", account.role)
         }
         val token = authorization?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")
         val session = token?.let { raw -> synchronized(sessions) {
