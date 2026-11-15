@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  title: AssayFlux PocketHost Remote Control Plane
+  version: 1.0.0
+  description: Independent backend for device registration, desired configuration and typed remote commands. Android devices initiate outbound HTTPS polling.
+servers:
+  - url: https://control.example.com
+security:
+  - AdminBearer: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        "200": { description: Service healthy }
+  /v1/admin/devices:
+    get:
+      summary: List registered devices and latest reported state
+      responses:
+        "200": { description: Device inventory }
+    post:
+      summary: Register a device and issue its one-time bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+      responses:
+        "201": { description: Device registered; device_token is returned once }
+  /v1/admin/devices/{id}:
+    delete:
+      summary: Revoke a device and delete its configuration and queued commands
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Device revoked }
+        "404": { description: Device not found }
+  /v1/admin/devices/{id}/config:
+    get:
+      summary: Read desired device configuration and version
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Versioned desired configuration }
+    put:
+      summary: Save a versioned config and atomically queue it for the phone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config]
+              properties:
+                expected_version: { type: integer, minimum: 1 }
+                config: { type: object, maxProperties: 32 }
+      responses:
+        "200": { description: Saved and queued }
+        "409": { description: Version conflict }
+  /v1/admin/devices/{id}/commands:
+    post:
+      summary: Queue an allowlisted command for a device
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, payload]
+              properties:
+                kind: { type: string, enum: [site_action, tunnel_action, restart_runtime] }
+                payload: { type: object }
+      responses:
+        "202": { description: Command queued }
+  /v1/device/commands:
+    get:
+      security:
+        - DeviceBearer: []
+      summary: Poll and lease queued commands
+      responses:
+        "200": { description: Up to 32 commands }
+  /v1/device/heartbeat:
+    post:
+      security:
+        - DeviceBearer: []
+      summary: Report current device and runtime state
+      responses:
+        "200": { description: Heartbeat accepted }
+  /v1/device/commands/{command}/ack:
+    post:
+      security:
+        - DeviceBearer: []
+      summary: Acknowledge command execution
+      parameters:
+        - in: path
+          name: command
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success, result]
+              properties:
+                success: { type: boolean }
+                result: { type: object }
+      responses:
+        "200": { description: Acknowledgement recorded }
+components:
+  securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+    DeviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque

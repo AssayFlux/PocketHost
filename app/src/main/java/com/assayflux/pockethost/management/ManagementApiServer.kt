@@ -436,6 +436,11 @@ object ManagementApiServer {
                 "apply_config" -> {
                     val config = payload.optJSONObject("config")
                         ?: return JSONObject().put("status", 400).put("error", "missing_config")
+                    val supportedKeys = setOf("pythonMaxWorkers", "nodeHeapMb", "tunnelEnabled")
+                    val requestedKeys = config.keys().asSequence().toSet()
+                    if (requestedKeys.isEmpty() || requestedKeys.any { it !in supportedKeys }) {
+                        return JSONObject().put("status", 400).put("error", "unsupported_config_key")
+                    }
                     val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
                     val results = org.json.JSONArray()
                     var applied = false

@@ -252,3 +252,17 @@ Released under the **Apache License 2.0**. See [LICENSE](LICENSE). Third-party r
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:1D292B,50:24434A,100:B18B5E&height=95&section=footer" alt="" width="100%">
 </p>
+
+
+## REMOTE CONTROL PLANE
+
+PocketHost now includes a separately deployable Rust + PostgreSQL management backend. It is distinct from the Android hosting origin: the phone continues serving websites locally, while an outbound authenticated agent reports device state and polls for typed management commands.
+
+- **Backend:** `control-plane/` — Rust API, PostgreSQL migrations, versioned desired configuration, device registration/revocation, command queue, delivery leases and acknowledgements.
+- **Web administration:** the Remote Control Plane section in the TypeScript console — register phones, copy one-time device credentials, inspect heartbeats, edit supported configuration and queue site/tunnel/runtime actions.
+- **Android agent:** encrypted device token storage using Android Keystore; outbound HTTPS polling while the hosting foreground service is active; command result persistence and acknowledgements.
+- **Deployment:** Docker Compose + PostgreSQL + Caddy TLS termination in `control-plane/compose.yaml`.
+
+See [remote-control deployment](control-plane/README.md), [API contract](control-plane/openapi.yaml), and [backend source](control-plane/src/main.rs).
+
+The initial remote configuration contract supports Python worker ceiling, Node V8 heap ceiling and tunnel enabled state. Typed commands support site start/stop, tunnel start/stop and runtime restart. Remote archive upload, multi-user roles, account audit export and physical-device acceptance remain separate release gates. Remote management requires an online phone with PocketHost hosting service running and a deployed HTTPS control plane.

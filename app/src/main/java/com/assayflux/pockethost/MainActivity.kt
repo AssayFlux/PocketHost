@@ -417,8 +417,8 @@ private fun PocketHostDashboard() {
                                         RemoteControlAgent.configure(context, controlPlaneEndpoint, controlPlaneToken)
                                         remoteControlConfigured = true
                                         controlPlaneToken = ""
-                                        RemoteControlAgent.start(context)
-                                        status = "Remote control connected. This phone will poll the backend while hosting is active."
+                                        if (hosting) RemoteControlAgent.start(context)
+                                        status = if (hosting) "Remote control connected. This phone will poll the backend while hosting is active." else "Remote connection saved securely. The agent starts when hosting starts."
                                     }.onFailure { status = it.message ?: "Could not configure remote control." }
                                 }, enabled = controlPlaneEndpoint.isNotBlank() && controlPlaneToken.length >= 32) {
                                     Text("Save remote connection")
