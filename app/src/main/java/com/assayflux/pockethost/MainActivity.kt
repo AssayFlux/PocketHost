@@ -10,7 +10,7 @@ import android.net.Uri
 import android.widget.Toast
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -109,7 +109,7 @@ private fun formatBytes(value: Long): String = when {
     else -> "${value / (1024L * 1024L * 1024L)} GB"
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val allowedAuthenticators: Int
         get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
