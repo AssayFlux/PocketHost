@@ -65,7 +65,8 @@ object ApplicationBackupManager {
         val pythonPort: Int,
         val nodePort: Int,
         val keepAwake: Boolean,
-        val autoStartOnBoot: Boolean
+        val autoStartOnBoot: Boolean,
+        val darkTheme: Boolean
     )
 
     private data class Counters(
@@ -297,7 +298,8 @@ object ApplicationBackupManager {
             json.optInt("pythonPort", 8081),
             json.optInt("nodePort", 3000),
             json.optBoolean("keepAwake", false),
-            json.optBoolean("autoStartOnBoot", false)
+            json.optBoolean("autoStartOnBoot", false),
+            json.optBoolean("darkTheme", false)
         )
         validatePorts(settings.port, settings.pythonPort, settings.nodePort)
         return settings
@@ -560,6 +562,7 @@ object ApplicationBackupManager {
             .putInt("node_port", settings.nodePort)
             .putBoolean("keep_awake", settings.keepAwake)
             .putBoolean("auto_start_on_boot", settings.autoStartOnBoot)
+            .putBoolean("dark_theme", settings.darkTheme)
             .putBoolean("allow_lan", false)
             .putBoolean("python_enabled", false)
             .putBoolean("node_enabled", false)
@@ -576,6 +579,7 @@ object ApplicationBackupManager {
             .put("node_port", prefs.getInt("node_port", 3000))
             .put("keep_awake", prefs.getBoolean("keep_awake", false))
             .put("auto_start_on_boot", prefs.getBoolean("auto_start_on_boot", false))
+            .put("dark_theme", prefs.getBoolean("dark_theme", false))
             .put("allow_lan", prefs.getBoolean("allow_lan", false))
             .put("python_enabled", prefs.getBoolean("python_enabled", false))
             .put("node_enabled", prefs.getBoolean("node_enabled", false))
@@ -589,6 +593,7 @@ object ApplicationBackupManager {
             .putInt("node_port", old.optInt("node_port", 3000))
             .putBoolean("keep_awake", old.optBoolean("keep_awake", false))
             .putBoolean("auto_start_on_boot", old.optBoolean("auto_start_on_boot", false))
+            .putBoolean("dark_theme", old.optBoolean("dark_theme", false))
             .putBoolean("allow_lan", old.optBoolean("allow_lan", false))
             .putBoolean("python_enabled", old.optBoolean("python_enabled", false))
             .putBoolean("node_enabled", old.optBoolean("node_enabled", false))
