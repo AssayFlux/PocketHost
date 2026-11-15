@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Semaphore};
@@ -131,10 +132,11 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
     for name in ["connection", "proxy-connection", "keep-alive", "transfer-encoding", "trailer", "te"] {
         headers.remove(name);
     }
-    let connector = HttpConnector::new();
+    let mut connector = HttpConnector::new();
+    connector.set_connect_timeout(Some(Duration::from_secs(5)));
     let client: Client<_, Incoming> = Client::builder(TokioExecutor::new()).build(connector);
-    match client.request(req).await {
-        Ok(upstream) => {
+    match tokio::time::timeout(Duration::from_secs(15), client.request(req)).await {
+        Ok(Ok(upstream)) => {
             let (mut parts, body) = upstream.into_parts();
             parts.headers.remove("connection");
             parts.headers.remove("transfer-encoding");
@@ -144,17 +146,17 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
             let body = body.map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error)).boxed_unsync();
             Ok(Response::from_parts(parts, body))
         }
-        Err(_) => Ok(text_response(StatusCode::BAD_GATEWAY, "text/plain; charset=utf-8", "Upstream runtime is unavailable")),
+        Ok(Err(_)) => Ok(text_response(StatusCode::BAD_GATEWAY, "text/plain; charset=utf-8", "Upstream runtime is unavailable")),
+        Err(_) => Ok(text_response(StatusCode::GATEWAY_TIMEOUT, "text/plain; charset=utf-8", "Upstream runtime did not respond within 15 seconds")),
     }
 }
 
 async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
-        .unwrap_or("")
-        .trim()
-        .to_ascii_lowercase()
-        .split(':').next().unwrap_or("").to_string();
+        .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
+        .map(|authority| authority.host().trim_end_matches('.').to_ascii_lowercase())
+        .unwrap_or_default();
     let selected_target = if host_roots.is_empty() {
         SiteTarget::Static(root)
     } else if let Some(target) = host_roots.get(&requested_host) {
