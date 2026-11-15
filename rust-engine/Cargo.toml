@@ -15,7 +15,7 @@ tokio = { version = "1.43", features = ["rt-multi-thread", "net", "sync", "macro
 tokio-util = { version = "0.7", features = ["io"] }
 futures-util = "0.3"
 hyper = { version = "1.5", features = ["http1", "server"] }
-hyper-util = { version = "0.1", features = ["tokio", "server-auto", "http1", "http2"] }
+hyper-util = { version = "0.1", features = ["tokio", "server-auto", "client", "client-legacy", "http1", "http2"] }
 http-body-util = "0.1"
 bytes = "1"
 percent-encoding = "2"
