@@ -79,6 +79,19 @@ object SiteFileManager {
         backup.delete()
     }
 
+    /** Rename a file or folder without replacing an existing destination. */
+    fun renameEntry(context: Context, sourcePath: String, destinationPath: String) {
+        val root = root(context)
+        val source = resolve(root, sourcePath)
+        val destination = resolve(root, destinationPath)
+        require(source.exists()) { "The selected file or folder no longer exists." }
+        require(source.canonicalFile != root) { "The website root cannot be renamed." }
+        require(!destination.exists()) { "A file or folder already exists at the new path." }
+        val parent = destination.parentFile ?: error("Invalid destination path.")
+        require(parent.isDirectory) { "The destination folder must already exist." }
+        java.nio.file.Files.move(source.toPath(), destination.toPath())
+    }
+
     fun deleteFile(context: Context, relativePath: String) {
         val file = resolve(root(context), relativePath)
         require(file.isFile) { "Only individual files can be deleted here." }
