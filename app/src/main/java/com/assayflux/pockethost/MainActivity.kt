@@ -106,6 +106,7 @@ private fun PocketHostDashboard() {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Dashboard") }
     var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
+    var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
     var showClearLogsConfirmation by remember { mutableStateOf(false) }
     var siteFileRefresh by remember { mutableIntStateOf(0) }
@@ -435,6 +436,30 @@ private fun PocketHostDashboard() {
                                 darkTheme = enabled
                                 context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("dark_theme", enabled).apply()
                             })
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Auto-start hosting on boot", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                    Text("Starts the local hosting service after device restart when Android permits it.", color = palette.onSurfaceVariant)
+                                }
+                                Switch(checked = autoStartOnBoot, onCheckedChange = { enabled ->
+                                    autoStartOnBoot = enabled
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("auto_start_on_boot", enabled).apply()
+                                })
+                            }
+                            OutlinedButton(onClick = {
+                                runCatching {
+                                    context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                                }.onFailure { status = it.message ?: "Could not open battery optimization settings." }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Battery optimization settings") }
                         }
                     }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
