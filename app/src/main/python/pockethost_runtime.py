@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import re
 import os
 import sys
 import threading
@@ -264,19 +265,24 @@ def start_many(host_roots_json: str, port: int, allow_lan: bool = False) -> str:
         if _server is not None:
             return "ALREADY_RUNNING"
         applications = {}
+        applications_by_root = {}
         loaded_modules = []
         loaded_roots = []
         try:
             for raw_host, raw_root in routes.items():
                 host = str(raw_host).strip().rstrip(".").lower()
-                if not host or len(host) > 253 or not isinstance(raw_root, str):
+                if not re.fullmatch(r"(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", host):
                     raise ValueError("Invalid Python hostname route.")
+                if not isinstance(raw_root, str):
+                    raise ValueError("Invalid Python project root.")
                 if host in applications:
                     raise ValueError("Duplicate Python hostname route.")
                 root = os.path.realpath(raw_root)
-                module_name = "_pockethost_wsgi_" + hashlib.sha256(root.encode("utf-8")).hexdigest()[:20]
-                if module_name not in loaded_modules:
+                application = applications_by_root.get(root)
+                if application is None:
+                    module_name = "_pockethost_wsgi_" + hashlib.sha256(root.encode("utf-8")).hexdigest()[:20]
                     application, loaded_name = _load_application(root, module_name)
+                    applications_by_root[root] = application
                     loaded_modules.append(loaded_name)
                     loaded_roots.append(root)
                 applications[host] = application
