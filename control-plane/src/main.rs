@@ -101,10 +101,71 @@ fn new_token() -> String {
     hex::encode(bytes)
 }
 
-fn admin(headers: &HeaderMap, state: &AppState) -> Result<(), (StatusCode, String)> {
+async fn admin(headers: &HeaderMap, state: &AppState) -> Result<String, (StatusCode, String)> {
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_auth_required".into()))?;
-    if secure_equal(supplied, &state.admin_token) { Ok(()) }
-    else { Err((StatusCode::UNAUTHORIZED, "invalid_admin_token".into())) }
+    if secure_equal(supplied, &state.admin_token) { return Ok("owner".into()); }
+    let role = sqlx::query("SELECT role FROM control_users WHERE token_hash=$1 AND active=TRUE")
+        .bind(token_hash(supplied)).fetch_optional(&state.db).await.map_err(internal)?
+        .map(|row| row.get::<String,_>("role"));
+    role.ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_token".into()))
+}
+
+async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<String, (StatusCode, String)> {
+    let role = admin(headers, state).await?;
+    if role == "viewer" {
+        return Err((StatusCode::FORBIDDEN, "insufficient_role".into()));
+    }
+    Ok(role)
+}
+
+#[derive(Deserialize)]
+struct CreateUser { name: String, role: String }
+
+#[derive(Serialize)]
+struct UserCreated { id: Uuid, name: String, role: String, token: String }
+
+async fn create_user(
+    State(s): State<AppState>, headers: HeaderMap, Json(input): Json<CreateUser>,
+) -> Result<(StatusCode, Json<UserCreated>), (StatusCode, String)> {
+    let actor = admin(&headers, &s).await?;
+    if actor != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    let name = input.name.trim();
+    if name.is_empty() || name.len() > 120 || !["editor","viewer"].contains(&input.role.as_str()) {
+        return Err((StatusCode::BAD_REQUEST, "invalid_user".into()));
+    }
+    let id = Uuid::new_v4();
+    let token = new_token();
+    sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,$2,$3,$4)")
+        .bind(id).bind(name).bind(&input.role).bind(token_hash(&token))
+        .execute(&s.db).await.map_err(internal)?;
+    audit(&s, "owner", "user.create", &id.to_string(), json!({"name":name,"role":input.role})).await?;
+    Ok((StatusCode::CREATED, Json(UserCreated { id, name:name.into(), role:input.role, token })))
+}
+
+async fn list_users(
+    State(s): State<AppState>, headers: HeaderMap,
+) -> Result<Json<Vec<Value>>, (StatusCode, String)> {
+    let actor = admin(&headers, &s).await?;
+    if actor != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    let rows = sqlx::query("SELECT id,name,role,active,created_at FROM control_users ORDER BY created_at DESC")
+        .fetch_all(&s.db).await.map_err(internal)?;
+    Ok(Json(rows.into_iter().map(|r| json!({
+        "id":r.get::<Uuid,_>("id"),"name":r.get::<String,_>("name"),
+        "role":r.get::<String,_>("role"),"active":r.get::<bool,_>("active"),
+        "createdAt":r.get::<DateTime<Utc>,_>("created_at")
+    })).collect()))
+}
+
+async fn revoke_user(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let actor = admin(&headers, &s).await?;
+    if actor != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1")
+        .bind(id).execute(&s.db).await.map_err(internal)?;
+    if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "user_not_found".into())); }
+    audit(&s, "owner", "user.revoke", &id.to_string(), json!({})).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (StatusCode, String)> {
