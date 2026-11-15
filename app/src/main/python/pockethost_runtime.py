@@ -242,10 +242,13 @@ def stop() -> str:
 class _HostRouter:
     def __init__(self, applications):
         self.applications = applications
+        self.default_application = next(iter(applications.values()))
 
     def __call__(self, environ, start_response):
         host = environ.get("HTTP_HOST", "").split(":", 1)[0].strip().rstrip(".").lower()
         application = self.applications.get(host)
+        if application is None and host in {"localhost", "127.0.0.1"}:
+            application = self.default_application
         if application is None:
             start_response("404 Not Found", [("Content-Length", "0")])
             return [b""]
