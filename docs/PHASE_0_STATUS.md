@@ -2,7 +2,7 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `90af8231481a224392df2adb3f1bcf338deb1de7`. PRs #48–#51 are merged, including capacity-protection runtime recovery, the branded navigation header, signed-release workflow/checksum correction and status documentation.
+> - **Current main:** `1453e7a6d7b4e9d00ef7721cf88b7bafe00cc8e7`. PRs #48–#51 are merged, including capacity-protection runtime recovery, the branded navigation header, signed-release workflow/checksum correction and status documentation.
 > - **Quality CI:** PR #48 run [43722553055](https://github.com/AssayFlux/PocketHost/actions/runs/43722553055) and PR #49 run [43722682803](https://github.com/AssayFlux/PocketHost/actions/runs/43722682803) passed all six jobs, including Android source compilation.
 > - **Android integration:** the PR #49 Android integration run [43722682844](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844) passed and produced the current app-source [three-ABI debug APK artifact 14165701365](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844/artifacts/14165701365). The artifact contains ARM64, ARMv7 and x86_64 APKs; emulator instrumentation is skipped by design.
 > - **Capacity recovery:** automatic protective suspension now retains the Owner's Python/Node enabled preferences and attempts restart after the device returns to NORMAL following recovery hysteresis. CI compilation passed; thermal/recovery behavior still requires physical-device acceptance.
@@ -11,7 +11,7 @@
 > - **Capacity Lab:** bounded static-origin sweep only. Multi-workload runtime benchmarks, sustained safe-capacity calibration and full telemetry/recovery validation remain open.
 > - **Runtime security:** Python executes in the app process and Node in a separate process with the same app UID. Neither is an OS security sandbox. Only trusted owner-installed code may run.
 > - **Remote control:** Android agent and Rust/PostgreSQL control-plane source exist. Production deployment, real-device pairing, live configuration changes and command-recovery acceptance are not proven. Deployment requires owner-controlled host/SSH/database/admin secrets.
-> - **Release:** signed-release workflow exists. PR #50 fixed the signed-release APK verification loop and added a portable SHA-256 manifest. No signed production APK has been built; the owner must configure the release keystore secrets. No signed production APK has been built; the owner must configure the release keystore secrets.
+> - **Release:** signed-release workflow exists. PR #50 fixed the signed-release APK verification loop and added a portable SHA-256 manifest. No signed production APK has been built; the owner must configure the release keystore secrets.
 > - **Device acceptance:** physical installation, Android lifecycle, existing Cloudflare tunnel/public HTTPS, thermal, battery and OEM behavior are owner-run acceptance tasks.
 > - **Release state:** integrated development build; not production approved. Independent security review and payment-provider integration remain open.
 >
