@@ -276,7 +276,7 @@ object ManagementApiServer {
             return when (site.runtime) {
                 "static" -> when (action) {
                     "start" -> {
-                        val hosts = SiteRegistry.staticHostnameMap(context).toString()
+                        val hosts = SiteRegistry.hostRoutingJson(context, context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("python_port", 8081), context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000)).toString()
                         val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080)
                         val lan = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)
                         val result = if (hosts != "{}") NativeEngine.startMultiSite(site.root, hosts, port, lan)
