@@ -190,6 +190,26 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
     }
 }
 
+async fn resolve_static_file(root: &Path, relative: &Path) -> Result<PathBuf, StatusCode> {
+    let requested = tokio::fs::canonicalize(root.join(relative)).await;
+    let candidate = match requested {
+        Ok(path) if path.is_file() => path,
+        Ok(path) if path.is_dir() && relative.extension().is_none() => {
+            tokio::fs::canonicalize(root.join("index.html")).await.map_err(|_| StatusCode::NOT_FOUND)?
+        }
+        Err(_) if relative.extension().is_none() => {
+            // History-based SPAs (React/Vue/Svelte/etc.) expect extensionless routes
+            // to load the application shell. Missing asset paths with extensions remain 404s.
+            tokio::fs::canonicalize(root.join("index.html")).await.map_err(|_| StatusCode::NOT_FOUND)?
+        }
+        Err(_) => return Err(StatusCode::NOT_FOUND),
+        _ => return Err(StatusCode::NOT_FOUND),
+    };
+    if !candidate.starts_with(root) { return Err(StatusCode::FORBIDDEN); }
+    if !candidate.is_file() { return Err(StatusCode::NOT_FOUND); }
+    Ok(candidate)
+}
+
 async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
@@ -218,13 +238,11 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
         Ok(path) => path,
         Err(status) => return Ok(text_response(status, "text/plain; charset=utf-8", "Invalid or forbidden path")),
     };
-    let canonical = match tokio::fs::canonicalize(selected_root.join(relative)).await {
+    let canonical = match resolve_static_file(&selected_root, &relative).await {
         Ok(path) => path,
+        Err(StatusCode::FORBIDDEN) => return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden")),
         Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
     };
-    if !canonical.starts_with(&selected_root) || !canonical.is_file() {
-        return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden"));
-    }
     let metadata = match tokio::fs::metadata(&canonical).await {
         Ok(metadata) => metadata,
         Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
@@ -489,6 +507,24 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeC
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn extensionless_routes_fall_back_to_spa_index_but_missing_assets_stay_404() {
+        let root = std::env::temp_dir().join(format!("pockethost-spa-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("assets")).unwrap();
+        std::fs::write(root.join("index.html"), "<div id=app></div>").unwrap();
+        std::fs::write(root.join("assets/app.js"), "console.log('ok')").unwrap();
+        let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let route = resolve_static_file(&root, Path::new("account/profile")).await.unwrap();
+            assert_eq!(route, std::fs::canonicalize(root.join("index.html")).unwrap());
+            let asset = resolve_static_file(&root, Path::new("assets/app.js")).await.unwrap();
+            assert_eq!(asset, std::fs::canonicalize(root.join("assets/app.js")).unwrap());
+            assert_eq!(resolve_static_file(&root, Path::new("assets/missing.js")).await.unwrap_err(), StatusCode::NOT_FOUND);
+        });
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn strips_standard_and_connection_nominated_hop_by_hop_headers() {
         let mut headers = hyper::HeaderMap::new();
