@@ -8,7 +8,7 @@ Pocket Host exports a portable, passphrase-encrypted `.afbackup` containing the 
 - AES-256-GCM authenticated encryption with a 128-bit authentication tag.
 - 16-byte random salt and 12-byte random nonce for each export.
 - PBKDF2-HMAC-SHA-256 with 210,000 iterations derives the encryption key.
-- A minimum 12-character passphrase is required; the passphrase is never stored.
+- A 12–128 character passphrase is required; the passphrase is never stored.
 - Ciphertext authentication is completed before archive extraction or deployment activation.
 - The decrypted archive is staged in app-private storage and validated before replacing active projects.
 
