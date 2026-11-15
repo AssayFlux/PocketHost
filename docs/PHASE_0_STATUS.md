@@ -2,17 +2,16 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `501d2e8f7d6164678c3e7bdfb36d463f4d6b4710` (PR #25 merged).
-> - **Quality CI:** [run 43706278144](https://github.com/AssayFlux/PocketHost/actions/runs/43706278144) passed all six jobs on current main: Rust, Node runtime, Android source compilation, control plane, Python runtime and console.
-> - **Android build:** [run 43706235774](https://github.com/AssayFlux/PocketHost/actions/runs/43706235774) successfully built the cloudflared Android JNI libraries and three ABI-specific debug APKs (ARM64, ARMv7 and x86_64). The API 26/33/35 emulator matrix was still running/queued at this reconciliation; no emulator result is claimed here.
+> - **Current main:** `3023118f786f52064e169c80f6afaac42402c9f0` (PR #26 and PR #27 merged).
+> - **Quality CI:** [run 43707912326](https://github.com/AssayFlux/PocketHost/actions/runs/43707912326) passed all six jobs on the PR #26 source now present in main: Rust, Node runtime, Android source compilation, control plane, Python runtime and console.
+> - **Android build:** [run 43707912276](https://github.com/AssayFlux/PocketHost/actions/runs/43707912276) successfully built cloudflared Android JNI libraries and three ABI-specific debug APKs (ARM64, ARMv7 and x86_64). APK artifact SHA-256: `30672b7390a38a39f32cfa9c37cd78baf5759c1960513d435a78aa918d02341e`. API 26 emulator smoke was still running and API 33/35 were queued at reconciliation; no emulator result is claimed here.
 > - **Release APK:** signed release is not built because release signing secrets are intentionally external to the repository. Debug APK packaging is complete.
 > - **Device acceptance:** physical-device installation, lifecycle, network, thermal and OEM battery behavior are owner-run acceptance tasks. Source/CI results do not replace those tests.
 > - **Release state:** integrated development build; not production approved.
 >
-> PR #25 corrected the Android Keystore AES-GCM IV behavior for API 26, increased a slow-device instrumentation socket timeout, and made the Python smoke test explicitly acknowledge trusted code execution while restoring its previous preference.
+> PR #25 corrected Android Keystore AES-GCM IV behavior for API 26, increased a slow-device instrumentation socket timeout, and made the Python smoke test explicitly acknowledge trusted code execution while restoring its previous preference. PR #26 added request-rate, byte-throughput and latency-distribution measurements to the static-origin Capacity Lab.
 >
 > The following historical sections below retain earlier evidence and implementation notes. When a historical run conflicts with this current reconciliation, use the current commit/run identifiers above.
-
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
