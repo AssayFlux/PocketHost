@@ -2,8 +2,8 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `c6e07a7248a123aac757a7358dc2df13caec9e86`  
-**Quality CI:** [run 43688959461](https://github.com/AssayFlux/PocketHost/actions/runs/43688959461) passed all six jobs on this exact main commit, including Android Kotlin and Android-test source compilation, without packaging an APK. [Run 43688677817](https://github.com/AssayFlux/PocketHost/actions/runs/43688677817) also passed all six jobs on the preceding source revision.  
+**Latest implementation commit:** `d291557e3aed4c0412590d80af75df196d9632a6`  
+**Quality CI:** [run 43692174009](https://github.com/AssayFlux/PocketHost/actions/runs/43692174009) passed all six jobs on UI implementation commit `d291557e3aed4c0412590d80af75df196d9632a6`, including Android Kotlin and Android-test source compilation, without packaging an APK. This does not include emulator UI screenshots or physical-device validation.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -179,3 +179,12 @@ The following first implementations were added directly to the Android/Rust/Type
 - Updated Android runtime smoke tests to explicitly opt into trusted-code execution.
 
 **This is a safety interlock, not sandboxing.** Untrusted Python/Node remains prohibited. OS-enforced UID/process isolation, filesystem and network confinement, and enforceable CPU/memory quotas remain release blockers. PSP payments, signed conventional tamper-evident audit, complete operational reports, full Rust rate/fairness/queue governance, physical-device acceptance and signed release are still not integrated.
+
+
+## 2026-11-15 UI implementation update
+
+- Android app display name is **AssayFlux Pocket Host**; repository and package identifiers remain unchanged.
+- Added the four-tab Dashboard / Files / Logs / Settings navigation, centralized navy light/dark theme, server status, single Start/Stop action, device telemetry warning, local URL copy/share, file metadata listing, website import/backup, operational log filters and a loopback WebView preview.
+- Updated foreground notification branding and Cloudflare instructions to reuse the owner's existing named tunnel and Public Hostname.
+- Quality CI run 43692174009 passed all six jobs, including Kotlin/Android-test source compilation. No APK was packaged and no emulator/physical-device UI test matrix was run.
+- The UI is an initial implementation, not a claim that every item in the design brief is finished. Request-level access logs, file CRUD/index selection, boot auto-start, local TLS, built-in visitor passwords, and full responsive/screenshot acceptance remain outstanding.

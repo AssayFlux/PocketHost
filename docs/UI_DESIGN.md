@@ -1,6 +1,6 @@
 # AssayFlux Pocket Host — UI Design
 
-**Status:** Design specification recorded; screen implementation is gated on owner approval.
+**Status:** Initial four-tab Compose implementation committed; device/responsive acceptance remains pending.
 **Product identity:** AssayFlux Pocket Host (repository: `AssayFlux/PocketHost`). “Phone Web Host” describes the use case and does not rename the application.
 **Authority:** This document is the single source of truth for PocketHost UI implementation. Read it before implementing each screen. If a design decision changes, update this document in the same commit as the corresponding UI code.
 
@@ -138,7 +138,7 @@ Only expose a setting as functional if the existing implementation supports it. 
 - Do not introduce dependencies or new product capabilities without approval.
 - Re-read this document before building each screen.
 - Screen sequence: **Dashboard → Settings → Files → Logs**.
-- After each screen, report a concise summary of what was built and tested, then stop and wait for the owner's explicit OK before starting the next screen.
+- The owner explicitly authorized the four-screen UI implementation in one pass on 2026-11-15. Report the completed pass and actual validation evidence together. Ask before adding features or making new major product decisions.
 
 ## 9. Required validation matrix after each screen
 
@@ -159,3 +159,5 @@ Do not claim a configuration was tested unless a test or inspection actually ran
 
 - **2026-11-15:** Owner authorized implementation in one pass. Added the four-tab Compose shell, top-bar server status, central navy light/dark theme, one Start/Stop control, telemetry warnings, local URL copy/share, file metadata listing, website import/backup actions, Logs filters, and an in-app loopback WebView preview.
 - **2026-11-15:** Implementation boundary recorded: request-level IP/path/status logs, log clearing, arbitrary file create/edit/delete/index selection, boot auto-start, local TLS and visitor password controls are not represented as working controls because they are not yet implemented in the existing backend. Device-size/landscape/large-font/keyboard screenshot validation remains pending; CI source compilation is the first gate.
+
+- **2026-11-15:** Quality CI run [43692174009](https://github.com/AssayFlux/PocketHost/actions/runs/43692174009) passed all six jobs on implementation commit `d291557e3aed4c0412590d80af75df196d9632a6`, including Android Kotlin and Android-test source compilation. No APK or emulator/device screenshot matrix was run.
