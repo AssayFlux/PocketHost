@@ -102,7 +102,7 @@ A configured tunnel, a connected tunnel process and a publicly verified website 
 
 ## Validation snapshot
 
-The quality workflow on the current implementation batch passed its Rust, control-plane/PostgreSQL, Python, Node preload, TypeScript console and Android source-compilation jobs. The Android integration run associated with the same implementation batch has successfully built cloudflared but its ABI APK and API 26/33/35 emulator jobs were still running/queued at the last status check. Do not interpret a queued or running job as a pass.
+The quality workflow passed on the current `main` commit before this documentation-only branch. Android integration run [43677996409](https://github.com/AssayFlux/PocketHost/actions/runs/43677996409) completed successfully for cloudflared, ABI APK assembly and API 26/33/35 emulator instrumentation on an earlier source SHA. The more recent Node-locking integration run [43678133737](https://github.com/AssayFlux/PocketHost/actions/runs/43678133737) has also completed cloudflared and ABI APK jobs; API 26 was still running and API 33/35 were queued at the last check. The documentation PR's own CI is also running. Always check the linked run for the exact commit before treating a gate as passed.
 
 - [Quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml)
 - [Android integration workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/android-integration.yml)
