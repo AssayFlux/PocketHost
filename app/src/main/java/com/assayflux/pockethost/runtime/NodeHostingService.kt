@@ -19,7 +19,7 @@ import java.net.Socket
 
 /** Node.js runs once in a dedicated Android process because V8 cannot be safely restarted in-process. */
 class NodeHostingService : Service() {
-    private val prefs by lazy { getSharedPreferences("pockethost_node_runtime", MODE_PRIVATE) }
+    @Volatile private var activeProjectRoot: String? = null
     @Volatile private var stopping = false
     @Volatile private var nodeThread: Thread? = null
     @Volatile private var monitorThread: Thread? = null
@@ -50,6 +50,8 @@ class NodeHostingService : Service() {
         setState("STARTING", "Launching Node.js.")
         val rootFile = File(root).canonicalFile
         val entryFile = File(entry).canonicalFile
+        activeProjectRoot = rootFile.absolutePath
+        NodeRuntimeStateStore.update(this, state = "STARTING", detail = "Launching Node.js.", projectRoot = rootFile.absolutePath)
         if (!entryFile.toPath().startsWith(rootFile.toPath()) || !entryFile.isFile) {
             setState("ERROR", "Node entry file is outside the project or missing.")
             stopSelf(startId)
@@ -108,19 +110,18 @@ class NodeHostingService : Service() {
     } catch (_: Exception) { false }
 
     private fun sampleMetrics() {
-        val root = prefs.getString("project_root", null) ?: return
+        val root = activeProjectRoot ?: return
         val file = File(root, ".pockethost/metrics.json")
         val metrics = runCatching { if (file.isFile) JSONObject(file.readText()) else JSONObject() }.getOrDefault(JSONObject())
         metrics.put("source", "node")
             .put("processPssKb", Debug.getPss())
             .put("nativeHeapBytes", Debug.getNativeHeapAllocatedSize())
             .put("sampledAt", System.currentTimeMillis())
-        prefs.edit().putString("metrics_json", metrics.toString()).apply()
+        NodeRuntimeStateStore.update(this, metrics = metrics)
     }
 
     private fun setState(state: String, detail: String) {
-        prefs.edit().putString("state", state).putString("detail", detail)
-            .putLong("updated_at", System.currentTimeMillis()).apply()
+        NodeRuntimeStateStore.update(this, state = state, detail = detail, projectRoot = activeProjectRoot)
         OperationalLog.record(this, if (state == "ERROR") "ERROR" else "INFO", "NODE_RUNTIME_$state", detail)
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(detail))
     }
