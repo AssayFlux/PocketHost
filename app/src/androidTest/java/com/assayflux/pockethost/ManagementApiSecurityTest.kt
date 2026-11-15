@@ -101,6 +101,12 @@ class ManagementApiSecurityTest {
         val bootstrap = JSONObject(request("POST", "/api/v1/pair/complete",
             JSONObject().put("challengeId", challenge.getString("challengeId")).put("code", code).toString()).second)
         val ownerToken = bootstrap.getString("accessToken")
+        if (!com.assayflux.pockethost.management.HostAccountStore.hasOwner(context)) {
+            val ownerSetup = request("POST", "/api/v1/auth/accounts",
+                JSONObject().put("username", "hostowner").put("password", "PocketHost-Owner-Password-42").put("role", "OWNER").toString(),
+                authorization = ownerToken)
+            assertEquals(201, ownerSetup.first)
+        }
         val username = "operator_" + System.nanoTime().toString().takeLast(8)
         val password = "PocketHost-Test-Password-42"
         val created = request("POST", "/api/v1/auth/accounts",
