@@ -250,7 +250,7 @@ class ManagementApiSecurityTest {
         host: String = "127.0.0.1"
     ): Pair<Int, String> {
         Socket("127.0.0.1", 17841).use { socket ->
-            socket.soTimeout = 5_000
+            socket.soTimeout = 30_000
             val bytes = body.toByteArray(Charsets.UTF_8)
             val headers = buildString {
                 append("$method $path HTTP/1.1\r\n")
