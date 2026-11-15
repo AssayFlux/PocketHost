@@ -223,7 +223,13 @@ object ManagementApiServer {
                 site.hostnames.forEach(hosts::put)
                 items.put(JSONObject().put("id", site.id).put("name", site.name)
                     .put("runtime", site.runtime).put("hostnames", hosts)
-                    .put("state", if (site.enabled) "configured" else "disabled"))
+                    .put("state", when {
+                        !site.enabled -> "DISABLED"
+                        site.runtime == "static" -> if (NativeEngine.status() == "RUNNING") "RUNNING" else "STOPPED"
+                        site.runtime == "python-wsgi" -> runCatching { PythonHostRuntime.status(context) }.getOrDefault("ERROR")
+                        site.runtime == "node" -> NodeHostRuntime.status(context)
+                        else -> "UNKNOWN"
+                    }))
             }
             return 200 to JSONObject().put("items", items)
         }
