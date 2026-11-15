@@ -194,8 +194,8 @@ export function App() {
           return <article className="metric-card" key={source}>
             <span>{label} requests</span>
             <strong>{item?.requests?.toLocaleString() ?? "Not running"}</strong>
-            <small>{item ? \`\${bytes(item.bytes_sent ?? item.bytesSent ?? 0)} sent · \${item.errors ?? 0} errors · \${item.active ?? 0} active\` : "Runtime-specific counters appear while the service is running."}</small>
-            {item && <small>{item.processPssKb ? \`Process memory \${bytes(item.processPssKb * 1024)}\` : item.rssBytes ? \`RSS \${bytes(item.rssBytes)}\` : "Memory sample unavailable"}</small>}
+            <small>{item ? bytes(item.bytes_sent ?? item.bytesSent ?? 0) + " sent · " + (item.errors ?? 0) + " errors · " + (item.active ?? 0) + " active" : "Runtime-specific counters appear while the service is running."}</small>
+            {item && <small>{item.processPssKb ? "Process memory " + bytes(item.processPssKb * 1024) : item.rssBytes ? "RSS " + bytes(item.rssBytes) : "Memory sample unavailable"}</small>}
           </article>;
         })}
       </section>
