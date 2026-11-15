@@ -320,6 +320,25 @@ private fun PocketHostDashboard() {
         }
     }
 
+    val singleFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            importing = true
+            status = "Uploading website file…"
+            scope.launch {
+                val result = runCatching {
+                    withContext(Dispatchers.IO) { SiteFileManager.importFile(context, uri) }
+                }
+                result.onSuccess { entry ->
+                    siteFileRefresh++
+                    status = "Uploaded ${entry.relativePath} (${formatBytes(entry.size)})."
+                }.onFailure { error ->
+                    status = error.message ?: "Individual file upload failed."
+                }
+                importing = false
+            }
+        }
+    }
+
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
@@ -827,6 +846,8 @@ private fun PocketHostDashboard() {
                         Text("Site files and folders", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(onClick = { showCreateSiteFile = true }, enabled = !hosting && !importing,
                             modifier = Modifier.fillMaxWidth()) { Text("New text file") }
+                        OutlinedButton(onClick = { singleFilePicker.launch(arrayOf("*/*")) }, enabled = !hosting && !importing,
+                            modifier = Modifier.fillMaxWidth()) { Text("Upload individual file") }
                         if (siteFiles.isEmpty()) {
                             Text("No imported site files yet. Choose a folder or ZIP to deploy your website.", color = palette.onSurfaceVariant)
                         } else {
