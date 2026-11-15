@@ -414,6 +414,20 @@ async fn acknowledge(
     let result = sqlx::query("UPDATE device_commands SET state=$3,result=$4,acknowledged_at=now() WHERE id=$1 AND device_id=$2 AND state='delivered'")
         .bind(command).bind(id).bind(state).bind(input.result).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "command_not_found_or_already_acknowledged".into())); }
+    if input.success {
+        if let Some(row) = sqlx::query("SELECT payload FROM device_commands WHERE id=$1 AND device_id=$2 AND kind='deploy_site'")
+            .bind(command).bind(id).fetch_optional(&s.db).await.map_err(internal)? {
+            let payload: Value = row.get("payload");
+            if let Some(artifact) = payload.get("artifactId").and_then(Value::as_str).and_then(|value| Uuid::parse_str(value).ok()) {
+                if let Some(file) = sqlx::query("SELECT storage_path FROM device_artifacts WHERE id=$1 AND device_id=$2")
+                    .bind(artifact).bind(id).fetch_optional(&s.db).await.map_err(internal)? {
+                    let path: String = file.get("storage_path");
+                    sqlx::query("DELETE FROM device_artifacts WHERE id=$1").bind(artifact).execute(&s.db).await.map_err(internal)?;
+                    let _ = fs::remove_file(path);
+                }
+            }
+        }
+    }
     audit(&s, "device", "command.acknowledge", &command.to_string(), json!({"deviceId":id,"state":state})).await?;
     Ok(Json(json!({"acknowledged":true,"state":state})))
 }
