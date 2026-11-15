@@ -320,7 +320,7 @@ async fn upload_site_archive(
     if body.is_empty() || body.len() > 50 * 1024 * 1024 {
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "archive_must_be_1_to_50_mib".into()));
     }
-    if !body.starts_with(b"PK\x03\x04") && !body.starts_with(b"PK\x05\x06") {
+    if !has_zip_signature(&body) {
         return Err((StatusCode::BAD_REQUEST, "invalid_zip_archive".into()));
     }
     let sha = hex::encode(Sha256::digest(&body));
