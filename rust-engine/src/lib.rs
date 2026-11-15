@@ -114,15 +114,28 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, PathBuf>>, req: Re
     if req.method() != Method::GET && req.method() != Method::HEAD {
         return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
     }
+    let requested_host = req.headers().get(hyper::header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase()
+        .split(':').next().unwrap_or("").to_string();
+    let selected_root = if host_roots.is_empty() {
+        root
+    } else if let Some(site_root) = host_roots.get(&requested_host) {
+        site_root.clone()
+    } else {
+        return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Unknown host"));
+    };
     let relative = match request_relative_path(req.uri().path()) {
         Ok(path) => path,
         Err(status) => return Ok(text_response(status, "text/plain; charset=utf-8", "Invalid or forbidden path")),
     };
-    let canonical = match tokio::fs::canonicalize(root.join(relative)).await {
+    let canonical = match tokio::fs::canonicalize(selected_root.join(relative)).await {
         Ok(path) => path,
         Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
     };
-    if !canonical.starts_with(&root) || !canonical.is_file() {
+    if !canonical.starts_with(&selected_root) || !canonical.is_file() {
         return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden"));
     }
     let metadata = match tokio::fs::metadata(&canonical).await {
