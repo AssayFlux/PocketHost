@@ -11,6 +11,7 @@ use jni::sys::{jboolean, jint, jlong, jstring};
 use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
+use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
@@ -108,7 +109,7 @@ fn parse_byte_range(value: &str, size: u64) -> Result<(u64, u64), ()> {
     Ok((first, last))
 }
 
-async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, PathBuf>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     REQUESTS.fetch_add(1, Ordering::Relaxed);
     if req.method() != Method::GET && req.method() != Method::HEAD {
         return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
@@ -178,7 +179,7 @@ async fn serve(root: PathBuf, req: Request<Incoming>) -> Result<Response<Respons
     Ok(response.body(body).expect("file response"))
 }
 
-async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Receiver<()>) {
+async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, PathBuf>>, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
     let permits = Arc::new(Semaphore::new(MAX_CONNECTIONS));
     loop {
@@ -200,7 +201,8 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Re
                 connections.spawn(async move {
                     let _active = active;
                     let _permit = permit;
-                    let service = service_fn(move |req| serve(site_root.clone(), req));
+                    let site_roots = host_roots.clone();
+                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
@@ -211,8 +213,25 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, mut stop: oneshot::Re
 }
 
 fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
+    start_engine_with_hosts(root, port, allow_lan, HashMap::new())
+}
+
+fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: HashMap<String, String>) -> Result<(), String> {
     let root = std::fs::canonicalize(root).map_err(|e| format!("Invalid site directory: {e}"))?;
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
+    let mut canonical_hosts = HashMap::new();
+    for (host, path) in host_paths {
+        let normalized = host.trim().trim_end_matches('.').to_ascii_lowercase();
+        if normalized.is_empty() || normalized.contains('/') || normalized.contains(':') || normalized.contains(' ') {
+            return Err(format!("Invalid hostname: {host}"));
+        }
+        let site_path = std::fs::canonicalize(&path).map_err(|e| format!("Invalid root for {normalized}: {e}"))?;
+        if !site_path.is_dir() { return Err(format!("Site root for {normalized} is not a directory")); }
+        if canonical_hosts.insert(normalized.clone(), site_path).is_some() {
+            return Err(format!("Duplicate hostname: {normalized}"));
+        }
+    }
+    let canonical_hosts = Arc::new(canonical_hosts);
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
     REQUESTS.store(0, Ordering::Relaxed);
@@ -247,7 +266,7 @@ fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
             }
         };
         if ready_tx.send(Ok(())).is_err() { return; }
-        runtime.block_on(accept_loop(listener, root, stop_rx));
+        runtime.block_on(accept_loop(listener, root, canonical_hosts, stop_rx));
     }).map_err(|e| format!("Cannot start engine thread: {e}"))?;
 
     match ready_rx.recv() {
