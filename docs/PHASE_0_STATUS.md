@@ -2,19 +2,17 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Status snapshot:** product-code baseline `a6bc0f77dac43d335bba36ad24e5d6e801e1b58e` (PRs #30–#36 merged; PR #31 removed obsolete blockchain references); documentation snapshot `c252236f9815cc6a8ddba94d75966a2e4d1083e5`.
-> - **Quality CI:** [run 43711272472](https://github.com/AssayFlux/PocketHost/actions/runs/43711272472) passed all six jobs on the product-code baseline: Rust, Node runtime, Python runtime, control plane, TypeScript console and Android source compilation.
-> - **Android APK build:** [run 43711203835](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835) passed cloudflared JNI build, three-ABI APK packaging and ABI-content verification. Emulator instrumentation was skipped by design; it is opt-in and physical-device acceptance is owner-run.
-> - **APK artifact:** [GitHub Actions artifact 14161340221](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835/artifacts/14161340221), SHA-256 `bd7e25439239f6c507b2c5762a2f8a8c353b37b8fdc129bfef10bd972deaa8c5`.
-> - **ABI APK SHA-256:** ARM64 `13d972bf6ad6579d511c1df9bb8e359a3422c8f39b8cd8c99ef6d2a408c1438a`; ARMv7 `4b207bfee30cafec1700def36692a742b982f55f3e2a1eaa9aa632941a6948f5`; x86_64 `e4ac7779962b742406675ec235c783b34cf97765017ca142823d8cb183305cb8`.
-> - **Implemented capacity protections:** bounded 16-active/32-waiting connection admission, 200 ms queue window, per-client token-bucket rate limit, per-site streaming concurrency caps, observable rejection counters, and up-to-three-second graceful shutdown drain.
-> - **Capacity Lab:** bounded static-origin sweep reports request rate, byte throughput and average/p50/p95/maximum latency. It is still a microbenchmark, not long-duration or multi-workload device calibration.
-> - **Blockchain references:** removed from the six project documents; no blockchain implementation/dependency is part of the repository.
-> - **Release APK:** signed release is not built because release signing secrets are external. The supplied APKs are debug builds.
+> - **Current main:** `ae7945f559f39a4b6ed012b3bef704b3bbac23d3` (PRs #30–#36 merged; PR #31 removed obsolete blockchain references; PR #30 added bounded waiting admission and queue-depth visibility).
+> - **Quality CI:** [run 43712517953](https://github.com/AssayFlux/PocketHost/actions/runs/43712517953) passed all six jobs on current main: Rust, Node runtime, Python runtime, control plane, TypeScript console and Android source compilation.
+> - **Android build:** [run 43712440966](https://github.com/AssayFlux/PocketHost/actions/runs/43712440966) successfully built cloudflared Android JNI libraries and ARM64, ARMv7 and x86_64 debug APKs. [APK bundle artifact 14161512087](https://github.com/AssayFlux/PocketHost/actions/runs/43712440966/artifacts/14161512087). Emulator instrumentation was skipped by design; physical-device acceptance is owner-run.
+> - **Capacity protections:** 16 active connections, bounded 32-socket/200 ms wait queue, per-client token-bucket rate limiting, per-site streaming concurrency caps, explicit 503/Retry-After overload handling, observable active/queued/rejected counts, and up-to-three-second graceful shutdown drain.
+> - **Capacity Lab:** bounded static-origin sweep reports request rate, byte throughput and average/p50/p95/maximum latency. It remains a static microbenchmark, not multi-workload or long-duration device calibration.
+> - **Blockchain:** no blockchain implementation/dependency; obsolete blockchain references were removed from project documentation.
+> - **Release APK:** signed release is not built because release signing secrets are external. The available APKs are debug builds.
 > - **Device acceptance:** physical installation, Android lifecycle, existing Cloudflare tunnel/public HTTPS, thermal, battery and OEM behavior are owner-run acceptance tasks.
-> - **Release state:** integrated development build; not production approved. Python/Node run under the app UID and are not OS-sandboxed; execute only trusted code. Remote control-plane deployment and any payment-provider integration require their own external configuration.
+> - **Release state:** integrated development build; not production approved. Python/Node run under the app UID and are not OS-sandboxed; execute only trusted code. Remote control-plane deployment and payment-provider integration require separate implementation/configuration.
 >
-> The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this reconciliation, use the current commit/run identifiers above.
+> The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this current reconciliation, use the current commit/run identifiers above.
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
