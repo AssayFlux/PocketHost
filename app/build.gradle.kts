@@ -5,6 +5,61 @@ plugins {
     id("com.chaquo.python")
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
+val nodeRuntimeDir = layout.buildDirectory.dir("generated/node-runtime")
+val prepareNodeRuntime by tasks.registering {
+    val output = nodeRuntimeDir
+    outputs.dir(output)
+    doLast {
+        val root = output.get().asFile
+        val downloadDir = layout.buildDirectory.dir("downloads").get().asFile
+        downloadDir.mkdirs()
+        val archive = File(downloadDir, "nodejs-mobile-android-24.22.1-0.zip")
+        val expectedSha256 = "d6fd9f610fe5d81fede8f0d400c5a62723247725a19831835f15abf4f0604250"
+        val actualBefore = if (archive.isFile) java.security.MessageDigest.getInstance("SHA-256")
+            .digest(archive.readBytes()).joinToString("") { "%02x".format(it) } else ""
+        if (actualBefore != expectedSha256) {
+            archive.delete()
+            val connection = java.net.URL("https://github.com/fogtape/nodejs-mobile/releases/download/v24.22.1-0/nodejs-mobile-android-24.22.1-0.zip")
+                .openConnection().apply { connectTimeout = 30_000; readTimeout = 180_000 }
+            connection.getInputStream().use { input ->
+                archive.outputStream().buffered().use { target -> input.copyTo(target) }
+            }
+        }
+        val actualSha256 = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(archive.readBytes()).joinToString("") { "%02x".format(it) }
+        check(actualSha256 == expectedSha256) { "Node.js mobile SDK SHA-256 mismatch." }
+        val jniRoot = File(root, "jniLibs")
+        val includeRoot = File(root, "include")
+        val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        java.util.zip.ZipFile(archive).use { zip ->
+            val entries = zip.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                if (entry.isDirectory) continue
+                val name = entry.name.replace('\\', '/')
+                val abi = supportedAbis.firstOrNull { name.endsWith("bin/$it/libnode.so") }
+                if (abi != null) {
+                    val destination = File(jniRoot, "$abi/libnode.so")
+                    destination.parentFile.mkdirs()
+                    zip.getInputStream(entry).use { input -> destination.outputStream().use { input.copyTo(it) } }
+                    continue
+                }
+                val includeIndex = name.indexOf("include/")
+                if (includeIndex >= 0) {
+                    val relative = name.substring(includeIndex + "include/".length)
+                    val destination = File(includeRoot, relative).canonicalFile
+                    check(destination.toPath().startsWith(includeRoot.canonicalFile.toPath())) { "Unsafe Node SDK archive path." }
+                    destination.parentFile.mkdirs()
+                    zip.getInputStream(entry).use { input -> destination.outputStream().use { input.copyTo(it) } }
+                }
+            }
+        }
+        supportedAbis.forEach { abi ->
+            check(File(jniRoot, "$abi/libnode.so").isFile) { "Node.js SDK is missing libnode.so for $abi." }
+        }
+        check(File(includeRoot, "node/node.h").isFile) { "Node.js SDK is missing node.h." }
+    }
+}
 val releaseKeystorePath = System.getenv("POCKETHOST_KEYSTORE_FILE")
 val releaseStorePassword = System.getenv("POCKETHOST_KEYSTORE_PASSWORD")
 val releaseKeyAlias = System.getenv("POCKETHOST_KEY_ALIAS")
@@ -29,8 +84,21 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DNODE_SDK_DIR=" + nodeRuntimeDir.get().asFile.absolutePath, "-DANDROID_STL=c++_shared")
+                cppFlags += listOf("-std=c++17")
+            }
+        }
     }
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
+    sourceSets["main"].jniLibs.srcDir(nodeRuntimeDir.map { it.dir("jniLibs") })
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
     signingConfigs {
         if (releaseSigningReady) {
             create("release") {
@@ -61,7 +129,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 }
-tasks.named("preBuild").configure { dependsOn(buildRustAndroid) }
+tasks.named("preBuild").configure { dependsOn(buildRustAndroid, prepareNodeRuntime) }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.10.0")
