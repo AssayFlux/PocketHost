@@ -134,19 +134,19 @@ class ManagementApiSecurityTest {
         val created = com.assayflux.pockethost.management.HostAccountStore.create(
             context, username, password, "OPERATOR"
         )
-        assertEquals(true, password.all { it == '\\u0000' })
+        assertEquals(true, password.all { it == '\u0000' })
         assertEquals("OPERATOR", created.role)
 
         val loginPassword = "PocketHost-Secure-Test-42".toCharArray()
         val account = com.assayflux.pockethost.management.HostAccountStore.verify(context, username, loginPassword)
         assertNotNull(account)
-        assertEquals(true, loginPassword.all { it == '\\u0000' })
+        assertEquals(true, loginPassword.all { it == '\u0000' })
 
         val missingPassword = "PocketHost-Secure-Test-42".toCharArray()
         assertEquals(null, com.assayflux.pockethost.management.HostAccountStore.verify(
             context, "not_a_real_user", missingPassword
         ))
-        assertEquals(true, missingPassword.all { it == '\\u0000' })
+        assertEquals(true, missingPassword.all { it == '\u0000' })
         assertEquals(true, com.assayflux.pockethost.management.HostAccountStore.revokeOperator(context, username))
     }
 
