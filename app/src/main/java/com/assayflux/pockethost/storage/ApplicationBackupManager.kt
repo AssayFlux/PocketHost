@@ -298,6 +298,7 @@ object ApplicationBackupManager {
             .put("nodePort", nodePort)
             .put("keepAwake", prefs.getBoolean("keep_awake", false))
             .put("autoStartOnBoot", prefs.getBoolean("auto_start_on_boot", false))
+            .put("darkTheme", prefs.getBoolean("dark_theme", false))
     }
 
     private fun parseSafeSettings(file: File): SafeSettings {
