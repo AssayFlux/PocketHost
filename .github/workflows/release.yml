@@ -82,6 +82,7 @@ jobs:
             cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/pockethost-release-apks/app-$abi-release.apk"
           done
           mkdir -p app/build/outputs/apk/release
+          rm -f app/build/outputs/apk/release/app-release.apk
           cp "$RUNNER_TEMP"/pockethost-release-apks/*.apk app/build/outputs/apk/release/
       - name: Verify every ABI APK signature
         run: |
