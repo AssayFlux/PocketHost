@@ -60,7 +60,7 @@ class NodeHostingService : Service() {
 
         val worker = Thread({
             try {
-                val result = NodeBridge.start(rootFile.absolutePath, entryFile.absolutePath, cacheDir.absolutePath, port, heapLimitMb)
+                val result = NodeBridge.start(rootFile.absolutePath, entryFile.absolutePath, File(noBackupFilesDir, "node-runtime").absolutePath, port, heapLimitMb)
                 if (!stopping) setState(if (result == 0) "STOPPED" else "ERROR", "Node.js exited with code $result.")
             } catch (error: Throwable) {
                 if (!stopping) {
@@ -111,7 +111,7 @@ class NodeHostingService : Service() {
 
     private fun sampleMetrics() {
         val root = activeProjectRoot ?: return
-        val file = File(root, ".pockethost/metrics.json")
+        val file = File(noBackupFilesDir, "node-runtime/metrics.json")
         val metrics = runCatching { if (file.isFile) JSONObject(file.readText()) else JSONObject() }.getOrDefault(JSONObject())
         metrics.put("source", "node")
             .put("processPssKb", Debug.getPss())
