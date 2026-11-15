@@ -30,7 +30,7 @@
 | Capacity schedules | Source implemented: custom timed percentage, expiry and previous-profile restoration | Verify restart, wall-clock changes, schedule replacement and failure recovery |
 | Runtime sandbox | Critical gap | Distinct UID/OS boundary, filesystem/network restrictions, quotas and adversarial tests |
 | Payments | Not implemented by PR #14 | PSP integration, signed webhooks, idempotency, durable ledger, reconciliation and security assessment |
-| Audit/blockchain | Planned/specification | Tamper detection, signed checkpoints; optional hash-only chain anchoring |
+| Audit integrity | Planned/specification | Conventional hash-chain tamper detection and signed checkpoints |
 | Daily reports/logs | Partial source: bounded redacted logs, hourly daily snapshots, rollover archive, 90-report retention and JSON export | Verify midnight rollover, process restart, storage exhaustion, reproducibility and full uptime/latency/tunnel reporting |
 | Backup/restore | Static-site scope | Tamper/wrong-passphrase/interruption and verified recovery; extend scope before payment ledger backup claims |
 | Release | Workflow/signing guide | Signed APKs, upgrade tests, checksums and compatibility evidence |
@@ -46,7 +46,7 @@
 7. Resolve runtime isolation before accepting third-party/untrusted code.
 8. Implement durable audit, secrets management and payment provider integration.
 9. Implement reconciliation, encrypted backups and daily financial/operations reports.
-10. Add optional blockchain checkpoint anchoring only after audit integrity and privacy review.
+10. Implement conventional signed, tamper-evident audit records and independent verification.
 11. Complete external security review, physical-device stress/fault tests and signed release.
 
 ## Required device and network evidence
@@ -83,7 +83,7 @@
 - [ ] Raw card numbers, CVVs and PINs are never stored.
 - [ ] Payment records and backups are encrypted and restore-tested.
 - [ ] Audit hash-chain tampering, deletion and reordering are detected.
-- [ ] Blockchain, if enabled, anchors hashes only and is not a hosting dependency.
+- [ ] Audit integrity uses conventional local hash chaining and signed checkpoints; no blockchain dependency or component.
 - [ ] Logs redact tokens, cookies, payment data and sensitive request bodies.
 - [ ] Daily report is reproducible and reconciles totals with the PSP.
 
@@ -106,7 +106,7 @@
 - Benchmark peak ≠ sustainable capacity.
 - Capacity percentage ≠ CPU utilization.
 - Node process separation ≠ security sandbox.
-- Hash chain/blockchain ≠ proof that source events were truthful.
+- A hash chain or signature detects alteration after recording; it does not prove that source events were truthful.
 - Payment-provider integration ≠ PCI compliance.
 - Remote-control source ≠ deployed service.
 

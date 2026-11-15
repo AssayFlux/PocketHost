@@ -37,8 +37,8 @@ Support presets and timed schedules, including 30% of safe capacity for three ho
 ### ADR-011 — Payment data stays with a PSP
 Use hosted/tokenized checkout and store provider references/events, not raw cardholder data. No PAN/CVV/PIN storage; verify signed webhooks and reconcile against provider.
 
-### ADR-012 — Conventional audit first, blockchain optional
-Append-only hash-chained records and signed checkpoints are source of truth. Blockchain may anchor hashes only; no personal/payment data or full logs on-chain. Hosting must not depend on blockchain availability.
+### ADR-012 — Conventional tamper-evident audit only
+Use conventional append-only hash-chained records and signed checkpoints, with local verification and controlled export. Distributed-ledger and blockchain technology are explicitly excluded from PocketHost. Audit integrity must not introduce a network dependency into hosting.
 
 ### ADR-013 — Logs are bounded and redacted
 Structured operational logs, rotation, retention caps and daily reports are core operations features. Logging cannot exhaust storage or leak credentials/payment data.

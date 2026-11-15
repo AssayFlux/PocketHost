@@ -93,7 +93,7 @@ The website request path and administration path are separate. The Cloudflare Pu
 | Adaptive capacity | Partial implementation: versioned device telemetry, static GET Capacity Lab, 1–100% timed profiles, Rust concurrency admission cap, five-state device health derating and protective runtime suspension | Broader workload calibration, full Rust rate/fairness/queue governor, long-duration validation and recovery acceptance remain |
 | Daily reports | Partial implementation: aggregate traffic and redacted operational-event snapshots, 90-report retention and JSON export | Full uptime, latency, tunnel, financial reconciliation and durable backup coverage remain |
 | Payment ledger | Security requirements specified in PR #14 | No live payment-processing or PCI-compliance claim |
-| Blockchain audit | Optional hash-checkpoint design specified | Not implemented; never store sensitive data on-chain |
+| Audit integrity | Conventional append-only hash-chained records and signed checkpoints are specified | Audit implementation and independent verification remain open |
 
 ## Adaptive capacity: intended product behavior
 
@@ -107,7 +107,7 @@ Full requirements and acceptance criteria: [Adaptive Capacity, Security, Payment
 
 Security must be designed into each boundary. Python and Node currently execute with PocketHost's app UID; neither is a hostile-code sandbox. A local trusted-code acknowledgement gate now blocks accidental runtime starts and removes optional public routes when revoked, but this is not isolation. Strong project isolation, filesystem/network restrictions and OS-enforced resource limits are release-blocking before accepting untrusted workloads.
 
-For payments, integrate a reputable payment service provider using hosted/tokenized checkout and signed, replay-resistant webhooks. Store provider transaction references and an encrypted durable event ledger, never raw card numbers or CVVs. Use append-only hash-chained audit records; optional blockchain anchoring may publish checkpoint hashes only. Do not claim PCI compliance without qualified assessment.
+For payments, integrate a reputable payment service provider using hosted/tokenized checkout and signed, replay-resistant webhooks. Store provider transaction references and an encrypted durable event ledger, never raw card numbers or CVVs. Use conventional append-only hash-chained audit records and signed checkpoints; no distributed-ledger or blockchain components are part of this product. Do not claim PCI compliance without qualified assessment.
 
 ## Product constraints
 
