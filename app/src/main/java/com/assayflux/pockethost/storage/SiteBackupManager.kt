@@ -58,8 +58,12 @@ object SiteBackupManager {
                     throw IOException("Website contains a path outside its deployment directory.")
                 }
                 val relative = root.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/')
-                val depth = relative.split('/').size
+                val parts = relative.split('/')
+                val depth = parts.size
                 if (depth > MAX_DEPTH) throw IOException("Website folder nesting exceeds the backup limit.")
+                parts.forEach(::validateBackupName)
+                counter.entries++
+                if (counter.entries > 10_000) throw IOException("Website contains too many files and folders for backup.")
                 if (file.isDirectory) {
                     zip.putNextEntry(ZipEntry("site/$relative/"))
                     zip.closeEntry()
@@ -88,11 +92,11 @@ object SiteBackupManager {
     }
 
     fun restore(context: Context, source: Uri, passphrase: CharArray): ImportReport {
-        require(passphrase.size >= 12) { "Use the passphrase that was set when this backup was created." }
-        val input = context.contentResolver.openInputStream(source)
-            ?: throw IOException("The selected backup cannot be opened.")
         val temporary = File(context.cacheDir, "pockethost-restore-${System.nanoTime()}.zip")
         try {
+            require(passphrase.size >= 12) { "Use the passphrase that was set when this backup was created." }
+            val input = context.contentResolver.openInputStream(source)
+                ?: throw IOException("The selected backup cannot be opened.")
             input.use { raw ->
                 val header = DataInputStream(raw)
                 val magic = ByteArray(MAGIC.size)
@@ -123,6 +127,17 @@ object SiteBackupManager {
         } finally {
             temporary.delete()
             passphrase.fill('\u0000')
+        }
+    }
+
+    private fun validateBackupName(name: String) {
+        val lower = name.lowercase()
+        if (name.isBlank() || name == "." || name == ".." || name.contains('/') ||
+            name.contains('\\') || name.contains('\u0000') ||
+            lower == ".env" || lower.startsWith(".env.") ||
+            lower in setOf(".git", ".ssh", ".pockethost", "id_rsa", "id_ed25519", "authorized_keys", "known_hosts") ||
+            lower.endsWith(".pem") || lower.endsWith(".key") || lower.endsWith(".p12") || lower.endsWith(".pfx")) {
+            throw IOException("Website contains a sensitive or unsafe filename: $name")
         }
     }
 
@@ -159,5 +174,5 @@ object SiteBackupManager {
         }
     }
 
-    private class Counter(var files: Int = 0, var bytes: Long = 0)
+    private class Counter(var files: Int = 0, var entries: Int = 0, var bytes: Long = 0)
 }
