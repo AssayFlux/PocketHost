@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -536,7 +535,7 @@ private fun PocketHostDashboard() {
                             selected = selectedTab == destination,
                             onClick = { selectedTab = destination },
                             icon = { Icon(symbol, contentDescription = destination) },
-                            label = { Text(destination, fontSize = 11.sp, maxLines = 1) },
+                            label = { Text(destination, fontSize = 12.sp, maxLines = 1) },
                             alwaysShowLabel = true
                         )
                     }
