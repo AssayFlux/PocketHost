@@ -113,6 +113,10 @@ For payments, integrate a reputable payment service provider using hosted/tokeni
 
 A phone is not a cloud region. Battery, heat, Android Doze/OEM process management, memory, storage, carrier NAT, mobile data caps and network outages affect availability. PocketHost must never promise unlimited traffic or guaranteed 24/7 uptime. Capacity is workload-specific and must be measured on the actual device.
 
+## UI design
+
+The canonical screen, navigation, responsive-layout, keyboard and implementation specification is [UI Design](docs/UI_DESIGN.md). Read it before changing any Android screen; obtain owner approval between screens.
+
 ## Documentation map
 
 | Document | Why it exists |
