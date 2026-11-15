@@ -8,6 +8,7 @@ type Device = {
   created_at: string;
 };
 type Config = { version: number; config: Record<string, unknown>; updated_at: string };
+type AuditEntry = { id: number; actor: string; action: string; target: string; details: Record<string, unknown>; createdAt: string };
 
 const initialPayloads: Record<string, string> = {
   site_action: JSON.stringify({ siteId: "my-site", action: "stop" }, null, 2),
@@ -20,6 +21,7 @@ export function RemoteControlPlane() {
   const [adminToken, setAdminToken] = useState(() => sessionStorage.getItem("pockethost_control_admin") || "");
   const [deviceName, setDeviceName] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [selected, setSelected] = useState("");
   const [issuedToken, setIssuedToken] = useState("");
   const [configText, setConfigText] = useState('{"pythonMaxWorkers":8,"nodeHeapMb":192,"tunnelEnabled":false}');
@@ -58,6 +60,7 @@ export function RemoteControlPlane() {
       sessionStorage.setItem("pockethost_control_admin", adminToken);
       const next = await request<Device[]>("/v1/admin/devices");
       setDevices(next);
+      setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit"));
       setMessage(`Connected. ${next.length} registered device(s).`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not connect to the Control Plane.");
@@ -69,6 +72,7 @@ export function RemoteControlPlane() {
     try {
       const next = await request<Device[]>("/v1/admin/devices");
       setDevices(next);
+      setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit"));
       setMessage(`Device inventory refreshed · ${next.length} device(s).`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not refresh devices."); }
     finally { setBusy(false); }
@@ -200,5 +204,13 @@ export function RemoteControlPlane() {
       </article>
     </div>}
     <p className="scope-note">The backend does not access phone files directly and exposes no shell command endpoint. Site deployment still uses the native import workflow; remote archive deployment is not yet supported.</p>
+    <div className="section-heading"><div><span className="eyebrow">SECURITY & GOVERNANCE</span><h2>Audit history</h2></div><span className="muted-tag">LATEST 200 EVENTS</span></div>
+    <div className="resource-panel">
+      {auditEntries.length === 0 ? <p>No audit events recorded yet.</p> : auditEntries.map(entry => <div className="status-line" key={entry.id}>
+        <span><strong>{entry.action}</strong><small>{entry.actor} · {entry.target}</small></span>
+        <span>{new Date(entry.createdAt).toLocaleString()}</span>
+      </div>)}
+    </div>
+    <p className="scope-note">Audit events record device registration/revocation, configuration changes, command queueing/acknowledgement and website deployment. This initial release still uses one administrator credential; per-user roles are a separate security gate.</p>
   </section>;
 }
