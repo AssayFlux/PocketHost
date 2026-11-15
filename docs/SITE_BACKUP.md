@@ -18,6 +18,7 @@ Pocket Host exports a portable, passphrase-encrypted `.afbackup` containing the 
 - Optional Python WSGI project (`files/python-project`).
 - Optional Node.js project (`files/node-project-default`), including prebundled dependencies when present.
 - Registered hostname routes for the supported static, Python and Node project roots.
+- Registered custom static roots inside app-private storage, stored under a version-3 `custom-static/<site-id>` archive prefix and restored under `files/site-roots/<site-id>`.
 - Non-secret settings: server/runtime ports, keep-awake preference, boot-start preference and light/dark theme.
 
 ## Excluded data
@@ -34,11 +35,12 @@ Credentials remain device-bound and must be configured independently on a replac
 
 - Export and restore require static hosting, Python and Node runtimes to be stopped.
 - Static files, Python and Node projects have separate size caps (50 MiB, 50 MiB and 100 MiB); total uncompressed content is capped at 200 MiB.
-- The archive is capped at 20,000 files, 30,000 total entries and 32 directory levels; static/Python projects are limited to 5,000 files each and Node projects to 10,000 files.
+- The archive is capped at 20,000 files, 30,000 total entries and 200 MiB uncompressed. Default static/Python roots are limited to 5,000 files each; Node roots to 10,000 files. Custom static roots share a combined 5,000-file, 10,000-entry and 50 MiB cap.
 - Path traversal, absolute paths, symbolic links, duplicate paths and sensitive filenames are rejected.
 - Python projects must contain `wsgi.py`; Node projects must contain a valid `package.json` and a safe entry file; static sites must contain root `index.html`.
 - Hostnames are revalidated for syntax, uniqueness and route limits before the route table is replaced.
 - Existing runtime directories and the previous static deployment are preserved during activation. If a later restore step fails, the manager attempts rollback; if rollback itself cannot complete, the recovery directory is preserved rather than deleted.
+- Route manifest version 3 records each registered static root and its archive mapping. Version-2 route manifests remain restorable.
 - Older `AFPHB01\\n` static-website backups remain restorable. They restore only the website and do not alter runtime projects or settings.
 
 ## Operational guidance
@@ -49,4 +51,7 @@ Credentials remain device-bound and must be configured independently on a replac
 ### Project-root compatibility
 
 - Active Python and Node project roots must be inside Pocket Host app-private storage. They are packaged and restored into the standard `python-project` and `node-project-default` locations; hostname routes are remapped to those restored roots.
-- The main static website root is backed up. A registered static site that points to a separate custom directory is currently rejected with an explicit error rather than silently omitted; add support for arbitrary static roots before relying on full backups for that configuration.
+- The main static website root and registered custom static roots are backed up. Custom roots must be separate real directories inside Pocket Host app-private storage, contain `index.html`, and must not overlap the main site or runtime roots.
+- Custom static roots are restored to `files/site-roots/<site-id>`; the hostname registry is rebound to the restored path. Existing custom roots are preserved and rolled back if a later restore step fails.
+- Custom Python/Node route roots that differ from the configured Python/Node project roots are still rejected. The configured runtime project roots themselves are backed up and remapped to their standard restore locations.
+- Android instrumentation covers a successful custom-root round trip and a duplicate-host failure after staging, asserting that the prior custom root and default static site are restored. API 26/33/35 emulator execution is tracked in the backup regression workflow; do not claim it passed until that run completes.
