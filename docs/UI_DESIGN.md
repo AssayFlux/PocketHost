@@ -36,7 +36,7 @@ These palette, spacing, sizing, accessibility and motion requirements are active
 
 ## 3. Navigation
 
-- Bottom navigation destinations: **Dashboard**, **Files**, **Logs**, **Settings**.
+- Bottom navigation destinations: **Dashboard**, **Sites**, **Activity**, **Learn** and **Settings**.
 - Top app bar: **AssayFlux Pocket Host** on the left and a server-status indicator/dot on the right.
 - Keep navigation usable with gesture and three-button system navigation.
 - Preserve state appropriately when switching tabs; do not discard in-progress user input unexpectedly.
@@ -44,7 +44,7 @@ These palette, spacing, sizing, accessibility and motion requirements are active
 
 ## 4. Screens
 
-Build in this order: Dashboard, Settings, Files, Logs. Each screen must be implemented only after the owner approves proceeding to that screen.
+The active implementation uses five destinations: Dashboard, Sites, Activity, Learn and Settings. Sites owns website files and runtime projects; Activity owns operational logs. The owner authorized the four-screen UI implementation in one pass on 2026-11-15.
 
 ### 4.1 Dashboard
 
@@ -73,7 +73,7 @@ Provide settings/navigation entries for:
 
 Only expose a setting as functional if the existing implementation supports it. For missing capabilities, do not create fake switches or claim that enabling a control configures a service. Mark unsupported items clearly or defer their controls until implementation is approved and available. Reuse the owner's already-configured Cloudflare Tunnel; do not ask them to create another tunnel.
 
-### 4.3 Files
+### 4.3 Sites and website files
 
 - List site files and folders with an appropriate icon, size and modified date.
 - Actions requested: upload, create new, edit, delete (with confirmation), and set `index.html`.
@@ -82,7 +82,7 @@ Only expose a setting as functional if the existing implementation supports it. 
 - Do not imply arbitrary file editing or write access until the underlying capability is confirmed.
 - Destructive actions require a clear confirmation dialog.
 
-### 4.4 Logs
+### 4.4 Activity and logs
 
 - Request list fields: time, client IP, path and HTTP status code.
 - Filter chips: **All**, **Errors**, **Today**.
@@ -238,4 +238,6 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Reduced dashboard helper copy so live state and measurements carry the visual hierarchy.
 - Split Settings into General, Network, Runtimes and About sections; only the selected group is displayed, reducing scrolling and cognitive load.
 - Kept the approved navy palette, five primary destinations, existing hosting controls and optional Python/Node runtime workflows.
+- The Learn guide now starts collapsed so users see the quick-start card and open only the guide they need.
+- The Dashboard hosting control uses a navy status hero with a high-contrast action.
 - Validation is pending the PR quality and Android integration workflows. Responsive screenshots and real-device acceptance are not claimed by source compilation alone.
