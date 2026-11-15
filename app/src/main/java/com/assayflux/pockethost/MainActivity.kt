@@ -210,6 +210,7 @@ private fun PocketHostDashboard() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Dashboard") }
+    var settingsSection by remember { mutableStateOf("General") }
     var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
     var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
     var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
@@ -568,6 +569,17 @@ private fun PocketHostDashboard() {
                 }
                 }
                 if (selectedTab == "Settings") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("General", "Network", "Runtimes", "About").forEach { section ->
+                            FilterChip(
+                                selected = settingsSection == section,
+                                onClick = { settingsSection = section },
+                                label = { Text(section, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+                }
+                if (selectedTab == "Settings" && settingsSection == "General") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1191,6 +1203,7 @@ private fun PocketHostDashboard() {
 
                 }
                 if (selectedTab == "Settings") {
+                if (settingsSection == "Network") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1282,6 +1295,9 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                }
+
+                if (settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1320,6 +1336,9 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                }
+
+                if (settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1382,6 +1401,9 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                }
+
+                if (settingsSection == "Network") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1443,6 +1465,9 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                }
+
+                if (settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1486,7 +1511,10 @@ private fun PocketHostDashboard() {
                     }
                 }
 
-                    Card(
+                }
+
+                    if (settingsSection == "Network") {
+                Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -1501,7 +1529,10 @@ private fun PocketHostDashboard() {
                             }
                         }
                     }
-                    Card(
+                }
+
+                    if (settingsSection == "About") {
+                Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -1515,6 +1546,8 @@ private fun PocketHostDashboard() {
                     }
                 }
                 if (selectedTab == "Dashboard") {
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
