@@ -282,7 +282,7 @@ private fun PocketHostDashboard() {
             scope.launch {
                 val result = runCatching { withContext(Dispatchers.IO) { NodeProjectImporter.importTree(context, uri, "default") } }
                 result.onSuccess { report ->
-                    nodeProjectSummary = "Node.js project imported · \${report.fileCount} files · \${report.totalBytes / 1024} KB · \${report.entryFile.name}"
+                    nodeProjectSummary = "Node.js project imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB · ${report.entryFile.name}"
                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                         .putString("node_project_root", report.projectDirectory.absolutePath).apply()
                     runCatching {
@@ -738,7 +738,7 @@ private fun PocketHostDashboard() {
                                 } else {
                                     preferences.edit().putInt("node_port", port).apply()
                                     runCatching { NodeHostRuntime.start(context, root, port) }
-                                        .onSuccess { status = "Node.js runtime \${it}. Waiting for the app to listen on port \${port}." }
+                                        .onSuccess { status = "Node.js runtime ${it}. Waiting for the app to listen on port ${port}." }
                                         .onFailure { status = it.message ?: "Node.js failed to start." }
                                 }
                             }, enabled = !nodeHosting && !importing) { Text("Start Node.js") }
