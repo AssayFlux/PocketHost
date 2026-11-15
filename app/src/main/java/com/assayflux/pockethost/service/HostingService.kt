@@ -12,6 +12,7 @@ import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.sites.SiteRegistry
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
@@ -24,6 +25,8 @@ class HostingService : Service() {
     @Volatile private var tunnelSupervisorActive = false
     @Volatile private var metricsMonitorActive = false
     @Volatile private var pythonSupervisorActive = false
+    @Volatile private var nodeSupervisorActive = false
+    @Volatile private var nodeSupervisorThread: Thread? = null
     @Volatile private var pythonSupervisorThread: Thread? = null
     @Volatile private var wakeLockMonitorActive = false
     @Volatile private var wakeLockMonitor: Thread? = null
@@ -60,10 +63,12 @@ class HostingService : Service() {
         }
 
         val engineAlreadyRunning = NativeEngine.status() == "RUNNING"
-        val registeredHosts = SiteRegistry.staticHostnameMap(this).toString()
+        val registeredRoutes = SiteRegistry.hostRoutingJson(
+            this, statePreferences.getInt("python_port", 8081), statePreferences.getInt("node_port", 3000)
+        ).toString()
         val result = if (engineAlreadyRunning) "OK"
-            else if (registeredHosts != "{}") NativeEngine.startMultiSite(
-                site.absolutePath, registeredHosts, statePreferences.getInt("port", 8080),
+            else if (registeredRoutes != "{}") NativeEngine.startMultiSite(
+                site.absolutePath, registeredRoutes, statePreferences.getInt("port", 8080),
                 statePreferences.getBoolean("allow_lan", false)
             ) else NativeEngine.start(
                 site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false)
@@ -127,6 +132,39 @@ class HostingService : Service() {
                     tunnelSupervisorActive = false
                 }, "PocketHost-Cloudflare-Startup").start()
             }
+            if (statePreferences.getBoolean("node_enabled", false) && !nodeSupervisorActive) {
+                nodeSupervisorActive = true
+                val nodeRoot = statePreferences.getString("node_project_root", File(filesDir, "node-project-default").absolutePath)
+                    ?: File(filesDir, "node-project-default").absolutePath
+                val nodePort = statePreferences.getInt("node_port", 3000)
+                val supervisor = Thread({
+                    var failures = 0
+                    while (!stopping && statePreferences.getBoolean("node_enabled", false)) {
+                        if (NodeHostRuntime.status(this) == "RUNNING") {
+                            failures = 0
+                            try { Thread.sleep(3_000) } catch (_: InterruptedException) { break }
+                            continue
+                        }
+                        val result = runCatching { NodeHostRuntime.start(this, nodeRoot, nodePort) }
+                            .getOrElse { "ERROR: Node.js runtime failed" }
+                        if (result == "STARTING") {
+                            try { Thread.sleep(5_000) } catch (_: InterruptedException) { break }
+                            if (NodeHostRuntime.status(this) == "RUNNING") continue
+                            failures++
+                        } else {
+                            failures++
+                        }
+                        OperationalLog.record(this, "WARN", "NODE_RUNTIME_RESTART", "Node.js start attempt $failures failed: $result")
+                        if (failures >= 5) break
+                        val delayMs = (5_000L shl (failures - 1)).coerceAtMost(60_000L)
+                        try { Thread.sleep(delayMs) } catch (_: InterruptedException) { break }
+                    }
+                    nodeSupervisorActive = false
+                    nodeSupervisorThread = null
+                }, "PocketHost-Node-Supervisor")
+                nodeSupervisorThread = supervisor
+                supervisor.start()
+            }
             if (pythonEnabled && !pythonSupervisorActive) {
                 pythonSupervisorActive = true
                 val projectRoot = statePreferences.getString("python_project_root", File(filesDir, "python-project").absolutePath)
@@ -189,6 +227,8 @@ class HostingService : Service() {
             MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
         }
         pythonSupervisorThread?.interrupt()
+        nodeSupervisorThread?.interrupt()
+        runCatching { NodeHostRuntime.stop(this) }
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
         releaseWakeLock()
