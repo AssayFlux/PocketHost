@@ -92,8 +92,19 @@ object ApplicationBackupManager {
                     ?: File(files, "node-project-default").absolutePath
             ).canonicalFile
             val privateRoot = files.canonicalFile.toPath()
-            if (!python.toPath().startsWith(privateRoot) || !node.toPath().startsWith(privateRoot)) {
-                throw IOException("Python and Node project folders must remain inside Pocket Host private storage to be backed up.")
+            val sitePath = site.toPath()
+            val pythonPath = python.toPath()
+            val nodePath = node.toPath()
+            if (!pythonPath.startsWith(privateRoot) || !nodePath.startsWith(privateRoot) ||
+                python == files.canonicalFile || node == files.canonicalFile ||
+                java.nio.file.Files.isSymbolicLink(python.toPath()) ||
+                java.nio.file.Files.isSymbolicLink(node.toPath())) {
+                throw IOException("Python and Node project folders must be real directories inside Pocket Host private storage.")
+            }
+            if (pythonPath.startsWith(sitePath) || sitePath.startsWith(pythonPath) ||
+                nodePath.startsWith(sitePath) || sitePath.startsWith(nodePath) ||
+                pythonPath.startsWith(nodePath) || nodePath.startsWith(pythonPath)) {
+                throw IOException("Website, Python and Node project folders must not overlap.")
             }
             if (!File(site, "index.html").isFile) throw IOException("There is no deployed website to back up.")
             val includePython = python.exists()
