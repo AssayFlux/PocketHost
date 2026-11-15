@@ -226,3 +226,8 @@ The Capacity Lab performs a bounded loopback static GET sweep against the active
 ## Rust admission queue (2026-11-15)
 
 The Rust listener reserves active connection slots atomically under the configured ceiling (hard maximum 16). When all active slots are occupied, it accepts at most 32 additional sockets into a bounded queue and waits up to 200 ms for a slot. Queue overflow or timeout receives HTTP 503 with Retry-After: 2. Queue depth, active connections and rejected connections are exposed through the native metrics, Android dashboard and authenticated management API. This is global admission control; per-site fairness and per-client request-rate limits are not implemented by this queue.
+
+
+## Per-client request limits and shutdown drain (2026-11-15)
+
+The Rust engine applies a token-bucket request limit per client IP: 120-request burst, replenished at 10 requests/second, with a bounded 1,024-client bucket map and oldest-entry eviction. For loopback traffic from the Cloudflare connector it uses the Cloudflare-provided `CF-Connecting-IP`; forwarded IP headers from non-loopback LAN peers are ignored. Excess requests receive HTTP 429 with `Retry-After: 1`, and the cumulative rate-limit count is visible in the Android dashboard and authenticated management API. On stop, the listener stops accepting new sockets and allows active connections up to three seconds to finish before force-closing remaining keep-alive work. These defaults are conservative safeguards, not a per-site fairness policy or a guarantee against all abusive traffic.

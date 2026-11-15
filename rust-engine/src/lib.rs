@@ -13,10 +13,11 @@ use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
 use std::collections::HashMap;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Semaphore};
@@ -27,6 +28,10 @@ const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_CONNECTIONS: usize = 16;
 const MAX_QUEUED_CONNECTIONS: usize = 32;
 const QUEUE_WAIT: Duration = Duration::from_millis(200);
+const SHUTDOWN_DRAIN: Duration = Duration::from_secs(3);
+const RATE_LIMIT_BURST: f64 = 120.0;
+const RATE_LIMIT_REFILL_PER_SECOND: f64 = 10.0;
+const MAX_RATE_LIMIT_BUCKETS: usize = 1_024;
 type ResponseBody = UnsyncBoxBody<Bytes, std::io::Error>;
 
 #[derive(Clone)]
@@ -38,6 +43,55 @@ static ACTIVE_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 static CAPACITY_LIMIT: AtomicU64 = AtomicU64::new(MAX_CONNECTIONS as u64);
 static REJECTED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 static QUEUED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
+static RATE_LIMITED_REQUESTS: AtomicU64 = AtomicU64::new(0);
+
+struct RateBucket {
+    tokens: f64,
+    last_refill: Instant,
+    last_seen: Instant,
+}
+
+impl RateBucket {
+    fn new(now: Instant) -> Self {
+        Self { tokens: RATE_LIMIT_BURST, last_refill: now, last_seen: now }
+    }
+
+    fn take_token(&mut self, now: Instant) -> bool {
+        let elapsed = now.duration_since(self.last_refill).as_secs_f64();
+        self.tokens = (self.tokens + elapsed * RATE_LIMIT_REFILL_PER_SECOND).min(RATE_LIMIT_BURST);
+        self.last_refill = now;
+        self.last_seen = now;
+        if self.tokens >= 1.0 {
+            self.tokens -= 1.0;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+static RATE_LIMITS: OnceLock<Mutex<HashMap<IpAddr, RateBucket>>> = OnceLock::new();
+
+fn allow_request_rate(client_ip: IpAddr) -> bool {
+    let now = Instant::now();
+    let limits = RATE_LIMITS.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut buckets) = limits.lock() else { return false };
+    if !buckets.contains_key(&client_ip) && buckets.len() >= MAX_RATE_LIMIT_BUCKETS {
+        if let Some(oldest) = buckets.iter().min_by_key(|(_, bucket)| bucket.last_seen).map(|(ip, _)| *ip) {
+            buckets.remove(&oldest);
+        }
+    }
+    buckets.entry(client_ip).or_insert_with(|| RateBucket::new(now)).take_token(now)
+}
+
+fn effective_client_ip(peer_ip: IpAddr, forwarded_ip: Option<&str>) -> IpAddr {
+    if peer_ip.is_loopback() {
+        if let Some(forwarded) = forwarded_ip.and_then(|value| value.trim().parse::<IpAddr>().ok()) {
+            return forwarded;
+        }
+    }
+    peer_ip
+}
 
 fn try_reserve_connection(counter: &AtomicU64, limit: u64) -> bool {
     let limit = limit.clamp(1, MAX_CONNECTIONS as u64);
@@ -241,7 +295,19 @@ async fn resolve_static_file(root: &Path, relative: &Path) -> Result<PathBuf, St
     Ok(candidate)
 }
 
-async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>, peer: SocketAddr) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+    let client_ip = effective_client_ip(
+        peer.ip(),
+        req.headers().get("cf-connecting-ip").and_then(|value| value.to_str().ok())
+    );
+    if !allow_request_rate(client_ip) {
+        RATE_LIMITED_REQUESTS.fetch_add(1, Ordering::Relaxed);
+        let mut response = text_response(StatusCode::TOO_MANY_REQUESTS, "text/plain; charset=utf-8", "Request rate limit exceeded");
+        response.headers_mut().insert("retry-after", "1".parse().unwrap());
+        response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
+        return Ok(response);
+    }
+    REQUESTS.fetch_add(1, Ordering::Relaxed);
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
@@ -261,7 +327,6 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
         SiteTarget::Static(path) => path,
         SiteTarget::Proxy { .. } => unreachable!(),
     };
-    REQUESTS.fetch_add(1, Ordering::Relaxed);
     if req.method() != Method::GET && req.method() != Method::HEAD {
         return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
     }
@@ -336,12 +401,24 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
     loop {
         tokio::select! {
             _ = &mut stop => {
-                connections.abort_all();
-                while connections.join_next().await.is_some() {}
+                // Stop accepting new sockets and let active responses finish for
+                // up to three seconds before force-closing lingering keep-alive work.
+                let deadline = tokio::time::Instant::now() + SHUTDOWN_DRAIN;
+                while !connections.is_empty() {
+                    match tokio::time::timeout_at(deadline, connections.join_next()).await {
+                        Ok(Some(_)) => {},
+                        Ok(None) => break,
+                        Err(_) => {
+                            connections.abort_all();
+                            while connections.join_next().await.is_some() {}
+                            break;
+                        }
+                    }
+                }
                 break;
             },
             accepted = listener.accept() => {
-                let Ok((stream, _peer)) = accepted else { continue };
+                let Ok((stream, peer)) = accepted else { continue };
                 let queue_permit = match queue_slots.clone().try_acquire_owned() {
                     Ok(permit) => permit,
                     Err(_) => {
@@ -383,7 +460,7 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                     let _active = ActiveConnection;
                     drop(queued_guard);
                     drop(queue_permit);
-                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req));
+                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req, peer));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
@@ -425,6 +502,10 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     BYTES_SERVED.store(0, Ordering::Relaxed);
     ACTIVE_CONNECTIONS.store(0, Ordering::Relaxed);
     QUEUED_CONNECTIONS.store(0, Ordering::Relaxed);
+    RATE_LIMITED_REQUESTS.store(0, Ordering::Relaxed);
+    if let Some(limits) = RATE_LIMITS.get() {
+        if let Ok(mut buckets) = limits.lock() { buckets.clear(); }
+    }
     REJECTED_CONNECTIONS.store(0, Ordering::Relaxed);
 
     // LAN exposure is opt-in from the Android dashboard. Public tunnel exposure is separate.
@@ -564,9 +645,33 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeC
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_queuedConnections(_env: JNIEnv, _class: JClass) -> jlong {
     QUEUED_CONNECTIONS.load(Ordering::Relaxed) as jlong
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rateLimitedRequests(_env: JNIEnv, _class: JClass) -> jlong {
+    RATE_LIMITED_REQUESTS.load(Ordering::Relaxed) as jlong
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rate_bucket_enforces_burst_and_refills_over_time() {
+        let start = Instant::now();
+        let mut bucket = RateBucket::new(start);
+        for _ in 0..(RATE_LIMIT_BURST as usize) {
+            assert!(bucket.take_token(start));
+        }
+        assert!(!bucket.take_token(start));
+        assert!(bucket.take_token(start + Duration::from_millis(100)));
+    }
+
+    #[test]
+    fn forwarded_client_ip_is_trusted_only_from_loopback_proxy() {
+        let forwarded = Some("203.0.113.7");
+        assert_eq!(effective_client_ip("127.0.0.1".parse().unwrap(), forwarded), "203.0.113.7".parse::<IpAddr>().unwrap());
+        assert_eq!(effective_client_ip("192.0.2.9".parse().unwrap(), forwarded), "192.0.2.9".parse::<IpAddr>().unwrap());
+        assert_eq!(effective_client_ip("127.0.0.1".parse().unwrap(), Some("not-an-ip")), "127.0.0.1".parse::<IpAddr>().unwrap());
+    }
+
     #[test]
     fn reserves_connection_slots_atomically_and_respects_limit() {
         let active = AtomicU64::new(0);

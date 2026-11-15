@@ -11,6 +11,7 @@ object NativeEngine {
     @JvmStatic external fun bytesServed(): Long
     @JvmStatic external fun activeConnections(): Long
     @JvmStatic external fun queuedConnections(): Long
+    @JvmStatic external fun rateLimitedRequests(): Long
     @JvmStatic external fun setCapacityLimit(limit: Int): String
     @JvmStatic external fun rejectedConnections(): Long
 }
