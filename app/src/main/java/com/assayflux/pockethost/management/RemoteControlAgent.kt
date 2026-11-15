@@ -115,28 +115,37 @@ object RemoteControlAgent {
             val processed = runCatching {
                 JSONObject(commandPrefs.getString("processed_commands", "{}") ?: "{}")
             }.getOrDefault(JSONObject())
-            val outcome = processed.optJSONObject(id) ?: runCatching {
-                if (kind == "deploy_site") {
-                    val artifactId = payload.getString("artifactId")
-                    val expectedSha = payload.getString("sha256")
-                    val archive = downloadArtifact(endpoint, token, artifactId, expectedSha, context)
-                    try {
-                        val report = FileInputStream(archive).use { SiteImporter.importZipStream(context, it) }
-                        JSONObject().put("status", 200).put("files", report.fileCount)
-                            .put("bytes", report.totalBytes).put("source", report.source)
-                    } finally { archive.delete() }
-                } else ManagementApiServer.executeRemoteCommand(context, kind, payload)
-            }.getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
-            if (!processed.has(id)) {
-                processed.put(id, outcome)
-                while (processed.length() > 100) {
-                    val oldest = processed.keys().asSequence().firstOrNull() ?: break
-                    processed.remove(oldest)
+            val saved = processed.optJSONObject(id)
+            val outcome = when {
+                saved?.optString("_state") == "started" ->
+                    JSONObject().put("status", 409).put("error", "previous_execution_interrupted_operator_retry_required")
+                saved != null -> saved
+                else -> {
+                    // Persist a start marker before side effects. If Android kills the
+                    // process mid-command, a lease retry must not execute it twice.
+                    processed.put(id, JSONObject().put("_state", "started"))
+                    commandPrefs.edit().putString("processed_commands", processed.toString()).commit()
+                    runCatching {
+                        if (kind == "deploy_site") {
+                            val artifactId = payload.getString("artifactId")
+                            val expectedSha = payload.getString("sha256")
+                            val archive = downloadArtifact(endpoint, token, artifactId, expectedSha, context)
+                            try {
+                                val report = FileInputStream(archive).use { SiteImporter.importZipStream(context, it) }
+                                JSONObject().put("status", 200).put("files", report.fileCount)
+                                    .put("bytes", report.totalBytes).put("source", report.source)
+                            } finally { archive.delete() }
+                        } else ManagementApiServer.executeRemoteCommand(context, kind, payload)
+                    }.getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
                 }
-                // Persist the result before acknowledging, so lease-based redelivery
-                // does not repeat non-idempotent runtime restart actions.
-                commandPrefs.edit().putString("processed_commands", processed.toString()).commit()
             }
+            processed.put(id, outcome)
+            while (processed.length() > 500) {
+                val oldest = processed.keys().asSequence().firstOrNull() ?: break
+                processed.remove(oldest)
+            }
+            // Persist the final result before acknowledging; a lost ACK is safe to retry.
+            commandPrefs.edit().putString("processed_commands", processed.toString()).commit();
             val success = outcome.optInt("status", 500) in 200..299
             if (success && kind == "apply_config") {
                 commandPrefs.edit().putLong("config_version", payload.optLong("version", 0L)).commit()
