@@ -7,9 +7,12 @@ import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -107,9 +110,81 @@ private fun formatBytes(value: Long): String = when {
 }
 
 class MainActivity : ComponentActivity() {
+    private val allowedAuthenticators =
+        BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    private var unlocked = mutableStateOf(true)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { PocketHostDashboard() }
+        val enabled = getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            .getBoolean("biometric_unlock_enabled", false)
+        unlocked = mutableStateOf(!enabled)
+        setContent {
+            if (unlocked.value) PocketHostDashboard()
+            else BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
+        }
+        if (enabled) authenticateAtLaunch()
+    }
+
+    /** Confirms the enrolled biometric/device credential before enabling the local app gate. */
+    fun confirmBiometricUnlock(onResult: (Boolean) -> Unit) {
+        if (BiometricManager.from(this).canAuthenticate(allowedAuthenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            Toast.makeText(this, "Set up a strong biometric or secure device lock first.", Toast.LENGTH_LONG).show()
+            onResult(false)
+            return
+        }
+        showBiometricPrompt("Enable biometric unlock", onResult)
+    }
+
+    private fun authenticateAtLaunch() {
+        if (BiometricManager.from(this).canAuthenticate(allowedAuthenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                .putBoolean("biometric_unlock_enabled", false).apply()
+            unlocked.value = true
+            Toast.makeText(this, "Biometric unlock is unavailable; the app lock was disabled.", Toast.LENGTH_LONG).show()
+            return
+        }
+        showBiometricPrompt("Unlock AssayFlux Pocket Host") { success ->
+            if (success) unlocked.value = true
+        }
+    }
+
+    private fun showBiometricPrompt(title: String, onResult: (Boolean) -> Unit) {
+        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    onResult(true)
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    onResult(false)
+                }
+            })
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle("Authenticate to access Pocket Host on this device.")
+            .setAllowedAuthenticators(allowedAuthenticators)
+            .build()
+        prompt.authenticate(info)
+    }
+}
+
+@Composable
+private fun BiometricUnlockScreen(onRetry: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            Text("ASSAYFLUX", color = Color(0xFF1F3A5F), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Spacer(Modifier.height(12.dp))
+            Text("Pocket Host is locked", color = Color(0xFF1C1C1C), fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("Authenticate with your enrolled biometric or secure device credential to continue.",
+                color = Color(0xFF6B6B6B), fontSize = 14.sp)
+            Spacer(Modifier.height(20.dp))
+            Button(onClick = onRetry) { Text("Unlock") }
+        }
     }
 }
 
@@ -119,6 +194,7 @@ private fun PocketHostDashboard() {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Dashboard") }
     var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
+    var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
     var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
     var showClearLogsConfirmation by remember { mutableStateOf(false) }
@@ -479,6 +555,42 @@ private fun PocketHostDashboard() {
                             Switch(checked = darkTheme, onCheckedChange = { enabled ->
                                 darkTheme = enabled
                                 context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("dark_theme", enabled).apply()
+                            })
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Biometric app unlock", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Require a strong biometric or secure device credential when Pocket Host is opened. This protects the local app UI; it does not replace Owner/Operator API authentication.", color = palette.onSurfaceVariant, fontSize = 13.sp)
+                            }
+                            Switch(checked = biometricUnlockEnabled, onCheckedChange = { enabled ->
+                                if (!enabled) {
+                                    biometricUnlockEnabled = false
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("biometric_unlock_enabled", false).apply()
+                                    status = "Biometric app unlock disabled."
+                                } else {
+                                    val activity = context as? MainActivity
+                                    if (activity == null) {
+                                        status = "Could not open biometric confirmation."
+                                    } else {
+                                        activity.confirmBiometricUnlock { success ->
+                                            if (success) {
+                                                biometricUnlockEnabled = true
+                                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                                    .putBoolean("biometric_unlock_enabled", true).apply()
+                                                status = "Biometric app unlock enabled for the next app launch."
+                                            } else {
+                                                status = "Biometric confirmation was not completed; the setting remains off."
+                                            }
+                                        }
+                                    }
+                                }
                             })
                         }
                     }
