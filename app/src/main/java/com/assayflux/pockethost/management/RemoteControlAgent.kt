@@ -105,8 +105,23 @@ object RemoteControlAgent {
             val id = command.optString("id")
             val kind = command.optString("kind")
             val payload = command.optJSONObject("payload") ?: JSONObject()
-            val outcome = runCatching { ManagementApiServer.executeRemoteCommand(context, kind, payload) }
-                .getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
+            val commandPrefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val processed = runCatching {
+                JSONObject(commandPrefs.getString("processed_commands", "{}") ?: "{}")
+            }.getOrDefault(JSONObject())
+            val outcome = processed.optJSONObject(id) ?: runCatching {
+                ManagementApiServer.executeRemoteCommand(context, kind, payload)
+            }.getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
+            if (!processed.has(id)) {
+                processed.put(id, outcome)
+                while (processed.length() > 100) {
+                    val oldest = processed.keys().asSequence().firstOrNull() ?: break
+                    processed.remove(oldest)
+                }
+                // Persist the result before acknowledging, so lease-based redelivery
+                // does not repeat non-idempotent runtime restart actions.
+                commandPrefs.edit().putString("processed_commands", processed.toString()).commit()
+            }
             val success = outcome.optInt("status", 500) in 200..299
             runCatching {
                 post(endpoint, token, "/v1/device/commands/$id/ack",
