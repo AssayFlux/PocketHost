@@ -2,7 +2,7 @@ use axum::{
     body::Bytes,
     extract::{DefaultBodyLimit, Path, State},
     http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode, Response},
-    routing::{get, post, put},
+    routing::{get, post},
     Json, Router,
 };
 use chrono::{DateTime, Utc};
@@ -240,7 +240,7 @@ async fn register_device(
 async fn list_devices(
     State(s): State<AppState>, headers: HeaderMap,
 ) -> Result<Json<Vec<DeviceView>>, (StatusCode, String)> {
-    let role = admin(&headers, &s).await?;
+    let _role = admin(&headers, &s).await?;
     let rows = sqlx::query("SELECT id,name,state,last_seen,created_at FROM devices ORDER BY created_at DESC")
         .fetch_all(&s.db).await.map_err(internal)?;
     Ok(Json(rows.into_iter().map(|r| DeviceView {
@@ -271,7 +271,7 @@ async fn delete_device(
 async fn get_config(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<Json<ConfigView>, (StatusCode, String)> {
-    let role = admin(&headers, &s).await?;
+    let _role = admin(&headers, &s).await?;
     let row = sqlx::query("SELECT version,config,updated_at FROM device_configs WHERE device_id=$1")
         .bind(id).fetch_optional(&s.db).await.map_err(internal)?
         .ok_or((StatusCode::NOT_FOUND, "device_config_not_found".into()))?;
@@ -319,7 +319,7 @@ async fn queue_command(
     }
     let command_id = Uuid::new_v4();
     let result = sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) SELECT $1,id,$2,$3 FROM devices WHERE id=$4")
-        .bind(command_id).bind(input.kind).bind(input.payload).bind(id).execute(&s.db).await.map_err(internal)?;
+        .bind(command_id).bind(&input.kind).bind(input.payload).bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "device_not_found".into())); }
     audit(&s, &role.name, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"commandId":command_id,"state":"queued"}))))
