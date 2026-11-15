@@ -31,6 +31,11 @@ object NodeHostRuntime {
         val metrics = File(metadata, "metrics.json")
         metrics.delete()
         val prefs = context.getSharedPreferences("pockethost_node_runtime", Context.MODE_PRIVATE)
+        val statePrefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        val memory = android.app.ActivityManager.MemoryInfo()
+        context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
+        val automaticHeapMb = (memory.totalMem / (1024L * 1024L * 20L)).toInt().coerceIn(128, 384)
+        val heapLimitMb = statePrefs.getInt("node_heap_mb", automaticHeapMb).coerceIn(96, 512)
         prefs.edit().putString("state", "STARTING").putString("project_root", root.absolutePath)
             .putString("metrics_json", JSONObject().put("source", "node").toString())
             .putLong("updated_at", System.currentTimeMillis()).apply()
@@ -38,6 +43,7 @@ object NodeHostRuntime {
             .putExtra(NodeHostingService.EXTRA_ROOT, root.absolutePath)
             .putExtra(NodeHostingService.EXTRA_ENTRY, entry.absolutePath)
             .putExtra(NodeHostingService.EXTRA_PORT, port)
+            .putExtra(NodeHostingService.EXTRA_HEAP_MB, heapLimitMb)
         ContextCompat.startForegroundService(context, intent)
         return "STARTING"
     }
