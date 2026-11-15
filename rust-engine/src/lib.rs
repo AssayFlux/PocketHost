@@ -387,8 +387,12 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMu
             } else {
                 match value.get("runtime").and_then(|v| v.as_str()).unwrap_or("static") {
                     "static" => SiteTarget::Static(PathBuf::from(value.get("root").and_then(|v| v.as_str()).ok_or("Static route requires root")?)),
-                    "python-wsgi" | "node" => SiteTarget::Proxy {
-                        port: value.get("port").and_then(|v| v.as_u64()).ok_or("Proxy route requires port")? as u16
+                    "python-wsgi" | "node" => {
+                        let raw_port = value.get("port").and_then(|v| v.as_u64()).ok_or("Proxy route requires port")?;
+                        if !(1024..=65535).contains(&raw_port) {
+                            return Err(format!("Invalid upstream port for {host}"));
+                        }
+                        SiteTarget::Proxy { port: raw_port as u16 }
                     },
                     runtime => return Err(format!("Unsupported runtime route: {runtime}")),
                 }
