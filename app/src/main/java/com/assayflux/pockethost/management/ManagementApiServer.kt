@@ -226,7 +226,15 @@ object ManagementApiServer {
             val account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
             if (account == null) {
                 val count = if (attempts != null && now - attempts.first < 60) attempts.second + 1 else 1
-                loginAttempts[username.lowercase()] = now to count
+                // Bound attacker-controlled username keys so repeated login attempts cannot
+                // grow this in-memory throttle map without limit. Expired entries are pruned
+                // first; when still full, evict the oldest window before inserting.
+                loginAttempts.entries.removeAll { now - it.value.first >= 60 }
+                if (loginAttempts.size >= 256 && username.lowercase() !in loginAttempts) {
+                    val oldest = loginAttempts.minByOrNull { it.value.first }?.key
+                    if (oldest != null) loginAttempts.remove(oldest)
+                }
+                if (username.length <= 32) loginAttempts[username.lowercase()] = now to count
                 return 401 to JSONObject().put("error", "invalid_credentials")
             }
             loginAttempts.remove(username.lowercase())
