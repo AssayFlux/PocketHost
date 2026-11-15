@@ -7,6 +7,7 @@ Imported project code is untrusted executable code and runs with the app's privi
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import sys
@@ -20,6 +21,8 @@ _server = None
 _thread = None
 _module_name = None
 _project_root = None
+_module_names = []
+_project_roots = []
 _metrics_lock = threading.Lock()
 _metrics = {"requests": 0, "bytes_sent": 0, "errors": 0, "active": 0, "peak_active": 0, "last_request_ms": 0}
 MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024
@@ -131,7 +134,7 @@ class _QuietRequestHandler(WSGIRequestHandler):
         return
 
 
-def _load_application(project_root: str):
+def _load_application(project_root: str, module_name: str | None = None):
     root = os.path.realpath(project_root)
     entry = os.path.join(root, "wsgi.py")
     if not os.path.isdir(root):
@@ -142,7 +145,7 @@ def _load_application(project_root: str):
     if added_path:
         sys.path.insert(0, root)
 
-    name = "_pockethost_user_wsgi"
+    name = module_name or "_pockethost_user_wsgi"
     previous = sys.modules.pop(name, None)
     spec = importlib.util.spec_from_file_location(name, entry)
     if spec is None or spec.loader is None:
@@ -167,7 +170,7 @@ def _load_application(project_root: str):
 
 
 def start(project_root: str, port: int, allow_lan: bool = False) -> str:
-    global _server, _thread, _module_name, _project_root
+    global _server, _thread, _module_name, _project_root, _module_names, _project_roots
     port = int(port)
     if port < 1024 or port > 65535:
         raise ValueError("Python port must be between 1024 and 65535.")
@@ -208,25 +211,104 @@ def start(project_root: str, port: int, allow_lan: bool = False) -> str:
             raise
         _server, _thread, _module_name = server, thread, module_name
         _project_root = os.path.realpath(project_root)
+        _module_names = [module_name]
+        _project_roots = [_project_root]
         return "RUNNING"
 
 
 def stop() -> str:
-    global _server, _thread, _module_name, _project_root
+    global _server, _thread, _module_name, _project_root, _module_names, _project_roots
     with _lock:
-        server, thread, module_name, project_root = _server, _thread, _module_name, _project_root
+        server, thread = _server, _thread
+        module_names = list(_module_names or ([ _module_name ] if _module_name else []))
+        project_roots = list(_project_roots or ([ _project_root ] if _project_root else []))
         if server is None:
             return "STOPPED"
         _server = _thread = _module_name = _project_root = None
+        _module_names, _project_roots = [], []
     server.shutdown()
     server.server_close()
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=3.0)
-    if module_name:
-        sys.modules.pop(module_name, None)
-    if project_root in sys.path:
-        sys.path.remove(project_root)
+    for name in module_names:
+        sys.modules.pop(name, None)
+    for root in project_roots:
+        if root in sys.path:
+            sys.path.remove(root)
     return "STOPPED"
+
+
+class _HostRouter:
+    def __init__(self, applications):
+        self.applications = applications
+
+    def __call__(self, environ, start_response):
+        host = environ.get("HTTP_HOST", "").split(":", 1)[0].strip().rstrip(".").lower()
+        application = self.applications.get(host)
+        if application is None:
+            start_response("404 Not Found", [("Content-Length", "0")])
+            return [b""]
+        return application(environ, start_response)
+
+
+def start_many(host_roots_json: str, port: int, allow_lan: bool = False) -> str:
+    """Serve multiple trusted WSGI projects on one listener using Host routing."""
+    global _server, _thread, _module_name, _project_root, _module_names, _project_roots
+    port = int(port)
+    if port < 1024 or port > 65535:
+        raise ValueError("Python port must be between 1024 and 65535.")
+    routes = json.loads(host_roots_json)
+    if not isinstance(routes, dict) or not routes or len(routes) > 100:
+        raise ValueError("Python hostname registry must contain between 1 and 100 routes.")
+    with _lock:
+        if _server is not None:
+            return "ALREADY_RUNNING"
+        applications = {}
+        loaded_modules = []
+        loaded_roots = []
+        try:
+            for raw_host, raw_root in routes.items():
+                host = str(raw_host).strip().rstrip(".").lower()
+                if not host or len(host) > 253 or not isinstance(raw_root, str):
+                    raise ValueError("Invalid Python hostname route.")
+                if host in applications:
+                    raise ValueError("Duplicate Python hostname route.")
+                root = os.path.realpath(raw_root)
+                module_name = "_pockethost_wsgi_" + hashlib.sha256(root.encode("utf-8")).hexdigest()[:20]
+                if module_name not in loaded_modules:
+                    application, loaded_name = _load_application(root, module_name)
+                    loaded_modules.append(loaded_name)
+                    loaded_roots.append(root)
+                applications[host] = application
+            application = _MetricsMiddleware(_HostRouter(applications))
+            host_address = "0.0.0.0" if bool(allow_lan) else "127.0.0.1"
+            server = make_server(
+                host_address, port, application,
+                server_class=_BoundedThreadingWSGIServer,
+                handler_class=_QuietRequestHandler,
+            )
+            thread = threading.Thread(
+                target=server.serve_forever,
+                kwargs={"poll_interval": 0.25},
+                name="PocketHost-Python-Multi-WSGI",
+                daemon=True,
+            )
+            try:
+                thread.start()
+            except BaseException:
+                server.server_close()
+                raise
+        except BaseException:
+            for name in loaded_modules:
+                sys.modules.pop(name, None)
+            for root in loaded_roots:
+                if root in sys.path:
+                    sys.path.remove(root)
+            raise
+        _server, _thread = server, thread
+        _module_name, _project_root = None, None
+        _module_names, _project_roots = loaded_modules, loaded_roots
+        return "RUNNING"
 
 
 def status() -> str:
