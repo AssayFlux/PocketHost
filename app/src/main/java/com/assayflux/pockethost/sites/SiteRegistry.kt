@@ -62,6 +62,14 @@ object SiteRegistry {
         return map
     }
 
+    fun pythonHostnameMap(context: Context): JSONObject {
+        val roots = JSONObject()
+        list(context).filter { it.enabled && it.runtime == "python-wsgi" }.forEach { site ->
+            site.hostnames.forEach { hostname -> roots.put(hostname, File(site.root).canonicalPath) }
+        }
+        return roots
+    }
+
     fun hostRoutingJson(context: Context, pythonPort: Int, nodePort: Int): JSONObject {
         val routes = JSONObject()
         list(context).filter { it.enabled }.forEach { site ->
