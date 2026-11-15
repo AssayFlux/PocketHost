@@ -418,7 +418,8 @@ object ManagementApiServer {
         origin.matches(Regex("http://localhost:[0-9]{1,5}")) ||
         origin.matches(Regex("http://127\\.0\\.0\\.1:[0-9]{1,5}")) ||
         origin == "https://assayflux.xyz" ||
-        origin.matches(Regex("https://[a-zA-Z0-9.-]+\\.assayflux\\.xyz"))
+        origin == "https://www.assayflux.xyz" ||
+        origin == "https://pockethost.assayflux.xyz"
     )
 
     private fun respond(output: BufferedOutputStream, status: Int, body: JSONObject, origin: String? = null) {
