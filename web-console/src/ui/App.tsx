@@ -41,7 +41,7 @@ export function App() {
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel] = await Promise.all([
+      const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel, nextResources] = await Promise.all([
         request("/api/v1/status"), request("/api/v1/metrics"), request("/api/v1/sites"),
         request("/api/v1/logs"), request("/api/v1/tunnel"), request("/api/v1/resources"),
       ]);
