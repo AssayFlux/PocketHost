@@ -115,6 +115,52 @@ object SiteImporter {
         }
     }
 
+    /**
+     * Activates a directory already extracted and validated by another trusted importer.
+     * The source must be an app-private staging directory on the same filesystem.
+     */
+    fun activatePreparedDirectory(context: Context, preparedRoot: File): ImportReport {
+        val root = preparedRoot.canonicalFile
+        val privateRoot = context.filesDir.canonicalFile.toPath()
+        if (!root.isDirectory || !root.toPath().startsWith(privateRoot) ||
+            root == File(context.filesDir, "site").canonicalFile) {
+            throw IOException("Prepared website directory is not a safe app-private staging folder.")
+        }
+        val counter = Counter()
+        fun validateDirectory(directory: File, depth: Int) {
+            if (depth > MAX_DEPTH) throw IOException("Website folder nesting is too deep.")
+            val children = directory.listFiles() ?: throw IOException("Could not inspect prepared website files.")
+            for (child in children) {
+                validateName(child.name)
+                if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
+                    throw IOException("Prepared website contains an unsupported symbolic link.")
+                }
+                if (!child.canonicalFile.toPath().startsWith(root.toPath())) {
+                    throw IOException("Prepared website contains a path outside its staging directory.")
+                }
+                counter.entries++
+                if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many entries.")
+                if (child.isDirectory) {
+                    validateDirectory(child, depth + 1)
+                } else if (child.isFile) {
+                    counter.files++
+                    counter.bytes += child.length()
+                    if (counter.files > MAX_FILES || counter.bytes > MAX_BYTES) {
+                        throw IOException("Prepared website exceeds the import safety limits.")
+                    }
+                } else {
+                    throw IOException("Prepared website contains an unsupported filesystem entry.")
+                }
+            }
+        }
+        validateDirectory(root, 0)
+        if (counter.files == 0 || !File(root, "index.html").isFile) {
+            throw IOException("Prepared website must contain index.html at its root.")
+        }
+        activate(context, root, root)
+        return ImportReport(counter.files, counter.bytes, "Full backup")
+    }
+
     private fun activate(context: Context, stagingBase: File, siteRoot: File) {
         val active = File(context.filesDir, "site")
         val releases = File(context.filesDir, "site-releases")
