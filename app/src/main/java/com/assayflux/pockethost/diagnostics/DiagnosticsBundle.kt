@@ -45,6 +45,7 @@ object DiagnosticsBundle {
             val traffic = JSONObject()
                 .put("totalRequests", metrics.totalRequests)
                 .put("totalBytes", metrics.totalBytes)
+                .put("source", "Rust static HTTP engine only; excludes Python WSGI and Cloudflare Tunnel traffic")
                 .put("todayRequests", metrics.todayRequests)
                 .put("todayBytes", metrics.todayBytes)
             putText(zip, "traffic.json", traffic.toString(2))
