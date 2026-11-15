@@ -136,7 +136,7 @@ private fun PocketHostDashboard() {
     var remoteControlConfigured by remember { mutableStateOf(RemoteControlAgent.isConfigured(context)) }
     var capacityPercent by remember { mutableFloatStateOf(CapacityController.snapshot(context).optInt("percent", 100).toFloat()) }
     var capacityInfo by remember { mutableStateOf(CapacityController.snapshot(context)) }
-    var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot()) }
+    var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot(context)) }
     var capacityDuration by remember { mutableStateOf("180") }
     var deviceTelemetry by remember { mutableStateOf(DeviceTelemetry.snapshot(context)) }
 
@@ -177,7 +177,7 @@ private fun PocketHostDashboard() {
             capacityInfo = withContext(Dispatchers.IO) { CapacityController.tick(context)
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections()) }
-            capacityBenchmark = CapacityLab.snapshot()
+            capacityBenchmark = CapacityLab.snapshot(context)
             val telemetryNow = android.os.SystemClock.elapsedRealtime()
             if (hosting) {
                 deviceTelemetry = TelemetryStore.latest(context) ?: DeviceTelemetry.snapshot(context)
@@ -590,7 +590,7 @@ private fun PocketHostDashboard() {
                         }
                         Text("Device: ${deviceTelemetry.optString("manufacturer")} ${deviceTelemetry.optString("model")} · Android API ${deviceTelemetry.optInt("androidApi")} · ${deviceTelemetry.optInt("cpuCores")} CPU cores",
                             color = Slate, fontSize = 11.sp)
-                        Text("RAM available: ${formatBytes(deviceTelemetry.optLong("availableMemoryBytes"))} · storage free: ${formatBytes(deviceTelemetry.optLong("storageAvailableBytes"))} · battery: ${if (deviceTelemetry.isNull("batteryPercent")) "unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "%"} · thermal: ${deviceTelemetry.optString("thermalLabel", "UNKNOWN")} · network: ${deviceTelemetry.optString("networkTransport", "unknown")}",
+                        Text("CPU load: ${if (deviceTelemetry.isNull("cpuUsagePercent")) "warming up / unavailable" else deviceTelemetry.optDouble("cpuUsagePercent").toInt().toString() + "%"} · app PSS: ${formatBytes(deviceTelemetry.optLong("processPssKb") * 1024L)} · RAM available: ${formatBytes(deviceTelemetry.optLong("storageAvailableBytes"))} · battery: ${if (deviceTelemetry.isNull("batteryPercent")) "unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "%"} · thermal: ${deviceTelemetry.optString("thermalLabel", "UNKNOWN")} · network: ${deviceTelemetry.optString("networkTransport", "unknown")}",
                             color = Slate, fontSize = 11.sp)
                         Text("Automatic health state: ${capacityInfo.optString("healthState", "NORMAL")}. Daily reports retained: ${DailyOperationsReport.list(context).size}. The percentage controls admission concurrency, not CPU usage or a guaranteed visitor count. Android can still stop the app.",
                             color = Slate, fontSize = 10.sp)

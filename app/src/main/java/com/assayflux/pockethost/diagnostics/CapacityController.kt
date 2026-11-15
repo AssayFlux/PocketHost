@@ -11,7 +11,7 @@ import java.time.Instant
 /** Persistent, bounded admission profile. Percentages apply to a measured safe concurrency ceiling. */
 object CapacityController {
     private const val PREFS = "pockethost_capacity"
-    private const val DEFAULT_SAFE_LIMIT = 16
+    private const val DEFAULT_SAFE_LIMIT = 4
     @Volatile private var lastHealthState = "NORMAL"
     @Volatile private var recoveryUntilElapsed = 0L
 
@@ -147,7 +147,7 @@ object CapacityLab {
     @Volatile private var latest = JSONObject().put("state", "NOT_RUN")
 
     @Synchronized fun start(context: Context, port: Int): JSONObject {
-        if (running) return latest
+        if (running || latest.optString("state") != "NOT_RUN") return latest
         require(port in 1024..65535)
         running = true
         latest = JSONObject().put("state", "RUNNING").put("startedAt", Instant.now().toString())
@@ -220,5 +220,10 @@ object CapacityLab {
         return latest
     }
 
-    fun snapshot(): JSONObject = latest
+    fun snapshot(context: Context): JSONObject {
+        if (running) return latest
+        val persisted = context.getSharedPreferences("pockethost_capacity", Context.MODE_PRIVATE)
+            .getString("benchmark_json", null)
+        return persisted?.let { runCatching { JSONObject(it) }.getOrNull() } ?: latest
+    }
 }

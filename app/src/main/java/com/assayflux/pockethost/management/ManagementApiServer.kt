@@ -327,7 +327,7 @@ object ManagementApiServer {
             }.getOrElse { 409 to JSONObject().put("error", it.message ?: "benchmark_unavailable") }
         }
         if (method == "GET" && path == "/api/v1/capacity/benchmark") {
-            return 200 to CapacityLab.snapshot()
+            return 200 to CapacityLab.snapshot(context)
         }
         if (method == "GET" && path == "/api/v1/reports") {
             val reports = org.json.JSONArray()
