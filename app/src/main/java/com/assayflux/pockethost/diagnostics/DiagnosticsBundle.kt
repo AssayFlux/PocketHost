@@ -40,7 +40,6 @@ object DiagnosticsBundle {
                 .put("pythonEnabled", preferences.getBoolean("python_enabled", false))
                 .put("tunnelEnabled", preferences.getBoolean("tunnel_enabled", false))
                 .put("keepCpuAwake", preferences.getBoolean("keep_awake", false))
-                .put("serviceStatus", preferences.getString("service_status", "unknown") ?: "unknown")
             putText(zip, "configuration.json", configuration.toString(2))
 
             val traffic = JSONObject()
