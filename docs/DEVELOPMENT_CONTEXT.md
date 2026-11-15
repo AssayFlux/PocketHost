@@ -4,12 +4,12 @@
 
 ## Current implementation snapshot — 2026-11-15
 
-- Current main commit: `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`.
+- Current main commit: `bf22b10c22f5c2f77058acee7905595b7edd3e81`.
 - PRs #40–#45 are merged. MainActivity uses ComponentActivity for Compose Activity Result launchers to avoid FragmentActivity's 16-bit request-code validation path. BiometricPrompt is hosted in a dedicated activity.
 - UI navigation is Dashboard, Sites, Activity, Learn and Settings. Settings are grouped into General, Network, Runtimes and About; Learn guides start collapsed. Keep descriptions concise and preserve the approved teal/bronze/ivory palette.
 - Encrypted full-app backup includes the active static website, optional Python/Node projects, hostname routes and selected non-secret settings. It excludes device-bound credentials, requires a 12–128 character passphrase, bounds archive sizes/counts, and keeps restored runtimes stopped pending fresh owner acknowledgement. Legacy static-only backups remain restorable.
 - Python and Node remain supported owner-managed hosting features. They currently run under the app UID and are not OS sandboxes; do not disable them as a workaround, but do not claim isolation or accept visitor-submitted executable code.
-- Latest quality run [43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed six jobs including Android source compilation. Android integration run [43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) is packaging ABI-specific debug APKs; emulator instrumentation is skipped and physical-device acceptance is owner-run.
+- Latest quality run [43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed six jobs including Android source compilation. Android integration run [43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed and produced [three-ABI debug APK artifact 14164002620](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620); emulator instrumentation is skipped and physical-device acceptance is owner-run.
 - Remaining production gates include OS-backed runtime isolation and quotas, deployment/verification of the optional remote control plane, payment-provider integration, independent security review, physical-device acceptance and owner-controlled release signing. Full backup currently rejects custom static roots outside the main website directory.
 
 ## 1. Repository identity
