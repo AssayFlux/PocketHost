@@ -2,7 +2,7 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `ad0ccab69920b32070d4ef60fe866a6c413c1a7c`  
+**Latest implementation commit:** `4a5284fc6f5cdc7481252445d05dfe721d17b027`  
 **Quality CI:** [run 43693751852](https://github.com/AssayFlux/PocketHost/actions/runs/43693751852) passed all six jobs on implementation commit `ad0ccab69920b32070d4ef60fe866a6c413c1a7c`, including Android Kotlin and Android-test source compilation, without packaging an APK. This does not include emulator UI screenshots or physical-device validation.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
@@ -227,3 +227,10 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Blockchain technology remains excluded from the product and codebase. Conventional local audit integrity, if implemented, is not blockchain.
 
 **Release decision:** integrated development build; not production approved. This status changes only when the relevant code, tests, device/network evidence and security review are recorded against the exact release commit.
+
+
+## Follow-up security hardening — 2026-11-15
+
+- Commit `4a5284fc6f5cdc7481252445d05dfe721d17b027` bounds the in-memory management-login throttle map: expired entries are pruned, the map is capped at 256 attacker-controlled username keys, and oversized usernames are not retained as throttle keys.
+- Quality workflow [43700940364](https://github.com/AssayFlux/PocketHost/actions/runs/43700940364) and Android integration workflow [43700940297](https://github.com/AssayFlux/PocketHost/actions/runs/43700940297) were queued at the time this status was updated. No pass is claimed for this commit until those runs complete.
+- This narrow hardening does not resolve runtime isolation, native biometric unlock, physical-device acceptance, external Cloudflare validation, remote control-plane deployment, payment integration or production release signing.
