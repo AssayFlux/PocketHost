@@ -732,9 +732,23 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rateLim
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_siteLimitRejections(_env: JNIEnv, _class: JClass) -> jlong {
     SITE_LIMIT_REJECTIONS.load(Ordering::Relaxed) as jlong
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_siteLimitRejections(_env: JNIEnv, _class: JClass) -> jlong {
+    SITE_LIMIT_REJECTIONS.load(Ordering::Relaxed) as jlong
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn per_site_semaphore_releases_after_response_slot_is_dropped() {
+        let limiter = Arc::new(Semaphore::new(1));
+        let permit = limiter.clone().try_acquire_owned().unwrap();
+        assert!(limiter.clone().try_acquire_owned().is_err());
+        drop(permit);
+        assert!(limiter.clone().try_acquire_owned().is_ok());
+    }
+
     #[test]
     fn site_target_keys_group_same_runtime_target() {
         assert_eq!(site_target_key(&SiteTarget::Proxy { port: 9000 }), "proxy:9000");
