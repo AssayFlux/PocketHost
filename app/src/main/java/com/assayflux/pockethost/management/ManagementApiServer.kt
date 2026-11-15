@@ -7,6 +7,7 @@ import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.sites.SiteRegistry
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -226,7 +227,7 @@ object ManagementApiServer {
                 .put("runtimes", org.json.JSONArray()
                     .put(JSONObject().put("name", "rust-static").put("state", NativeEngine.status()))
                     .put(JSONObject().put("name", "python").put("state", py))
-                    .put(JSONObject().put("name", "node").put("state", "UNAVAILABLE")))
+                    .put(JSONObject().put("name", "node").put("state", NodeHostRuntime.status(context))))
         }
         if (method == "GET" && path == "/api/v1/metrics") {
             val m = MetricsStore.snapshot(context)
@@ -235,8 +236,7 @@ object ManagementApiServer {
                 .put("todayRequests", m.todayRequests).put("todayBytes", m.todayBytes))
             val python = runCatching { PythonHostRuntime.metrics(context) }.getOrNull()
             if (python != null) sources.put(python)
-            sources.put(JSONObject().put("source", "node").put("available", false)
-                .put("scopeNote", "Node.js runtime is not integrated in this build."))
+            NodeHostRuntime.metrics(context)?.let { sources.put(it) }
             return 200 to JSONObject().put("sampledAt", Instant.now().toString()).put("sources", sources)
         }
         if (method == "GET" && path == "/api/v1/logs") {
@@ -293,7 +293,14 @@ object ManagementApiServer {
                     "stop" -> 200 to JSONObject().put("state", PythonHostRuntime.stop(context))
                     else -> 400 to JSONObject().put("error", "unsupported_site_action")
                 }
-                "node" -> 501 to JSONObject().put("error", "node_runtime_not_integrated")
+                "node" -> when (action) {
+                    "start" -> runCatching {
+                        val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000)
+                        NodeHostRuntime.start(context, site.root, port)
+                    }.fold({ 202 to JSONObject().put("state", it) }, { 503 to JSONObject().put("error", it.message ?: "node_start_failed") })
+                    "stop" -> 200 to JSONObject().put("state", NodeHostRuntime.stop(context))
+                    else -> 400 to JSONObject().put("error", "unsupported_site_action")
+                }
                 else -> 400 to JSONObject().put("error", "unsupported_runtime")
             }
         }
