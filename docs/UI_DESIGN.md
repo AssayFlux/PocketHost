@@ -229,6 +229,5 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Android foreground services improve continuity but cannot guarantee 24/7 uptime or override OEM/OS battery policies.
 - Cloudflare Tunnel connectivity is not visitor authentication; use Cloudflare Access for private sites.
 - Do not claim universal visitor counts, complete sandboxing, payment compliance, deployed remote control, production readiness or a signed release without the corresponding evidence.
-- Blockchain technology remains excluded from the product and codebase. Conventional local audit integrity, if implemented, is not blockchain.
 
 **Release decision:** integrated development build; not production approved. This status changes only when the relevant code, tests, device/network evidence and security review are recorded against the exact release commit.
