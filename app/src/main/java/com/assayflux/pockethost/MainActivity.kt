@@ -32,6 +32,7 @@ import com.assayflux.pockethost.diagnostics.DiagnosticsBundle
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
+import com.assayflux.pockethost.storage.SiteBackupManager
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
@@ -107,6 +108,7 @@ private fun PocketHostDashboard() {
     var pythonProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "python-project/wsgi.py").isFile) "Python WSGI project imported." else "No Python project imported.") }
     var pythonHosting by remember { mutableStateOf(runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)) }
     var cloudflareTokenText by remember { mutableStateOf("") }
+    var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
 
@@ -163,6 +165,42 @@ private fun PocketHostDashboard() {
             scope.launch {
                 val exported = withContext(Dispatchers.IO) { DiagnosticsBundle.export(context, uri) }
                 status = if (exported) "Diagnostics bundle exported. Review it before sharing." else "Could not export diagnostics bundle."
+            }
+        }
+    }
+
+    val backupExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val passphrase = backupPassphrase.toCharArray()
+            backupPassphrase = ""
+            scope.launch {
+                val result = runCatching {
+                    withContext(Dispatchers.IO) { SiteBackupManager.export(context, uri, passphrase) }
+                }
+                status = if (result.getOrDefault(false)) "Encrypted website backup exported. Keep the passphrase safe; it cannot be recovered." else result.exceptionOrNull()?.message ?: "Backup export failed."
+            }
+        }
+    }
+
+    val backupRestorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            val passphrase = backupPassphrase.toCharArray()
+            backupPassphrase = ""
+            importing = true
+            scope.launch {
+                val result = runCatching {
+                    withContext(Dispatchers.IO) { SiteBackupManager.restore(context, uri, passphrase) }
+                }
+                result.onSuccess { report ->
+                    importedSummary = "Encrypted backup restored · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
+                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                        .putString("site_summary", importedSummary).apply()
+                    previousReleases = SiteImporter.listReleases(context)
+                    status = "Backup authenticated and restored. Restart hosting to load the restored website."
+                }.onFailure { error -> status = error.message ?: "Backup restore failed." }
+                importing = false
             }
         }
     }
@@ -411,6 +449,26 @@ private fun PocketHostDashboard() {
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Import website ZIP") }
                         Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = Slate, fontSize = 11.sp)
+                        OutlinedTextField(
+                            value = backupPassphrase,
+                            onValueChange = { backupPassphrase = it },
+                            label = { Text("Backup passphrase (12+ characters)") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            enabled = !hosting && !importing,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedButton(
+                            onClick = { backupExportPicker.launch("pockethost-site.afbackup") },
+                            enabled = !hosting && !importing && backupPassphrase.length >= 12,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Export encrypted website backup") }
+                        OutlinedButton(
+                            onClick = { backupRestorePicker.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
+                            enabled = !hosting && !importing && backupPassphrase.length >= 12,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Restore encrypted website backup") }
+                        Text("Backups use AES-256-GCM with a passphrase-derived key. Only the static website is included; Python projects, tunnel credentials and device settings are excluded. Restores are authenticated and validated before deployment.", color = Slate, fontSize = 10.sp)
                         if (previousReleases.isNotEmpty()) {
                             OutlinedButton(
                                 onClick = {
