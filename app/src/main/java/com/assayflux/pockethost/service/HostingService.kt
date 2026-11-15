@@ -86,6 +86,9 @@ class HostingService : Service() {
                 site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false)
             )
         if (result == "OK") {
+            if (!engineAlreadyRunning || !statePreferences.contains("hosting_started_elapsed_ms")) {
+                statePreferences.edit().putLong("hosting_started_elapsed_ms", android.os.SystemClock.elapsedRealtime()).apply()
+            }
             if (!engineAlreadyRunning) MetricsStore.beginSession(this)
             CapacityController.apply(this)
             startMetricsMonitor()
@@ -251,6 +254,7 @@ class HostingService : Service() {
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { NativeEngine.stop() }
         releaseWakeLock()
+        statePreferences.edit().remove("hosting_started_elapsed_ms").apply()
         if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {
             updateStatus("Hosting stopped.")
         }

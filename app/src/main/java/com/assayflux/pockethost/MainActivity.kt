@@ -86,6 +86,19 @@ private fun localLanAddress(): String? = runCatching {
     candidates.firstOrNull { it.isNotBlank() }
 }.getOrNull()
 
+private fun formatUptime(totalSeconds: Long): String {
+    val days = totalSeconds / 86_400
+    val hours = (totalSeconds % 86_400) / 3_600
+    val minutes = (totalSeconds % 3_600) / 60
+    val seconds = totalSeconds % 60
+    return when {
+        days > 0 -> "${days}d ${hours}h"
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m ${seconds}s"
+        else -> "${seconds}s"
+    }
+}
+
 private fun formatBytes(value: Long): String = when {
     value < 1024L -> "$value B"
     value < 1024L * 1024L -> "${value / 1024L} KB"
@@ -118,6 +131,7 @@ private fun PocketHostDashboard() {
     var pendingDeleteSiteFile by remember { mutableStateOf<String?>(null) }
     var pendingIndexSiteFile by remember { mutableStateOf<String?>(null) }
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
+    var uptimeText by remember { mutableStateOf("—") }
     var importing by remember { mutableStateOf(false) }
     var advancedMode by remember { mutableStateOf(false) }
     var keepAwake by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("keep_awake", false)) }
@@ -182,6 +196,10 @@ private fun PocketHostDashboard() {
         var lastIdleTelemetryAt = 0L
         while (true) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
+            val hostingStartedAt = preferences.getLong("hosting_started_elapsed_ms", 0L)
+            uptimeText = if (hosting && hostingStartedAt > 0L) {
+                formatUptime(((android.os.SystemClock.elapsedRealtime() - hostingStartedAt) / 1000L).coerceAtLeast(0L))
+            } else "—"
             val metrics = withContext(Dispatchers.IO) { MetricsStore.snapshot(context) }
             requests = metrics.totalRequests
             bytesServed = metrics.totalBytes
@@ -608,6 +626,7 @@ private fun PocketHostDashboard() {
                                 Text(formatBytes(bytesServed), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                         }
+                        Text("Uptime: $uptimeText", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Text("Today: $todayRequests requests · ${formatBytes(todayBytes)} transferred.", color = palette.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Text("Static-engine totals persist across service restarts. Python WSGI and tunnel traffic are not included yet.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
