@@ -29,6 +29,9 @@ services:
       POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the exact HTTPS console origin}
       POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
       RUST_LOG: info
+      POCKETHOST_ARTIFACT_DIR: /var/lib/pockethost/artifacts
+    volumes:
+      - pockethost-artifacts:/var/lib/pockethost/artifacts
     expose: ["8080"]
     read_only: true
     tmpfs: ["/tmp"]
@@ -54,6 +57,7 @@ services:
 
 volumes:
   pockethost-control-data:
+  pockethost-artifacts:
   caddy-data:
   caddy-config:
 
