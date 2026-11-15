@@ -32,7 +32,7 @@ Set these under Settings → Secrets and variables → Actions → Secrets:
 | `POCKETHOST_CONTROL_SSH_KEY` | Private SSH deploy key |
 | `POCKETHOST_CONTROL_KNOWN_HOSTS` | Pre-verified SSH host-key line(s); do not use an unverified key scan |
 | `POCKETHOST_CONTROL_ADMIN_TOKEN` | Unique Owner token, at least 64 random hex characters |
-| `POCKETHOST_POSTGRES_PASSWORD` | Independent strong PostgreSQL password |
+| `POCKETHOST_POSTGRES_PASSWORD` | Independent strong URL-safe PostgreSQL password (letters, digits, underscore or hyphen; 32+ characters), because it is embedded in DATABASE_URL |
 
 Use a protected GitHub Environment named `production` and require an approval before deployment. Never put these values in repository files or workflow inputs.
 
