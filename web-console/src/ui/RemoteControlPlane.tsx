@@ -89,6 +89,18 @@ export function RemoteControlPlane() {
     finally { setBusy(false); }
   }
 
+  async function revokeDevice(device: Device) {
+    if (!window.confirm(`Revoke ${device.name}? Its device token and queued commands will be invalidated.`)) return;
+    setBusy(true);
+    try {
+      await request<void>(`/v1/admin/devices/${encodeURIComponent(device.id)}`, { method: "DELETE" });
+      setDevices(current => current.filter(item => item.id !== device.id));
+      if (selected === device.id) setSelected("");
+      setMessage(`${device.name} was revoked.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Device revocation failed."); }
+    finally { setBusy(false); }
+  }
+
   async function loadConfig(deviceId: string) {
     setSelected(deviceId);
     setBusy(true);
@@ -149,7 +161,7 @@ export function RemoteControlPlane() {
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
       <span><strong>{device.name}</strong><small>{device.id} · Last seen: {device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</small></span>
-      <span className="site-actions"><strong>{device.last_seen ? "Registered" : "Awaiting heartbeat"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button></span>
+      <span className="site-actions"><strong>{device.last_seen ? "Registered" : "Awaiting heartbeat"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke</button></span>
     </div>)}
     {selected && <div className="lower-grid">
       <article className="panel">
