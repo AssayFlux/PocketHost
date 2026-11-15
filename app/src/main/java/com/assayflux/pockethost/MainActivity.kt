@@ -711,6 +711,57 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("CUSTOM HOSTNAME ROUTING", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("Map a domain to an imported website or backend. Configure Cloudflare's public hostname origin to the Rust static server port.", color = Slate, fontSize = 10.sp)
+                        OutlinedTextField(value = hostnameText, onValueChange = { hostnameText = it.trim().lowercase() },
+                            label = { Text("Hostname, e.g. app.example.com") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("static", "python-wsgi", "node").forEach { runtime ->
+                                FilterChip(selected = hostnameRuntime == runtime, onClick = { hostnameRuntime = runtime },
+                                    label = { Text(if (runtime == "python-wsgi") "Python" else runtime.replaceFirstChar { it.uppercase() }) })
+                            }
+                        }
+                        Button(onClick = {
+                            val host = hostnameText.trim().trimEnd('.').lowercase()
+                            val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                            val root = when (hostnameRuntime) {
+                                "static" -> File(context.filesDir, "site").absolutePath
+                                "python-wsgi" -> preferences.getString("python_project_root", File(context.filesDir, "python-project").absolutePath) ?: ""
+                                else -> preferences.getString("node_project_root", File(context.filesDir, "node-project-default").absolutePath) ?: ""
+                            }
+                            val id = when (hostnameRuntime) { "static" -> "static-default"; "python-wsgi" -> "python-default"; else -> "node-default" }
+                            val name = when (hostnameRuntime) { "static" -> "Static website"; "python-wsgi" -> "Python application"; else -> "Node application" }
+                            runCatching {
+                                val current = SiteRegistry.list(context).firstOrNull { it.id == id }
+                                SiteRegistry.put(context, SiteRegistry.Site(id, name, hostnameRuntime, root,
+                                    (current?.hostnames.orEmpty() + host).distinct(), true))
+                                if (hosting) {
+                                    MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed())
+                                    NativeEngine.stop()
+                                    val routes = SiteRegistry.hostRoutingJson(context, preferences.getInt("python_port", 8081), preferences.getInt("node_port", 3000))
+                                    val result = if (routes.length() == 0) NativeEngine.start(File(context.filesDir, "site").absolutePath,
+                                        preferences.getInt("port", 8080), preferences.getBoolean("allow_lan", false))
+                                    else NativeEngine.startMultiSite(File(context.filesDir, "site").absolutePath, routes.toString(),
+                                        preferences.getInt("port", 8080), preferences.getBoolean("allow_lan", false))
+                                    check(result == "OK") { result }
+                                }
+                            }.onSuccess {
+                                hostnameText = ""
+                                status = "Hostname route saved. It is active now if hosting is running."
+                            }.onFailure { status = it.message ?: "Could not save hostname route." }
+                        }, enabled = hostnameText.isNotBlank() && !importing) { Text("Save hostname route") }
+                        SiteRegistry.list(context).filter { it.hostnames.isNotEmpty() }.forEach { site ->
+                            Text(site.name + " · " + site.hostnames.joinToString(), color = Slate, fontSize = 10.sp)
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text("NODE.JS 24 LTS · EMBEDDED RUNTIME", color = Teal, fontWeight = FontWeight.SemiBold)
                         Text(nodeProjectSummary, color = Slate, fontSize = 12.sp)
                         OutlinedButton(onClick = { nodeProjectPicker.launch(null) }, enabled = !importing && !nodeHosting,
