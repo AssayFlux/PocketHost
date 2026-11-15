@@ -108,7 +108,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += listOf("-DNODE_SDK_DIR=" + nodeRuntimeDir.get().asFile.absolutePath, "-DANDROID_STL=c++_shared")
-                cppFlags += listOf("-std=c++17")
+                cppFlags += listOf("-std=c++20")
             }
         }
     }
