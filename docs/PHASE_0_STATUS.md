@@ -41,7 +41,7 @@
 ### Website import and deployment
 - Android 13+ notification permission onboarding; hosting can still start when permission is denied.
 - Android Storage Access Framework folder import.
-- ZIP import with path validation and compressed/uncompressed 50 MiB caps.
+- ZIP import with path validation and compressed/uncompressed 50 MiB caps; a stream-based import path is covered by an Android instrumentation smoke test and is reused by encrypted backup restore.
 - Maximum 5,000 files, 10,000 entries and 32 levels of nesting.
 - Sensitive-name rejection for common secrets and repository metadata.
 - Staging before activation, up to five previous releases retained, and rollback while hosting is stopped.
@@ -83,6 +83,9 @@ Workflow: [PocketHost quality run 43610902054](https://github.com/AssayFlux/Pock
 | Android API 35 emulator smoke | Emulator-runner failure | Emulator booted, then adb/settings/input calls failed with broken-pipe errors before a test result; this is an infrastructure failure, not a confirmed app test failure |
 
 A successful source build is not proof of physical-device compatibility. Do not interpret the API 35 emulator-runner failure as either an app pass or an app regression.
+
+
+**Validation note (2026-11-15):** The status snapshot above is the last recorded run before the 2026-11-15 source changes. Encrypted website backup/restore, diagnostics ZIP export, searchable recent logs, the stream-import smoke test and the bounded wake-lock lease have been committed since then. Their CI results have not yet been confirmed. No APK packaging was run for this batch, as requested.
 
 ## Not yet implemented or not yet verified
 
