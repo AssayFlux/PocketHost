@@ -166,6 +166,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     androidTestImplementation("androidx.test:runner:1.6.2")
