@@ -6,7 +6,7 @@ AssayFlux Pocket Host turns an Android phone into a small website host. It runs 
 
 No Termux. No root. No mandatory VPS. The existing domain and named Cloudflare Tunnel can be reused.
 
-> **Current status:** integrated development build. PRs #48–#59 are merged. Main quality run 43726081859 passed all six jobs. The current main app-source Android build passed and produced [the three-ABI debug APK bundle 14166696548](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477/artifacts/14166696548). The API 26/33/35 backup restore regression remains in progress. This is not a production-signed release. Emulator and physical-device acceptance remain open. This is not a production-approved or signed release.
+> **Current status:** integrated development build; PRs #48–#62 are merged. PR #62 quality CI [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs on its head and was merged as `eee3b82d8071fdb06acb4cea0393dfebab2fc869`. Fresh main quality validation [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) passed all six jobs. Main Android integration [43769131790](https://github.com/AssayFlux/PocketHost/actions/runs/43769131790) has built cloudflared and is assembling the ABI APKs; emulator smoke is skipped for push events. The PR-triggered API 26/33/35 run [43769116977](https://github.com/AssayFlux/PocketHost/actions/runs/43769116977) is pending. The last available main APK artifact, [14168200339](https://github.com/AssayFlux/PocketHost/actions/runs/43728985708/artifacts/14168200339), predates PR #62 and is not the latest merged build. This is an integrated development build, not a signed production release; emulator and physical-device acceptance remain open.
 
 ## What is included
 
@@ -64,9 +64,9 @@ The public hostname must point to the Rust website listener. It must never point
 ## Build and validation
 
 - Repository: [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)
-- Latest main: `05afe2041c80ace4bddbd0711e554f40e32aa6a6`
-- [Quality CI](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs on the implementation through the custom-root depth fix; the latest main validation is [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859).
-- [Android integration build](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) is building the current main app source for ARM64, ARMv7 and x86_64. The backup-specific API 26/33/35 emulator matrix is tracked separately in [run 43724908863](https://github.com/AssayFlux/PocketHost/actions/runs/43724908863); physical-device acceptance is owner-run.
+- Latest main: `eee3b82d8071fdb06acb4cea0393dfebab2fc869`
+- PR #62 quality CI [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs; fresh main quality validation [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) is running.
+- Main Android integration [43769131790](https://github.com/AssayFlux/PocketHost/actions/runs/43769131790) is building the three ABI APKs; emulator smoke is skipped for push events. PR-triggered API 26/33/35 validation [43769116977](https://github.com/AssayFlux/PocketHost/actions/runs/43769116977) is pending; physical-device acceptance is owner-run.
 - Debug APKs are not signed production releases. Release signing requires owner-controlled signing material.
 
 See [PHASE_0_STATUS.md](docs/PHASE_0_STATUS.md) for exact validation evidence and outstanding gates.
@@ -74,7 +74,7 @@ See [PHASE_0_STATUS.md](docs/PHASE_0_STATUS.md) for exact validation evidence an
 ## Security boundaries and known gaps
 
 - Python and Node hosting are supported features for **owner-installed applications**. Visitors can access those hosted sites through normal HTTP routing; visitor-submitted executable code is not a supported workflow.
-- Python and Node currently run under the app UID. A separate process is not an OS sandbox. Only run code you trust; proper OS-backed runtime isolation, filesystem/network confinement and enforceable resource quotas remain release blockers.
+- Python and Node project roots are now canonicalized and restricted to descendants of PocketHost's app-private directories, including symlink-escape rejection. However, both runtimes still execute with the app UID; path validation and a separate process are not an OS sandbox. Only run trusted code until OS-backed isolation, network confinement and enforceable resource quotas are delivered.
 - The management API is loopback-only and authenticated. Do not expose it through Cloudflare.
 - Full backups exclude device-bound credentials and common secret files. Secrets embedded in ordinary source/config files cannot be detected reliably; review project contents before sharing a backup.
 - Route manifest v3 now includes registered custom static roots under app-private storage. Custom Python/Node route roots outside their configured project roots remain unsupported.
