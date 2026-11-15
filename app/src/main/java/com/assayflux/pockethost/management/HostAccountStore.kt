@@ -7,6 +7,9 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.AtomicMoveNotSupportedException
 import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -112,8 +115,11 @@ object HostAccountStore {
         val file = File(context.noBackupFilesDir, FILE_NAME)
         val temp = File(context.noBackupFilesDir, "$FILE_NAME.tmp")
         temp.outputStream().use { stream -> stream.write(nonce); stream.write(encrypted); stream.fd.sync() }
-        if (file.exists() && !file.delete()) { temp.delete(); error("host_account_store_replace_failed") }
-        if (!temp.renameTo(file)) { temp.delete(); error("host_account_store_commit_failed") }
+        try {
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun key(): SecretKey {
