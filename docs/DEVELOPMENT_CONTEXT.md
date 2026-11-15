@@ -173,7 +173,7 @@ Update conflicting documents in the same PR. Do not leave contradictory claims.
 
 ## 12. Current handoff
 
-PR #14 merged the initial adaptive capacity/security/payments/operations specification. This document and [ROADMAP.md](ROADMAP.md) are the next documentation update. The Resource Governor, sandbox, payment ledger, blockchain anchoring and full daily reporting still require implementation.
+PR #14 merged the initial adaptive capacity/security/payments/operations specification; PR #15 merged the canonical roadmap and development handoff. Main commit `96200c320e0a5d6fc14c9d7b78fcb62f08b5429f` adds the first static-workload Capacity Lab, Rust admission cap, scheduled profiles and daily aggregate snapshots. Continue from the explicit partial-implementation boundaries in [PHASE_0_STATUS.md](PHASE_0_STATUS.md). The full multi-state Resource Governor, OS-enforced sandbox, payment ledger, blockchain anchoring and complete operational reporting still require implementation and validation.
 
 Primary links:
 - [Repository](https://github.com/AssayFlux/PocketHost)

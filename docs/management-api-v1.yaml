@@ -159,6 +159,48 @@ paths:
           description: Limits outside supported range
         '409':
           description: Stop Python and Node before changing limits
+  /capacity:
+    get:
+      summary: Read the current admission budget and capacity profile
+      responses:
+        '200':
+          description: Current profile, effective concurrency limit and engine counters
+    post:
+      summary: Apply a capacity percentage or timed profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [percent]
+              properties:
+                percent: { type: integer, minimum: 1, maximum: 100 }
+                durationMinutes: { type: integer, minimum: 0, maximum: 1440, description: Omit or set zero for an untimed profile }
+      responses:
+        '200':
+          description: Capacity profile saved
+        '400':
+          description: Invalid profile or schedule
+  /capacity/benchmark:
+    get:
+      summary: Read the current Capacity Lab benchmark state
+      responses:
+        '200':
+          description: Benchmark status and workload-level measurements
+    post:
+      summary: Start a bounded static GET benchmark (hosting must be running)
+      responses:
+        '202':
+          description: Benchmark accepted
+        '409':
+          description: Hosting is stopped or benchmark cannot start
+  /reports:
+    get:
+      summary: List retained daily aggregate operations reports
+      responses:
+        '200':
+          description: Up to 90 local daily reports
   /metrics:
     get:
       summary: Read metrics with runtime source attribution

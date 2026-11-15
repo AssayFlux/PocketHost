@@ -2,7 +2,8 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest known main commit before this implementation pass:** `de7dca0219a51a7b594e56feb1db0b2d964e0fb0` (merge of PR #15)  
+**Latest main commit:** `96200c320e0a5d6fc14c9d7b78fcb62f08b5429f`  
+**Quality CI:** [run 43685908160](https://github.com/AssayFlux/PocketHost/actions/runs/43685908160) — in progress at last check.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
