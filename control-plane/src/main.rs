@@ -225,6 +225,7 @@ async fn register_device(
     sqlx::query("INSERT INTO device_configs(device_id,config) VALUES($1,'{}'::jsonb)")
         .bind(id).execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    audit(&s, &role, "device.register", &id.to_string(), json!({"name":name})).await?;
     Ok((StatusCode::CREATED, Json(RegisteredDevice {
         id, name: name.to_owned(), device_token: token,
         warning: "Store this token securely. It is shown only once.",
