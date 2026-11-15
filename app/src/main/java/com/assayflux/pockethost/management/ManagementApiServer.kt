@@ -326,13 +326,20 @@ object ManagementApiServer {
                 .put("configured", CloudflareTokenStore.hasToken(context))
         }
         if (method == "POST" && path == "/api/v1/tunnel/actions") {
+            val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             return when (body.optString("action")) {
-                "stop" -> 200 to JSONObject().put("state", CloudflareTunnelRuntime.stop())
+                "stop" -> {
+                    prefs.edit().putBoolean("tunnel_enabled", false).apply()
+                    200 to JSONObject().put("state", CloudflareTunnelRuntime.stop())
+                }
                 "start" -> {
-                    val tokenValue = runCatching { CloudflareTokenStore.read(context) }.getOrNull()
-                    if (tokenValue.isNullOrBlank()) 409 to JSONObject().put("error", "tunnel_token_not_configured")
-                    else runCatching { CloudflareTunnelRuntime.start(context, tokenValue) }
-                        .fold({ 200 to JSONObject().put("state", it) }, { 503 to JSONObject().put("error", it.message ?: "tunnel_start_failed") })
+                    if (!CloudflareTokenStore.hasToken(context)) {
+                        409 to JSONObject().put("error", "tunnel_token_not_configured")
+                    } else {
+                        prefs.edit().putBoolean("tunnel_enabled", true).apply()
+                        context.startForegroundService(Intent(context, HostingService::class.java))
+                        202 to JSONObject().put("state", "CONNECTING")
+                    }
                 }
                 else -> 400 to JSONObject().put("error", "unsupported_tunnel_action")
             }
