@@ -110,6 +110,14 @@ android {
             version = "3.22.1"
         }
     }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = false
+        }
+    }
     signingConfigs {
         if (releaseSigningReady) {
             create("release") {
