@@ -61,5 +61,44 @@ class PythonHostRuntimeTest(unittest.TestCase):
                 runtime.start(project, port)
 
 
+    def test_request_body_limit_rejects_malformed_and_negative_lengths(self):
+        for raw_length in ("not-a-number", "-1"):
+            statuses = []
+            app = runtime._RequestBodyLimit(
+                lambda environ, start_response: self.fail("Invalid request reached the WSGI app")
+            )
+            response = app(
+                {"CONTENT_LENGTH": raw_length},
+                lambda status, headers: statuses.append(status),
+            )
+            self.assertEqual(["400 Bad Request"], statuses)
+            self.assertEqual([b""], list(response))
+
+    def test_request_body_limit_allows_exact_limit(self):
+        called = []
+        expected = [b"accepted"]
+        app = runtime._RequestBodyLimit(
+            lambda environ, start_response: called.append(True) or expected
+        )
+        response = app(
+            {"CONTENT_LENGTH": str(runtime.MAX_REQUEST_BODY_BYTES)},
+            lambda status, headers: None,
+        )
+        self.assertEqual([True], called)
+        self.assertIs(expected, response)
+
+    def test_failed_wsgi_import_does_not_leave_runtime_running(self):
+        with tempfile.TemporaryDirectory() as project:
+            pathlib.Path(project, "wsgi.py").write_text(
+                "application = 42\\n", encoding="utf-8"
+            )
+            with socket.socket() as probe:
+                probe.bind(("127.0.0.1", 0))
+                port = probe.getsockname()[1]
+            with self.assertRaisesRegex(TypeError, "callable"):
+                runtime.start(project, port)
+            self.assertEqual("STOPPED", runtime.status())
+            self.assertNotIn("_pockethost_user_wsgi", __import__("sys").modules)
+
 if __name__ == "__main__":
     unittest.main()
