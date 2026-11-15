@@ -50,6 +50,16 @@ class ManagementApiSecurityTest {
     }
 
     @Test
+    fun pairingRateLimitWindowResetsAfterListenerRestart() {
+        assertEquals(201, request("POST", "/api/v1/pair/challenge", "{}").first)
+        ManagementApiServer.stop()
+        ManagementApiServer.start(context)
+        val second = request("POST", "/api/v1/pair/challenge", "{}")
+        assertEquals(201, second.first)
+        assertNotNull(JSONObject(second.second).optString("challengeId").takeIf { it.isNotBlank() })
+    }
+
+    @Test
     fun rejectsUntrustedOriginsAndHostHeader() {
         val originResponse = request("OPTIONS", "/api/v1/status", origin = "https://attacker.example")
         assertEquals(403, originResponse.first)
