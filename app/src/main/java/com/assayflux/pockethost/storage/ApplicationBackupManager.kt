@@ -131,7 +131,6 @@ object ApplicationBackupManager {
     fun restore(context: Context, source: Uri, passphrase: CharArray): RestoreReport {
         val archive = File(context.cacheDir, "pockethost-full-backup-${UUID.randomUUID()}.zip")
         val stage = File(context.filesDir, "pockethost-full-restore-${UUID.randomUUID()}")
-        val staticZip = File(context.cacheDir, "pockethost-static-restore-${UUID.randomUUID()}.zip")
         val backupDir = File(context.filesDir, "pockethost-restore-previous-${UUID.randomUUID()}")
         var preserveBackup = true
         try {
@@ -173,7 +172,6 @@ object ApplicationBackupManager {
 
             val settings = parseSafeSettings(File(stage, "settings.json"))
             val routes = parseRoutes(File(stage, "routes.json"), context, hasPython, hasNode)
-            createStaticZip(siteRoot, staticZip)
 
             val activeSite = File(context.filesDir, "site")
             val activePython = File(context.filesDir, "python-project")
@@ -207,7 +205,7 @@ object ApplicationBackupManager {
                     if (!nodeStage.renameTo(activeNode)) throw IOException("Could not activate the restored Node.js project.")
                 }
 
-                FileInputStream(staticZip).use { SiteImporter.importZipStream(context, it) }
+                SiteImporter.activatePreparedDirectory(context, siteRoot)
                 staticImported = true
                 SiteRegistry.replaceAll(context, routes)
                 applySafeSettings(context, settings)
@@ -252,7 +250,6 @@ object ApplicationBackupManager {
         } finally {
             archive.delete()
             stage.deleteRecursively()
-            staticZip.delete()
             if (!preserveBackup) backupDir.deleteRecursively()
             passphrase.fill('\u0000')
         }
@@ -549,32 +546,6 @@ object ApplicationBackupManager {
             throw IOException("The backup is missing required settings or route metadata.")
         }
         return counters
-    }
-
-    private fun createStaticZip(root: File, destination: File) {
-        ZipOutputStream(destination.outputStream().buffered()).use { zip ->
-            fun visit(directory: File, relative: String) {
-                val children = directory.listFiles()?.sortedBy { it.name }
-                    ?: throw IOException("Could not read restored website files.")
-                for (child in children) {
-                    validateName(child.name)
-                    if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
-                        throw IOException("Restored website contains an unsupported symbolic link.")
-                    }
-                    val childRelative = if (relative.isEmpty()) child.name else "$relative/${child.name}"
-                    if (child.isDirectory) {
-                        zip.putNextEntry(ZipEntry("$childRelative/"))
-                        zip.closeEntry()
-                        visit(child, childRelative)
-                    } else if (child.isFile) {
-                        zip.putNextEntry(ZipEntry(childRelative))
-                        child.inputStream().use { it.copyTo(zip) }
-                        zip.closeEntry()
-                    }
-                }
-            }
-            visit(root, "")
-        }
     }
 
     private fun rollbackRuntimeDirectory(active: File, backup: File): Boolean = runCatching {
