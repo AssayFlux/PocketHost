@@ -191,7 +191,7 @@ export function RemoteControlPlane() {
     <p>Manage registered PocketHost phones while their hosting services remain active. The backend queues typed commands; the phone initiates outbound HTTPS polling.</p>
     <div className="resource-panel">
       <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => setEndpoint(event.target.value)} placeholder="https://control.example.com" /></label>
-      <label>Administrator token<input type="password" value={adminToken} onChange={event => setAdminToken(event.target.value)} placeholder="Administrator bearer token" /></label>
+      <label>Control Plane access token<input type="password" value={adminToken} onChange={event => setAdminToken(event.target.value)} placeholder="Owner, Editor or Viewer bearer token" /></label>
       <div className="site-actions">
         <button disabled={busy || !endpoint.startsWith("https://") || adminToken.length < 32} onClick={connect}>Connect</button>
         <button disabled={busy || !adminToken} onClick={refreshDevices}>Refresh devices</button>
@@ -206,7 +206,7 @@ export function RemoteControlPlane() {
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
       <span><strong>{device.name}</strong><small>{device.id} · Last seen: {device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</small></span>
-      <span className="site-actions"><strong>{device.last_seen ? "Registered" : "Awaiting heartbeat"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke</button></span>
+      <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke</button></span>
     </div>)}
     {selected && <div className="lower-grid">
       <article className="panel">
@@ -232,7 +232,7 @@ export function RemoteControlPlane() {
         <button disabled={busy} onClick={queueCommand}>Queue command</button>
       </article>
     </div>}
-    <p className="scope-note">The backend does not access phone files directly and exposes no shell command endpoint. Site deployment still uses the native import workflow; remote archive deployment is not yet supported.</p>
+    <p className="scope-note">The backend cannot browse the phone filesystem or execute shell commands. Website archives are validated on-device and activated using the native release importer.</p>
     <div className="section-heading"><div><span className="eyebrow">ACCESS CONTROL</span><h2>Team permissions</h2></div><span className="muted-tag">OWNER MANAGED</span></div>
     <div className="resource-panel">
       <p>Owner credentials can create revocable Editor and Viewer accounts. Editors can manage devices and deployments; Viewers can inspect device state, configuration and audit history.</p>
@@ -249,6 +249,6 @@ export function RemoteControlPlane() {
         <span>{new Date(entry.createdAt).toLocaleString()}</span>
       </div>)}
     </div>
-    <p className="scope-note">Audit events record device registration/revocation, configuration changes, command queueing/acknowledgement and website deployment. This initial release still uses one administrator credential; per-user roles are a separate security gate.</p>
+    <p className="scope-note">Audit events record device registration/revocation, configuration changes, command queueing/acknowledgement and website deployment. Owner, Editor and Viewer roles are enforced by the backend. Audit history is a latest-200 view; configure secure database backups for long-term retention.</p>
   </section>;
 }
