@@ -72,7 +72,10 @@ object ApplicationBackupManager {
     private data class Counters(
         var files: Int = 0,
         var entries: Int = 0,
-        var bytes: Long = 0L
+        var bytes: Long = 0L,
+        var customStaticFiles: Int = 0,
+        var customStaticEntries: Int = 0,
+        var customStaticBytes: Long = 0L
     )
 
     private data class ExtraStaticRoot(val archivePath: String, val root: File)
@@ -562,6 +565,12 @@ object ApplicationBackupManager {
                 if (childRelative.split('/').size > MAX_DEPTH) throw IOException("Project folder nesting exceeds the backup limit.")
                 counters.entries++
                 rootEntries++
+                if (prefix.startsWith("custom-static/")) {
+                    counters.customStaticEntries++
+                    if (counters.customStaticEntries > 10_000) {
+                        throw IOException("Custom static sites contain too many combined archive entries.")
+                    }
+                }
                 if (counters.entries > MAX_ENTRIES || rootEntries > 10_000) {
                     throw IOException("The app contains too many files and folders for backup.")
                 }
@@ -572,6 +581,12 @@ object ApplicationBackupManager {
                 } else if (child.isFile) {
                     counters.files++
                     rootFiles++
+                    if (prefix.startsWith("custom-static/")) {
+                        counters.customStaticFiles++
+                        if (counters.customStaticFiles > 5_000) {
+                            throw IOException("Custom static sites contain too many combined files.")
+                        }
+                    }
                     if (counters.files > MAX_FILES || rootFiles > rootFileLimit) {
                         throw IOException("$prefix project contains too many files for backup.")
                     }
@@ -583,6 +598,12 @@ object ApplicationBackupManager {
                             if (count < 0) break
                             rootBytes += count
                             counters.bytes += count
+                            if (prefix.startsWith("custom-static/")) {
+                                counters.customStaticBytes += count
+                                if (counters.customStaticBytes > STATIC_LIMIT) {
+                                    throw IOException("Custom static sites exceed their combined backup size limit.")
+                                }
+                            }
                             if (rootBytes > rootLimit) throw IOException("$prefix project exceeds its backup size limit.")
                             if (counters.bytes > MAX_TOTAL_BYTES) throw IOException("The full app backup exceeds 200 MiB.")
                             zip.write(buffer, 0, count)
