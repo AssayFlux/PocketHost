@@ -10,6 +10,7 @@ set_target_properties(libnode PROPERTIES
     IMPORTED_LOCATION "${NODE_SDK_DIR}/jniLibs/${ANDROID_ABI}/libnode.so")
 
 add_library(nodebridge SHARED node-bridge.cpp)
+target_compile_features(nodebridge PRIVATE cxx_std_20)
 target_include_directories(nodebridge PRIVATE
     "${NODE_SDK_DIR}/include/node"
     "${NODE_SDK_DIR}/include/node/deps/uv/include"
