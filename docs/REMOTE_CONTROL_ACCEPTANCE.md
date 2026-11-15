@@ -1,87 +1,106 @@
 # PocketHost integration and release acceptance
 
-This checklist separates automated evidence from tests that require real infrastructure or physical phones. A green source-compile job is not a substitute for these acceptance tests.
+This checklist records evidence required for a production decision. Use **PASS**, **FAIL** or **NOT TESTED** for every item. Never infer a pass from source presence or an unrelated CI run.
 
-## 1. Remote Control Plane deployment
+## 1. Current automated CI
 
-Prerequisites: a Linux host with Docker Engine and Compose, a DNS name for the control API, and an HTTPS origin for the TypeScript console.
+- Quality workflow: [quality.yml](../.github/workflows/quality.yml)
+- Android integration: [android-integration.yml](../.github/workflows/android-integration.yml)
 
-1. Copy `control-plane/.env.example` to `control-plane/.env`.
-2. Set `CONTROL_PLANE_DOMAIN`, `POCKETHOST_CONTROL_ORIGIN`, a unique random `POCKETHOST_CONTROL_ADMIN_TOKEN` (at least 64 random hex characters), and a strong independent PostgreSQL password.
-3. Run `docker compose --env-file .env -f compose.yaml up -d --build` from `control-plane/`.
-4. Verify `https://$CONTROL_PLANE_DOMAIN/health` returns HTTP 200 and the expected service/API version.
-5. Verify ports 5432 and 8080 are not published publicly; only 80/443 terminate at Caddy.
-6. Verify the certificate chain and hostname using a browser and `curl --fail --show-error https://$CONTROL_PLANE_DOMAIN/health`.
-7. Restart the stack and confirm device records, audit history and uploaded artifacts persist.
+The quality workflow covers Rust tests, control-plane/PostgreSQL tests, Python syntax and WSGI lifecycle, Node preload smoke, console production build and Android source compilation. The Android integration workflow separately builds cloudflared, assembles ABI-specific APKs and runs API 26/33/35 instrumentation. Record the exact commit SHA and workflow URL in the release evidence.
 
-Do not mark deployment complete until the API hostname is publicly reachable and the exact console origin passes CORS preflight.
+## 2. Existing Cloudflare domain and tunnel
 
-## 2. Real Android device pairing
+The project owner has already configured a domain and connected a Cloudflare Tunnel. Reuse the existing named tunnel; do not create a duplicate.
 
-1. Install a debug/release build signed by the intended release key on a physical device.
-2. Register a device in the Remote Control Plane console and copy the one-time device token directly into PocketHost Advanced → Remote Control Plane.
-3. Confirm the token is not visible in plaintext SharedPreferences or app logs.
-4. Start PocketHost hosting and keep the app's foreground service active.
-5. Confirm the device appears online (heartbeat within 90 seconds), and that Android reports static, Python, Node and tunnel states accurately.
-6. Turn off Wi-Fi/mobile data for at least three minutes. Confirm the UI marks the phone offline and does not claim queued commands succeeded.
-7. Restore connectivity. Confirm heartbeat resumes and queued commands are delivered and acknowledged.
-8. Revoke the device from the console. Confirm subsequent heartbeat/poll requests return HTTP 401 and no further command is executed.
+1. Confirm the matching tunnel token is saved in PocketHost Tunnel settings.
+2. Confirm the Cloudflare Public Hostname routes to the phone's Rust website listener and correct port (not the Android management API).
+3. Start hosting and the connector from PocketHost.
+4. From mobile data or another external network, request the configured hostname and verify valid TLS plus the expected website body.
+5. Confirm unknown hosts are rejected and the management API is not reachable from the public hostname.
+6. Verify Cloudflare Access for private sites; public sites must be intentionally public.
+7. Rotate the token and confirm the old token no longer connects if a rotation test is scheduled.
+8. Test Wi-Fi/mobile transitions, screen-off, battery saver, connector death and reconnect on real devices.
 
-## 3. Live configuration while serving traffic
+A green local connector readiness endpoint is not proof of external hostname reachability.
 
-1. Deploy a test static site and verify a repeated HTTP GET.
-2. Start Python and Node test sites where the device has enough memory.
-3. While requests continue to the static site, change Python worker and Node heap limits remotely.
-4. Confirm the API reports the new values, static hosting remains RUNNING, and only affected runtime processes restart.
-5. Confirm Python and Node supervisors relaunch their processes and the new limits are reflected in runtime diagnostics.
-6. Force a runtime startup failure and confirm bounded supervisor backoff without stopping the static origin.
+## 3. Local console and management API
 
-## 4. Remote archive deployment and recovery
+1. Pair a browser using the six-digit challenge approved in the Android app.
+2. Verify no bearer session exists before explicit pairing.
+3. Confirm status, sites, metrics, logs, runtime state and tunnel state match the device.
+4. Test invalid/expired pairing challenges, rate limits, wrong codes and repeated attempts.
+5. Revoke a session and confirm subsequent requests fail.
+6. Restart HostingService and verify old in-memory sessions are no longer valid.
+7. Test CORS allowlist and Private Network Access preflight from the actual console origin.
+8. Test malformed headers, duplicate Host, oversized headers/body, unsupported transfer encoding and socket timeouts.
+9. Verify Host validation against DNS rebinding and unexpected local origins.
 
-1. Upload a valid ZIP (index.html at root) below 50 MiB.
-2. Confirm the device downloads it over its authenticated outbound connection, verifies SHA-256 and acknowledges deployment.
-3. Repeatedly request the public/static origin while deployment happens; confirm the origin remains available and eventually serves the new release.
-4. Upload invalid ZIP data, a traversal entry (`../`), a symlink/path escape, missing index.html, and an archive exceeding the limit. Confirm all are rejected and the active release remains unchanged.
-5. Disconnect the phone after command delivery but before acknowledgement. Confirm the device's persisted command result prevents repeating completed actions after the lease expires.
-6. Kill the app during a command. Confirm an interrupted command is reported as requiring operator retry rather than silently re-executed.
-7. Confirm the previous release can be restored locally after a bad deployment.
+## 4. Static hosting and multi-site routing
 
-## 5. Multi-user and audit acceptance
+1. Import a valid folder and ZIP with index.html.
+2. Test GET, HEAD, MIME types, byte ranges, large streaming files and missing paths.
+3. Register multiple hostnames and verify correct site selection.
+4. Test duplicate/invalid hostnames, unknown hosts, traversal attempts, encoded separators and symlink/path escapes.
+5. Deploy a new release under traffic; confirm the active server stays available and the previous release is recoverable.
+6. Confirm runtime configuration changes do not stop static hosting.
 
-1. Authenticate with the bootstrap Owner token and create one Editor and one Viewer.
-2. Confirm only the Owner can list/create/revoke users.
-3. Confirm Editor can register/revoke devices, change configuration, queue commands and deploy archives.
-4. Confirm Viewer can list devices, read configuration and audit history, but receives HTTP 403 for every mutation.
-5. Revoke a team user and confirm its token immediately returns HTTP 401.
-6. Confirm audit events capture actor role, action, target and timestamp for device registration/revocation, config updates, command queue/ack and site deployment.
-7. Confirm tokens and secret values never appear in audit details or application logs.
+## 5. Python and Node runtime acceptance
 
-## 6. Android compatibility matrix
+### Python
+- Confirm CPython 3.11 starts a root `wsgi.py` application exporting `application`.
+- Test import validation, missing dependencies, exception paths, stop/restart and supervisor backoff.
+- Confirm request metrics and loopback-only behavior by default.
+- Stress the WSGI worker ceiling and memory behavior.
+- Do not claim ASGI, WebSockets, pip installation or sandbox isolation.
 
-Run `.github/workflows/android-integration.yml` with `run_emulators=true`. It builds ABI-specific debug packages for ARM64 and ARMv7 and runs instrumentation on API 26, 33 and 35 x86_64 emulators.
+### Node.js
+- Load the actual `libnode.so` for the device ABI and confirm `process.version`.
+- Import a prebundled dependency, start an HTTP listener and verify Rust reverse-proxy routing.
+- Confirm Node TCP listener loopback enforcement.
+- Stop the Node service, verify process exit, then start a fresh process and application.
+- Test invalid package metadata, missing entrypoint, bundled native modules and resource ceiling behavior.
+- Do not claim child-process workflows, on-device npm install or hostile-code sandboxing.
 
-Physical-device acceptance is still required for each ABI family:
+## 6. Optional remote control plane
 
-| Device class | Required validation |
+The remote backend is separate from the phone's website server and optional for core hosting. Only execute this section if remote management is in the release scope.
+
+1. Deploy the Rust/Axum + PostgreSQL service on its selected reachable host/topology.
+2. Verify HTTPS health, certificate, exact console CORS origin and database persistence.
+3. Register the phone and enter the one-time token in PocketHost Advanced → Remote Control Plane.
+4. Confirm heartbeat is received within 90 seconds and state matches the phone.
+5. Queue a configuration update; verify it applies while static hosting remains online.
+6. Deploy a valid ZIP and verify checksum, activation and acknowledgement.
+7. Test invalid ZIP, traversal, wrong checksum, oversize archive and interrupted download.
+8. Test disconnect/reconnect, command lease expiry and persisted idempotency result.
+9. Test Owner/Editor/Viewer permissions and token revocation.
+10. Verify audit events and ensure tokens/secrets never appear in logs or audit details.
+
+The current backend Compose workflow expects Linux/Docker. The default Caddy configuration expects inbound 80/443; it is not automatically compatible with a Cloudflare Tunnel-only network. Confirm the deployment topology before enabling it.
+
+## 7. Physical-device compatibility
+
+Record model, Android build, API, ABI, RAM, app version, APK SHA-256, test date and result.
+
+| Target | Required checks |
 |---|---|
-| Android 8 / API 26, ARMv7, 2–4 GB RAM | Install, foreground service, static HTTP, Python/Node startup, tunnel process, screen-off and recovery |
-| Android 8+ / API 26+, ARM64, 4 GB RAM | Same tests plus remote pairing, archive deploy, runtime restart and memory pressure |
-| Android 13 / API 33+ | Notification permission, foreground service restrictions, battery saver and background recovery |
-| Android 15 / API 35 | Current target behavior, foreground service start/stop, network changes and process recreation |
+| Vivo Y95 · Android 8.1 · 4 GB · ARM64 | Install/upgrade, foreground service, static site, tunnel, screen-off, battery saver, Wi-Fi/mobile transition, Python/Node startup and recovery |
+| Moto G54 · Android 15 · ARM64 | Current Android restrictions, notification permission, all runtime workflows, remote pairing if enabled, memory/thermal and process recovery |
+| Android 8 / API 26 · ARMv7 · representative 4 GB or lower | ABI install, native libraries, static hosting, tunnel and runtime smoke |
+| API 33 and API 35 emulators | CI instrumentation and Android platform behavior |
 
-Record exact model, Android build, ABI, RAM, app version, APK SHA-256, test date and pass/fail for every device. An emulator is not a physical-device substitute. Vendor-specific background restrictions must be checked on the actual Vivo Y95 and Moto G54 devices.
+An emulator is not a physical-device substitute. Foreground services do not guarantee 24/7 uptime; record vendor-specific battery restrictions.
 
-## 7. Cloudflare public hostname and security
+## 8. Backup, diagnostics and release
 
-1. Create a Cloudflare-managed named tunnel and configure the public hostname to point to the phone's local static origin (for example, `http://127.0.0.1:8080`).
-2. Configure DNS and ingress in Cloudflare Zero Trust; do not expose the phone's management API port.
-3. Add Cloudflare Access for private sites and administrative origins. Public sites must be intentionally public.
-4. Confirm the hostname resolves, TLS validates, and a request returns the expected site content.
-5. Confirm unknown hostnames are rejected, static path traversal is blocked, and management API is not reachable through the public hostname.
-6. Rotate the tunnel token and confirm the old token no longer connects.
-7. Test tunnel disconnect/reconnect, phone network switching, screen-off, and Android process death.
-8. Inspect Cloudflare logs and PocketHost logs for leaked tokens; none may appear.
+- Test backup export and restore on a second installation.
+- Test wrong passphrase, tampered ciphertext, malformed ZIP and interrupted restore; active site must remain intact.
+- Confirm backup scope is static site files only and excludes tunnel credentials, runtime projects, settings and release history.
+- Inspect diagnostics for token, password, private key, site contents and personal data leakage.
+- Configure release signing secrets outside source control.
+- Build signed ABI APKs, verify signatures, install/upgrade, record file sizes and SHA-256, inspect native ABI and 16 KB page-size compatibility.
 
-## Evidence and release decision
+## Production decision
 
-Attach CI run URLs, backend deployment health output, emulator instrumentation results, device test records, DNS/TLS observations and a redacted audit sample to the release record. Mark each gate as PASS, FAIL or NOT TESTED. Never convert NOT TESTED into PASS.
+Production approval requires green CI on the exact release SHA, completed emulator and physical-device tests, external Cloudflare hostname verification, resolved critical/high security findings, and signed/upgrade-tested APKs. If the optional remote control plane is included, its deployed health and real-device command flow are also mandatory. Otherwise mark it explicitly as optional/not deployed.
