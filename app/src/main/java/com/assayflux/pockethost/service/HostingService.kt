@@ -12,6 +12,7 @@ import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import java.io.File
@@ -42,6 +43,8 @@ class HostingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(1, notification("Starting local website server…"))
+        runCatching { ManagementApiServer.start(this) }
+            .onFailure { OperationalLog.record(this, "ERROR", "MANAGEMENT_API_START_FAILED", it.message ?: "Management API failed to start.") }
         acquireWakeLockIfRequested()
         updateStatus("Starting local website server…")
 
@@ -153,6 +156,7 @@ class HostingService : Service() {
 
     override fun onDestroy() {
         stopping = true
+        ManagementApiServer.stop()
         Thread({ runCatching { CloudflareTunnelRuntime.stop() } }, "PocketHost-Cloudflare-Stop").start()
         runCatching {
             MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
