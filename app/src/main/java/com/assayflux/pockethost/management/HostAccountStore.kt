@@ -65,7 +65,7 @@ object HostAccountStore {
             }
             return Account(username, role, System.currentTimeMillis())
         } finally {
-            password.fill('\\u0000')
+            password.fill('\u0000')
         }
     }
 
@@ -91,7 +91,7 @@ object HostAccountStore {
             if (item == null) return null
             return if (valid) Account(item.getString("username"), item.getString("role"), item.getLong("createdAt")) else null
         } finally {
-            password.fill('\\u0000')
+            password.fill('\u0000')
         }
     }
 
