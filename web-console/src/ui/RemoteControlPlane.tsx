@@ -28,6 +28,7 @@ export function RemoteControlPlane() {
   const [payloadText, setPayloadText] = useState(initialPayloads.site_action);
   const [message, setMessage] = useState("Connect to your independently deployed PocketHost Control Plane.");
   const [busy, setBusy] = useState(false);
+  const [archive, setArchive] = useState<File | null>(null);
 
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const response = await fetch(endpoint.replace(/\/$/, "") + path, {
@@ -128,6 +129,17 @@ export function RemoteControlPlane() {
     finally { setBusy(false); }
   }
 
+  async function deployArchive() {
+    if (!selected || !archive) return;
+    if (!archive.name.toLowerCase().endsWith('.zip') || archive.size < 1 || archive.size > 50 * 1024 * 1024) { setMessage('Choose a ZIP no larger than 50 MiB.'); return; }
+    setBusy(true);
+    try {
+      const result = await request<{ artifactId: string; sha256: string; state: string }>( '/v1/admin/devices/' + encodeURIComponent(selected) + '/artifacts', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: await archive.arrayBuffer() });
+      setMessage('Website archive queued: ' + result.artifactId + '.');
+      setArchive(null);
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Website deployment failed.'); }
+    finally { setBusy(false); }
+  }
   async function queueCommand() {
     if (!selected) return;
     setBusy(true);
@@ -169,6 +181,12 @@ export function RemoteControlPlane() {
         <p>Supported keys currently include pythonMaxWorkers, nodeHeapMb and tunnelEnabled. The phone validates settings before applying them.</p>
         <textarea rows={9} value={configText} onChange={event => setConfigText(event.target.value)} spellCheck={false}/>
         <button disabled={busy || configVersion === null} onClick={saveConfig}>Save and queue configuration</button>
+      </article>
+      <article className="panel">
+        <div className="panel-heading"><h3>Deploy website archive</h3><span className="muted-tag">ZIP · 50 MiB MAX</span></div>
+        <p>Upload a ZIP containing index.html at its root. The phone verifies SHA-256 and atomically activates the release while hosting stays online.</p>
+        <label>Website ZIP<input type="file" accept=".zip,application/zip" onChange={event => setArchive(event.target.files?.[0] || null)} /></label>
+        <button disabled={busy || !archive} onClick={deployArchive}>Upload and deploy</button>
       </article>
       <article className="panel">
         <div className="panel-heading"><h3>Remote actions</h3><span className="muted-tag">TYPED COMMANDS</span></div>
