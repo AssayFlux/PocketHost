@@ -15,7 +15,7 @@
 > - **Device acceptance:** physical installation, Android lifecycle, existing Cloudflare tunnel/public HTTPS, thermal, battery and OEM behavior are owner-run acceptance tasks.
 > - **Release state:** integrated development build; not production approved. Independent security review and payment-provider integration remain open.
 >
->>
+>
 > The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this current reconciliation, use the current commit/run identifiers above.
 
 **Last reconciled:** 2026-11-15  
