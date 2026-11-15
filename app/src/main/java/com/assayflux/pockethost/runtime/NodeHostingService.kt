@@ -88,7 +88,9 @@ class NodeHostingService : Service() {
                 try { Thread.sleep(500) } catch (_: InterruptedException) { break }
             }
             if (!ready && !stopping && nodeThread?.isAlive == true) {
-                setState("STARTING", "Node.js is running but the configured port has not become ready.")
+                setState("ERROR", "Node.js did not listen on port $port within 45 seconds.")
+                Handler(Looper.getMainLooper()).post { stopSelf() }
+                return@Thread
             }
             while (!stopping && nodeThread?.isAlive == true) {
                 sampleMetrics()
