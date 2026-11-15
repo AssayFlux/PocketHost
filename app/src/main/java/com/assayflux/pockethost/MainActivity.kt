@@ -369,11 +369,13 @@ private fun PocketHostDashboard() {
         if (uri != null) {
             val passphrase = backupPassphrase.toCharArray()
             backupPassphrase = ""
+            importing = true
             scope.launch {
                 val result = runCatching {
                     withContext(Dispatchers.IO) { ApplicationBackupManager.export(context, uri, passphrase) }
                 }
                 status = if (result.getOrDefault(false)) "Encrypted full app backup exported. Keep the passphrase safe; device-bound credentials are excluded." else result.exceptionOrNull()?.message ?: "Full backup export failed."
+                importing = false
             }
         }
     }
@@ -1058,7 +1060,7 @@ private fun PocketHostDashboard() {
                             label = { Text("Backup passphrase (12+ characters)") },
                             visualTransformation = PasswordVisualTransformation(),
                             singleLine = true,
-                            enabled = !hosting && !importing,
+                            enabled = !hosting && !pythonHosting && !nodeHosting && !importing,
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedButton(
