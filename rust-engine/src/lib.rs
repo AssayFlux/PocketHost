@@ -149,7 +149,6 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
 }
 
 async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
-    REQUESTS.fetch_add(1, Ordering::Relaxed);
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .unwrap_or("")
@@ -170,6 +169,7 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
         SiteTarget::Static(path) => path,
         SiteTarget::Proxy { .. } => unreachable!(),
     };
+    REQUESTS.fetch_add(1, Ordering::Relaxed);
     if req.method() != Method::GET && req.method() != Method::HEAD {
         return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
     }
