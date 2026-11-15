@@ -48,7 +48,13 @@ class NodeHostingService : Service() {
 
         stopping = false
         setState("STARTING", "Launching Node.js.")
-        val rootFile = File(root).canonicalFile
+        val rootFile = try {
+            RuntimeProjectRoot.requireOwnedProjectRoot(this, root)
+        } catch (error: IllegalArgumentException) {
+            setState("ERROR", error.message ?: "Node project must be inside PocketHost private storage.")
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         val entryFile = File(entry).canonicalFile
         activeProjectRoot = rootFile.absolutePath
         NodeRuntimeStateStore.update(this, state = "STARTING", detail = "Launching Node.js.", projectRoot = rootFile.absolutePath)
