@@ -55,9 +55,12 @@ Java_com_assayflux_pockethost_runtime_NodeBridge_start(
     setenv("PORT", std::to_string(port).c_str(), 1);
     setenv("POCKETHOST_METRICS_FILE", (root + "/.pockethost/metrics.json").c_str(), 1);
 
+    const std::string preload = root + "/.pockethost/metrics-preload.cjs";
     std::vector<std::string> arguments{
         "node",
         "--max-old-space-size=384",
+        "--require",
+        preload,
         entry
     };
     std::vector<char*> argv;
