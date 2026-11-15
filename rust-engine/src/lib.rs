@@ -139,6 +139,12 @@ fn site_target_key(target: &SiteTarget) -> String {
     }
 }
 
+fn per_site_connection_limit(site_count: usize) -> usize {
+    if site_count <= 1 { return MAX_CONNECTIONS; }
+    let reserved_for_other_sites = site_count.saturating_sub(1).saturating_mul(2);
+    MAX_CONNECTIONS.saturating_sub(reserved_for_other_sites).clamp(2, MAX_PER_SITE_CONNECTIONS)
+}
+
 fn normalize_hostname(value: &str) -> Result<String, String> {
     let host = value.strip_suffix('.').unwrap_or(value).to_ascii_lowercase();
     if host.is_empty() || host.len() > 253 || !host.is_ascii() {
@@ -556,7 +562,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     } else {
         canonical_hosts.values().map(site_target_key).collect()
     };
-    let per_site_limit = if site_keys.len() <= 1 { MAX_CONNECTIONS } else { MAX_PER_SITE_CONNECTIONS };
+    let per_site_limit = per_site_connection_limit(site_keys.len());
     let site_limits = Arc::new(site_keys.into_iter()
         .map(|key| (key, Arc::new(Semaphore::new(per_site_limit))))
         .collect::<HashMap<_, _>>());
@@ -731,6 +737,16 @@ mod tests {
         assert!(limiter.clone().try_acquire_owned().is_err());
         drop(permit);
         assert!(limiter.clone().try_acquire_owned().is_ok());
+    }
+
+    #[test]
+    fn per_site_limit_preserves_capacity_for_other_sites() {
+        assert_eq!(per_site_connection_limit(0), MAX_CONNECTIONS);
+        assert_eq!(per_site_connection_limit(1), MAX_CONNECTIONS);
+        assert_eq!(per_site_connection_limit(2), 12);
+        assert_eq!(per_site_connection_limit(4), 10);
+        assert_eq!(per_site_connection_limit(9), 2);
+        assert_eq!(per_site_connection_limit(100), 2);
     }
 
     #[test]
