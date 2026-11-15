@@ -77,7 +77,7 @@ object ApplicationBackupManager {
 
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
-            require(passphrase.size >= 12) { "Use a backup passphrase with at least 12 characters." }
+            require(passphrase.size in 12..128) { "Use a backup passphrase between 12 and 128 characters." }
             requireAllRuntimesStopped(context)
 
             val files = context.filesDir
@@ -161,7 +161,7 @@ object ApplicationBackupManager {
         val backupDir = File(context.filesDir, "pockethost-restore-previous-${UUID.randomUUID()}")
         var preserveBackup = true
         try {
-            require(passphrase.size >= 12) { "Use the passphrase that was set when this backup was created." }
+            require(passphrase.size in 12..128) { "Use the backup passphrase (12–128 characters)." }
             requireAllRuntimesStopped(context)
 
             val prefix = ByteArray(MAGIC.size)
@@ -423,6 +423,9 @@ object ApplicationBackupManager {
     ) {
         val canonicalRoot = root.canonicalFile
         var rootBytes = 0L
+        var rootFiles = 0
+        var rootEntries = 0
+        val rootFileLimit = when (prefix) { "site", "python" -> 5_000; "node" -> 10_000; else -> MAX_FILES }
         fun visit(directory: File, relative: String) {
             val children = directory.listFiles()?.sortedBy { it.name }
                 ?: throw IOException("Could not read project directory: ${directory.name}")
@@ -439,14 +442,20 @@ object ApplicationBackupManager {
                 val childRelative = if (relative.isEmpty()) child.name else "$relative/${child.name}"
                 if (childRelative.split('/').size > MAX_DEPTH) throw IOException("Project folder nesting exceeds the backup limit.")
                 counters.entries++
-                if (counters.entries > MAX_ENTRIES) throw IOException("The app contains too many files and folders for backup.")
+                rootEntries++
+                if (counters.entries > MAX_ENTRIES || rootEntries > 10_000) {
+                    throw IOException("The app contains too many files and folders for backup.")
+                }
                 if (child.isDirectory) {
                     zip.putNextEntry(ZipEntry("$prefix/$childRelative/"))
                     zip.closeEntry()
                     visit(child, childRelative)
                 } else if (child.isFile) {
                     counters.files++
-                    if (counters.files > MAX_FILES) throw IOException("The app contains too many files for backup.")
+                    rootFiles++
+                    if (counters.files > MAX_FILES || rootFiles > rootFileLimit) {
+                        throw IOException("$prefix project contains too many files for backup.")
+                    }
                     zip.putNextEntry(ZipEntry("$prefix/$childRelative"))
                     child.inputStream().use { input ->
                         val buffer = ByteArray(32 * 1024)
@@ -513,11 +522,20 @@ object ApplicationBackupManager {
         val counters = Counters()
         val rootLimits = mapOf("site" to STATIC_LIMIT, "python" to PYTHON_LIMIT, "node" to NODE_LIMIT)
         val rootBytes = mutableMapOf("site" to 0L, "python" to 0L, "node" to 0L)
+        val rootFiles = mutableMapOf("site" to 0, "python" to 0, "node" to 0)
+        val rootEntries = mutableMapOf("site" to 0, "python" to 0, "node" to 0)
         val allowedRoots = setOf("site", "python", "node", "settings.json", "routes.json")
         ZipInputStream(FileInputStream(archive).buffered()).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
                 counters.entries++
+                val rootName = entry.name.substringBefore('/')
+                if (rootName in rootEntries) {
+                    rootEntries[rootName] = (rootEntries[rootName] ?: 0) + 1
+                    if ((rootEntries[rootName] ?: 0) > 10_000) {
+                        throw IOException("$rootName project contains too many archive entries.")
+                    }
+                }
                 if (counters.entries > MAX_ENTRIES) throw IOException("The backup contains too many archive entries.")
                 val normalized = entry.name.replace('\\', '/')
                 if (normalized.startsWith('/') || normalized.contains('\u0000') || normalized.contains(':')) {
@@ -545,6 +563,13 @@ object ApplicationBackupManager {
                     target.parentFile?.let { if (!it.exists() && !it.mkdirs()) throw IOException("Could not create a restore folder.") }
                     if (target.exists()) throw IOException("The backup contains a duplicate archive path.")
                     counters.files++
+                    if (root in rootFiles) {
+                        rootFiles[root] = (rootFiles[root] ?: 0) + 1
+                        val rootFileLimit = if (root == "node") 10_000 else 5_000
+                        if ((rootFiles[root] ?: 0) > rootFileLimit) {
+                            throw IOException("$root project contains too many files.")
+                        }
+                    }
                     if (counters.files > MAX_FILES) throw IOException("The backup contains too many files.")
                     val root = parts[0]
                     var entryBytes = 0L

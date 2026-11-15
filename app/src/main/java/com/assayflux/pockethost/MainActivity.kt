@@ -1056,7 +1056,7 @@ private fun PocketHostDashboard() {
                         Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedTextField(
                             value = backupPassphrase,
-                            onValueChange = { backupPassphrase = it },
+                            onValueChange = { if (it.length <= 128) backupPassphrase = it },
                             label = { Text("Backup passphrase (12+ characters)") },
                             visualTransformation = PasswordVisualTransformation(),
                             singleLine = true,
