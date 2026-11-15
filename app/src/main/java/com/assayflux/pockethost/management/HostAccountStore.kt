@@ -99,6 +99,38 @@ object HostAccountStore {
         }
     }
 
+    /** Changes one account password after verifying the current credential. */
+    @Synchronized fun changePassword(
+        context: Context,
+        username: String,
+        currentPassword: CharArray,
+        newPassword: CharArray
+    ): Boolean {
+        try {
+            val account = verify(context, username, currentPassword) ?: return false
+            require(newPassword.size in 12..128) { "new_password_must_be_12_to_128_characters" }
+            val accounts = read(context)
+            val item = (0 until accounts.length()).map { accounts.getJSONObject(it) }
+                .firstOrNull { it.optString("username").equals(account.username, true) }
+                ?: return false
+            val salt = ByteArray(16).also(random::nextBytes)
+            val verifier = derive(newPassword, salt)
+            try {
+                item.put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+                    .put("verifier", Base64.encodeToString(verifier, Base64.NO_WRAP))
+                    .put("iterations", ITERATIONS)
+                write(context, accounts)
+            } finally {
+                salt.fill(0)
+                verifier.fill(0)
+            }
+            return true
+        } finally {
+            currentPassword.fill('\u0000')
+            newPassword.fill('\u0000')
+        }
+    }
+
     @Synchronized fun revokeOperator(context: Context, username: String): Boolean {
         val source = read(context)
         val result = JSONArray()
