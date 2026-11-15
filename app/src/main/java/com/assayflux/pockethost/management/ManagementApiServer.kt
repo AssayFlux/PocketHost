@@ -424,6 +424,7 @@ object ManagementApiServer {
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("queuedConnections", NativeEngine.queuedConnections())
                 .put("rateLimitedRequests", NativeEngine.rateLimitedRequests())
+                .put("siteLimitRejections", NativeEngine.siteLimitRejections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections())
                 .put("engineState", NativeEngine.status())
             return 200 to profile
