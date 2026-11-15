@@ -5,6 +5,7 @@ use hyper::body::{Frame, Incoming};
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::client::legacy::{Client, connect::HttpConnector};
 use hyper_util::server::conn::auto::Builder;
 use jni::objects::{JClass, JString};
 use jni::sys::{jboolean, jint, jlong, jstring};
@@ -24,6 +25,9 @@ use tokio_util::io::ReaderStream;
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_CONNECTIONS: usize = 16;
 type ResponseBody = UnsyncBoxBody<Bytes, std::io::Error>;
+
+#[derive(Clone)]
+enum SiteTarget { Static(PathBuf), Proxy { port: u16 } }
 
 static REQUESTS: AtomicU64 = AtomicU64::new(0);
 static BYTES_SERVED: AtomicU64 = AtomicU64::new(0);
@@ -109,24 +113,66 @@ fn parse_byte_range(value: &str, size: u64) -> Result<(u64, u64), ()> {
     Ok((first, last))
 }
 
-async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, PathBuf>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
-    REQUESTS.fetch_add(1, Ordering::Relaxed);
-    if req.method() != Method::GET && req.method() != Method::HEAD {
-        return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
+async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+    let original_host = req.headers().get(hyper::header::HOST).cloned();
+    let forwarded_proto = if req.headers().get("cf-visitor").and_then(|v| v.to_str().ok())
+        .map(|v| v.contains("\\"scheme\\":\\"https\\"")).unwrap_or(false) { "https" } else { "http" };
+    let path_and_query = req.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/");
+    let uri = match format!("http://127.0.0.1:{port}{path_and_query}").parse() {
+        Ok(uri) => uri,
+        Err(_) => return Ok(text_response(StatusCode::BAD_GATEWAY, "text/plain; charset=utf-8", "Invalid upstream URI")),
+    };
+    *req.uri_mut() = uri;
+    let headers = req.headers_mut();
+    if let Some(host) = original_host {
+        headers.insert("x-forwarded-host", host);
     }
+    headers.insert("x-forwarded-proto", forwarded_proto.parse().unwrap());
+    for name in ["connection", "proxy-connection", "keep-alive", "transfer-encoding", "trailer", "te"] {
+        headers.remove(name);
+    }
+    let connector = HttpConnector::new();
+    let client: Client<_, Incoming> = Client::builder(TokioExecutor::new()).build(connector);
+    match client.request(req).await {
+        Ok(upstream) => {
+            let (mut parts, body) = upstream.into_parts();
+            parts.headers.remove("connection");
+            parts.headers.remove("transfer-encoding");
+            if !parts.headers.contains_key("x-content-type-options") {
+                parts.headers.insert("x-content-type-options", "nosniff".parse().unwrap());
+            }
+            let body = body.map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error)).boxed_unsync();
+            Ok(Response::from_parts(parts, body))
+        }
+        Err(_) => Ok(text_response(StatusCode::BAD_GATEWAY, "text/plain; charset=utf-8", "Upstream runtime is unavailable")),
+    }
+}
+
+async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+    REQUESTS.fetch_add(1, Ordering::Relaxed);
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .unwrap_or("")
         .trim()
         .to_ascii_lowercase()
         .split(':').next().unwrap_or("").to_string();
-    let selected_root = if host_roots.is_empty() {
-        root
-    } else if let Some(site_root) = host_roots.get(&requested_host) {
-        site_root.clone()
+    let selected_target = if host_roots.is_empty() {
+        SiteTarget::Static(root)
+    } else if let Some(target) = host_roots.get(&requested_host) {
+        target.clone()
     } else {
         return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Unknown host"));
     };
+    if let SiteTarget::Proxy { port } = selected_target {
+        return proxy_request(req, port).await;
+    }
+    let selected_root = match selected_target {
+        SiteTarget::Static(path) => path,
+        SiteTarget::Proxy { .. } => unreachable!(),
+    };
+    if req.method() != Method::GET && req.method() != Method::HEAD {
+        return Ok(text_response(StatusCode::METHOD_NOT_ALLOWED, "text/plain; charset=utf-8", "Method not allowed"));
+    }
     let relative = match request_relative_path(req.uri().path()) {
         Ok(path) => path,
         Err(status) => return Ok(text_response(status, "text/plain; charset=utf-8", "Invalid or forbidden path")),
@@ -192,7 +238,7 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, PathBuf>>, req: Re
     Ok(response.body(body).expect("file response"))
 }
 
-async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, PathBuf>>, mut stop: oneshot::Receiver<()>) {
+async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
     let permits = Arc::new(Semaphore::new(MAX_CONNECTIONS));
     loop {
@@ -229,7 +275,7 @@ fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
     start_engine_with_hosts(root, port, allow_lan, HashMap::new())
 }
 
-fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: HashMap<String, String>) -> Result<(), String> {
+fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: HashMap<String, SiteTarget>) -> Result<(), String> {
     let root = std::fs::canonicalize(root).map_err(|e| format!("Invalid site directory: {e}"))?;
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut canonical_hosts = HashMap::new();
@@ -238,9 +284,18 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
         if normalized.is_empty() || normalized.contains('/') || normalized.contains(':') || normalized.contains(' ') {
             return Err(format!("Invalid hostname: {host}"));
         }
-        let site_path = std::fs::canonicalize(&path).map_err(|e| format!("Invalid root for {normalized}: {e}"))?;
-        if !site_path.is_dir() { return Err(format!("Site root for {normalized} is not a directory")); }
-        if canonical_hosts.insert(normalized.clone(), site_path).is_some() {
+        let target = match path {
+            SiteTarget::Static(site_path) => {
+                let canonical = std::fs::canonicalize(&site_path).map_err(|e| format!("Invalid root for {normalized}: {e}"))?;
+                if !canonical.is_dir() { return Err(format!("Site root for {normalized} is not a directory")); }
+                SiteTarget::Static(canonical)
+            }
+            SiteTarget::Proxy { port } => {
+                if !(1024..=65535).contains(&port) { return Err(format!("Invalid upstream port for {normalized}")); }
+                SiteTarget::Proxy { port }
+            }
+        };
+        if canonical_hosts.insert(normalized.clone(), target).is_some() {
             return Err(format!("Duplicate hostname: {normalized}"));
         }
     }
@@ -324,7 +379,22 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMu
         let root: String = env.get_string(&root).map_err(|e| e.to_string())?.into();
         let json: String = env.get_string(&sites_json).map_err(|e| e.to_string())?.into();
         if !(1024..=65535).contains(&port) { return Err("Port must be 1024–65535".to_string()); }
-        let sites: HashMap<String, String> = serde_json::from_str(&json).map_err(|e| format!("Invalid hostname registry: {e}"))?;
+        let raw: HashMap<String, serde_json::Value> = serde_json::from_str(&json).map_err(|e| format!("Invalid hostname registry: {e}"))?;
+        let mut sites = HashMap::new();
+        for (host, value) in raw {
+            let target = if let Some(path) = value.as_str() {
+                SiteTarget::Static(PathBuf::from(path))
+            } else {
+                match value.get("runtime").and_then(|v| v.as_str()).unwrap_or("static") {
+                    "static" => SiteTarget::Static(PathBuf::from(value.get("root").and_then(|v| v.as_str()).ok_or("Static route requires root")?)),
+                    "python-wsgi" | "node" => SiteTarget::Proxy {
+                        port: value.get("port").and_then(|v| v.as_u64()).ok_or("Proxy route requires port")? as u16
+                    },
+                    runtime => return Err(format!("Unsupported runtime route: {runtime}")),
+                }
+            };
+            sites.insert(host, target);
+        }
         start_engine_with_hosts(&root, port as u16, allow_lan == 1, sites)?;
         Ok("OK".to_string())
     })();
