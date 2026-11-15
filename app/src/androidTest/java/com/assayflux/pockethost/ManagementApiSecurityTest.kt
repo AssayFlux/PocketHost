@@ -225,7 +225,9 @@ class ManagementApiSecurityTest {
             authorization = normalOwnerToken).first)
 
         // Restore the emulator's conventional test credential so other instrumentation
-        // cases remain independent regardless of test execution order.
+        // cases remain independent regardless of test execution order. Pairing is rate-limited
+        // to one challenge every three seconds.
+        Thread.sleep(3_100)
         val resetPairing = approvedPairingToken()
         assertEquals(200, request("POST", "/api/v1/auth/recover-owner",
             JSONObject().put("newPassword", "PocketHost-Owner-Password-42").toString(),
