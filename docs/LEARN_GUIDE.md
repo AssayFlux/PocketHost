@@ -20,6 +20,10 @@ The dashboard reports current hosting state, static-engine traffic totals, uptim
 
 Capacity Lab performs a bounded local static GET sweep. Run it on a cool, adequately charged phone. Its safe concurrency ceiling is workload/device-specific. A percentage profile controls admission concurrency, not CPU use or a guaranteed visitor count.
 
+## Website frameworks and languages
+
+Pocket Host can host built static output from HTML/CSS/JavaScript, TypeScript and frontend frameworks such as React, Vue, Svelte and Angular. For build steps, Next.js static export boundaries, and current Python/Node runtime requirements, see the [Website Deployment Guide](WEBSITE_DEPLOYMENT.md).
+
 ## Python and Node runtimes
 These runtimes are for trusted code only. Python currently supports one WSGI application. Node runs one active application with prebundled dependencies. Both run under the Pocket Host app identity; neither is an OS-enforced sandbox. Do not run untrusted projects.
 
