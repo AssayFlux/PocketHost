@@ -1,0 +1,62 @@
+services:
+  database:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pockethost}
+      POSTGRES_USER: ${POSTGRES_USER:-pockethost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pockethost-control-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pockethost} -d ${POSTGRES_DB:-pockethost}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [private]
+
+  control-plane:
+    build:
+      context: ..
+      dockerfile: control-plane/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-pockethost}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-pockethost}
+      POCKETHOST_CONTROL_ADMIN_TOKEN: ${POCKETHOST_CONTROL_ADMIN_TOKEN:?Set a long random administrator token}
+      POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the exact HTTPS console origin}
+      POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
+      RUST_LOG: info
+    expose: ["8080"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    networks: [private]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [control-plane]
+    environment:
+      CONTROL_PLANE_DOMAIN: ${CONTROL_PLANE_DOMAIN:?Set CONTROL_PLANE_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [private]
+
+volumes:
+  pockethost-control-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  private:
+    driver: bridge
