@@ -61,7 +61,7 @@ import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.SiteFileManager
 import com.assayflux.pockethost.storage.PythonProjectImporter
 import com.assayflux.pockethost.storage.NodeProjectImporter
-import com.assayflux.pockethost.storage.SiteBackupManager
+import com.assayflux.pockethost.storage.ApplicationBackupManager
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.sites.SiteRegistry
@@ -371,9 +371,9 @@ private fun PocketHostDashboard() {
             backupPassphrase = ""
             scope.launch {
                 val result = runCatching {
-                    withContext(Dispatchers.IO) { SiteBackupManager.export(context, uri, passphrase) }
+                    withContext(Dispatchers.IO) { ApplicationBackupManager.export(context, uri, passphrase) }
                 }
-                status = if (result.getOrDefault(false)) "Encrypted website backup exported. Keep the passphrase safe; it cannot be recovered." else result.exceptionOrNull()?.message ?: "Backup export failed."
+                status = if (result.getOrDefault(false)) "Encrypted full app backup exported. Keep the passphrase safe; device-bound credentials are excluded." else result.exceptionOrNull()?.message ?: "Full backup export failed."
             }
         }
     }
@@ -385,14 +385,14 @@ private fun PocketHostDashboard() {
             importing = true
             scope.launch {
                 val result = runCatching {
-                    withContext(Dispatchers.IO) { SiteBackupManager.restore(context, uri, passphrase) }
+                    withContext(Dispatchers.IO) { ApplicationBackupManager.restore(context, uri, passphrase) }
                 }
                 result.onSuccess { report ->
-                    importedSummary = "Encrypted backup restored · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
+                    importedSummary = "Full backup restored · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                         .putString("site_summary", importedSummary).apply()
                     previousReleases = SiteImporter.listReleases(context)
-                    status = "Backup authenticated and restored. Restart hosting to load the restored website."
+                    status = if (report.legacyStaticOnly) "Legacy website backup restored. Runtime projects and settings were not included." else "Full backup restored. Python and Node remain stopped; review trusted-code acknowledgement before starting either runtime."
                 }.onFailure { error -> status = error.message ?: "Backup restore failed." }
                 importing = false
             }
@@ -1062,16 +1062,16 @@ private fun PocketHostDashboard() {
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedButton(
-                            onClick = { backupExportPicker.launch("pockethost-site.afbackup") },
-                            enabled = !hosting && !importing && backupPassphrase.length >= 12,
+                            onClick = { backupExportPicker.launch("pockethost-app.afbackup") },
+                            enabled = !hosting && !pythonHosting && !nodeHosting && !importing && backupPassphrase.length >= 12,
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Export encrypted website backup") }
+                        ) { Text("Export encrypted full app backup") }
                         OutlinedButton(
                             onClick = { backupRestorePicker.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
-                            enabled = !hosting && !importing && backupPassphrase.length >= 12,
+                            enabled = !hosting && !pythonHosting && !nodeHosting && !importing && backupPassphrase.length >= 12,
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Restore encrypted website backup") }
-                        Text("Backups use AES-256-GCM with a passphrase-derived key. Only the static website is included; Python projects, tunnel credentials and device settings are excluded. Restores are authenticated and validated before deployment.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        ) { Text("Restore encrypted full app backup") }
+                        Text("Includes website files, optional Python/Node projects, hostname routes and safe port settings. Secrets, accounts and tunnel tokens are excluded. Restored runtimes stay stopped until you approve trusted code.", color = palette.onSurfaceVariant, fontSize = 13.sp)
                         if (previousReleases.isNotEmpty()) {
                             OutlinedButton(
                                 onClick = {
