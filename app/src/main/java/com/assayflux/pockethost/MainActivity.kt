@@ -110,8 +110,14 @@ private fun formatBytes(value: Long): String = when {
 }
 
 class MainActivity : ComponentActivity() {
-    private val allowedAuthenticators =
-        BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    private val allowedAuthenticators: Int
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        } else {
+            // Android 8–10 cannot combine DEVICE_CREDENTIAL with BIOMETRIC_STRONG
+            // in the AndroidX prompt. Keep those devices on strong biometrics only.
+            BiometricManager.Authenticators.BIOMETRIC_STRONG
+        }
     private var unlocked = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -159,12 +165,16 @@ class MainActivity : ComponentActivity() {
                     onResult(false)
                 }
             })
-        val info = BiometricPrompt.PromptInfo.Builder()
+        val infoBuilder = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle("Authenticate to access Pocket Host on this device.")
-            .setAllowedAuthenticators(allowedAuthenticators)
-            .build()
-        prompt.authenticate(info)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            infoBuilder.setAllowedAuthenticators(allowedAuthenticators)
+        } else {
+            infoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setNegativeButtonText("Cancel")
+        }
+        prompt.authenticate(infoBuilder.build())
     }
 }
 
@@ -180,7 +190,7 @@ private fun BiometricUnlockScreen(onRetry: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text("Pocket Host is locked", color = Color(0xFF1C1C1C), fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
             Spacer(Modifier.height(8.dp))
-            Text("Authenticate with your enrolled biometric or secure device credential to continue.",
+            Text("Authenticate with a strong biometric; Android 11 and later can also use your secure device credential.",
                 color = Color(0xFF6B6B6B), fontSize = 14.sp)
             Spacer(Modifier.height(20.dp))
             Button(onClick = onRetry) { Text("Unlock") }
@@ -566,7 +576,7 @@ private fun PocketHostDashboard() {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Biometric app unlock", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Require a strong biometric or secure device credential when Pocket Host is opened. This protects the local app UI; it does not replace Owner/Operator API authentication.", color = palette.onSurfaceVariant, fontSize = 13.sp)
+                                Text("Require a strong biometric when Pocket Host is opened; Android 11+ can also use a secure device credential. This protects the local app UI, not Owner/Operator API authentication.", color = palette.onSurfaceVariant, fontSize = 13.sp)
                             }
                             Switch(checked = biometricUnlockEnabled, onCheckedChange = { enabled ->
                                 if (!enabled) {
