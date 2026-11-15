@@ -1,77 +1,61 @@
-# Node.js runtime integration decision
+# Embedded Node.js runtime
 
-**Decision status:** Runtime candidate selected for an implementation spike; not integrated into PocketHost yet.  
-**Target line:** Node.js 24 LTS, upstream v24.22.1.  
-**Candidate mobile recipe:** `fogtape/nodejs-mobile`, branch `recipe`, release `v24.22.1-0`.  
-**PocketHost status:** Do not advertise Node.js hosting as available until native integration, lifecycle supervision, project import, memory controls and device tests pass.
+**Implementation status:** Integrated in PocketHost source; native build and physical-device acceptance are still being validated. Do not treat source integration as proof of successful runtime execution on every target phone.
 
-## Why this candidate
+## Runtime selected
 
-The candidate builds an embeddable Android `libnode.so` for all three required ABIs:
+PocketHost pins the full Android SDK from `fogtape/nodejs-mobile`, release `v24.22.1-0`, based on upstream Node.js 24.22.1. It is an independently maintained mobile embedding build, not an official Node.js Foundation Android SDK.
 
-- `arm64-v8a`
-- `armeabi-v7a`
-- `x86_64`
-
-The recipe reconstructs Node.js from a pinned upstream source tag and a reviewed mobile patch series, verifies the reconstructed source tree hash, and provides Android test tooling. The mobile release is a prerelease of the embedding project, although it is based on the official Node.js v24.22.1 security release. It is not an official Node.js Foundation Android SDK distribution. PocketHost must independently verify the recipe, binary provenance, licensing and test coverage before shipping it.
-
-Source references:
-- [Mobile recipe](https://github.com/fogtape/nodejs-mobile/tree/recipe)
-- [v24.22.1-0 release](https://github.com/fogtape/nodejs-mobile/releases/tag/v24.22.1-0)
-- [Embedding environment requirements](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/EMBEDDING.md)
-- [Mobile API compatibility FAQ](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/FAQ.md)
-- [Build instructions](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/BUILDING.md)
-
-## Pinned artifact metadata
-
-| Item | Value |
+| Item | Pinned value |
 |---|---|
-| Release tag | `v24.22.1-0` |
-| Upstream Node.js tag | `v24.22.1` |
+| Release | `v24.22.1-0` |
+| Upstream Node.js | `v24.22.1` |
 | Upstream source commit | `ce7aaf1cee78b8cf0ce17364260535c418d3ed26` |
-| Android full SDK archive | `nodejs-mobile-android-24.22.1-0.zip` |
-| Archive size | 112,853,733 bytes |
+| Android archive | `nodejs-mobile-android-24.22.1-0.zip` |
+| Compressed archive size | 112,853,733 bytes |
 | SHA-256 | `d6fd9f610fe5d81fede8f0d400c5a62723247725a19831835f15abf4f0604250` |
-| License | MIT (upstream Node.js and mobile recipe; preserve notices) |
+| ABIs | `arm64-v8a`, `armeabi-v7a`, `x86_64` |
 
-The archive digest is taken from the GitHub release asset metadata. The implementation pipeline must verify the downloaded archive against this exact digest before extraction. It must also verify each extracted ELF's ABI, minimum Android API and 16 KB page-size compatibility. Do not commit the binary archive or extracted `libnode.so` files to Git.
+Gradle downloads the archive only during the native build, checks the complete SHA-256 digest, extracts `bin/<abi>/libnode.so` and the headers, and fails if any required ABI or `node/node.h` is missing. The binary archive is not committed to Git. The full variant is selected to retain the broadest runtime feature set, including built-in TypeScript type stripping.
 
-The **full** variant is the initial candidate because PocketHost should not silently remove common Node capabilities such as `node:sqlite`, Inspector or built-in TypeScript type stripping. The corresponding lite archive is smaller (71,981,976 bytes compressed) but omits those features. The full archive is already 112,853,733 bytes compressed; the extracted and per-ABI APK size must be measured before committing to an APK packaging strategy. Do not trade away a feature silently to reduce APK size.
+## Implemented integration
 
-## Non-negotiable mobile constraints
+- `app/build.gradle.kts`: pinned archive materialization, digest verification, ABI extraction and CMake dependency.
+- `app/src/main/cpp/node-bridge.cpp`: C++ JNI adapter calling `node::Start`, configuring working directory, `HOME`, `TMPDIR`, compile cache, loopback defaults, thread-pool size and V8 heap cap.
+- `NodeBridge.kt`: Kotlin JNI declaration.
+- `NodeHostingService.kt`: foreground service in the dedicated Android `:node` process; readiness monitor, process metrics and process-boundary shutdown.
+- `NodeHostRuntime.kt` and `NodeRuntimeStateStore.kt`: lifecycle API and atomic file-backed IPC between the main process and `:node` process. SharedPreferences is deliberately not used as cross-process state transport.
+- `NodeProjectImporter.kt`: Storage Access Framework folder import with file-count, total-size and depth bounds; path validation; sensitive-file exclusion; package entrypoint validation.
+- `pockethost-node-metrics.cjs`: request, response-byte, error, active-request, RSS and heap metrics; TCP listeners are forced to loopback so public ingress must pass through the Rust engine.
+- Rust host routing: registered Node hostnames are reverse-proxied to the Node loopback port.
+- HostingService supervisor: detects Node process exit and retries startup with bounded exponential backoff.
+- Management API and TypeScript console: Node state, metrics and resource limits are exposed to the paired console.
 
-1. **One Node instance per process.** The runtime cannot be started twice in the same process. PocketHost must run it in a dedicated Android service process, not in the main UI or Rust engine process.
-2. **No child-process model.** Mobile does not support `child_process.spawn()` / `fork()` in the usual desktop sense. Do not build a process manager that depends on npm scripts spawning child processes, PM2, cluster or worker subprocesses.
-3. **Lifecycle isolation.** A single user application is active at a time in the first Node implementation. The Android supervisor must detect runtime process death, stop/recreate the dedicated service process, and never attempt to initialize a second Node instance in the same process.
-4. **Android filesystem environment.** Before Node starts, set `TMPDIR` to PocketHost's cache directory, `HOME` and working directory to the imported project/app-private data area, and `NODE_COMPILE_CACHE` to a cache subdirectory. Never assume `/tmp` exists.
-5. **Memory controls.** Set a conservative V8 heap ceiling using `NODE_OPTIONS` and a configurable PocketHost memory budget. The 4 GB device baseline must be tested under concurrent static hosting, Python hosting and Android UI load. Node must be disabled by default and loaded only when explicitly enabled.
-6. **Project dependency model.** Dependencies must be installed or bundled during project preparation. The embedded runtime archive does not by itself provide a desktop npm installation environment. Native addons must be ABI-compatible Android builds. Arbitrary install scripts, native compilation and desktop-only dependencies cannot be promised.
-7. **No public exposure by default.** Node origin binds to loopback. It is routed through the Rust engine only after per-site routing and access policy are implemented.
+## Runtime policy and constraints
 
-## Planned PocketHost integration boundary
+1. **One Node process / one active Node project.** The embedded Node instance is isolated in Android process `:node`. Do not start a second Node instance in that process. Multiple hostnames may map to the same Node project.
+2. **No desktop child-process assumptions.** Android mobile embedding does not provide the usual `child_process.spawn()` / `fork()` workflow. PM2, cluster workers, npm scripts that spawn subprocesses, and process-based build tools are unsupported.
+3. **Dependencies are prebundled.** Import a prepared project containing its required `node_modules`. PocketHost does not run `npm install`, lifecycle scripts, native compilation or arbitrary shell commands on the phone. Native addons must be built for the exact Android ABI and Node ABI.
+4. **Trusted code only.** Node projects execute with PocketHost's application UID and access to app-private files. The dedicated process improves lifecycle isolation; it is not a security sandbox or separate Android UID.
+5. **Loopback ingress.** The metrics preload constrains Node TCP server listeners to `127.0.0.1`; Rust is the public/LAN-facing listener and reverse proxy. UDP listeners are not covered by this TCP guard. Public exposure still requires explicit LAN/tunnel configuration and app-level security.
+6. **Resource ceilings.** V8 old-space is configurable from 96–512 MiB, with a device-RAM-based default. The Python WSGI worker cap is configurable from 2–16. These are application-level controls, not cgroup CPU quotas or hard total-RSS limits. Android may still kill a process under memory pressure.
+7. **Filesystem.** `TMPDIR` and V8 compile cache use Android's app cache directory. `HOME` and project working directory are app-private. Do not assume `/tmp` exists.
+8. **TypeScript.** Node 24's built-in type stripping supports erasable TypeScript syntax in supported entry files. It is not a full TypeScript compiler: it does not type-check or compile TS features that require transformation. Use a prebuilt JavaScript output when your project needs a bundler or compiler.
+9. **Availability.** The full Node library materially increases APK size. The actual per-ABI and universal APK sizes must be measured after native packaging; this is not yet claimed as verified.
 
-- Kotlin owns the dedicated `:node` service process, foreground-service coordination, project selection, resource limits and status reporting.
-- A small C++/JNI adapter links the pinned `libnode.so` and calls the documented Node embedding entry point on a dedicated thread.
-- The service receives a validated app-private project directory, entrypoint, port and memory budget; it does not accept arbitrary shell command strings.
-- A PocketHost bootstrap module owns the Node server lifecycle and exposes a private loopback shutdown/control channel.
-- The parent hosting service supervises the dedicated process. It may recreate a dead Node service process, but it must never attempt a second Node initialization inside the same process.
-- Rust remains the central HTTP/routing engine. Node is an optional application runtime behind a loopback origin, not a replacement for Rust.
+## Validation still required
 
-## Required implementation and acceptance gates
+- CI native compile for all configured ABIs, Rust tests, Python tests, console build and Node metrics-preload smoke.
+- Android emulator smoke that loads the actual `libnode.so`, reports `process.version`, imports a bundled dependency, starts an HTTP server, verifies Rust reverse-proxy routing, stops the service and starts a fresh Node process.
+- Android API 26, 33 and 35 lifecycle / notification / background-execution tests.
+- Physical ARMv7 and ARM64 tests, including a representative 4 GB phone.
+- Stress tests with Rust static hosting, Python and Node enabled together; low-storage, memory-pressure, thermal and screen-off behavior.
+- Verify archive license notices and the final APK's ABI / 16 KB page-size metadata.
 
-- Reproducible, SHA-verified runtime materialization in the on-demand Android integration workflow.
-- License and third-party notices included in the app and README.
-- CMake/JNI bridge with deterministic startup error reporting.
-- Dedicated Android service process with safe start, stop, crash detection and restart.
-- Correct environment setup (`TMPDIR`, `HOME`, working directory, compile cache, CA certificates and heap limit).
-- Node project importer with archive traversal protection, size/file/depth limits, entrypoint validation and dependency policy.
-- Explicit single-active-Node-project constraint in UI and documentation.
-- Loopback-only binding and Rust reverse-proxy integration.
-- Instrumentation smoke tests for Node version, HTTP response, module loading, shutdown and process restart.
-- Android API 26/33/35 emulator tests and physical ARMv7/ARM64 tests on representative 4 GB devices.
-- Memory, thermal, battery and screen-off tests while static hosting and Python runtime are active.
-- Security review before public tunnel exposure.
+## Upstream references
 
-## Initial scope decision
-
-The first Node release should support one trusted Node.js HTTP application at a time, with prebundled dependencies and one declared entrypoint. Do not promise arbitrary npm lifecycle scripts, PM2, cluster, child processes, arbitrary native addons or multiple concurrent Node projects. Broader support requires a separate compatibility and isolation design.
+- [Mobile recipe and release provenance](https://github.com/fogtape/nodejs-mobile/tree/recipe)
+- [Pinned v24.22.1-0 release](https://github.com/fogtape/nodejs-mobile/releases/tag/v24.22.1-0)
+- [Embedding environment requirements](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/EMBEDDING.md)
+- [Mobile API compatibility](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/FAQ.md)
+- [Build instructions](https://github.com/fogtape/nodejs-mobile/blob/recipe/docs/BUILDING.md)
