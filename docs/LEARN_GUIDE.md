@@ -38,3 +38,16 @@ Keep the phone ventilated, monitor battery/temperature/storage and use conservat
 - Full configuration and runtime backup is not implemented.
 - Local management sessions are not a replacement for Owner/Operator account management.
 - Physical-device, screen-size, large-font and keyboard acceptance must be completed before a production release.
+
+
+## Host Owner and Operator accounts
+
+1. Pair a browser with the phone only when you can approve the six-digit request in the Android app.
+2. Use the first approved Owner session to create the Owner username and a unique password of at least 12 characters.
+3. Use the Owner credentials for subsequent sign-ins.
+4. From the Owner session, create or revoke Operator accounts.
+5. Operators can inspect data, operate sites and adjust capacity. Owner-only settings and account administration are rejected by the device API.
+
+Password verifiers use PBKDF2-HMAC-SHA256; the account registry is encrypted with Android Keystore AES-GCM. Browser tokens are tab-scoped; device sessions expire after 12 hours and are revocable.
+
+Biometric unlock is not yet implemented. Never expose the management API through the public website hostname.

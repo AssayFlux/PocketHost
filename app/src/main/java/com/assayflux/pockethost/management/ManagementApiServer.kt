@@ -47,7 +47,9 @@ object ManagementApiServer {
     @Volatile private var acceptThread: Thread? = null
     @Volatile private var appContext: Context? = null
     @Volatile private var pending: Pairing? = null
-    private val sessions = HashMap<String, Long>()
+    private data class Session(val expiresAt: Long, val username: String, val role: String)
+    private val sessions = HashMap<String, Session>()
+    private val loginAttempts = HashMap<String, Pair<Long, Int>>()
 
     private data class Pairing(val id: String, val code: String, val expires: Long, @Volatile var approved: Boolean = false, var attempts: Int = 0)
     @Volatile private var lastChallengeAt = 0L
@@ -210,21 +212,78 @@ object ManagementApiServer {
                 return 401 to JSONObject().put("error", "invalid_pairing_code")
             }
             val token = randomToken(32)
-            synchronized(sessions) { sessions[tokenHash(token)] = Instant.now().epochSecond + SESSION_SECONDS }
+            synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + SESSION_SECONDS, "owner", "OWNER") }
             pending = null
             return 200 to JSONObject().put("accessToken", token).put("expiresAt", Instant.now().epochSecond + SESSION_SECONDS)
         }
-        val token = authorization?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")
-        val valid = token != null && synchronized(sessions) {
-            val expiry = sessions[tokenHash(token)]
-            if (expiry != null && expiry > Instant.now().epochSecond) true
-            else { sessions.remove(tokenHash(token)); false }
+        if (method == "POST" && path == "/api/v1/auth/login") {
+            val username = body.optString("username").trim()
+            val now = Instant.now().epochSecond
+            val attempts = loginAttempts[username.lowercase()]
+            if (attempts != null && now - attempts.first < 60 && attempts.second >= 8)
+                return 429 to JSONObject().put("error", "login_rate_limited")
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
+            if (account == null) {
+                val count = if (attempts != null && now - attempts.first < 60) attempts.second + 1 else 1
+                loginAttempts[username.lowercase()] = now to count
+                return 401 to JSONObject().put("error", "invalid_credentials")
+            }
+            loginAttempts.remove(username.lowercase())
+            val token = randomToken(32)
+            val expiry = now + SESSION_SECONDS
+            synchronized(sessions) { sessions[tokenHash(token)] = Session(expiry, account.username, account.role) }
+            return 200 to JSONObject().put("accessToken", token).put("expiresAt", expiry).put("username", account.username).put("role", account.role)
         }
-        if (!valid) return 401 to JSONObject().put("error", "unauthorized")
+        val token = authorization?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")
+        val session = token?.let { raw -> synchronized(sessions) {
+            val record = sessions[tokenHash(raw)]
+            if (record != null && record.expiresAt > Instant.now().epochSecond) record
+            else { sessions.remove(tokenHash(raw)); null }
+        } }
+        if (session == null) return 401 to JSONObject().put("error", "unauthorized")
+        if (session.role == "OPERATOR") {
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val stillActive = runCatching {
+                HostAccountStore.list(context).any { it.role == "OPERATOR" && it.username.equals(session.username, true) }
+            }.getOrDefault(false)
+            if (!stillActive) {
+                if (token != null) synchronized(sessions) { sessions.remove(tokenHash(token)) }
+                return 401 to JSONObject().put("error", "operator_account_revoked")
+            }
+        }
         if (method == "DELETE" && path == "/api/v1/session") {
             synchronized(sessions) { sessions.remove(tokenHash(token!!)) }
             return 204 to JSONObject()
         }
+        if (method == "GET" && path == "/api/v1/auth/me")
+            return 200 to JSONObject().put("username", session.username).put("role", session.role).put("expiresAt", session.expiresAt)
+        if (path == "/api/v1/auth/accounts") {
+            if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            if (method == "GET") {
+                val items = org.json.JSONArray()
+                HostAccountStore.list(context).forEach { items.put(JSONObject().put("username", it.username).put("role", it.role).put("createdAt", it.createdAt)) }
+                return 200 to JSONObject().put("items", items)
+            }
+            if (method == "POST") return runCatching {
+                val role = if (!HostAccountStore.hasOwner(context)) "OWNER" else body.optString("role", "OPERATOR").uppercase()
+                require(role == "OPERATOR" || (role == "OWNER" && !HostAccountStore.hasOwner(context))) { "only_one_owner_account_supported" }
+                val account = HostAccountStore.create(context, body.getString("username"), body.getString("password").toCharArray(), role)
+                OperationalLog.record(context, "INFO", "HOST_ACCOUNT_CREATED", "Role=${account.role}; actor=${session.username}")
+                201 to JSONObject().put("username", account.username).put("role", account.role)
+            }.getOrElse { 400 to JSONObject().put("error", it.message ?: "account_creation_failed") }
+        }
+        if (method == "DELETE" && path.startsWith("/api/v1/auth/accounts/")) {
+            if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
+            val username = path.removePrefix("/api/v1/auth/accounts/")
+            if (username.equals(session.username, true)) return 409 to JSONObject().put("error", "cannot_revoke_current_account")
+            val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+            val removed = runCatching { HostAccountStore.revokeOperator(context, username) }.getOrDefault(false)
+            return if (removed) 204 to JSONObject() else 404 to JSONObject().put("error", "account_not_found")
+        }
+        if (session.role == "OPERATOR" && !operatorAllowed(method, path))
+            return 403 to JSONObject().put("error", "owner_required")
         val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
         if (method == "GET" && path == "/api/v1/sites") {
             val items = org.json.JSONArray()
@@ -480,7 +539,7 @@ object ManagementApiServer {
     fun executeRemoteCommand(context: Context, kind: String, payload: JSONObject): JSONObject {
         appContext = context.applicationContext
         val token = randomToken(32)
-        synchronized(sessions) { sessions[tokenHash(token)] = Instant.now().epochSecond + 60 }
+        synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + 60, "remote-control", "OWNER") }
         try {
             val result = when (kind) {
                 "site_action" -> {
@@ -558,6 +617,14 @@ object ManagementApiServer {
         }
     }
 
+    private fun operatorAllowed(method: String, path: String): Boolean {
+        if (method == "GET") return true
+        if (method == "DELETE" && path == "/api/v1/session") return true
+        if (method == "POST" && path == "/api/v1/capacity") return true
+        if (method == "POST" && path == "/api/v1/capacity/benchmark") return true
+        if (method == "POST" && path.matches(Regex("/api/v1/sites/[A-Za-z0-9_-]{1,64}/actions"))) return true
+        return false
+    }
     private fun restartEngineRoutes(context: Context) {
         val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         val engineRunning = NativeEngine.status() == "RUNNING"
