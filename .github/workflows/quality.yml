@@ -17,6 +17,31 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --manifest-path rust-engine/Cargo.toml
 
+  control-plane:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pockethost
+          POSTGRES_PASSWORD: pockethost-ci
+          POSTGRES_DB: pockethost
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pockethost -d pockethost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://pockethost:pockethost-ci@localhost:5432/pockethost
+      POCKETHOST_CONTROL_ADMIN_TOKEN: ci-only-test-admin-token-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test remote control-plane backend and database migrations
+        run: cargo test --manifest-path control-plane/Cargo.toml
+
   python-runtime:
     runs-on: ubuntu-latest
     steps:
