@@ -42,10 +42,12 @@ Java_com_assayflux_pockethost_runtime_NodeBridge_start(
         return -4;
     }
 
-    const std::string home = root + "/.pockethost/home";
-    const std::string temp = cache + "/pockethost-node-tmp";
-    const std::string compile_cache = cache + "/pockethost-node-compile-cache";
-    make_directory((root + "/.pockethost").c_str());
+    // The caller supplies app-private noBackupFilesDir/node-runtime storage.
+    // Never place HOME, metrics or preload files beneath the user-served project root.
+    const std::string home = cache + "/home";
+    const std::string temp = cache + "/tmp";
+    const std::string compile_cache = cache + "/compile-cache";
+    make_directory(cache);
     make_directory(home);
     make_directory(temp);
     make_directory(compile_cache);
@@ -57,9 +59,9 @@ Java_com_assayflux_pockethost_runtime_NodeBridge_start(
     setenv("HOST", "127.0.0.1", 1);
     setenv("UV_THREADPOOL_SIZE", "2", 1);
     setenv("PORT", std::to_string(port).c_str(), 1);
-    setenv("POCKETHOST_METRICS_FILE", (root + "/.pockethost/metrics.json").c_str(), 1);
+    setenv("POCKETHOST_METRICS_FILE", (cache + "/metrics.json").c_str(), 1);
 
-    const std::string preload = root + "/.pockethost/metrics-preload.cjs";
+    const std::string preload = cache + "/metrics-preload.cjs";
     std::vector<std::string> arguments{
         "node",
         "--max-old-space-size=" + std::to_string(heap_limit_mb),
