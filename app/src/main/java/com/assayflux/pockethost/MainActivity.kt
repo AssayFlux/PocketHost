@@ -32,8 +32,11 @@ import com.assayflux.pockethost.diagnostics.DiagnosticsBundle
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
+import com.assayflux.pockethost.storage.NodeProjectImporter
 import com.assayflux.pockethost.storage.SiteBackupManager
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.runtime.NodeHostRuntime
+import com.assayflux.pockethost.sites.SiteRegistry
 import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
@@ -109,6 +112,9 @@ private fun PocketHostDashboard() {
     var pythonPortText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("python_port", 8081).toString()) }
     var pythonProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "python-project/wsgi.py").isFile) "Python WSGI project imported." else "No Python project imported.") }
     var pythonHosting by remember { mutableStateOf(runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)) }
+    var nodePortText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000).toString()) }
+    var nodeProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "node-project-default/package.json").isFile) "Node project imported." else "No Node project imported.") }
+    var nodeHosting by remember { mutableStateOf(NodeHostRuntime.status(context) == "RUNNING") }
     var cloudflareTokenText by remember { mutableStateOf("") }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
@@ -143,6 +149,7 @@ private fun PocketHostDashboard() {
             todayBytes = metrics.todayBytes
             activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
+            nodeHosting = runCatching { NodeHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
             pendingPairingCode = ManagementApiServer.pendingApprovalCode()
             preferences.getString("service_status", null)?.let { status = it }
@@ -263,6 +270,27 @@ private fun PocketHostDashboard() {
                         .putString("python_project_root", report.projectDirectory.absolutePath).apply()
                     status = "Python project is ready. Start the Python backend to run its wsgi.py application."
                 }.onFailure { error -> status = error.message ?: "Python project import failed." }
+                importing = false
+            }
+        }
+    }
+
+    val nodeProjectPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+        if (uri != null) {
+            importing = true
+            status = "Importing Node.js project and validating package.json…"
+            scope.launch {
+                val result = runCatching { withContext(Dispatchers.IO) { NodeProjectImporter.importTree(context, uri, "default") } }
+                result.onSuccess { report ->
+                    nodeProjectSummary = "Node.js project imported · \${report.fileCount} files · \${report.totalBytes / 1024} KB · \${report.entryFile.name}"
+                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                        .putString("node_project_root", report.projectDirectory.absolutePath).apply()
+                    runCatching {
+                        SiteRegistry.put(context, SiteRegistry.Site("node-default", "Node application", "node",
+                            report.projectDirectory.absolutePath, emptyList(), true))
+                    }.onFailure { OperationalLog.record(context, "WARN", "NODE_SITE_REGISTRY", it.message ?: "Could not register Node project.") }
+                    status = "Node.js project is ready. Dependencies must already be included in node_modules; npm install scripts are not run on-device."
+                }.onFailure { error -> status = error.message ?: "Node project import failed." }
                 importing = false
             }
         }
@@ -686,6 +714,48 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("NODE.JS 24 LTS · EMBEDDED RUNTIME", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text(nodeProjectSummary, color = Slate, fontSize = 12.sp)
+                        OutlinedButton(onClick = { nodeProjectPicker.launch(null) }, enabled = !importing && !nodeHosting,
+                            modifier = Modifier.fillMaxWidth()) { Text("Import Node.js project") }
+                        OutlinedTextField(value = nodePortText,
+                            onValueChange = { value -> if (value.length <= 5 && value.all(Char::isDigit)) nodePortText = value },
+                            label = { Text("Node.js HTTP port") }, enabled = !nodeHosting, singleLine = true)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(onClick = {
+                                val port = nodePortText.toIntOrNull()
+                                val root = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                    .getString("node_project_root", File(context.filesDir, "node-project-default").absolutePath)
+                                    ?: File(context.filesDir, "node-project-default").absolutePath
+                                val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                val staticPort = preferences.getInt("port", 8080)
+                                val pythonPort = preferences.getInt("python_port", 8081)
+                                if (port == null || port !in 1024..65535 || port == staticPort || port == pythonPort) {
+                                    status = "Choose a valid Node port different from the static and Python ports."
+                                } else {
+                                    preferences.edit().putInt("node_port", port).apply()
+                                    runCatching { NodeHostRuntime.start(context, root, port) }
+                                        .onSuccess { status = "Node.js runtime \${it}. Waiting for the app to listen on port \${port}." }
+                                        .onFailure { status = it.message ?: "Node.js failed to start." }
+                                }
+                            }, enabled = !nodeHosting && !importing) { Text("Start Node.js") }
+                            OutlinedButton(onClick = {
+                                NodeHostRuntime.stop(context)
+                                nodeHosting = false
+                                status = "Stopping the isolated Node.js process."
+                            }, enabled = nodeHosting) { Text("Stop Node.js") }
+                        }
+                        if (nodeHosting) Text("Node.js preview: http://127.0.0.1:\$nodePortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Runs one Node.js application in an isolated Android process. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = Slate, fontSize = 10.sp)
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEAE3D2))
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -710,7 +780,7 @@ private fun PocketHostDashboard() {
                     }
                 }
                 Text(if (advancedMode) "ADVANCED MODE · ENGINE DETAILS" else "SIMPLE MODE · SAFE STATIC SITE HOSTING", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Cloudflare Tunnel integration is under validation. Python WSGI is available; Node.js hosting and remote console control are not yet implemented. Public access requires a configured Cloudflare hostname and an access policy for private content.", color = Slate, fontSize = 11.sp)
+                Text("Cloudflare Tunnel integration is under validation. Python WSGI is available; Node.js hosting is embedded through the pinned Android Node 24 LTS SDK. Multi-runtime hostname routing and physical-device compatibility remain under validation. Public access requires a configured Cloudflare hostname and an access policy for private content.", color = Slate, fontSize = 11.sp)
                 Text("AssayFlux PocketHost · v0.1.0", color = Slate, fontSize = 11.sp)
             }
         }
