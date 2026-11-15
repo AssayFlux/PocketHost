@@ -680,17 +680,7 @@ private fun PocketHostDashboard() {
                                     } else {
                                         context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                                             .putBoolean("python_enabled", true).putInt("python_port", port).apply()
-                                        if (hosting) {
-                                            scope.launch {
-                                                val started = runCatching {
-                                                    withContext(Dispatchers.IO) { PythonHostRuntime.start(context, root, port, allowLan) }
-                                                }
-                                                started.onSuccess { status = "Python WSGI backend $it on port $port." }
-                                                    .onFailure { status = it.message ?: "Python backend failed to start." }
-                                            }
-                                        } else {
-                                            startHosting(false)
-                                        }
+                                        startHosting(false)
                                     }
                                 },
                                 enabled = !pythonHosting && !importing
