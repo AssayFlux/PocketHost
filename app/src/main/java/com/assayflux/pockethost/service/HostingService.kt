@@ -219,7 +219,9 @@ class HostingService : Service() {
             )
             stopSelf()
         }
-        return START_NOT_STICKY
+        // Persisted runtime preferences are sufficient to reconstruct the hosting stack
+        // when Android reclaims the app process under memory pressure.
+        return START_STICKY
     }
 
     override fun onDestroy() {
