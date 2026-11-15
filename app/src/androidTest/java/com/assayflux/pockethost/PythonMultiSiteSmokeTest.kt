@@ -49,20 +49,20 @@ class PythonMultiSiteSmokeTest {
     }
 
     private fun wsgi(body: String) =
-        "def application(environ, start_response):\\n" +
-            "    body = b'$body'\\n" +
-            "    start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', str(len(body)))])\\n" +
-            "    return [body]\\n"
+        "def application(environ, start_response):\n" +
+            "    body = b'$body'\n" +
+            "    start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', str(len(body)))])\n" +
+            "    return [body]\n"
 
     private fun get(port: Int, host: String): String = Socket().use { socket ->
         socket.soTimeout = 5_000
         socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
         socket.getOutputStream().write(
-            "GET / HTTP/1.1\\r\\nHost: $host\\r\\nConnection: close\\r\\n\\r\\n".toByteArray()
+            "GET / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray()
         )
         socket.getOutputStream().flush()
         val response = socket.getInputStream().bufferedReader().readText()
         check(response.startsWith("HTTP/1.0 200")) { response }
-        response.substringAfter("\\r\\n\\r\\n").trim()
+        response.substringAfter("\r\n\r\n").trim()
     }
 }
