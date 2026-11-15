@@ -109,7 +109,7 @@ fn new_token() -> String {
     hex::encode(bytes)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct AdminActor { name: String, role: String }
 
 async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
