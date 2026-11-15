@@ -2,23 +2,26 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `ae7945f559f39a4b6ed012b3bef704b3bbac23d3` (PRs #30–#36 merged; PR #31 removed obsolete blockchain references; PR #30 added bounded waiting admission and queue-depth visibility).
-> - **Quality CI:** [run 43712517953](https://github.com/AssayFlux/PocketHost/actions/runs/43712517953) passed all six jobs on current main: Rust, Node runtime, Python runtime, control plane, TypeScript console and Android source compilation.
-> - **Android build:** [run 43712440966](https://github.com/AssayFlux/PocketHost/actions/runs/43712440966) successfully built cloudflared Android JNI libraries and ARM64, ARMv7 and x86_64 debug APKs. [APK bundle artifact 14161512087](https://github.com/AssayFlux/PocketHost/actions/runs/43712440966/artifacts/14161512087). Emulator instrumentation was skipped by design; physical-device acceptance is owner-run.
+> - **Current main:** `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`. PRs #40–#45 merged: Activity Result crash correction, five-tab UI refresh, encrypted full-app backup/restore, passphrase and archive limits, ZIP path normalization, and restore counter correction.
+> - **Quality CI:** [run 43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Rust, Node, Python, control plane, TypeScript console and Android source compilation.
+> - **Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704): cloudflared Android build passed; ARM64/ARMv7/x86_64 debug APK assembly and ABI verification are in progress at this reconciliation. Emulator instrumentation is skipped by design.
+> - **Android crash fix:** MainActivity now uses ComponentActivity for all Compose Activity Result launchers; the biometric prompt runs in a dedicated BiometricHostActivity. No request-code masking was introduced.
+> - **UI:** five destinations—Dashboard, Sites, Activity, Learn and Settings. Settings are grouped into General, Network, Runtimes and About; Learn guides start collapsed; Dashboard has a high-contrast hosting status hero.
+> - **Backup:** versioned AES-256-GCM full-app backup includes the active static site, optional Python/Node project roots, hostname routes and selected non-secret settings. Device-bound credentials are excluded; restored runtimes stay stopped and require fresh trusted-code acknowledgement. Legacy static-only AFPHB01 backups remain restorable.
 > - **Capacity protections:** 16 active connections, bounded 32-socket/200 ms wait queue, per-client token-bucket rate limiting, per-site streaming concurrency caps, explicit 503/Retry-After overload handling, observable active/queued/rejected counts, and up-to-three-second graceful shutdown drain.
 > - **Capacity Lab:** bounded static-origin sweep reports request rate, byte throughput and average/p50/p95/maximum latency. It remains a static microbenchmark, not multi-workload or long-duration device calibration.
 > - **Blockchain:** no blockchain implementation/dependency; obsolete blockchain references were removed from project documentation.
-> - **Release APK:** signed release is not built because release signing secrets are external. The available APKs are debug builds.
+> - **Release APK:** debug ABI builds are being packaged; a signed production release is not built because signing material is owner-controlled.
 > - **Device acceptance:** physical installation, Android lifecycle, existing Cloudflare tunnel/public HTTPS, thermal, battery and OEM behavior are owner-run acceptance tasks.
-> - **Release state:** integrated development build; not production approved. Python/Node run under the app UID and are not OS-sandboxed; execute only trusted code. Remote control-plane deployment and payment-provider integration require separate implementation/configuration.
+> - **Release state:** integrated development build; not production approved. Python/Node run under the app UID and are not OS-sandboxed; execute only trusted owner-installed code. Remote control-plane deployment, payment-provider integration and independent security review remain open.
 >
 > The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this current reconciliation, use the current commit/run identifiers above.
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `34f8d5329223d59e984e98b977e92d86e6efd555`  
-**Quality CI:** [run 43703703022](https://github.com/AssayFlux/PocketHost/actions/runs/43703703022) passed all six jobs, including Rust, Node, Python, console, control plane and Android source compilation. No APK packaging or emulator UI acceptance is implied.  
-**Android integration:** [run 43703702835](https://github.com/AssayFlux/PocketHost/actions/runs/43703702835) pending at reconciliation time.  
+**Latest implementation commit:** `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`  
+**Quality CI:** [run 43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Android source compilation.  
+**Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) is building and verifying ABI-specific debug APKs; emulator instrumentation is skipped by design.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -40,7 +43,7 @@ The separate Rust/PostgreSQL Remote Control Plane is optional remote management 
 - User-started foreground HostingService, notification/status handling and bounded optional wake-lock lease.
 - SAF folder and ZIP imports, validation, staging, retained releases and rollback.
 - Python and Node project importers with bounded size/count/depth and path/sensitive-file checks.
-- Encrypted static-site backup/restore and redacted diagnostics export.
+- Encrypted full-app backup/restore for the active website, optional Python/Node project roots, hostname routes and selected non-secret settings; redacted diagnostics export.
 
 ### Rust hosting engine
 - Tokio + Hyper HTTP engine; GET/HEAD, streaming responses, byte ranges and MIME handling.
@@ -112,7 +115,7 @@ Do not describe these as live, secure or production-ready until implemented and 
 
 ## Not yet verified / production release gates
 
-1. Complete APK assembly, APK content/signature checks and API 26/33/35 emulator instrumentation on current merged source.
+1. Complete current ABI-specific APK assembly/content verification. Emulator instrumentation is skipped by design; physical Android 8/15 device acceptance is owner-run.
 2. Actual Node instrumentation: load `libnode.so`, confirm version, import bundled dependency, verify loopback ingress, Rust proxy, stop and fresh-process restart.
 3. Foreground-service behavior, notification permission, Doze, screen-off, battery saver, Wi-Fi/mobile transitions, low memory and process death.
 4. Physical testing on Vivo Y95 (Android 8.1 / 4 GB / ARM64), Moto G54 (Android 15 / ARM64), and representative Android 8 ARMv7 device.
