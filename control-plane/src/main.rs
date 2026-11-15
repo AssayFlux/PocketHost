@@ -95,6 +95,14 @@ fn secure_equal(a: &str, b: &str) -> bool {
     a.as_bytes().ct_eq(b.as_bytes()).into()
 }
 
+fn role_can_write(role: &str) -> bool {
+    matches!(role, "owner" | "editor")
+}
+
+fn has_zip_signature(bytes: &[u8]) -> bool {
+    bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06")
+}
+
 fn new_token() -> String {
     let mut bytes = [0u8; 32];
     OsRng.fill_bytes(&mut bytes);
@@ -112,7 +120,7 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<String, (StatusC
 
 async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<String, (StatusCode, String)> {
     let role = admin(headers, state).await?;
-    if role == "viewer" {
+    if !role_can_write(&role) {
         return Err((StatusCode::FORBIDDEN, "insufficient_role".into()));
     }
     Ok(role)
@@ -457,6 +465,22 @@ mod tests {
         assert_eq!(a.len(), 64);
         assert_ne!(a, b);
         assert_ne!(token_hash(&a), a);
+    }
+
+    #[test]
+    fn viewer_is_read_only_and_editor_owner_can_mutate() {
+        assert!(!role_can_write("viewer"));
+        assert!(role_can_write("editor"));
+        assert!(role_can_write("owner"));
+        assert!(!role_can_write("unknown"));
+    }
+
+    #[test]
+    fn deployment_upload_requires_a_zip_signature() {
+        assert!(has_zip_signature(b"PK\x03\x04archive"));
+        assert!(has_zip_signature(b"PK\x05\x06empty"));
+        assert!(!has_zip_signature(b"not a zip"));
+        assert!(!has_zip_signature(b""));
     }
 
     #[test]
