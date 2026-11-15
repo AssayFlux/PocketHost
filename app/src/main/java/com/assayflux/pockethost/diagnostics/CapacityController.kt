@@ -10,6 +10,31 @@ import java.time.Instant
 object CapacityController {
     private const val PREFS = "pockethost_capacity"
     private const val DEFAULT_SAFE_LIMIT = 16
+    @Volatile private var lastHealthState = "NORMAL"
+
+    private fun healthFactor(context: Context): Pair<Double, String> {
+        val memory = android.app.ActivityManager.MemoryInfo()
+        context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
+        val thermal = if (android.os.Build.VERSION.SDK_INT >= 29)
+            context.getSystemService(android.os.PowerManager::class.java).currentThermalStatus else 0
+        val storage = android.os.StatFs(context.filesDir.absolutePath)
+        val freeBytes = storage.availableBlocksLong * storage.blockSizeLong
+        val battery = runCatching {
+            context.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        }.getOrNull()
+        val level = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val batteryPercent = if (level >= 0 && scale > 0) level * 100 / scale else 100
+        val batteryStatus = battery?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val charging = batteryStatus == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+            batteryStatus == android.os.BatteryManager.BATTERY_STATUS_FULL
+        val critical = memory.lowMemory || memory.availMem < memory.totalMem / 20L ||
+            thermal >= 4 || freeBytes < 256L * 1024L * 1024L
+        val constrained = thermal >= 3 || memory.availMem < memory.totalMem / 8L ||
+            freeBytes < 1024L * 1024L * 1024L || (batteryPercent <= 10 && !charging)
+        val state = if (critical) "PROTECTIVE" else if (constrained) "CONSTRAINED" else "NORMAL"
+        return (if (critical) 0.1 else if (constrained) 0.5 else 1.0) to state
+    }
 
     @Synchronized fun tick(context: Context): JSONObject {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -61,7 +86,14 @@ object CapacityController {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val safe = prefs.getInt("safe_concurrency", DEFAULT_SAFE_LIMIT).coerceIn(1, 16)
         val percent = prefs.getInt("percent", 100).coerceIn(1, 100)
-        val limit = ((safe * percent) / 100.0).toInt().coerceAtLeast(1).coerceAtMost(16)
+        val baseLimit = ((safe * percent) / 100.0).toInt().coerceAtLeast(1).coerceAtMost(16)
+        val (factor, state) = healthFactor(context)
+        val limit = (baseLimit * factor).toInt().coerceAtLeast(1).coerceAtMost(16)
+        if (state != lastHealthState) {
+            lastHealthState = state
+            OperationalLog.record(context, if (state == "NORMAL") "INFO" else "WARN",
+                "CAPACITY_HEALTH_STATE", "Automatic admission protection state changed to $state.")
+        }
         runCatching { NativeEngine.setCapacityLimit(limit) }
     }
 
@@ -70,8 +102,10 @@ object CapacityController {
         val safe = prefs.getInt("safe_concurrency", DEFAULT_SAFE_LIMIT).coerceIn(1, 16)
         val percent = prefs.getInt("percent", 100).coerceIn(1, 100)
         val expiry = prefs.getLong("schedule_expires", 0L)
+        val (factor, healthState) = healthFactor(context)
         return JSONObject().put("percent", percent).put("safeConcurrency", safe)
-            .put("effectiveConcurrencyLimit", ((safe * percent) / 100.0).toInt().coerceAtLeast(1))
+            .put("effectiveConcurrencyLimit", (((safe * percent) / 100.0).toInt().coerceAtLeast(1) * factor).toInt().coerceAtLeast(1))
+            .put("healthState", healthState).put("healthFactor", factor)
             .put("calibratedAt", prefs.getLong("calibrated_at", 0L))
             .put("scheduleExpiresAt", expiry)
             .put("scheduled", expiry > Instant.now().epochSecond)

@@ -11,6 +11,7 @@ import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.CapacityController
 import com.assayflux.pockethost.diagnostics.CapacityLab
 import com.assayflux.pockethost.diagnostics.DailyOperationsReport
+import com.assayflux.pockethost.diagnostics.TelemetryStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.engine.NativeEngine
@@ -332,6 +333,12 @@ object ManagementApiServer {
             DailyOperationsReport.list(context).forEach(reports::put)
             return 200 to JSONObject().put("items", reports).put("retentionDays", 90)
         }
+        if (method == "GET" && path == "/api/v1/telemetry") {
+            val samples = org.json.JSONArray()
+            TelemetryStore.history(context, 120).forEach(samples::put)
+            return 200 to JSONObject().put("latest", TelemetryStore.latest(context) ?: TelemetryStore.record(context))
+                .put("samples", samples).put("sampleCount", samples.length())
+        }
         if (method == "GET" && path == "/api/v1/metrics") {
             val m = MetricsStore.snapshot(context)
             val sources = org.json.JSONArray().put(JSONObject().put("source", "rust-static")
@@ -355,6 +362,7 @@ object ManagementApiServer {
                 .put("availableDeviceMemoryBytes", memoryInfo.availMem)
                 .put("totalDeviceMemoryBytes", memoryInfo.totalMem)
                 .put("lowMemory", memoryInfo.lowMemory)
+                .put("telemetry", TelemetryStore.latest(context) ?: TelemetryStore.record(context))
             return 200 to JSONObject().put("sampledAt", Instant.now().toString())
                 .put("sources", sources).put("deviceResources", resources)
         }

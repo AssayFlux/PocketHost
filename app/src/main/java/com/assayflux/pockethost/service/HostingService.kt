@@ -8,10 +8,12 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.diagnostics.CapacityController
+import com.assayflux.pockethost.diagnostics.TelemetryStore
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.management.ManagementApiServer
@@ -255,9 +257,16 @@ class HostingService : Service() {
         metricsMonitorActive = true
         Thread({
             try {
+                var lastTelemetryAt = 0L
+                TelemetryStore.record(this)
                 while (!stopping && NativeEngine.status() == "RUNNING") {
                     MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
                     CapacityController.tick(this)
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - lastTelemetryAt >= 30_000L) {
+                        TelemetryStore.record(this)
+                        lastTelemetryAt = now
+                    }
                     Thread.sleep(2_000)
                 }
             } catch (_: InterruptedException) {

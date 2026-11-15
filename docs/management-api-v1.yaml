@@ -159,6 +159,12 @@ paths:
           description: Limits outside supported range
         '409':
           description: Stop Python and Node before changing limits
+  /telemetry:
+    get:
+      summary: Read the latest device telemetry and bounded sample history
+      responses:
+        '200':
+          description: Device profile and recent samples; unavailable values are represented as null
   /capacity:
     get:
       summary: Read the current admission budget and capacity profile

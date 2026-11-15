@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -32,6 +35,8 @@ import com.assayflux.pockethost.diagnostics.DiagnosticsBundle
 import com.assayflux.pockethost.diagnostics.CapacityController
 import com.assayflux.pockethost.diagnostics.CapacityLab
 import com.assayflux.pockethost.diagnostics.DailyOperationsReport
+import com.assayflux.pockethost.diagnostics.TelemetryStore
+import com.assayflux.pockethost.diagnostics.DeviceTelemetry
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
@@ -133,6 +138,7 @@ private fun PocketHostDashboard() {
     var capacityInfo by remember { mutableStateOf(CapacityController.snapshot(context)) }
     var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot()) }
     var capacityDuration by remember { mutableStateOf("180") }
+    var deviceTelemetry by remember { mutableStateOf(TelemetryStore.latest(context) ?: DeviceTelemetry.snapshot(context)) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -171,6 +177,7 @@ private fun PocketHostDashboard() {
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections()) }
             capacityBenchmark = CapacityLab.snapshot()
+            deviceTelemetry = TelemetryStore.latest(context) ?: deviceTelemetry
             delay(1_000)
         }
     }
@@ -535,7 +542,32 @@ private fun PocketHostDashboard() {
                             modifier = Modifier.fillMaxWidth()) { Text(if (capacityBenchmark.optString("state") == "RUNNING") "Benchmark running…" else "Measure safe capacity") }
                         Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
                             color = Slate, fontSize = 11.sp)
-                        Text("Daily reports retained: ${DailyOperationsReport.list(context).size}. The percentage controls admission concurrency, not CPU usage or a guaranteed visitor count. Android can still stop the app.",
+                        val benchmarkLevels = capacityBenchmark.optJSONArray("levels")
+                        val chartRows = (0 until (benchmarkLevels?.length() ?: 0)).mapNotNull { index ->
+                            benchmarkLevels?.optJSONObject(index)?.let { it.optInt("concurrency") to it.optLong("p95LatencyMs") }
+                        }
+                        if (chartRows.isNotEmpty()) {
+                            Text("P95 response latency by concurrency", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Canvas(Modifier.fillMaxWidth().height(112.dp)) {
+                                val maxLatency = maxOf(750L, chartRows.maxOf { it.second }).toFloat()
+                                val rowHeight = size.height / chartRows.size
+                                chartRows.forEachIndexed { index, row ->
+                                    val top = index * rowHeight + rowHeight * 0.2f
+                                    val barWidth = size.width * (row.second.toFloat() / maxLatency).coerceIn(0f, 1f)
+                                    drawRect(color = Bronze, topLeft = Offset(0f, top), size = Size(barWidth, rowHeight * 0.48f))
+                                    drawLine(color = Teal.copy(alpha = 0.55f),
+                                        start = Offset(size.width * (750f / maxLatency), top - 2f),
+                                        end = Offset(size.width * (750f / maxLatency), top + rowHeight * 0.7f), strokeWidth = 2f)
+                                }
+                            }
+                            Text("Bars show p95 milliseconds; vertical marker = 750 ms acceptance threshold. Concurrency levels: ${chartRows.joinToString { it.first.toString() }}.",
+                                color = Slate, fontSize = 10.sp)
+                        }
+                        Text("Device: ${deviceTelemetry.optString("manufacturer")} ${deviceTelemetry.optString("model")} · Android API ${deviceTelemetry.optInt("androidApi")} · ${deviceTelemetry.optInt("cpuCores")} CPU cores",
+                            color = Slate, fontSize = 11.sp)
+                        Text("RAM available: ${formatBytes(deviceTelemetry.optLong("availableMemoryBytes"))} · storage free: ${formatBytes(deviceTelemetry.optLong("storageAvailableBytes"))} · battery: ${if (deviceTelemetry.isNull("batteryPercent")) "unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "%"} · thermal: ${deviceTelemetry.optString("thermalLabel", "UNKNOWN")} · network: ${deviceTelemetry.optString("networkTransport", "unknown")}",
+                            color = Slate, fontSize = 11.sp)
+                        Text("Automatic health state: ${capacityInfo.optString("healthState", "NORMAL")}. Daily reports retained: ${DailyOperationsReport.list(context).size}. The percentage controls admission concurrency, not CPU usage or a guaranteed visitor count. Android can still stop the app.",
                             color = Slate, fontSize = 10.sp)
                     }
                 }

@@ -34,7 +34,7 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 **Priority: P0**
 
-**Implementation update:** bounded rotating logs and aggregate counters already exist. A first daily rollover report is now persisted (90-report retention), and the dashboard/console expose the report count. This is partial: the report currently summarizes static-engine counters and retained redacted events, not complete uptime, latency, battery, tunnel or financial data.
+**Implementation update:** bounded rotating logs and aggregate counters already exist. A versioned Android device sampler now records model/API/ABIs/cores, sampled CPU load, RAM/PSS/heaps, storage, battery/temperature, thermal state and network transport into a two-file bounded history. A first daily rollover/hourly snapshot report is persisted (90-report retention), and the dashboard/console expose device health. This is partial: there is no complete uptime, latency, network-throughput, tunnel or financial report yet.
 
 1. Versioned hardware/device profile.
 2. CPU, RAM/PSS, storage, battery, thermal, network and runtime telemetry.
@@ -64,7 +64,7 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 **Priority: P0**
 
-**Implementation update:** a first admission limiter applies the calibrated connection ceiling and 1–100% profile in Rust; excess accepted sockets receive HTTP 503 with Retry-After. The Android app and TypeScript console support manual profiles and the 30%-for-180-minutes schedule with automatic expiry/restore. This is not yet the complete multi-state thermal/memory/battery Governor, rate limiter, per-site fairness scheduler or graceful in-flight drain.
+**Implementation update:** a first admission limiter applies the calibrated connection ceiling and 1–100% profile in Rust; excess accepted sockets receive HTTP 503 with Retry-After. The Android app and TypeScript console support manual profiles and the 30%-for-180-minutes schedule with automatic expiry/restore. Android memory, storage, battery and thermal signals automatically reduce the effective connection ceiling under constrained/protective states. This is not yet the complete multi-state Rust governor, rate limiter, per-site fairness scheduler or graceful in-flight drain.
 
 1. Rust Resource Governor with NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY and EMERGENCY states.
 2. Global/per-site/per-route concurrency and rate budgets.
