@@ -250,6 +250,32 @@ object ManagementApiServer {
                     .put(JSONObject().put("name", "python").put("state", py))
                     .put(JSONObject().put("name", "node").put("state", NodeHostRuntime.status(context))))
         }
+        if (method == "GET" && path == "/api/v1/resources") {
+            val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            val memory = ActivityManager.MemoryInfo()
+            context.getSystemService(ActivityManager::class.java).getMemoryInfo(memory)
+            val defaultPythonWorkers = (memory.totalMem / (512L * 1024L * 1024L)).toInt().coerceIn(4, 16)
+            val defaultNodeHeap = (memory.totalMem / (1024L * 1024L * 20L)).toInt().coerceIn(128, 384)
+            return 200 to JSONObject().put("pythonMaxWorkers", prefs.getInt("python_max_workers", defaultPythonWorkers))
+                .put("nodeHeapMb", prefs.getInt("node_heap_mb", defaultNodeHeap))
+                .put("nodeHeapRangeMb", org.json.JSONArray().put(96).put(512))
+                .put("pythonWorkerRange", org.json.JSONArray().put(2).put(16))
+                .put("deviceTotalMemoryBytes", memory.totalMem).put("deviceAvailableMemoryBytes", memory.availMem)
+                .put("note", "Limits are enforced per runtime process; Android may still terminate processes under system memory pressure.")
+        }
+        if (method == "POST" && path == "/api/v1/resources") {
+            val pythonWorkers = body.optInt("pythonMaxWorkers", -1)
+            val nodeHeap = body.optInt("nodeHeapMb", -1)
+            if (pythonWorkers !in 2..16 || nodeHeap !in 96..512)
+                return 400 to JSONObject().put("error", "resource_limits_out_of_range")
+            if (runCatching { PythonHostRuntime.status(context) }.getOrDefault("STOPPED") == "RUNNING" ||
+                NodeHostRuntime.status(context) in setOf("RUNNING", "STARTING"))
+                return 409 to JSONObject().put("error", "stop_python_and_node_before_changing_limits")
+            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                .putInt("python_max_workers", pythonWorkers).putInt("node_heap_mb", nodeHeap).apply()
+            OperationalLog.record(context, "INFO", "RESOURCE_LIMITS_UPDATED", "Python workers=$pythonWorkers; Node V8 heap=$nodeHeap MB")
+            return 200 to JSONObject().put("pythonMaxWorkers", pythonWorkers).put("nodeHeapMb", nodeHeap)
+        }
         if (method == "GET" && path == "/api/v1/metrics") {
             val m = MetricsStore.snapshot(context)
             val sources = org.json.JSONArray().put(JSONObject().put("source", "rust-static")
