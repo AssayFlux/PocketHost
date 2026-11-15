@@ -11,7 +11,7 @@
 - Package: `com.assayflux.pockethost`
 - Main branch: `main`
 - Initial version target: `0.1.0`
-- Current documentation branch: `docs/roadmap-development-context` (PR to be opened after updates).
+- Canonical documentation: merged to `main`; PR #15 is closed/merged.
 
 Always fetch current default branch, latest commit, open PRs, relevant source files and CI state before editing. Never assume an earlier chat summary is newer than GitHub. GitHub source is authoritative.
 
@@ -31,6 +31,8 @@ Always fetch current default branch, latest commit, open PRs, relevant source fi
 12. Python and Node are optional trusted application runtimes until a real security sandbox is implemented and independently validated.
 13. Target Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 and ARM64 phones; x86_64 for emulator.
 14. Product goal is budget-conscious hosting for small sites/development/modest workloads, not cloud-region reliability.
+15. UI direction is fixed: PocketHost teal `#24434A`, bronze `#B18B5E`, ivory `#F6F4EF`, slate `#657174`; modern clear cards and restrained accents. Keep the Android dashboard vertically scrollable on small screens, retain Simple/Advanced modes, and show the 16-connection engine ceiling accurately.
+16. The TypeScript console must remain responsive and clearly distinguish disconnected/preview states from live device data. Never fabricate metrics or imply a pairing succeeded before the API confirms it.
 
 ## 3. System architecture
 
@@ -50,7 +52,7 @@ Keep module contracts explicit. Do not duplicate HTTP routing in Kotlin or mix m
 
 ## 4. Current known implementation boundaries
 
-Source includes Kotlin/Compose app, Rust HTTP engine, multi-site routing, Python WSGI preview, Node mobile SDK integration, TypeScript console, local pairing API, Cloudflare connector, import/backup/diagnostics and optional remote control-plane code.
+Source includes Kotlin/Compose app, Rust HTTP engine, multi-site routing, Python WSGI preview, Node mobile SDK integration, TypeScript console, local pairing API, Cloudflare connector, import/backup/diagnostics, versioned device telemetry, static-workload Capacity Lab, timed capacity profiles, first device-side health governor and optional remote control-plane code.
 
 Do not infer production readiness:
 - Python/Node run with PocketHost app UID; no strong hostile-code sandbox.
@@ -61,17 +63,17 @@ Do not infer production readiness:
 - Local management sessions are in-memory and expire; process restart requires pairing again.
 - Connected tunnel does not prove public hostname serves the expected website.
 - Control-plane source does not prove deployed service or paired physical device.
-- Payment processing, encrypted payment ledger, blockchain anchoring and full adaptive governor are not implemented merely because PR #14 specifies them.
+- Payment processing, encrypted payment ledger, blockchain anchoring and the full Rust-native rate/fairness/queue governor are not implemented merely because PR #14 specifies them.
 
 Read runtime-specific docs before changing these components.
 
 ## 5. Required next product work
 
-Current main includes a first static-GET Capacity Lab, dynamic Rust concurrency admission cap, scheduled capacity profile and daily aggregate rollover report. These are deliberately partial implementations; see [PHASE_0_STATUS.md](PHASE_0_STATUS.md) for exact boundaries. Continue with broader device telemetry and report completeness, then the full multi-state governor, runtime isolation, payments and audit. Follow [ROADMAP.md](ROADMAP.md):
+Current main includes versioned low-frequency device telemetry, a static-GET Capacity Lab, dynamic Rust concurrency admission cap, timed capacity profiles, a five-state Android health derating policy with protective suspension of optional runtimes, and daily aggregate rollover reports. These are deliberately partial implementations; see [PHASE_0_STATUS.md](PHASE_0_STATUS.md) for exact boundaries. Continue with broader workload benchmarking and report completeness, then complete the Rust-native governor, runtime isolation, payments and audit. Follow [ROADMAP.md](ROADMAP.md):
 1. Reconcile source state and complete baseline CI/device/Cloudflare validation.
-2. Implement device telemetry and bounded structured logs/daily reports.
-3. Build Capacity Lab and benchmark-specific safe capacity graphs.
-4. Implement Rust Resource Governor, overload behavior and scheduled profiles (including 30% for three hours).
+2. Validate telemetry, rollover, redaction and bounded retention on devices.
+3. Expand Capacity Lab workload classes and benchmark-specific safe capacity graphs.
+4. Complete Rust Resource Governor, overload behavior and scheduled profiles (including 30% for three hours).
 5. Resolve runtime isolation and network/filesystem restrictions before accepting untrusted code.
 6. Implement PSP-based payment events, encrypted ledger, reconciliation and audit.
 7. Add optional hash-only blockchain anchoring after privacy/security review.

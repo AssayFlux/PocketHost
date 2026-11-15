@@ -39,7 +39,7 @@ Read [North Star](docs/NORTH_STAR.md), [Roadmap](docs/ROADMAP.md), and [Developm
 - Reject excess connections with an explicit HTTP 503 and Retry-After response instead of silently dropping them.
 - Archive daily aggregate traffic and redacted operational-event summaries with bounded 90-report retention.
 
-The current benchmark covers the local static GET route only. It does not certify Python/Node workloads, external network/tunnel capacity, long-duration thermal sustainability, requests per second for arbitrary sites, or a visitor-count SLA. The full thermal/memory Resource Governor and sandbox/payment/audit workstreams remain open.
+The current benchmark covers the local static GET route only. It does not certify Python/Node workloads, external network/tunnel capacity, long-duration thermal sustainability, requests per second for arbitrary sites, or a visitor-count SLA. The full Rust-native thermal/memory/rate/fairness Resource Governor, OS-enforced runtime sandbox, payment processing and tamper-evident audit workstreams remain open.
 
 ## Architecture
 
@@ -90,7 +90,8 @@ The website request path and administration path are separate. The Cloudflare Pu
 | Cloudflare | Android connector build, encrypted token and reconnect supervision | Reuse configured tunnel; verify public HTTPS from another network |
 | Backup | Encrypted static-site backup | Does not yet cover all runtime/configuration/payment data |
 | Remote management | Optional backend and phone agent source | Not deployed or real-device verified merely by existing source |
-| Adaptive capacity | Specification in PR #14 | Telemetry, benchmark, governor and schedules not yet implemented |
+| Adaptive capacity | Partial implementation: versioned device telemetry, static GET Capacity Lab, 1–100% timed profiles, Rust concurrency admission cap, five-state device health derating and protective runtime suspension | Broader workload calibration, full Rust rate/fairness/queue governor, long-duration validation and recovery acceptance remain |
+| Daily reports | Partial implementation: aggregate traffic and redacted operational-event snapshots, 90-report retention and JSON export | Full uptime, latency, tunnel, financial reconciliation and durable backup coverage remain |
 | Payment ledger | Security requirements specified in PR #14 | No live payment-processing or PCI-compliance claim |
 | Blockchain audit | Optional hash-checkpoint design specified | Not implemented; never store sensitive data on-chain |
 

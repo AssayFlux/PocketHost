@@ -24,14 +24,14 @@
 | TypeScript console | Connected in source | Full browser/device end-to-end validation |
 | Cloudflare Tunnel | Connector source/build integrated | Existing tunnel configured in app; external HTTPS content verified |
 | Remote control plane | Optional source implemented | Deploy and test real phone pairing/commands only if included in release |
-| Adaptive telemetry | Planned/specification | Correct device metrics, validity, retention and redaction tests |
-| Capacity Lab | Planned/specification | Repeatable device benchmarks with documented workload and safe envelope |
-| Resource Governor | Planned/specification | Bounded admission, queues, overload behavior, recovery and fault injection |
-| Capacity schedules | Planned/specification | 30%-for-3-hours schedule, expiry, restoration and persistence test |
+| Adaptive telemetry | Partial implementation: versioned 30-second hardware samples and bounded history | Verify accuracy/missing values, battery/thermal behavior, retention, restart and physical-device performance |
+| Capacity Lab | First static-GET loopback sweep implemented; p95 latency and safe concurrency ceiling recorded | Add representative workload classes, throughput/resource trends, repeatability and long-duration tests |
+| Resource Governor | Partial: Rust concurrency cap/503 plus five-state Android health derating and optional-runtime suspension | Add Rust-native rate/fairness/queue policies, graceful drain, fault injection and hysteresis acceptance |
+| Capacity schedules | Source implemented: custom timed percentage, expiry and previous-profile restoration | Verify restart, wall-clock changes, schedule replacement and failure recovery |
 | Runtime sandbox | Critical gap | Distinct UID/OS boundary, filesystem/network restrictions, quotas and adversarial tests |
 | Payments | Not implemented by PR #14 | PSP integration, signed webhooks, idempotency, durable ledger, reconciliation and security assessment |
 | Audit/blockchain | Planned/specification | Tamper detection, signed checkpoints; optional hash-only chain anchoring |
-| Daily reports/logs | Partial logging source; expanded design specified | Durable structured events, redaction, rotation, daily report and restore tests |
+| Daily reports/logs | Partial source: bounded redacted logs, hourly daily snapshots, rollover archive, 90-report retention and JSON export | Verify midnight rollover, process restart, storage exhaustion, reproducibility and full uptime/latency/tunnel reporting |
 | Backup/restore | Static-site scope | Tamper/wrong-passphrase/interruption and verified recovery; extend scope before payment ledger backup claims |
 | Release | Workflow/signing guide | Signed APKs, upgrade tests, checksums and compatibility evidence |
 
@@ -40,9 +40,9 @@
 1. Keep the existing phone-hosting architecture and document actual source state.
 2. Complete current CI/instrumentation on the exact final source SHA.
 3. Validate static hosting, routing, deployment, tunnel and local management on target devices.
-4. Implement telemetry and bounded operational logging.
-5. Implement Capacity Lab and evidence-based safe capacity.
-6. Implement Resource Governor, overload handling and configurable schedules.
+4. Extend and validate device telemetry, rollover reports and bounded operational logging.
+5. Expand Capacity Lab beyond static GET and validate evidence-based safe capacity.
+6. Complete the Rust-native Resource Governor, rate/fairness/queue handling and configurable schedules.
 7. Resolve runtime isolation before accepting third-party/untrusted code.
 8. Implement durable audit, secrets management and payment provider integration.
 9. Implement reconciliation, encrypted backups and daily financial/operations reports.
@@ -65,14 +65,13 @@
 
 ## Adaptive capacity acceptance
 
-- [ ] Hardware inventory and live telemetry are valid, timestamped and do not fabricate missing data.
-- [ ] Benchmark runs representative static and trusted-runtime workloads and stops safely on thermal, memory, battery, timeout and cancellation triggers.
-- [ ] Graph separates observed peak, sustainable safe capacity and current admission budget.
-- [ ] Governor keeps concurrency and queues bounded under overload.
-- [ ] Overload produces documented 429/503 behavior and recovers without restart loops.
-- [ ] Critical management/logging reserve survives visitor overload.
-- [ ] 30% capacity profile runs for three hours, expires, restores the previous profile and survives app restart as specified.
-- [ ] Thermal/memory degradation reduces admission automatically with hysteresis.
+- [x] First versioned device telemetry is implemented for model/API/ABIs/cores, sampled CPU, RAM/PSS/heaps, storage, battery/temperature, thermal state and network transport; physical accuracy and sustained behavior remain NOT TESTED.
+- [ ] Benchmark covers representative static and trusted-runtime workloads and stops safely on thermal, memory, battery, timeout and cancellation triggers.
+- [ ] Graph separates observed peak, sustainable safe capacity and current admission budget; current graph is a static-workload p95 chart only.
+- [x] First concurrency admission cap and HTTP 503/Retry-After rejection are implemented; bounded waiting queues and rate/fairness policies remain NOT IMPLEMENTED.
+- [ ] Critical management/logging reserve survives visitor overload under stress.
+- [ ] 30% capacity profile source workflow exists; three-hour wall-clock, process-restart and restoration acceptance remain NOT TESTED.
+- [x] Initial device-side health derating and protective runtime suspension are implemented; physical hysteresis/recovery acceptance remains NOT TESTED.
 
 ## Security, payments and audit acceptance
 

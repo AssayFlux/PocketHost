@@ -66,6 +66,9 @@ Use staged deployment, integrity checks, rollback and tested restore. A failed u
 ### 12. Small, testable boundaries
 Version API contracts and schemas. Keep static hosting independent from optional runtimes. Make each module observable and testable. Prefer fewer reliable capabilities over a large set of superficial toggles.
 
+### 13. Consistent product interface
+The interface should feel modern, calm and operational—not like a generic developer console. Preserve the AssayFlux palette: deep teal `#24434A`, bronze `#B18B5E`, ivory `#F6F4EF` and slate `#657174`. Use clear card hierarchy, restrained bronze highlights, readable metadata and responsive spacing. The native Android dashboard must scroll vertically on compact screens and keep Simple/Advanced modes. The TypeScript console must adapt to mobile widths and clearly show disconnected states rather than invented live data.
+
 ## What success looks like
 
 ### Simple Mode
