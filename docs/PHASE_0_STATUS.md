@@ -58,7 +58,7 @@
 - App-private structured JSONL service-status event log.
 - 1 MiB log rotation with three retained archives.
 - Redaction for token, authorization, secret, password and API-key assignments and bearer credentials.
-- Dashboard display of the latest eight events; file reads run off the main thread.
+- Dashboard display of the latest eight matching events with case-insensitive filtering across level, event name and message; log reads run off the main thread.
 - User-controlled export of redacted operational logs as JSONL through Android's Storage Access Framework.
 - User-controlled diagnostics ZIP containing redacted logs, app/Android compatibility metadata, non-secret hosting configuration and aggregate traffic counters; excludes project contents and tunnel credentials.
 
@@ -91,7 +91,7 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Connected TypeScript console, pairing flow and remote-control authorization.
 - Multi-site hosting, hostname routing and per-site listener/origin configuration.
 - Rust reverse proxy and runtime-to-site routing.
-- Log filtering and advanced event search are not implemented; a redacted diagnostics ZIP export is now implemented alongside JSONL export.
+- Advanced event search, date-range filtering and pagination are not implemented; the dashboard has a basic recent-event text filter and redacted diagnostics ZIP export.
 - Configurable cache policies, custom 404 pages and site-level request policies.
 - Python resource quotas, request timeouts, stronger isolation and dependency management.
 - Tunnel external-hostname/DNS validation and real-device network recovery testing.
