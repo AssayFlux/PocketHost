@@ -149,7 +149,11 @@ object SiteBackupManager {
         return try {
             val encoded = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
                 .generateSecret(spec).encoded
-            SecretKeySpec(encoded, "AES")
+            try {
+                SecretKeySpec(encoded, "AES")
+            } finally {
+                encoded.fill(0)
+            }
         } finally {
             spec.clearPassword()
         }
