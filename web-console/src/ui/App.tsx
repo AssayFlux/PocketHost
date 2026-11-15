@@ -180,6 +180,13 @@ export function App() {
         <article className="metric-card"><span>Static data served</span><strong>{metrics ? bytes(metrics.sources.find(x => x.source === "rust-static")?.bytesServed ?? 0) : "—"}</strong><small>Rust static server only</small></article>
         <article className="metric-card"><span>Last sample</span><strong>{metrics ? new Date(metrics.sampledAt).toLocaleTimeString() : "—"}</strong><small>Device-reported timestamp</small></article>
       </section>
+      <div className="section-heading"><div><span className="eyebrow">RESOURCE POLICY</span><h2>Runtime resource limits</h2></div><span className="muted-tag">DEVICE-AWARE</span></div>
+      <section className="panel resource-panel">
+        <div className="resource-control"><label>Python WSGI worker ceiling <strong>{pythonWorkers}</strong><input type="range" min="2" max="16" step="1" value={pythonWorkers} onChange={event => setPythonWorkers(Number(event.target.value))} /></label></div>
+        <div className="resource-control"><label>Node.js V8 heap ceiling <strong>{nodeHeap} MB</strong><input type="range" min="96" max="512" step="16" value={nodeHeap} onChange={event => setNodeHeap(Number(event.target.value))} /></label></div>
+        <p>{resources?.note ?? "Resource limits are device-managed."}</p>
+        <button disabled={busy || !resources} onClick={saveResources}>Save resource limits</button>
+      </section>
       <div className="section-heading" id="runtimes"><div><span className="eyebrow">DEVICE RUNTIMES</span><h2>Runtime health</h2></div><span className="muted-tag">{status?.state ?? "NOT CONNECTED"}</span></div>
       <section className="lower-grid">
         <article className="panel"><div className="panel-heading"><h3>Cloudflare Tunnel</h3><span className="muted-tag">{tunnel?.state ?? "UNKNOWN"}</span></div><p>{tunnel?.configured ? "Encrypted tunnel token is configured on the Android device." : "No tunnel token is configured."}</p><div className="site-actions"><button disabled={busy || !tunnel?.configured} onClick={() => tunnelAction("start")}>Start tunnel</button><button disabled={busy} onClick={() => tunnelAction("stop")}>Stop tunnel</button></div></article>
