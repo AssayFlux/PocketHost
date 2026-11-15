@@ -77,7 +77,7 @@ object ApplicationBackupManager {
 
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
-            require(passphrase.size >= 12) { "Use a backup passphrase with at least 12 characters." }
+            require(passphrase.size in 12..128) { "Use a backup passphrase between 12 and 128 characters." }
             requireAllRuntimesStopped(context)
 
             val files = context.filesDir
@@ -161,7 +161,7 @@ object ApplicationBackupManager {
         val backupDir = File(context.filesDir, "pockethost-restore-previous-${UUID.randomUUID()}")
         var preserveBackup = true
         try {
-            require(passphrase.size >= 12) { "Use the passphrase that was set when this backup was created." }
+            require(passphrase.size in 12..128) { "Use the backup passphrase (12–128 characters)." }
             requireAllRuntimesStopped(context)
 
             val prefix = ByteArray(MAGIC.size)
