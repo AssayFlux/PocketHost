@@ -125,6 +125,29 @@ class PythonHostRuntimeTest(unittest.TestCase):
                 runtime.start_many(json.dumps({"bad host": project}), port)
             self.assertEqual("STOPPED", runtime.status())
 
+    def test_wsgi_metrics_count_requests_bytes_and_release_active_slot(self):
+        before = runtime.metrics()
+        application = runtime._MetricsMiddleware(
+            lambda environ, start_response: [b"metrics-test", b"-payload"]
+        )
+        response = application({}, lambda status, headers: None)
+        self.assertEqual([b"metrics-test", b"-payload"], list(response))
+        after = runtime.metrics()
+        self.assertEqual(before["requests"] + 1, after["requests"])
+        self.assertEqual(before["bytes_sent"] + len(b"metrics-test-payload"), after["bytes_sent"])
+        self.assertEqual(before["active"], after["active"])
+        self.assertGreaterEqual(after["peak_active"], 1)
+
+    def test_worker_limit_is_bounded_and_applied_before_start(self):
+        previous = runtime._BoundedThreadingWSGIServer.max_workers
+        try:
+            runtime.configure(3)
+            self.assertEqual(3, runtime._BoundedThreadingWSGIServer.max_workers)
+            with self.assertRaisesRegex(ValueError, "between 2 and 16"):
+                runtime.configure(17)
+        finally:
+            runtime._BoundedThreadingWSGIServer.max_workers = previous
+
     def test_failed_wsgi_import_does_not_leave_runtime_running(self):
         with tempfile.TemporaryDirectory() as project:
             pathlib.Path(project, "wsgi.py").write_text(
