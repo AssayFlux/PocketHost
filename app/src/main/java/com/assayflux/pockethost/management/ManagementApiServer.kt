@@ -339,15 +339,34 @@ object ManagementApiServer {
             return when (site.runtime) {
                 "static" -> when (action) {
                     "start" -> {
-                        val hosts = SiteRegistry.hostRoutingJson(context, context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("python_port", 8081), context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000)).toString()
-                        val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080)
-                        val lan = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)
-                        val result = if (hosts != "{}") NativeEngine.startMultiSite(site.root, hosts, port, lan)
-                            else NativeEngine.start(site.root, port, lan)
-                        if (result == "OK") 200 to JSONObject().put("state", "RUNNING")
-                        else 503 to JSONObject().put("error", result)
+                        if (!site.enabled) {
+                            SiteRegistry.put(context, site.copy(enabled = true))
+                            if (NativeEngine.status() == "RUNNING") restartEngineRoutes(context)
+                        }
+                        if (NativeEngine.status() == "RUNNING") {
+                            200 to JSONObject().put("state", "RUNNING")
+                        } else {
+                            val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                            val routes = SiteRegistry.hostRoutingJson(context, prefs.getInt("python_port", 8081), prefs.getInt("node_port", 3000))
+                            val port = prefs.getInt("port", 8080)
+                            val lan = prefs.getBoolean("allow_lan", false)
+                            val result = if (routes.length() > 0) NativeEngine.startMultiSite(
+                                File(context.filesDir, "site").absolutePath, routes.toString(), port, lan
+                            ) else NativeEngine.start(site.root, port, lan)
+                            if (result == "OK") 200 to JSONObject().put("state", "RUNNING")
+                            else 503 to JSONObject().put("error", result)
+                        }
                     }
-                    "stop" -> 200 to JSONObject().put("state", NativeEngine.stop())
+                    "stop" -> {
+                        SiteRegistry.put(context, site.copy(enabled = false))
+                        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                        val remainingRoutes = SiteRegistry.hostRoutingJson(context, prefs.getInt("python_port", 8081), prefs.getInt("node_port", 3000))
+                        if (NativeEngine.status() == "RUNNING") {
+                            if (remainingRoutes.length() > 0) restartEngineRoutes(context)
+                            else NativeEngine.stop()
+                        }
+                        200 to JSONObject().put("state", "STOPPED")
+                    }
                     else -> 400 to JSONObject().put("error", "unsupported_site_action")
                 }
                 "python-wsgi" -> when (action) {
