@@ -3,6 +3,7 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.management.ManagementApiServer
+import com.assayflux.pockethost.engine.NativeEngine
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -11,6 +12,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.Socket
+import java.net.ServerSocket
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class ManagementApiSecurityTest {
@@ -53,6 +56,31 @@ class ManagementApiSecurityTest {
 
         val hostResponse = request("GET", "/api/v1/health", host = "attacker.example")
         assertEquals(403, hostResponse.first)
+    }
+
+    @Test
+    fun resourceLimitsCanChangeWhileStaticHostingRemainsOnline() {
+        val root = File(context.cacheDir, "remote-config-" + System.nanoTime())
+        assertEquals(true, root.mkdirs())
+        File(root, "index.html").writeText("still-online")
+        val port = ServerSocket(0).use { it.localPort }
+        try {
+            assertEquals("OK", NativeEngine.start(root.absolutePath, port, false))
+            val challenge = JSONObject(request("POST", "/api/v1/pair/challenge", "{}").second)
+            val challengeId = challenge.getString("challengeId")
+            val code = ManagementApiServer.pendingApprovalCode()!!
+            assertEquals(true, ManagementApiServer.approvePairing(code))
+            val token = JSONObject(request("POST", "/api/v1/pair/complete",
+                JSONObject().put("challengeId", challengeId).put("code", code).toString()).second).getString("accessToken")
+            val body = JSONObject().put("pythonMaxWorkers", 6).put("nodeHeapMb", 160).toString()
+            val response = request("POST", "/api/v1/resources", body, authorization = token)
+            assertEquals(200, response.first)
+            assertEquals("RUNNING", NativeEngine.status())
+            assertEquals(true, JSONObject(response.second).getBoolean("staticHostingPreserved"))
+        } finally {
+            NativeEngine.stop()
+            root.deleteRecursively()
+        }
     }
 
     private fun request(
