@@ -26,13 +26,14 @@ void make_directory(const std::string& path) {
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_assayflux_pockethost_runtime_NodeBridge_start(
-    JNIEnv* env, jclass, jstring project_root, jstring entry_file, jint port) {
+    JNIEnv* env, jclass, jstring project_root, jstring entry_file, jstring cache_directory, jint port) {
     bool expected = false;
     if (!g_node_started.compare_exchange_strong(expected, true)) return -2;
 
     const std::string root = from_java(env, project_root);
     const std::string entry = from_java(env, entry_file);
-    if (root.empty() || entry.empty() || port < 1024 || port > 65535) {
+    const std::string cache = from_java(env, cache_directory);
+    if (root.empty() || entry.empty() || cache.empty() || port < 1024 || port > 65535) {
         g_node_started.store(false);
         return -3;
     }
@@ -42,16 +43,19 @@ Java_com_assayflux_pockethost_runtime_NodeBridge_start(
     }
 
     const std::string home = root + "/.pockethost/home";
-    const std::string temp = root + "/.pockethost/tmp";
-    const std::string cache = root + "/.pockethost/compile-cache";
+    const std::string temp = cache + "/pockethost-node-tmp";
+    const std::string compile_cache = cache + "/pockethost-node-compile-cache";
     make_directory((root + "/.pockethost").c_str());
     make_directory(home);
     make_directory(temp);
-    make_directory(cache);
+    make_directory(compile_cache);
     setenv("HOME", home.c_str(), 1);
     setenv("TMPDIR", temp.c_str(), 1);
-    setenv("NODE_COMPILE_CACHE", cache.c_str(), 1);
+    setenv("NODE_COMPILE_CACHE", compile_cache.c_str(), 1);
+    setenv("NODE_COMPILE_CACHE_PORTABLE", "1", 1);
     setenv("NODE_ENV", "production", 1);
+    setenv("HOST", "127.0.0.1", 1);
+    setenv("UV_THREADPOOL_SIZE", "2", 1);
     setenv("PORT", std::to_string(port).c_str(), 1);
     setenv("POCKETHOST_METRICS_FILE", (root + "/.pockethost/metrics.json").c_str(), 1);
 
