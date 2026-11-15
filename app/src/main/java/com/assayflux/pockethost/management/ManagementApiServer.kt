@@ -335,15 +335,33 @@ object ManagementApiServer {
     }
 
     private fun restartEngineRoutes(context: Context) {
-        if (NativeEngine.status() != "RUNNING") return
         val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
-        runCatching { MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed()) }
-        NativeEngine.stop()
-        val routes = SiteRegistry.hostRoutingJson(context, prefs.getInt("python_port", 8081), prefs.getInt("node_port", 3000))
-        val root = File(context.filesDir, "site")
-        val result = NativeEngine.startMultiSite(root.absolutePath, routes.toString(),
-            prefs.getInt("port", 8080), prefs.getBoolean("allow_lan", false))
-        if (result != "OK") OperationalLog.record(context, "ERROR", "ROUTE_RELOAD_FAILED", result)
+        val engineRunning = NativeEngine.status() == "RUNNING"
+        if (engineRunning) {
+            runCatching { MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed()) }
+            NativeEngine.stop()
+        }
+        if (prefs.getBoolean("python_enabled", false)) {
+            runCatching { PythonHostRuntime.stop(context) }
+            val pythonHosts = SiteRegistry.pythonHostnameMap(context)
+            val pythonResult = runCatching {
+                if (pythonHosts.length() > 0) PythonHostRuntime.startSites(context, pythonHosts.toString(),
+                    prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false))
+                else PythonHostRuntime.start(context,
+                    prefs.getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
+                        ?: File(context.filesDir, "python-project").absolutePath,
+                    prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false))
+            }.getOrElse { "ERROR: " + (it.message ?: "Python route reload failed") }
+            if (pythonResult != "RUNNING" && pythonResult != "ALREADY_RUNNING")
+                OperationalLog.record(context, "ERROR", "PYTHON_ROUTE_RELOAD_FAILED", pythonResult)
+        }
+        if (engineRunning) {
+            val routes = SiteRegistry.hostRoutingJson(context, prefs.getInt("python_port", 8081), prefs.getInt("node_port", 3000))
+            val root = File(context.filesDir, "site")
+            val result = NativeEngine.startMultiSite(root.absolutePath, routes.toString(),
+                prefs.getInt("port", 8080), prefs.getBoolean("allow_lan", false))
+            if (result != "OK") OperationalLog.record(context, "ERROR", "ROUTE_RELOAD_FAILED", result)
+        }
     }
 
     private fun randomToken(size: Int): String = ByteArray(size).also(random::nextBytes).let {
