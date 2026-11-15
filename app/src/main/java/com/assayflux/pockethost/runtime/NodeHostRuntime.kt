@@ -36,9 +36,8 @@ object NodeHostRuntime {
         context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
         val automaticHeapMb = (memory.totalMem / (1024L * 1024L * 20L)).toInt().coerceIn(128, 384)
         val heapLimitMb = statePrefs.getInt("node_heap_mb", automaticHeapMb).coerceIn(96, 512)
-        prefs.edit().putString("state", "STARTING").putString("project_root", root.absolutePath)
-            .putString("metrics_json", JSONObject().put("source", "node").toString())
-            .putLong("updated_at", System.currentTimeMillis()).apply()
+        NodeRuntimeStateStore.update(context, state = "STARTING", detail = "Node.js startup requested.",
+            projectRoot = root.absolutePath, metrics = JSONObject().put("source", "node"))
         val intent = Intent(context, NodeHostingService::class.java)
             .putExtra(NodeHostingService.EXTRA_ROOT, root.absolutePath)
             .putExtra(NodeHostingService.EXTRA_ENTRY, entry.absolutePath)
@@ -52,15 +51,13 @@ object NodeHostRuntime {
     fun stop(context: Context): String {
         val stopped = context.stopService(Intent(context, NodeHostingService::class.java))
         if (!stopped) {
-            context.getSharedPreferences("pockethost_node_runtime", Context.MODE_PRIVATE)
-                .edit().putString("state", "STOPPED").apply()
+            NodeRuntimeStateStore.update(context, state = "STOPPED", detail = "Node.js service was not running.")
         }
         return "STOPPING"
     }
 
     fun status(context: Context): String {
-        val prefs = context.getSharedPreferences("pockethost_node_runtime", Context.MODE_PRIVATE)
-        val state = prefs.getString("state", "STOPPED") ?: "STOPPED"
+        val state = NodeRuntimeStateStore.state(context)
         if (state in setOf("RUNNING", "STARTING")) {
             val manager = context.getSystemService(ActivityManager::class.java)
             val serviceAlive = runCatching {
@@ -69,7 +66,7 @@ object NodeHostRuntime {
                 }
             }.getOrDefault(false)
             if (!serviceAlive) {
-                prefs.edit().putString("state", "STOPPED").putString("detail", "Node process is no longer running.").apply()
+                NodeRuntimeStateStore.update(context, state = "STOPPED", detail = "Node process is no longer running.")
                 return "STOPPED"
             }
         }
@@ -78,8 +75,6 @@ object NodeHostRuntime {
 
     fun metrics(context: Context): JSONObject? {
         if (status(context) != "RUNNING") return null
-        val raw = context.getSharedPreferences("pockethost_node_runtime", Context.MODE_PRIVATE)
-            .getString("metrics_json", null) ?: return null
-        return runCatching { JSONObject(raw).put("source", "node") }.getOrNull()
+        return NodeRuntimeStateStore.metrics(context)?.put("source", "node")
     }
 }
