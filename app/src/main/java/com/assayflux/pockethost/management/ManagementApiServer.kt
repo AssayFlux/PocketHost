@@ -423,6 +423,7 @@ object ManagementApiServer {
             val profile = CapacityController.tick(context)
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("queuedConnections", NativeEngine.queuedConnections())
+                .put("rateLimitedRequests", NativeEngine.rateLimitedRequests())
                 .put("rejectedConnections", NativeEngine.rejectedConnections())
                 .put("engineState", NativeEngine.status())
             return 200 to profile
