@@ -2,6 +2,8 @@
 
 **Purpose:** single actionable definition of completion. Source presence, documentation or a green compile is not production approval. Every gate must be marked PASS, FAIL or NOT TESTED with commit-specific evidence.
 
+> **Implementation snapshot — 2026-11-15:** main `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`. The latest quality run passed all six jobs, including Android source compilation. The Android integration workflow is packaging and verifying ABI-specific debug APKs; emulator instrumentation is skipped and physical-device acceptance remains owner-run. MainActivity now uses ComponentActivity for Compose Activity Result launchers, and the biometric prompt is hosted separately. The app UI has five focused destinations and grouped Settings. Encrypted full-app backup now includes the active website, optional Python/Node projects, hostname routes and selected non-secret settings; it deliberately excludes device credentials and keeps restored runtimes stopped. This remains a development build, not production approval.
+
 ## Product baseline
 
 - Standalone Kotlin/Jetpack Compose Android app; no Termux and no root.
@@ -16,7 +18,7 @@
 
 | Workstream | Current source status | Production completion evidence |
 |---|---|---|
-| Android shell/lifecycle | Integrated | API 26/33/35 and physical-device lifecycle acceptance |
+| Android shell/lifecycle | Integrated; MainActivity uses ComponentActivity for Compose Activity Result APIs, biometric prompt is hosted separately, five-tab card-first UI | API 26/33/35 and physical-device lifecycle acceptance; current emulator instrumentation is skipped by design |
 | Rust static engine | Integrated: static streaming/ranges, multi-host routing, bounded 16-active/32-waiting admission, per-client 429 rate limiting, per-site streaming concurrency caps, and three-second graceful drain | HTTP security, load, fault and multi-site end-to-end tests on target phones |
 | Python WSGI | Preview runtime | Device tests, failure recovery, quotas and reviewed isolation model |
 | Node.js | Integrated mobile SDK | Device execution, ABI, memory, restart and isolation acceptance |
@@ -32,7 +34,7 @@
 | Payments | Not implemented by PR #14 | PSP integration, signed webhooks, idempotency, durable ledger, reconciliation and security assessment |
 | Audit integrity | Planned/specification | Conventional hash-chain tamper detection and signed checkpoints |
 | Daily reports/logs | Partial source: bounded redacted logs, hourly daily snapshots, rollover archive, 90-report retention and JSON export | Verify midnight rollover, process restart, storage exhaustion, reproducibility and full uptime/latency/tunnel reporting |
-| Backup/restore | Static-site scope | Tamper/wrong-passphrase/interruption and verified recovery; extend scope before payment ledger backup claims |
+| Backup/restore | Encrypted full-app backup for active static site, Python/Node project roots, hostname routes and selected non-secret settings; legacy static-only restore supported | Wrong-passphrase/tamper/interruption rollback acceptance; custom static roots are not yet supported; no payment-ledger backup claim |
 | Release | Workflow/signing guide | Signed APKs, upgrade tests, checksums and compatibility evidence |
 
 ## Non-negotiable implementation order
