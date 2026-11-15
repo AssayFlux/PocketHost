@@ -131,6 +131,30 @@ object HostAccountStore {
         }
     }
 
+    /** Resets the Owner password only when the caller has separately proven physical device approval. */
+    @Synchronized fun recoverOwnerPassword(context: Context, newPassword: CharArray): String? {
+        try {
+            require(newPassword.size in 12..128) { "new_password_must_be_12_to_128_characters" }
+            val accounts = read(context)
+            val owner = (0 until accounts.length()).map { accounts.getJSONObject(it) }
+                .firstOrNull { it.optString("role") == "OWNER" } ?: return null
+            val salt = ByteArray(16).also(random::nextBytes)
+            val verifier = derive(newPassword, salt)
+            try {
+                owner.put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+                    .put("verifier", Base64.encodeToString(verifier, Base64.NO_WRAP))
+                    .put("iterations", ITERATIONS)
+                write(context, accounts)
+            } finally {
+                salt.fill(0)
+                verifier.fill(0)
+            }
+            return owner.getString("username")
+        } finally {
+            newPassword.fill('\u0000')
+        }
+    }
+
     @Synchronized fun revokeOperator(context: Context, username: String): Boolean {
         val source = read(context)
         val result = JSONArray()
