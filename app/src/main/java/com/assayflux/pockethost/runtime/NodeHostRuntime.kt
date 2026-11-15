@@ -57,17 +57,17 @@ object NodeHostRuntime {
 
     fun status(context: Context): String {
         val state = NodeRuntimeStateStore.state(context)
-        if (state in setOf("RUNNING", "STARTING")) {
-            val manager = context.getSystemService(ActivityManager::class.java)
-            val serviceAlive = runCatching {
-                manager.getRunningServices(Int.MAX_VALUE).any {
-                    it.service.className == NodeHostingService::class.java.name
-                }
-            }.getOrDefault(false)
-            if (!serviceAlive) {
-                NodeRuntimeStateStore.update(context, state = "STOPPED", detail = "Node process is no longer running.")
-                return "STOPPED"
+        val manager = context.getSystemService(ActivityManager::class.java)
+        val serviceAlive = runCatching {
+            manager.getRunningServices(Int.MAX_VALUE).any {
+                it.service.className == NodeHostingService::class.java.name
             }
+        }.getOrDefault(false)
+        // Never re-enter node::Start while the old :node process is still tearing down.
+        if (serviceAlive && state in setOf("ERROR", "STOPPED")) return "STARTING"
+        if (!serviceAlive && state in setOf("RUNNING", "STARTING")) {
+            NodeRuntimeStateStore.update(context, state = "STOPPED", detail = "Node process is no longer running.")
+            return "STOPPED"
         }
         return state
     }
