@@ -244,22 +244,18 @@ object ManagementApiServer {
                 if (username.length > 32) {
                     LoginThrottle(now) // Invalid oversized names are not retained in the bounded map.
                 } else {
-                    var state = loginAttempts[normalizedUsername]
-                    if (state == null) {
+                    val state = loginAttempts[normalizedUsername] ?: run {
                         if (loginAttempts.size >= 256) {
                             val oldest = loginAttempts.entries
                                 .filter { it.value.inFlight == 0 }
                                 .minByOrNull { it.value.windowStartedAt }?.key
                             if (oldest != null) loginAttempts.remove(oldest)
                         }
-                        if (loginAttempts.size >= 256) {
-                            null
-                        } else {
-                            state = LoginThrottle(now)
-                            loginAttempts[normalizedUsername] = state
-                            state.inFlight++
-                            state
-                        }
+                        if (loginAttempts.size >= 256) null
+                        else LoginThrottle(now).also { loginAttempts[normalizedUsername] = it }
+                    }
+                    if (state == null) {
+                        null
                     } else if (now - state.windowStartedAt >= 60 && state.inFlight == 0) {
                         state.windowStartedAt = now
                         state.failures = 0
