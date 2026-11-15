@@ -2,8 +2,8 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `a6bc0f77dac43d335bba36ad24e5d6e801e1b58e` (PRs #30–#36 merged; PR #31 removed obsolete blockchain references).
-> - **Quality CI:** [run 43711272472](https://github.com/AssayFlux/PocketHost/actions/runs/43711272472) passed all six jobs on current main: Rust, Node runtime, Python runtime, control plane, TypeScript console and Android source compilation.
+> - **Current main:** `c252236f9815cc6a8ddba94d75966a2e4d1083e5` (documentation reconciliation commit). **Product-code baseline:** `a6bc0f77dac43d335bba36ad24e5d6e801e1b58e` (PRs #30–#36 merged; PR #31 removed obsolete blockchain references).
+> - **Quality CI:** [run 43711272472](https://github.com/AssayFlux/PocketHost/actions/runs/43711272472) passed all six jobs on the product-code baseline: Rust, Node runtime, Python runtime, control plane, TypeScript console and Android source compilation.
 > - **Android APK build:** [run 43711203835](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835) passed cloudflared JNI build, three-ABI APK packaging and ABI-content verification. Emulator instrumentation was skipped by design; it is opt-in and physical-device acceptance is owner-run.
 > - **APK artifact:** [GitHub Actions artifact 14161340221](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835/artifacts/14161340221), SHA-256 `bd7e25439239f6c507b2c5762a2f8a8c353b37b8fdc129bfef10bd972deaa8c5`.
 > - **ABI APK SHA-256:** ARM64 `13d972bf6ad6579d511c1df9bb8e359a3422c8f39b8cd8c99ef6d2a408c1438a`; ARMv7 `4b207bfee30cafec1700def36692a742b982f55f3e2a1eaa9aa632941a6948f5`; x86_64 `e4ac7779962b742406675ec235c783b34cf97765017ca142823d8cb183305cb8`.
