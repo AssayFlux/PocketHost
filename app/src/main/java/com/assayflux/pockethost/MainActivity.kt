@@ -173,6 +173,7 @@ private fun PocketHostDashboard() {
     var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot(context)) }
     var capacityDuration by remember { mutableStateOf("180") }
     var selectedCapacityConcurrency by remember { mutableIntStateOf(-1) }
+    var capacityDetailsExpanded by remember { mutableStateOf(false) }
     var deviceTelemetry by remember { mutableStateOf(DeviceTelemetry.snapshot(context)) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
@@ -643,6 +644,12 @@ private fun PocketHostDashboard() {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("CAPACITY & AUTOMATIC PROTECTION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text("Safe ceiling: ${capacityInfo.optInt("safeConcurrency", 16)} · Active: ${capacityInfo.optLong("activeConnections")} · Health: ${capacityInfo.optString("healthState", "NORMAL")}",
+                            color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        TextButton(onClick = { capacityDetailsExpanded = !capacityDetailsExpanded }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (capacityDetailsExpanded) "Hide capacity controls" else "Show capacity controls and benchmark")
+                        }
+                        if (capacityDetailsExpanded) {
                         Text("Admission budget: ${capacityInfo.optInt("effectiveConcurrencyLimit", 16)} active connections · ${capacityInfo.optInt("percent", 100)}% of ${if (capacityInfo.optLong("calibratedAt") > 0L) "measured" else "provisional"} concurrency ceiling",
                             color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Slider(value = capacityPercent, onValueChange = { capacityPercent = it }, valueRange = 1f..100f)
@@ -716,6 +723,7 @@ private fun PocketHostDashboard() {
                         OutlinedButton(onClick = { dailyReportExportPicker.launch("pockethost-daily-report.json") },
                             enabled = DailyOperationsReport.list(context).isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
                             Text("Export latest daily report")
+                        }
                         }
                     }
                 }
