@@ -159,7 +159,7 @@ async fn list_users(
     State(s): State<AppState>, headers: HeaderMap,
 ) -> Result<Json<Vec<Value>>, (StatusCode, String)> {
     let actor = admin(&headers, &s).await?;
-    if actor != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let rows = sqlx::query("SELECT id,name,role,active,created_at FROM control_users ORDER BY created_at DESC")
         .fetch_all(&s.db).await.map_err(internal)?;
     Ok(Json(rows.into_iter().map(|r| json!({
@@ -173,7 +173,7 @@ async fn revoke_user(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let actor = admin(&headers, &s).await?;
-    if actor != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1")
         .bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "user_not_found".into())); }
@@ -264,7 +264,7 @@ async fn delete_device(
         let path: String = row.get("storage_path");
         let _ = fs::remove_file(path);
     }
-    audit(&s, &role, "device.revoke", &id.to_string(), json!({})).await?;
+    audit(&s, &role.name, "device.revoke", &id.to_string(), json!({})).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -302,7 +302,7 @@ async fn put_config(
         .bind(json!({"version":next,"config":committed_config}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, &role, "config.update", &id.to_string(), json!({"version":next})).await?;
+    audit(&s, &role.name, "config.update", &id.to_string(), json!({"version":next})).await?;
     Ok(Json(ConfigView { version: row.get("version"), config: row.get("config"), updated_at: row.get("updated_at") }))
 }
 
@@ -321,7 +321,7 @@ async fn queue_command(
     let result = sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) SELECT $1,id,$2,$3 FROM devices WHERE id=$4")
         .bind(command_id).bind(input.kind).bind(input.payload).bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "device_not_found".into())); }
-    audit(&s, &role, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
+    audit(&s, &role.name, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"commandId":command_id,"state":"queued"}))))
 }
 
@@ -356,7 +356,7 @@ async fn upload_site_archive(
         .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, &role, "site.deploy.queue", &id.to_string(), json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()})).await?;
+    audit(&s, &role.name, "site.deploy.queue", &id.to_string(), json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len(),"state":"queued"}))))
 }
 
