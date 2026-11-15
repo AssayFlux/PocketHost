@@ -75,6 +75,14 @@ object ApplicationBackupManager {
         var bytes: Long = 0L
     )
 
+    private data class ExtraStaticRoot(val archivePath: String, val root: File)
+    private data class ExportedRoutes(val manifest: JSONObject, val extraStaticRoots: List<ExtraStaticRoot>)
+    private data class ParsedRoutes(
+        val sites: List<SiteRegistry.Site>,
+        val customStaticRoots: Map<String, File>
+    )
+    private data class CustomRootChange(val active: File, val backup: File, val hadPrevious: Boolean)
+
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
             require(passphrase.size in 12..128) { "Use a backup passphrase between 12 and 128 characters." }
@@ -125,7 +133,7 @@ object ApplicationBackupManager {
             }
 
             val settings = readSafeSettings(context)
-            val routes = exportRoutes(context, site, python, node, includePython, includeNode)
+            val routeExport = exportRoutes(context, site, python, node, includePython, includeNode)
             val salt = ByteArray(SALT_BYTES).also(SecureRandom()::nextBytes)
             val nonce = ByteArray(NONCE_BYTES).also(SecureRandom()::nextBytes)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -143,8 +151,11 @@ object ApplicationBackupManager {
                 addTree(zip, site, "site", STATIC_LIMIT, counters)
                 if (includePython) addTree(zip, python, "python", PYTHON_LIMIT, counters)
                 if (includeNode) addTree(zip, node, "node", NODE_LIMIT, counters)
+                routeExport.extraStaticRoots.forEach { extra ->
+                    addTree(zip, extra.root, extra.archivePath, STATIC_LIMIT, counters)
+                }
                 addSmallEntry(zip, "settings.json", settings.toString().toByteArray(Charsets.UTF_8), counters)
-                addSmallEntry(zip, "routes.json", routes.toString().toByteArray(Charsets.UTF_8), counters)
+                addSmallEntry(zip, "routes.json", routeExport.manifest.toString().toByteArray(Charsets.UTF_8), counters)
                 if (counters.files > MAX_FILES || counters.entries > MAX_ENTRIES || counters.bytes > MAX_TOTAL_BYTES) {
                     throw IOException("The full app backup exceeds its file, entry or total-size safety limit.")
                 }
@@ -198,7 +209,8 @@ object ApplicationBackupManager {
             }
 
             val settings = parseSafeSettings(File(stage, "settings.json"))
-            val routes = parseRoutes(File(stage, "routes.json"), context, hasPython, hasNode)
+            val parsedRoutes = parseRoutes(File(stage, "routes.json"), context, hasPython, hasNode)
+            val routes = parsedRoutes.sites
 
             val activeSite = File(context.filesDir, "site")
             val activePython = File(context.filesDir, "python-project")
@@ -211,6 +223,7 @@ object ApplicationBackupManager {
             var staticImported = false
             var pythonTouched = false
             var nodeTouched = false
+            val customRootChanges = mutableListOf<CustomRootChange>()
             try {
                 val previousPython = File(backupDir, "python-project")
                 if (activePython.exists()) {
@@ -230,6 +243,40 @@ object ApplicationBackupManager {
                 if (hasNode) {
                     nodeTouched = true
                     if (!nodeStage.renameTo(activeNode)) throw IOException("Could not activate the restored Node.js project.")
+                }
+
+                parsedRoutes.customStaticRoots.forEach { (archivePath, activeRoot) ->
+                    val stagedRoot = File(stage, archivePath).canonicalFile
+                    val stagePath = stage.canonicalFile.toPath()
+                    if (!stagedRoot.toPath().startsWith(stagePath) || !stagedRoot.isDirectory ||
+                        !File(stagedRoot, "index.html").isFile) {
+                        throw IOException("The backup contains an invalid custom static site root.")
+                    }
+                    val rootParent = File(context.filesDir, "site-roots").canonicalFile
+                    if (!rootParent.toPath().startsWith(context.filesDir.canonicalFile.toPath())) {
+                        throw IOException("The custom site restore directory is unsafe.")
+                    }
+                    if (!rootParent.exists() && !rootParent.mkdirs()) {
+                        throw IOException("Could not create the custom site restore directory.")
+                    }
+                    if (java.nio.file.Files.isSymbolicLink(activeRoot.toPath())) {
+                        throw IOException("The existing custom site root is a symbolic link.")
+                    }
+                    val previous = File(backupDir, "custom-static/${activeRoot.name}")
+                    var hadPrevious = false
+                    if (activeRoot.exists()) {
+                        if (!previous.parentFile!!.exists() && !previous.parentFile!!.mkdirs()) {
+                            throw IOException("Could not create custom site rollback storage.")
+                        }
+                        if (!activeRoot.renameTo(previous)) {
+                            throw IOException("Could not preserve the previous custom site root.")
+                        }
+                        hadPrevious = true
+                    }
+                    customRootChanges.add(CustomRootChange(activeRoot, previous, hadPrevious))
+                    if (!stagedRoot.renameTo(activeRoot)) {
+                        throw IOException("Could not activate the restored custom site root.")
+                    }
                 }
 
                 SiteImporter.activatePreparedDirectory(context, siteRoot)
@@ -252,6 +299,17 @@ object ApplicationBackupManager {
                     .also { rollbackSucceeded = rollbackSucceeded && it }
                 if (pythonTouched) rollbackRuntimeDirectory(activePython, File(backupDir, "python-project"))
                     .also { rollbackSucceeded = rollbackSucceeded && it }
+                customRootChanges.asReversed().forEach { change ->
+                    val restored = runCatching {
+                        if (change.active.exists() && !change.active.deleteRecursively()) {
+                            throw IOException("Could not remove partially restored custom site root.")
+                        }
+                        if (change.hadPrevious && change.backup.exists() && !change.backup.renameTo(change.active)) {
+                            throw IOException("Could not roll back custom site root ${change.active.name}.")
+                        }
+                    }.isSuccess
+                    rollbackSucceeded = rollbackSucceeded && restored
+                }
                 if (staticImported) {
                     val staticRollback = runCatching {
                         if (hadActiveSite) SiteImporter.rollbackLatest(context)
@@ -348,17 +406,37 @@ object ApplicationBackupManager {
         node: File,
         includePython: Boolean,
         includeNode: Boolean
-    ): JSONObject {
+    ): ExportedRoutes {
         val routes = JSONArray()
+        val extraRoots = linkedMapOf<String, ExtraStaticRoot>()
         val expected = mapOf(
             "static" to site.canonicalPath,
             "python-wsgi" to python.canonicalPath,
             "node" to node.canonicalPath
         )
+        val privateRoot = context.filesDir.canonicalFile.toPath()
         SiteRegistry.list(context).forEach { entry ->
-            val canonicalRoot = File(entry.root).canonicalPath
-            if (canonicalRoot != expected[entry.runtime]) {
-                throw IOException("Site '${entry.name}' uses a custom project directory that is not supported by portable backup.")
+            val root = File(entry.root).canonicalFile
+            val canonicalRoot = root.canonicalPath
+            var archiveRoot = expected[entry.runtime]
+            if (canonicalRoot != archiveRoot) {
+                if (entry.runtime != "static") {
+                    throw IOException("Site '${entry.name}' uses a custom runtime project directory that is not supported by portable backup.")
+                }
+                if (java.nio.file.Files.isSymbolicLink(File(entry.root).toPath()) ||
+                    !root.isDirectory || !File(root, "index.html").isFile ||
+                    !root.toPath().startsWith(privateRoot) || root == context.filesDir.canonicalFile ||
+                    root.toPath().startsWith(site.canonicalFile.toPath()) ||
+                    site.canonicalFile.toPath().startsWith(root.toPath()) ||
+                    root.toPath().startsWith(python.canonicalFile.toPath()) ||
+                    python.canonicalFile.toPath().startsWith(root.toPath()) ||
+                    root.toPath().startsWith(node.canonicalFile.toPath()) ||
+                    node.canonicalFile.toPath().startsWith(root.toPath())) {
+                    throw IOException("Custom static site '${entry.name}' must be a separate, real directory inside Pocket Host private storage and contain index.html.")
+                }
+                archiveRoot = extraRoots.values.firstOrNull { it.root.canonicalPath == canonicalRoot }?.archivePath
+                    ?: "custom-static/${entry.id}"
+                extraRoots.putIfAbsent(archiveRoot, ExtraStaticRoot(archiveRoot, root))
             }
             if (entry.runtime == "python-wsgi" && !includePython) {
                 throw IOException("A Python hostname route exists but its project directory is missing.")
@@ -372,10 +450,14 @@ object ApplicationBackupManager {
                 .put("id", entry.id)
                 .put("name", entry.name)
                 .put("runtime", entry.runtime)
+                .put("archiveRoot", archiveRoot)
                 .put("hostnames", hostnames)
                 .put("enabled", entry.enabled))
         }
-        return JSONObject().put("version", 2).put("sites", routes)
+        return ExportedRoutes(
+            JSONObject().put("version", 3).put("sites", routes),
+            extraRoots.values.toList()
+        )
     }
 
     private fun parseRoutes(
@@ -383,10 +465,11 @@ object ApplicationBackupManager {
         context: Context,
         hasPython: Boolean,
         hasNode: Boolean
-    ): List<SiteRegistry.Site> {
+    ): ParsedRoutes {
         if (!file.isFile || file.length() > 256_000L) throw IOException("The backup route manifest is missing or too large.")
         val json = JSONObject(file.readText(Charsets.UTF_8))
-        if (json.optInt("version") != 2) throw IOException("Unsupported full backup route manifest.")
+        val version = json.optInt("version")
+        if (version !in setOf(2, 3)) throw IOException("Unsupported full backup route manifest.")
         val array = json.optJSONArray("sites") ?: JSONArray()
         if (array.length() > 100) throw IOException("The backup contains too many site routes.")
         val roots = mapOf(
@@ -394,24 +477,45 @@ object ApplicationBackupManager {
             "python-wsgi" to File(context.filesDir, "python-project").absolutePath,
             "node" to File(context.filesDir, "node-project-default").absolutePath
         )
-        return (0 until array.length()).map { index ->
+        val customRoots = linkedMapOf<String, File>()
+        val sites = (0 until array.length()).map { index ->
             val item = array.getJSONObject(index)
+            val id = item.getString("id")
+            if (!id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) throw IOException("The backup contains an invalid site ID.")
             val runtime = item.getString("runtime")
             if (runtime !in roots.keys) throw IOException("The backup contains an unsupported site runtime.")
             if (runtime == "python-wsgi" && !hasPython) throw IOException("A Python route has no Python project in this backup.")
             if (runtime == "node" && !hasNode) throw IOException("A Node.js route has no Node.js project in this backup.")
+            val defaultArchive = roots.getValue(runtime).substringAfterLast('/')
+            val archiveRoot = if (version >= 3) item.optString("archiveRoot", defaultArchive) else defaultArchive
+            val root = if (runtime == "static" && archiveRoot != "site") {
+                val expectedArchive = "custom-static/$id"
+                if (archiveRoot != expectedArchive) throw IOException("The backup contains an invalid custom static root mapping.")
+                val parent = File(context.filesDir, "site-roots").canonicalFile
+                if (!parent.toPath().startsWith(context.filesDir.canonicalFile.toPath())) {
+                    throw IOException("The custom static restore path is unsafe.")
+                }
+                val target = File(parent, id).canonicalFile
+                if (!target.toPath().startsWith(parent.toPath())) throw IOException("The custom static restore path escapes app storage.")
+                customRoots.putIfAbsent(archiveRoot, target)
+                target.absolutePath
+            } else {
+                if (archiveRoot != defaultArchive) throw IOException("The backup contains an invalid project root mapping.")
+                roots.getValue(runtime)
+            }
             val hostArray = item.optJSONArray("hostnames") ?: JSONArray()
             if (hostArray.length() > 100) throw IOException("A site contains too many hostnames.")
             val hosts = (0 until hostArray.length()).map { hostArray.getString(it) }
             SiteRegistry.Site(
-                id = item.getString("id"),
+                id = id,
                 name = item.getString("name"),
                 runtime = runtime,
-                root = roots.getValue(runtime),
+                root = root,
                 hostnames = hosts,
                 enabled = item.optBoolean("enabled", true)
             )
         }
+        return ParsedRoutes(sites, customRoots)
     }
 
     private fun addTree(
@@ -520,11 +624,11 @@ object ApplicationBackupManager {
 
     private fun extractArchive(archive: File, stage: File): Counters {
         val counters = Counters()
-        val rootLimits = mapOf("site" to STATIC_LIMIT, "python" to PYTHON_LIMIT, "node" to NODE_LIMIT)
-        val rootBytes = mutableMapOf("site" to 0L, "python" to 0L, "node" to 0L)
-        val rootFiles = mutableMapOf("site" to 0, "python" to 0, "node" to 0)
-        val rootEntries = mutableMapOf("site" to 0, "python" to 0, "node" to 0)
-        val allowedRoots = setOf("site", "python", "node", "settings.json", "routes.json")
+        val rootLimits = mapOf("site" to STATIC_LIMIT, "python" to PYTHON_LIMIT, "node" to NODE_LIMIT, "custom-static" to STATIC_LIMIT)
+        val rootBytes = mutableMapOf("site" to 0L, "python" to 0L, "node" to 0L, "custom-static" to 0L)
+        val rootFiles = mutableMapOf("site" to 0, "python" to 0, "node" to 0, "custom-static" to 0)
+        val rootEntries = mutableMapOf("site" to 0, "python" to 0, "node" to 0, "custom-static" to 0)
+        val allowedRoots = setOf("site", "python", "node", "custom-static", "settings.json", "routes.json")
         ZipInputStream(FileInputStream(archive).buffered()).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
