@@ -12,7 +12,8 @@ process.env.POCKETHOST_METRICS_FILE = metricsFile;
 require('../../app/src/main/assets/pockethost-node-metrics.cjs');
 
 const server = http.createServer((_request, response) => response.end('ok'));
-server.listen(0, '127.0.0.1', () => {
+server.listen(0, '0.0.0.0', () => {
+  assert.equal(server.address().address, '127.0.0.1', 'Node server must be forced to loopback');
   const port = server.address().port;
   http.get({ hostname: '127.0.0.1', port, path: '/' }, response => {
     response.resume();
