@@ -47,7 +47,8 @@ After all four secrets are configured:
 1. Open **Actions → PocketHost signed release**.
 2. Choose **Run workflow** on `main`.
 3. Wait for the build and APK signature verification steps.
-4. Download the `pockethost-signed-release-apks` artifact from the successful run (it contains the ARM64, ARMv7 and x86_64 release APKs).
+4. Download the `pockethost-signed-release-apks` artifact from the successful run (it contains the ARM64, ARMv7 and x86_64 release APKs plus `SHA256SUMS`).
+5. Verify each downloaded file from the directory containing the APKs with `sha256sum -c SHA256SUMS`. The workflow also verifies every APK signature with Android's `apksigner` before publishing the artifact.
 
 The workflow deliberately fails if required signing secrets are missing. The ordinary quality workflow continues to build a debug APK and never needs the release key.
 

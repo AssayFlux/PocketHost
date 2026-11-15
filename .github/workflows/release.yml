@@ -89,13 +89,16 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           apks=(app/build/outputs/apk/release/*.apk)
-          test \${#apks[@]} -eq 3
-          for apk in "\${apks[@]}"; do
+          test ${#apks[@]} -eq 3
+          for apk in "${apks[@]}"; do
             "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
           done
+          (cd app/build/outputs/apk/release && sha256sum ./*.apk > SHA256SUMS && sha256sum -c SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: pockethost-signed-release-apks
-          path: app/build/outputs/apk/release/*.apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
