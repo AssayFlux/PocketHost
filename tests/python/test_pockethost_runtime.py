@@ -90,7 +90,7 @@ class PythonHostRuntimeTest(unittest.TestCase):
     def test_failed_wsgi_import_does_not_leave_runtime_running(self):
         with tempfile.TemporaryDirectory() as project:
             pathlib.Path(project, "wsgi.py").write_text(
-                "application = 42\\n", encoding="utf-8"
+                "application = 42\n", encoding="utf-8"
             )
             with socket.socket() as probe:
                 probe.bind(("127.0.0.1", 0))
