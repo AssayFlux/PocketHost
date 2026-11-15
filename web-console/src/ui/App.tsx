@@ -34,7 +34,11 @@ export function App() {
       cache: "no-store",
     });
     const text = await response.text();
-    let data: any = {};\n    if (text) { try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 240) }; } }
+    let data: { error?: string } = {};
+    if (text) {
+      try { data = JSON.parse(text) as { error?: string }; }
+      catch { data = { error: text.slice(0, 240) }; }
+    }
     if (!response.ok) throw new Error(data.error || `Device API returned ${response.status}`);
     return data;
   }, [apiBase, token]);
