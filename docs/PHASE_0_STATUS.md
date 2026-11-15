@@ -2,8 +2,8 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest main commit:** `96200c320e0a5d6fc14c9d7b78fcb62f08b5429f`  
-**Quality CI:** [run 43685908160](https://github.com/AssayFlux/PocketHost/actions/runs/43685908160) — in progress at last check.  
+**Latest main commit:** `233376abe5ef64a551ce0289413af318a760d00d`  
+**Quality CI:** [run 43686794728](https://github.com/AssayFlux/PocketHost/actions/runs/43686794728) passed all six jobs on implementation commit `ef0677ce54cd2e69993b12073fdf27449ac36926`; [run 43687094231](https://github.com/AssayFlux/PocketHost/actions/runs/43687094231) passed all six jobs on current docs-only commit `233376abe5ef64a551ce0289413af318a760d00d`.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -150,7 +150,7 @@ Final release decision must use current workflow evidence and recorded physical-
 - [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
 
 
-## 2026-11-15 implementation pass — capacity and daily operations (source added; CI pending)
+## 2026-11-15 implementation pass — capacity, device telemetry and protective governor (source added; quality CI passed)
 
 The following first implementations were added directly to the Android/Rust/TypeScript codebase:
 
@@ -159,8 +159,10 @@ The following first implementations were added directly to the Android/Rust/Type
 - The selected safe concurrency ceiling and 1–100% capacity profile persist across restarts. Timed schedules (1–1440 minutes) restore the previous profile on expiry; the dashboard includes the requested 30%-for-three-hours action.
 - Authenticated management API routes expose capacity state, profile changes, benchmark state and daily reports.
 - Android dashboard and TypeScript console expose the profile, benchmark results, active/rejected connection counters and report summaries.
-- Daily rollover archives aggregate static-engine request/byte totals and retained redacted operational events. Reports are stored privately with a 90-report retention cap.
+- Versioned Android device telemetry records manufacturer/model, API/ABIs/CPU cores, sampled aggregate CPU load, RAM/PSS/heaps, storage, battery/temperature, thermal state and network transport every 30 seconds in a bounded two-file history.
+- The five-state device-side governor (NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY, EMERGENCY) derates the connection ceiling; protective/emergency conditions stop optional Python/Node runtimes while preserving the Rust static origin.
+- Daily rollover archives aggregate static-engine request/byte totals and retained redacted operational events; hourly snapshots refresh the current day. Reports are stored privately with a 90-report retention cap and can be exported as JSON.
 
-**Important limitations:** this is a static GET concurrency smoke benchmark, not a complete Capacity Lab. It does not measure Python/Node, external Cloudflare/network throughput, sustained multi-hour thermal behavior, p99, CPU/RPS graphs or arbitrary website workloads. The limiter is a concurrency admission ceiling, not a full rate/fairness/queue governor. Daily reports do not yet contain complete uptime, battery, latency, tunnel or financial metrics. Quality CI passed on the exact implementation SHA. Physical-device, emulator instrumentation and external Cloudflare hostname validation remain pending.
+**Important limitations:** telemetry is a low-frequency device snapshot, not a complete profiler or reliable per-process CPU accounting. This is a static GET concurrency smoke benchmark, not a complete Capacity Lab. It does not measure Python/Node, external Cloudflare/network throughput, sustained multi-hour thermal behavior, p99, CPU/RPS graphs or arbitrary website workloads. The limiter is a concurrency admission ceiling, not a full rate/fairness/queue governor. Daily reports do not yet contain complete uptime, battery, latency, tunnel or financial metrics. Quality CI [43686794728](https://github.com/AssayFlux/PocketHost/actions/runs/43686794728) passed all six jobs on exact implementation SHA `ef0677ce54cd2e69993b12073fdf27449ac36926` (Rust, Node runtime, Python runtime, TypeScript console, control plane and Android Kotlin source compilation). The later docs-only commit also passed [43687094231](https://github.com/AssayFlux/PocketHost/actions/runs/43687094231). Neither run built APKs or ran emulator instrumentation. Physical-device, emulator instrumentation and external Cloudflare hostname validation remain pending.
 
 **Still not implemented/approved:** OS-enforced per-project runtime UID sandbox and network/filesystem isolation; full multi-state thermal/memory/battery Resource Governor; PSP payment integration, webhook inbox, encrypted payment ledger and reconciliation; hash-chained signed audit checkpoints and optional blockchain anchoring; external Cloudflare hostname validation; deployed remote control plane; physical-device acceptance; signed release. Do not run untrusted Python/Node projects or accept live payments under the current architecture.
