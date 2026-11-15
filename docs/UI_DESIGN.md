@@ -182,3 +182,14 @@ Do not claim a configuration was tested unless a test or inspection actually ran
 ## 12. Change Log
 
 - **2026-11-15:** Added Sites, Activity and Learn navigation destinations and an expandable in-app learning guide. Added first-use, domain/tunnel, dashboard, capacity, runtime safety, activity, backup and phone-safety lessons. Updated card-first design and chart-data integrity requirements. Device screenshot and accessibility validation remains pending.
+
+
+## 13. Host accounts and console access
+
+- Device pairing remains a physically approved bootstrap path. Use it only when an operator can approve the request on the phone.
+- The first paired Owner session creates the initial Owner username and password before normal password sign-in is used.
+- Passwords use salted PBKDF2-HMAC-SHA256 verifiers; the account registry is encrypted with an Android Keystore AES-GCM key in app-private no-backup storage.
+- Owner can create and revoke Operator accounts. Operators can read device information, start/stop site runtimes and adjust/benchmark capacity; sensitive configuration and account administration remain Owner-only.
+- Device bearer tokens are random, hashed in memory, expire after 12 hours and can be revoked. They are not persistent sessions.
+- The web console stores its active token in tab-scoped sessionStorage. Use HTTPS for non-loopback browser origins; never expose the management API through the public website tunnel.
+- Biometric unlock is not implemented in this pass; it must use Android BiometricPrompt and a Keystore-backed credential gate, not a simulated web prompt.

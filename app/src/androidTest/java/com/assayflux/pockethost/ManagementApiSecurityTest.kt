@@ -93,6 +93,40 @@ class ManagementApiSecurityTest {
         }
     }
 
+    @Test
+    fun operatorAccountLoginAndOwnerOnlyWritesAreEnforced() {
+        val challenge = JSONObject(request("POST", "/api/v1/pair/challenge", "{}").second)
+        val code = ManagementApiServer.pendingApprovalCode()!!
+        assertEquals(true, ManagementApiServer.approvePairing(code))
+        val bootstrap = JSONObject(request("POST", "/api/v1/pair/complete",
+            JSONObject().put("challengeId", challenge.getString("challengeId")).put("code", code).toString()).second)
+        val ownerToken = bootstrap.getString("accessToken")
+        val username = "operator_" + System.nanoTime().toString().takeLast(8)
+        val password = "PocketHost-Test-Password-42"
+        val created = request("POST", "/api/v1/auth/accounts",
+            JSONObject().put("username", username).put("password", password).put("role", "OPERATOR").toString(),
+            authorization = ownerToken)
+        assertEquals(201, created.first)
+        val login = request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", username).put("password", password).toString())
+        assertEquals(200, login.first)
+        val operatorToken = JSONObject(login.second).getString("accessToken")
+        assertEquals("OPERATOR", JSONObject(request("GET", "/api/v1/auth/me", authorization = operatorToken).second).getString("role"))
+        assertEquals(200, request("GET", "/api/v1/status", authorization = operatorToken).first)
+        assertEquals(403, request("POST", "/api/v1/resources",
+            JSONObject().put("pythonMaxWorkers", 4).put("nodeHeapMb", 128).toString(), authorization = operatorToken).first)
+        assertEquals(204, request("DELETE", "/api/v1/auth/accounts/" + username, authorization = ownerToken).first)
+        assertEquals(401, request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", username).put("password", password).toString()).first)
+    }
+
+    @Test
+    fun loginRejectsInvalidCredentials() {
+        val response = request("POST", "/api/v1/auth/login",
+            JSONObject().put("username", "missing-account").put("password", "not-a-valid-password").toString())
+        assertEquals(401, response.first)
+    }
+
     private fun request(
         method: String,
         path: String,

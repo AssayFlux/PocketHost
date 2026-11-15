@@ -19,6 +19,13 @@ export function App() {
   const [token, setToken] = useState(storedToken);
   const [challengeId, setChallengeId] = useState("");
   const [approvalCode, setApprovalCode] = useState("");
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [accountUsername, setAccountUsername] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [hostIdentity, setHostIdentity] = useState<{ username: string; role: string } | null>(null);
+  const [hostAccounts, setHostAccounts] = useState<Array<{ username: string; role: string; createdAt: number }>>([]);
+  const [needsOwnerSetup, setNeedsOwnerSetup] = useState(false);
   const [status, setStatus] = useState<DeviceStatus | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
@@ -74,7 +81,8 @@ export function App() {
         setPythonWorkers(nextResources.pythonMaxWorkers);
         setNodeHeap(nextResources.nodeHeapMb);
       }
-      setMessage("Secure device session active. Metrics are labelled by their actual source.");
+      await loadHostIdentity();
+      setMessage("Authenticated host session active. Metrics are labelled by their actual source.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not reach the device.");
       if (error instanceof Error && error.message === "unauthorized") {
@@ -90,6 +98,53 @@ export function App() {
     const timer = window.setInterval(() => void refresh(), 3000);
     return () => window.clearInterval(timer);
   }, [refresh, token]);
+
+  async function login() {
+    setBusy(true);
+    try {
+      localStorage.setItem("pockethost_api_base", apiBase);
+      const result = await request<{ accessToken: string }>("/api/v1/auth/login", {
+        method: "POST", body: JSON.stringify({ username: loginUsername, password: loginPassword }),
+      });
+      sessionStorage.setItem("pockethost_device_token", result.accessToken);
+      setToken(result.accessToken); setLoginPassword(""); setMessage("Host account authenticated.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Login failed."); }
+    finally { setBusy(false); }
+  }
+
+  async function loadHostIdentity() {
+    const me = await request<{ username: string; role: string }>("/api/v1/auth/me");
+    setHostIdentity(me);
+    if (me.role === "OWNER") {
+      const result = await request<{ items: Array<{ username: string; role: string; createdAt: number }> }>("/api/v1/auth/accounts");
+      setHostAccounts(result.items || []);
+      setNeedsOwnerSetup(!(result.items || []).some(account => account.role === "OWNER"));
+    } else { setHostAccounts([]); setNeedsOwnerSetup(false); }
+  }
+
+  async function createHostAccount() {
+    setBusy(true);
+    try {
+      await request("/api/v1/auth/accounts", { method: "POST", body: JSON.stringify({
+        username: accountUsername, password: accountPassword, role: needsOwnerSetup ? "OWNER" : "OPERATOR",
+      }) });
+      setAccountUsername(""); setAccountPassword("");
+      await loadHostIdentity();
+      setMessage(needsOwnerSetup ? "Owner account created. Use these credentials for future logins." : "Operator account created.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create host account."); }
+    finally { setBusy(false); }
+  }
+
+  async function revokeHostAccount(username: string) {
+    if (!window.confirm("Revoke operator " + username + "?")) return;
+    setBusy(true);
+    try {
+      await request("/api/v1/auth/accounts/" + encodeURIComponent(username), { method: "DELETE" });
+      await loadHostIdentity();
+      setMessage("Operator account revoked.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not revoke operator."); }
+    finally { setBusy(false); }
+  }
 
   async function beginPairing() {
     setBusy(true);
@@ -114,7 +169,7 @@ export function App() {
       setToken(result.accessToken);
       setApprovalCode("");
       setChallengeId("");
-      setMessage("Device paired. Your bearer token is stored in this browser profile.");
+      setMessage("Device paired. Create the first Owner account to enable password login.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Pairing failed.");
     } finally { setBusy(false); }
@@ -190,6 +245,7 @@ export function App() {
       sessionStorage.removeItem("pockethost_device_token");
       setToken("");
       setStatus(null);
+      setHostIdentity(null); setHostAccounts([]); setNeedsOwnerSetup(false);
       setMetrics(null);
       setSites([]);
       setLogs([]);
@@ -213,11 +269,34 @@ export function App() {
     <section className="main-panel" id="overview">
       <header className="topbar"><div><span className="eyebrow">ASSAYFLUX / CONTROL PLANE</span><h1>Device overview</h1><p>Live status from your PocketHost Android device.</p></div><span className="device-pill"><i /> {token ? "Session active" : "Not connected"}</span></header>
       <section className="notice"><div className="notice-icon">i</div><div><strong>Device connection</strong><p>{message}</p></div></section>
-      {!token && <section className="panel" id="connection">
-        <div className="panel-heading"><h3>Secure device pairing</h3><span className="muted-tag">DEVICE APPROVAL REQUIRED</span></div>
-        <label>Management API address<input value={apiBase} onChange={e => setApiBase(e.target.value)} spellCheck={false} /></label>
-        <button disabled={busy} onClick={beginPairing}>Request pairing code</button>
-        {challengeId && <div className="pair-complete"><p>Enter the code shown in the Android app after approving this request.</p><input aria-label="Device approval code" value={approvalCode} onChange={e => setApprovalCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="6-digit code" /><button disabled={busy || approvalCode.length !== 6} onClick={completePairing}>Complete pairing</button></div>}
+      {!token && <section className="lower-grid" id="connection">
+        <article className="panel">
+          <div className="panel-heading"><h3>Host account login</h3><span className="muted-tag">OWNER / OPERATOR</span></div>
+          <label>Management API address<input value={apiBase} onChange={e => setApiBase(e.target.value)} spellCheck={false} /></label>
+          <label>Username<input autoComplete="username" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} /></label>
+          <label>Password<input type="password" autoComplete="current-password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} /></label>
+          <button disabled={busy || !loginUsername || !loginPassword} onClick={login}>Sign in</button>
+        </article>
+        <article className="panel">
+          <div className="panel-heading"><h3>First-time device pairing</h3><span className="muted-tag">ON-DEVICE APPROVAL</span></div>
+          <p>Pair only when you can approve the request on the Android phone. The first approved session creates the Owner account.</p>
+          <button disabled={busy} onClick={beginPairing}>Request pairing code</button>
+          {challengeId && <div className="pair-complete"><p>Enter the code shown in the Android app after approving this request.</p><input aria-label="Device approval code" value={approvalCode} onChange={e => setApprovalCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="6-digit code" /><button disabled={busy || approvalCode.length !== 6} onClick={completePairing}>Complete pairing</button></div>}
+        </article>
+      </section>}
+      {token && hostIdentity && <section className="panel">
+        <div className="panel-heading"><h3>Host access</h3><span className="muted-tag">{hostIdentity.role}</span></div>
+        <p>Signed in as <strong>{hostIdentity.username}</strong>. Operators can inspect device data, operate sites and adjust capacity. Sensitive configuration and account administration remain Owner-only.</p>
+        {hostIdentity.role === "OWNER" && <>
+          <div className="section-heading"><div><span className="eyebrow">TEAM ACCESS</span><h2>{needsOwnerSetup ? "Create the Owner account" : "Manage Operators"}</h2></div></div>
+          {needsOwnerSetup && <p>Set a unique Owner username and password of at least 12 characters. Credentials are stored encrypted on the phone.</p>}
+          <div className="resource-panel">
+            <label>Username<input autoComplete="username" value={accountUsername} onChange={e => setAccountUsername(e.target.value)} /></label>
+            <label>Password<input type="password" autoComplete="new-password" value={accountPassword} onChange={e => setAccountPassword(e.target.value)} placeholder="At least 12 characters" /></label>
+            <button disabled={busy || accountUsername.length < 3 || accountPassword.length < 12} onClick={createHostAccount}>{needsOwnerSetup ? "Create Owner account" : "Create Operator"}</button>
+          </div>
+          {hostAccounts.filter(account => account.role === "OPERATOR").map(account => <div className="status-line" key={account.username}><span><strong>{account.username}</strong><small>Operator · {new Date(account.createdAt).toLocaleDateString()}</small></span><button className="danger-button" disabled={busy} onClick={() => void revokeHostAccount(account.username)}>Revoke</button></div>)}
+        </>}
       </section>}
       <div className="section-heading"><div><span className="eyebrow">SITE REGISTRY</span><h2>Configured websites</h2></div><span className="muted-tag">{sites.length} REGISTERED</span></div>
       <section className="panel">
@@ -249,6 +328,19 @@ export function App() {
         <p>Available device memory: {metrics?.deviceResources?.availableDeviceMemoryBytes ? bytes(metrics.deviceResources.availableDeviceMemoryBytes) : "—"} · App process PSS: {metrics?.deviceResources?.processPssKb ? bytes(metrics.deviceResources.processPssKb * 1024) : "—"}</p>
         <button disabled={busy || !resources} onClick={saveResources}>Save resource limits</button>
       </section>
+      {benchmark?.levels && benchmark.levels.length > 0 && <section className="panel">
+        <div className="panel-heading"><h3>Measured capacity curve</h3><span className="muted-tag">P95 · MILLISECONDS</span></div>
+        <div className="capacity-chart" role="group" aria-label="Measured p95 latency by concurrency">
+          {benchmark.levels.map(level => <button type="button" className="capacity-point" key={level.concurrency}
+            aria-label={level.concurrency + " concurrent, p95 " + level.p95LatencyMs + " milliseconds"}
+            title={level.concurrency + " concurrent · p95 " + level.p95LatencyMs + " ms · " + level.samples + " samples"}
+            onClick={() => setMessage(level.concurrency + " concurrent: p95 " + level.p95LatencyMs + " ms; " + level.samples + " samples, " + level.errors + " errors.")}>
+            <span className="capacity-bar" style={{ height: Math.max(5, Math.min(100, level.p95LatencyMs / Math.max(1, ...benchmark.levels!.map(point => point.p95LatencyMs)) * 100)) + "%" }} />
+            <strong>{level.p95LatencyMs} ms</strong><small>{level.concurrency}x</small>
+          </button>)}
+        </div>
+        <p>Each bar is a measured benchmark point, not live visitor traffic. Select a bar to inspect its sample and error counts in the status message.</p>
+      </section>}
       <div className="section-heading" id="capacity"><div><span className="eyebrow">DEVICE PROTECTION</span><h2>Capacity & operations</h2></div><span className="muted-tag">{capacity?.scheduled ? "SCHEDULED PROFILE" : "ADMISSION CONTROL"}</span></div>
       <section className="panel resource-panel">
         <div className="resource-control"><label>Safe capacity profile <strong>{capacityPercent}%</strong><input type="range" min="1" max="100" step="1" value={capacityPercent} onChange={event => { setCapacityPercent(Number(event.target.value)); setCapacityDirty(true); }} /></label></div>

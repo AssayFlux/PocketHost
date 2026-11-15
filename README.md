@@ -115,7 +115,7 @@ A phone is not a cloud region. Battery, heat, Android Doze/OEM process managemen
 
 ## UI design
 
-The canonical screen, navigation, responsive-layout, keyboard and implementation specification for **AssayFlux Pocket Host** is [UI Design](docs/UI_DESIGN.md). The in-app beginner guides are documented in [Learn and Quick Start](docs/LEARN_GUIDE.md).
+The canonical screen, navigation, responsive-layout, keyboard and implementation specification for **AssayFlux Pocket Host** is [UI Design](docs/UI_DESIGN.md). The in-app beginner guides are documented in [Learn and Quick Start](docs/LEARN_GUIDE.md). Host Owner/Operator authentication and permission boundaries are documented in [UI Design](docs/UI_DESIGN.md).
 
 ## Documentation map
 
