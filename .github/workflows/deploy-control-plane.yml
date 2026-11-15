@@ -26,6 +26,7 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.POCKETHOST_CONTROL_KNOWN_HOSTS }}
           ADMIN_TOKEN: ${{ secrets.POCKETHOST_CONTROL_ADMIN_TOKEN }}
           DB_PASSWORD: ${{ secrets.POCKETHOST_POSTGRES_PASSWORD }}
+          TUNNEL_TOKEN: ${{ secrets.POCKETHOST_CONTROL_TUNNEL_TOKEN }}
         run: |
           set -euo pipefail
           for value in "$HOST" "$USER" "$PATH_ON_HOST" "$DOMAIN" "$ORIGIN" "$SSH_KEY" "$KNOWN_HOSTS" "$ADMIN_TOKEN" "$DB_PASSWORD"; do
@@ -55,12 +56,19 @@ jobs:
           ORIGIN: ${{ vars.POCKETHOST_CONTROL_ORIGIN }}
           ADMIN_TOKEN: ${{ secrets.POCKETHOST_CONTROL_ADMIN_TOKEN }}
           DB_PASSWORD: ${{ secrets.POCKETHOST_POSTGRES_PASSWORD }}
+          TUNNEL_TOKEN: ${{ secrets.POCKETHOST_CONTROL_TUNNEL_TOKEN }}
         run: |
           set -euo pipefail
           ssh "$USER@$HOST" "mkdir -p '$PATH_ON_HOST' && if [ -d '$PATH_ON_HOST/.git' ]; then git -C '$PATH_ON_HOST' fetch origin main && git -C '$PATH_ON_HOST' reset --hard origin/main; else git clone --branch main https://github.com/AssayFlux/PocketHost.git '$PATH_ON_HOST'; fi"
-          printf 'CONTROL_PLANE_DOMAIN=%s\nPOCKETHOST_CONTROL_ORIGIN=%s\nPOCKETHOST_CONTROL_ADMIN_TOKEN=%s\nPOSTGRES_DB=pockethost\nPOSTGRES_USER=pockethost\nPOSTGRES_PASSWORD=%s\n' "$DOMAIN" "$ORIGIN" "$ADMIN_TOKEN" "$DB_PASSWORD" |
+          printf 'CONTROL_PLANE_DOMAIN=%s\nPOCKETHOST_CONTROL_ORIGIN=%s\nPOCKETHOST_CONTROL_ADMIN_TOKEN=%s\nPOSTGRES_DB=pockethost\nPOSTGRES_USER=pockethost\nPOSTGRES_PASSWORD=%s\nPOCKETHOST_CONTROL_TUNNEL_TOKEN=%s\n' "$DOMAIN" "$ORIGIN" "$ADMIN_TOKEN" "$DB_PASSWORD" "$TUNNEL_TOKEN" |
             ssh "$USER@$HOST" "umask 077; cat > '$PATH_ON_HOST/control-plane/.env'"
-          ssh "$USER@$HOST" "cd '$PATH_ON_HOST/control-plane' && docker compose --env-file .env -f compose.yaml up -d --build"
+          if [ -n "$TUNNEL_TOKEN" ]; then
+            ssh "$USER@$HOST" "cd '$PATH_ON_HOST/control-plane' && docker compose --env-file .env --profile public stop caddy >/dev/null 2>&1 || true"
+            ssh "$USER@$HOST" "cd '$PATH_ON_HOST/control-plane' && docker compose --env-file .env --profile cloudflare up -d --build"
+          else
+            ssh "$USER@$HOST" "cd '$PATH_ON_HOST/control-plane' && docker compose --env-file .env --profile cloudflare stop cloudflared >/dev/null 2>&1 || true"
+            ssh "$USER@$HOST" "cd '$PATH_ON_HOST/control-plane' && docker compose --env-file .env --profile public up -d --build"
+          fi
 
       - name: Verify deployed HTTPS endpoint
         env:
