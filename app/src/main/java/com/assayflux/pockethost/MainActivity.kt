@@ -11,6 +11,13 @@ import android.widget.Toast
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Timeline
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -517,12 +524,18 @@ private fun PocketHostDashboard() {
             bottomBar = {
                 NavigationBar(modifier = Modifier.imePadding(), containerColor = palette.surface) {
                     listOf("Dashboard", "Sites", "Activity", "Learn", "Settings").forEach { destination ->
-                        val symbol = when (destination) { "Dashboard" -> "⌂"; "Sites" -> "▦"; "Files" -> "▤"; "Activity" -> "⌁"; "Learn" -> "ⓘ"; else -> "⚙" }
+                        val symbol = when (destination) {
+                            "Dashboard" -> Icons.Outlined.Dashboard
+                            "Sites" -> Icons.Outlined.FolderOpen
+                            "Activity" -> Icons.Outlined.Timeline
+                            "Learn" -> Icons.Outlined.School
+                            else -> Icons.Outlined.Settings
+                        }
                         NavigationBarItem(
                             selected = selectedTab == destination,
                             onClick = { selectedTab = destination },
-                            icon = { Text(symbol, fontSize = 18.sp) },
-                            label = { Text(destination, fontSize = 14.sp) },
+                            icon = { Icon(symbol, contentDescription = destination) },
+                            label = { Text(destination, fontSize = 11.sp, maxLines = 1) },
                             alwaysShowLabel = true
                         )
                     }
