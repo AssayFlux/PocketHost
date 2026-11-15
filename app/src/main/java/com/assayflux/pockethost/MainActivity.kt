@@ -404,7 +404,7 @@ private fun PocketHostDashboard() {
             },
             bottomBar = {
                 NavigationBar(modifier = Modifier.imePadding(), containerColor = palette.surface) {
-                    listOf("Dashboard", "Sites", "Files", "Activity", "Learn", "Settings").forEach { destination ->
+                    listOf("Dashboard", "Sites", "Activity", "Learn", "Settings").forEach { destination ->
                         val symbol = when (destination) { "Dashboard" -> "⌂"; "Sites" -> "▦"; "Files" -> "▤"; "Activity" -> "⌁"; "Learn" -> "ⓘ"; else -> "⚙" }
                         NavigationBarItem(
                             selected = selectedTab == destination,
@@ -424,7 +424,7 @@ private fun PocketHostDashboard() {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                 if (selectedTab == "Learn") {
-                    PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenFiles = { selectedTab = "Files" }, onOpenSettings = { selectedTab = "Settings" })
+                    PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenFiles = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
                 if (selectedTab == "Dashboard") {
                 if (pendingPairingCode != null) {
@@ -711,7 +711,7 @@ private fun PocketHostDashboard() {
                 }
 
                 }
-                if (selectedTab == "Logs") {
+                if (selectedTab == "Activity") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -793,7 +793,7 @@ private fun PocketHostDashboard() {
                 }
 
                 }
-                if (selectedTab == "Files") {
+                if (selectedTab == "Sites") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),

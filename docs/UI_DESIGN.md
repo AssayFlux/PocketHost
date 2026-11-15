@@ -170,7 +170,7 @@ Do not claim a configuration was tested unless a test or inspection actually ran
 ## 11. Card-first navigation and Learn
 
 - The owner requested a compact, interactive control-panel experience inspired by the supplied dashboard/login references.
-- Add **Sites**, **Activity** and **Learn** destinations while retaining Dashboard, Files and Settings. Activity is the user-facing label for operational logs.
+- Use five compact destinations: **Dashboard**, **Sites**, **Activity**, **Learn** and **Settings**. Sites contains website import and file management; Activity contains operational logs.
 - Use minimal monochrome iconography with consistent visual weight. Avoid emoji icons, gradients, neon and glass effects.
 - Make the dashboard a card overview. Each card presents concise status/metrics and opens a focused detail area; avoid presenting every setting as one long continuous document.
 - Use interactive charts only when backed by measured data. Label units, time window, sample count and limitations. Never fabricate time-series history from one current sample. Capacity Lab p95 measurements may be charted by concurrency; do not imply visitor-traffic trends.
