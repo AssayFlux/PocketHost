@@ -116,7 +116,7 @@ fn parse_byte_range(value: &str, size: u64) -> Result<(u64, u64), ()> {
 async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let original_host = req.headers().get(hyper::header::HOST).cloned();
     let forwarded_proto = if req.headers().get("cf-visitor").and_then(|v| v.to_str().ok())
-        .map(|v| v.contains("\\"scheme\\":\\"https\\"")).unwrap_or(false) { "https" } else { "http" };
+        .map(|v| v.contains("\"scheme\":\"https\"")).unwrap_or(false) { "https" } else { "http" };
     let path_and_query = req.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/");
     let uri = match format!("http://127.0.0.1:{port}{path_and_query}").parse() {
         Ok(uri) => uri,
@@ -163,8 +163,8 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
     } else {
         return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Unknown host"));
     };
-    if let SiteTarget::Proxy { port } = selected_target {
-        return proxy_request(req, port).await;
+    if let SiteTarget::Proxy { port } = &selected_target {
+        return proxy_request(req, *port).await;
     }
     let selected_root = match selected_target {
         SiteTarget::Static(path) => path,
