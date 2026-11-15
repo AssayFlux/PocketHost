@@ -44,5 +44,5 @@ Credentials remain device-bound and must be configured independently on a replac
 ## Operational guidance
 
 - Keep the backup file and passphrase separately; anyone with both can recover the included project source.
-- Treat Python and Node project backups as executable source code and do not share them with untrusted parties.
+- Treat Python and Node project backups as executable source code and do not share them with untrusted parties. Secret values embedded inside ordinary source/config files cannot be detected reliably; review project contents before sharing.
 - Keep an independent copy of important backups. A successful export does not replace an off-device disaster-recovery copy.
