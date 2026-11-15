@@ -319,6 +319,19 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_start(m
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
 }
 #[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMultiSite(mut env: JNIEnv, _class: JClass, root: JString, sites_json: JString, port: jint, allow_lan: jboolean) -> jstring {
+    let result = (|| {
+        let root: String = env.get_string(&root).map_err(|e| e.to_string())?.into();
+        let json: String = env.get_string(&sites_json).map_err(|e| e.to_string())?.into();
+        if !(1024..=65535).contains(&port) { return Err("Port must be 1024–65535".to_string()); }
+        let sites: HashMap<String, String> = serde_json::from_str(&json).map_err(|e| format!("Invalid hostname registry: {e}"))?;
+        start_engine_with_hosts(&root, port as u16, allow_lan == 1, sites)?;
+        Ok("OK".to_string())
+    })();
+    to_jstring(&mut env, result.unwrap_or_else(|e| e))
+}
+
+#[no_mangle]
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_stop(mut env: JNIEnv, _class: JClass) -> jstring {
     to_jstring(&mut env, stop_engine().map(|_| "OK".to_string()).unwrap_or_else(|e| e))
 }
