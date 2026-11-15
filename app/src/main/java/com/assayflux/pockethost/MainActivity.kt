@@ -115,6 +115,8 @@ private fun PocketHostDashboard() {
     var nodePortText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000).toString()) }
     var nodeProjectSummary by remember { mutableStateOf(if (File(context.filesDir, "node-project-default/package.json").isFile) "Node project imported." else "No Node project imported.") }
     var nodeHosting by remember { mutableStateOf(NodeHostRuntime.status(context) == "RUNNING") }
+    var hostnameText by remember { mutableStateOf("") }
+    var hostnameRuntime by remember { mutableStateOf("static") }
     var cloudflareTokenText by remember { mutableStateOf("") }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
@@ -268,6 +270,8 @@ private fun PocketHostDashboard() {
                     pythonProjectSummary = "Python project imported · ${report.fileCount} files · ${report.totalBytes / 1024} KB"
                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                         .putString("python_project_root", report.projectDirectory.absolutePath).apply()
+                    runCatching { SiteRegistry.put(context, SiteRegistry.Site("python-default", "Python application", "python-wsgi",
+                        report.projectDirectory.absolutePath, emptyList(), true)) }
                     status = "Python project is ready. Start the Python backend to run its wsgi.py application."
                 }.onFailure { error -> status = error.message ?: "Python project import failed." }
                 importing = false
@@ -736,19 +740,20 @@ private fun PocketHostDashboard() {
                                 if (port == null || port !in 1024..65535 || port == staticPort || port == pythonPort) {
                                     status = "Choose a valid Node port different from the static and Python ports."
                                 } else {
-                                    preferences.edit().putInt("node_port", port).apply()
-                                    runCatching { NodeHostRuntime.start(context, root, port) }
-                                        .onSuccess { status = "Node.js runtime ${it}. Waiting for the app to listen on port ${port}." }
-                                        .onFailure { status = it.message ?: "Node.js failed to start." }
+                                    preferences.edit().putInt("node_port", port).putBoolean("node_enabled", true)
+                                        .putString("node_project_root", root).apply()
+                                    startHosting(false)
+                                    status = "Node.js runtime requested. The foreground supervisor will launch the isolated process."
                                 }
                             }, enabled = !nodeHosting && !importing) { Text("Start Node.js") }
                             OutlinedButton(onClick = {
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("node_enabled", false).apply()
                                 NodeHostRuntime.stop(context)
                                 nodeHosting = false
                                 status = "Stopping the isolated Node.js process."
                             }, enabled = nodeHosting) { Text("Stop Node.js") }
                         }
-                        if (nodeHosting) Text("Node.js preview: http://127.0.0.1:\$nodePortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Text("Runs one Node.js application in an isolated Android process. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = Slate, fontSize = 10.sp)
                     }
                 }
