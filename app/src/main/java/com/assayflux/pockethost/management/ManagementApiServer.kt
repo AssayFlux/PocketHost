@@ -32,7 +32,10 @@ object ManagementApiServer {
     @Volatile private var pending: Pairing? = null
     private val sessions = HashMap<String, Long>()
 
-    private data class Pairing(val id: String, val code: String, val expires: Long, @Volatile var approved: Boolean = false)
+    private data class Pairing(val id: String, val code: String, val expires: Long, @Volatile var approved: Boolean = false, var attempts: Int = 0)
+    @Volatile private var lastChallengeAt = 0L
+    @Volatile private var challengeWindowAt = 0L
+    @Volatile private var challengeWindowCount = 0
 
     @Synchronized fun start(context: Context): String {
         if (listener?.isClosed == false) return "RUNNING"
@@ -135,10 +138,16 @@ object ManagementApiServer {
         throw IllegalArgumentException("Headers too large")
     }
 
-    private fun route(method: String, path: String, authorization: String?, body: JSONObject): Pair<Int, JSONObject> {
+    @Synchronized private fun route(method: String, path: String, authorization: String?, body: JSONObject): Pair<Int, JSONObject> {
         if (method == "GET" && path == "/api/v1/health")
             return 200 to JSONObject().put("status", "ok").put("apiVersion", "v1")
         if (method == "POST" && path == "/api/v1/pair/challenge") {
+            val now = Instant.now().epochSecond
+            if (now - challengeWindowAt >= 60) { challengeWindowAt = now; challengeWindowCount = 0 }
+            challengeWindowCount++
+            if (challengeWindowCount > 10 || now - lastChallengeAt < 3)
+                return 429 to JSONObject().put("error", "pairing_rate_limited")
+            lastChallengeAt = now
             val id = randomToken(12)
             val code = (100000 + random.nextInt(900000)).toString()
             pending = Pairing(id, code, Instant.now().epochSecond + 120)
@@ -147,7 +156,11 @@ object ManagementApiServer {
         if (method == "POST" && path == "/api/v1/pair/complete") {
             val p = pending
             if (p == null || p.expires <= Instant.now().epochSecond || p.id != body.optString("challengeId") ||
-                p.code != body.optString("code") || !p.approved) return 401 to JSONObject().put("error", "pairing_not_approved")
+                !p.approved || p.attempts >= 5) return 401 to JSONObject().put("error", "pairing_not_approved")
+            if (p.code != body.optString("code")) {
+                p.attempts++
+                return 401 to JSONObject().put("error", "invalid_pairing_code")
+            }
             val token = randomToken(32)
             synchronized(sessions) { sessions[tokenHash(token)] = Instant.now().epochSecond + SESSION_SECONDS }
             pending = null
