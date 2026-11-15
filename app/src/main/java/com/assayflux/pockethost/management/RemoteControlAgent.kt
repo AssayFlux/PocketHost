@@ -102,7 +102,7 @@ object RemoteControlAgent {
             .put("node", com.assayflux.pockethost.runtime.NodeHostRuntime.status(context))
             .put("tunnel", com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime.status())
             .put("reportedAt", System.currentTimeMillis())
-            .put("configVersion", prefs.getLong("config_version", 0L))
+            .put("config_version", prefs.getLong("config_version", 0L))
         post(endpoint, token, "/v1/device/heartbeat",
             JSONObject().put("state", state).put("config_version", JSONObject.NULL))
         val commands = get(endpoint, token, "/v1/device/commands")
