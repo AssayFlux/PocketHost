@@ -12,6 +12,7 @@ import com.assayflux.pockethost.diagnostics.CapacityController
 import com.assayflux.pockethost.diagnostics.CapacityLab
 import com.assayflux.pockethost.diagnostics.DailyOperationsReport
 import com.assayflux.pockethost.diagnostics.TelemetryStore
+import com.assayflux.pockethost.diagnostics.DeviceTelemetry
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.engine.NativeEngine
@@ -336,7 +337,10 @@ object ManagementApiServer {
         if (method == "GET" && path == "/api/v1/telemetry") {
             val samples = org.json.JSONArray()
             TelemetryStore.history(context, 120).forEach(samples::put)
-            return 200 to JSONObject().put("latest", TelemetryStore.latest(context) ?: TelemetryStore.record(context))
+            val latest = if (NativeEngine.status() == "RUNNING")
+                TelemetryStore.latest(context) ?: TelemetryStore.record(context)
+            else DeviceTelemetry.snapshot(context)
+            return 200 to JSONObject().put("latest", latest)
                 .put("samples", samples).put("sampleCount", samples.length())
         }
         if (method == "GET" && path == "/api/v1/metrics") {
@@ -362,7 +366,7 @@ object ManagementApiServer {
                 .put("availableDeviceMemoryBytes", memoryInfo.availMem)
                 .put("totalDeviceMemoryBytes", memoryInfo.totalMem)
                 .put("lowMemory", memoryInfo.lowMemory)
-                .put("telemetry", TelemetryStore.latest(context) ?: TelemetryStore.record(context))
+                .put("telemetry", if (NativeEngine.status() == "RUNNING") TelemetryStore.latest(context) ?: TelemetryStore.record(context) else DeviceTelemetry.snapshot(context))
             return 200 to JSONObject().put("sampledAt", Instant.now().toString())
                 .put("sources", sources).put("deviceResources", resources)
         }
