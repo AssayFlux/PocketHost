@@ -420,7 +420,7 @@ object ApplicationBackupManager {
             val root = File(entry.root).canonicalFile
             val canonicalRoot = root.canonicalPath
             var archiveRoot = defaultArchiveRoots[entry.runtime]
-            if (canonicalRoot != archiveRoot) {
+            if (canonicalRoot != expected[entry.runtime]) {
                 if (entry.runtime != "static") {
                     throw IOException("Site '${entry.name}' uses a custom runtime project directory that is not supported by portable backup.")
                 }
@@ -540,7 +540,11 @@ object ApplicationBackupManager {
         var rootBytes = 0L
         var rootFiles = 0
         var rootEntries = 0
-        val rootFileLimit = when (prefix) { "site", "python" -> 5_000; "node" -> 10_000; else -> MAX_FILES }
+        val rootFileLimit = when {
+            prefix == "site" || prefix == "python" || prefix.startsWith("custom-static/") -> 5_000
+            prefix == "node" -> 10_000
+            else -> MAX_FILES
+        }
         fun visit(directory: File, relative: String) {
             val children = directory.listFiles()?.sortedBy { it.name }
                 ?: throw IOException("Could not read project directory: ${directory.name}")
