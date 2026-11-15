@@ -812,6 +812,65 @@ private fun PocketHostDashboard() {
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("Your website", color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                                Text(if (importedSummary.isBlank()) "No website deployed yet" else importedSummary,
+                                    color = palette.onSurfaceVariant, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Text(if (hosting) "LIVE" else "OFFLINE",
+                                color = if (hosting) Color(0xFF2E7D32) else palette.onSurfaceVariant,
+                                fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        val websitePort = portText.toIntOrNull() ?: 8080
+                        val websiteUrl = if (allowLan && !lanAddress.isNullOrBlank())
+                            "http://$lanAddress:$websitePort" else "http://127.0.0.1:$websitePort"
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = palette.background
+                        ) {
+                            Text(websiteUrl, modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+                                color = palette.onSurface, fontFamily = FontFamily.Monospace, fontSize = 13.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(websiteUrl)))
+                                    }.onFailure { status = it.message ?: "Could not open the website preview." }
+                                },
+                                enabled = hosting,
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Open preview") }
+                            OutlinedButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Pocket Host website URL", websiteUrl))
+                                    status = "Website address copied."
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Copy address") }
+                        }
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Box(Modifier.size(7.dp).clip(CircleShape)
+                                .background(if (tunnelStatus == "CONNECTED") Color(0xFF2E7D32) else palette.outline))
+                            Spacer(Modifier.width(7.dp))
+                            Text(if (tunnelStatus == "CONNECTED") "Cloudflare tunnel connected" else "Cloudflare tunnel not connected",
+                                color = palette.onSurfaceVariant, fontSize = 12.sp)
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { selectedTab = "Sites" }) { Text("Manage site") }
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
+                ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Traffic", color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
