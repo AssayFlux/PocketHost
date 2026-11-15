@@ -20,9 +20,19 @@ object PythonHostRuntime {
         return Python.getInstance()
     }
 
+    private fun configure(context: Context) {
+        val memory = android.app.ActivityManager.MemoryInfo()
+        context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
+        val automaticWorkers = (memory.totalMem / (512L * 1024L * 1024L)).toInt().coerceIn(4, 16)
+        val workers = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            .getInt("python_max_workers", automaticWorkers).coerceIn(2, 16)
+        python(context).getModule("pockethost_runtime").callAttr("configure", workers)
+    }
+
     @Synchronized
     fun start(context: Context, projectRoot: String, port: Int, allowLan: Boolean = false): String {
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
+        configure(context)
         return python(context).getModule("pockethost_runtime")
             .callAttr("start", projectRoot, port, allowLan).toString()
     }
