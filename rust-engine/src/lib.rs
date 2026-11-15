@@ -362,17 +362,6 @@ async fn serve(
 }
 
 async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
-    let client_ip = effective_client_ip(
-        peer.ip(),
-        req.headers().get("cf-connecting-ip").and_then(|value| value.to_str().ok())
-    );
-    if !allow_request_rate(client_ip) {
-        RATE_LIMITED_REQUESTS.fetch_add(1, Ordering::Relaxed);
-        let mut response = text_response(StatusCode::TOO_MANY_REQUESTS, "text/plain; charset=utf-8", "Request rate limit exceeded");
-        response.headers_mut().insert("retry-after", "1".parse().unwrap());
-        response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
-        return Ok(response);
-    }
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
@@ -726,11 +715,6 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_queuedC
 #[no_mangle]
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rateLimitedRequests(_env: JNIEnv, _class: JClass) -> jlong {
     RATE_LIMITED_REQUESTS.load(Ordering::Relaxed) as jlong
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_siteLimitRejections(_env: JNIEnv, _class: JClass) -> jlong {
-    SITE_LIMIT_REJECTIONS.load(Ordering::Relaxed) as jlong
 }
 
 #[no_mangle]
