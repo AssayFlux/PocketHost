@@ -41,6 +41,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Test remote control-plane backend and database migrations
         run: cargo test --manifest-path control-plane/Cargo.toml
+      - name: Validate public and Cloudflare Tunnel Compose profiles
+        env:
+          POSTGRES_PASSWORD: ci-only-postgres-password
+          POCKETHOST_CONTROL_ADMIN_TOKEN: ci-only-test-admin-token-0123456789abcdef
+          POCKETHOST_CONTROL_ORIGIN: https://console.example.test
+          CONTROL_PLANE_DOMAIN: api.example.test
+          POCKETHOST_CONTROL_TUNNEL_TOKEN: ci-only-cloudflare-tunnel-token
+        run: |
+          docker pull cloudflare/cloudflared:2026.11.0
+          docker compose --profile public -f control-plane/compose.yaml config --quiet
+          docker compose --profile cloudflare -f control-plane/compose.yaml config --quiet
 
   python-runtime:
     runs-on: ubuntu-latest
