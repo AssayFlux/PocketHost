@@ -84,10 +84,14 @@ object HostAccountStore {
                 ?: DUMMY_SALT.copyOf()
             val expected = item?.let { Base64.decode(it.getString("verifier"), Base64.NO_WRAP) }
                 ?: DUMMY_VERIFIER
-            val actual = derive(password, salt)
-            val valid = MessageDigest.isEqual(expected, actual) && item != null
-            salt.fill(0)
-            actual.fill(0)
+            val valid = try {
+                val actual = derive(password, salt)
+                try { MessageDigest.isEqual(expected, actual) && item != null }
+                finally { actual.fill(0) }
+            } finally {
+                salt.fill(0)
+                if (item != null) expected.fill(0)
+            }
             if (item == null) return null
             return if (valid) Account(item.getString("username"), item.getString("role"), item.getLong("createdAt")) else null
         } finally {
