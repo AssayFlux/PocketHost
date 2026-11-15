@@ -366,7 +366,7 @@ async fn download_artifact(
         .status(StatusCode::OK)
         .header(CONTENT_TYPE, "application/zip")
         .header("Cache-Control", "no-store")
-        .header(axum::http::header::CONTENT_LENGTH, bytes.len())
+        .header(axum::http::header::CONTENT_LENGTH, bytes.len().to_string())
         .body(axum::body::Body::from(bytes))
         .map_err(internal)
 }
