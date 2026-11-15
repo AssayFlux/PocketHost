@@ -18,7 +18,7 @@ No Termux. No root. No mandatory VPS. The existing domain and named Cloudflare T
 - **Cloudflare:** Android-targeted cloudflared connector with encrypted token storage and lifecycle supervision.
 - **Local management:** authenticated loopback API and paired TypeScript/React console.
 - **Operations:** traffic and device metrics, activity logs, diagnostics and Capacity Lab.
-- **Backup:** passphrase-encrypted full-app backup for the active website, supported Python/Node project roots, hostname routes and selected non-secret settings. Device-bound credentials are excluded; restored runtimes remain stopped pending owner approval.
+- **Backup:** passphrase-encrypted full-app backup for the active website, registered custom static roots, configured Python/Node project roots, hostname routes and selected non-secret settings. Device-bound credentials are excluded; restored runtimes remain stopped pending owner approval.
 
 ## App navigation
 
