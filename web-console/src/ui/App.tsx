@@ -111,6 +111,18 @@ export function App() {
     finally { setBusy(false); }
   }
 
+  async function saveResources() {
+    setBusy(true);
+    try {
+      const result = await request("/api/v1/resources", {
+        method: "POST", body: JSON.stringify({ pythonMaxWorkers: pythonWorkers, nodeHeapMb: nodeHeap }),
+      });
+      setResources(current => current ? { ...current, ...result } : current);
+      setMessage("Runtime resource limits saved. Restart Python and Node runtimes to apply them.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Resource settings could not be saved."); }
+    finally { setBusy(false); }
+  }
+
   async function tunnelAction(action: "start" | "stop") {
     setBusy(true);
     try {
