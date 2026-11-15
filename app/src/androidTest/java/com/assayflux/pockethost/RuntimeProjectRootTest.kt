@@ -15,17 +15,25 @@ class RuntimeProjectRootTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
-    fun acceptsProjectInsideAppPrivateFilesAndCacheDirectories() {
+    fun acceptsProjectInsideEveryAllowedPrivateDirectory() {
         val filesProject = File(context.filesDir, "runtime-root-test-files").apply { mkdirs() }
         val cacheProject = File(context.cacheDir, "runtime-root-test-cache").apply { mkdirs() }
+        val noBackupProject = File(context.noBackupFilesDir, "runtime-root-test-no-backup").apply { mkdirs() }
+        val codeCacheProject = File(context.codeCacheDir, "runtime-root-test-code-cache").apply { mkdirs() }
         try {
             assertEquals(filesProject.canonicalFile,
                 RuntimeProjectRoot.requireOwnedProjectRoot(context, filesProject.absolutePath))
             assertEquals(cacheProject.canonicalFile,
                 RuntimeProjectRoot.requireOwnedProjectRoot(context, cacheProject.absolutePath))
+            assertEquals(noBackupProject.canonicalFile,
+                RuntimeProjectRoot.requireOwnedProjectRoot(context, noBackupProject.absolutePath))
+            assertEquals(codeCacheProject.canonicalFile,
+                RuntimeProjectRoot.requireOwnedProjectRoot(context, codeCacheProject.absolutePath))
         } finally {
             filesProject.deleteRecursively()
             cacheProject.deleteRecursively()
+            noBackupProject.deleteRecursively()
+            codeCacheProject.deleteRecursively()
         }
     }
 

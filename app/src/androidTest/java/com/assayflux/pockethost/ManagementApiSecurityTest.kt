@@ -14,6 +14,9 @@ import org.junit.runner.RunWith
 import java.net.Socket
 import java.net.ServerSocket
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class ManagementApiSecurityTest {
@@ -232,6 +235,40 @@ class ManagementApiSecurityTest {
         assertEquals(200, request("POST", "/api/v1/auth/recover-owner",
             JSONObject().put("newPassword", "PocketHost-Owner-Password-42").toString(),
             authorization = resetPairing).first)
+    }
+
+    @Test
+    fun healthEndpointRemainsResponsiveDuringConcurrentPasswordVerification() {
+        val username = "parallel_" + System.nanoTime().toString().takeLast(8)
+        val password = "PocketHost-Parallel-Password-42"
+        com.assayflux.pockethost.management.HostAccountStore.create(
+            context, username, password.toCharArray(), "OPERATOR"
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        val ready = CountDownLatch(2)
+        try {
+            val loginTasks = (1..2).map {
+                executor.submit<Pair<Int, String>> {
+                    ready.countDown()
+                    request("POST", "/api/v1/auth/login",
+                        JSONObject().put("username", username).put("password", password).toString())
+                }
+            }
+            assertEquals(true, ready.await(5, TimeUnit.SECONDS))
+
+            // The management listener must continue serving lightweight health checks
+            // while expensive password verification is running on other worker threads.
+            val startedAt = System.nanoTime()
+            val health = request("GET", "/api/v1/health")
+            val elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
+            assertEquals(200, health.first)
+            assertEquals(true, elapsedMs < 5_000)
+
+            loginTasks.forEach { assertEquals(200, it.get(90, TimeUnit.SECONDS).first) }
+        } finally {
+            executor.shutdownNow()
+            com.assayflux.pockethost.management.HostAccountStore.revokeOperator(context, username)
+        }
     }
 
     @Test
