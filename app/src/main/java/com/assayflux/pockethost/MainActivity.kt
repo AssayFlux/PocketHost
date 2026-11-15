@@ -13,6 +13,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import java.time.LocalDate
+import com.assayflux.pockethost.ui.theme.PocketHostTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,10 +63,6 @@ import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
-private val Teal = Color(0xFF24434A)
-private val Bronze = Color(0xFFB18B5E)
-private val Ivory = Color(0xFFF6F4EF)
-private val Slate = Color(0xFF657174)
 
 private fun localLanAddress(): String? = runCatching {
     val interfaces = NetworkInterface.getNetworkInterfaces()
@@ -98,6 +100,9 @@ class MainActivity : ComponentActivity() {
 private fun PocketHostDashboard() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var selectedTab by remember { mutableStateOf("Dashboard") }
+    var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
+    var logFilterMode by remember { mutableStateOf("All") }
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var importing by remember { mutableStateOf(false) }
     var advancedMode by remember { mutableStateOf(false) }
@@ -343,33 +348,56 @@ private fun PocketHostDashboard() {
         }
     }
 
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Teal,
-            onPrimary = Ivory,
-            secondary = Bronze,
-            onSecondary = Color.White,
-            background = Ivory,
-            onBackground = Teal,
-            surface = Color.White,
-            onSurface = Teal,
-            outline = Color(0xFFD9D3C8)
-        )
-    ) {
-        Surface(Modifier.fillMaxSize(), color = Ivory) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text("DESIGNED BY ASSAYFLUX", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Text("PocketHost", color = Teal, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                Text("Your website. Your device. Your control.", color = Slate)
+    PocketHostTheme(darkTheme = darkTheme) {
+        val palette = MaterialTheme.colorScheme
+        Scaffold(
+            containerColor = palette.background,
+            topBar = {
+                Surface(color = palette.surface, tonalElevation = 1.dp) {
+                    Row(
+                        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("AssayFlux Pocket Host", color = palette.onSurface,
+                                fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(selectedTab, color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        }
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (hosting) Color(0xFF2E7D32) else Color(0xFFC62828)))
+                        Text(if (hosting) "Running" else "Stopped", color = palette.onSurface,
+                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            bottomBar = {
+                NavigationBar(containerColor = palette.surface) {
+                    listOf("Dashboard", "Files", "Logs", "Settings").forEach { destination ->
+                        val symbol = when (destination) { "Dashboard" -> "⌂"; "Files" -> "▤"; "Logs" -> "≡"; else -> "⚙" }
+                        NavigationBarItem(
+                            selected = selectedTab == destination,
+                            onClick = { selectedTab = destination },
+                            icon = { Text(symbol, fontSize = 18.sp) },
+                            label = { Text(destination, fontSize = 14.sp) },
+                            alwaysShowLabel = true
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Surface(Modifier.fillMaxSize(), color = palette.background) {
+                Column(
+                    Modifier.fillMaxSize().padding(innerPadding).imePadding()
+                        .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                if (selectedTab == "Dashboard") {
                 if (pendingPairingCode != null) {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("CONSOLE PAIRING REQUEST", color = Teal, fontWeight = FontWeight.Bold)
-                            Text("Code: $pendingPairingCode", color = Teal, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                            Text("Only approve this if you initiated pairing from your own trusted browser.", color = Slate)
+                            Text("CONSOLE PAIRING REQUEST", color = palette.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Code: $pendingPairingCode", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Only approve this if you initiated pairing from your own trusted browser.", color = palette.onSurfaceVariant)
                             Button(onClick = {
                                 val approved = ManagementApiServer.approvePairing(pendingPairingCode.orEmpty())
                                 if (approved) { status = "Management console pairing approved."; pendingPairingCode = null }
@@ -378,6 +406,24 @@ private fun PocketHostDashboard() {
                         }
                     }
                 }
+                }
+                if (selectedTab == "Settings") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Dark theme", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Use the darker Pocket Host appearance.", color = palette.onSurfaceVariant)
+                            }
+                            Switch(checked = darkTheme, onCheckedChange = { enabled ->
+                                darkTheme = enabled
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("dark_theme", enabled).apply()
+                            })
+                        }
+                    }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
                     FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
@@ -388,7 +434,7 @@ private fun PocketHostDashboard() {
                         colors = CardDefaults.cardColors(containerColor = Color.White)
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("SERVER CONFIGURATION", color = Teal, fontWeight = FontWeight.SemiBold)
+                            Text("SERVER CONFIGURATION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                             OutlinedTextField(
                                 value = portText,
                                 onValueChange = { value -> if (value.length <= 5 && value.all(Char::isDigit)) portText = value },
@@ -409,11 +455,11 @@ private fun PocketHostDashboard() {
                                 },
                                 enabled = !hosting
                             ) { Text("Save server settings") }
-                            Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = Slate, fontSize = 11.sp)
+                            Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("Keep CPU awake while hosting", color = Teal, fontWeight = FontWeight.SemiBold)
-                                    Text("Optional screen-off reliability aid. Uses more battery and cannot override every OEM network policy.", color = Slate, fontSize = 10.sp)
+                                    Text("Keep CPU awake while hosting", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                    Text("Optional screen-off reliability aid. Uses more battery and cannot override every OEM network policy.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                                 }
                                 Switch(
                                     checked = keepAwake,
@@ -433,8 +479,8 @@ private fun PocketHostDashboard() {
                         colors = CardDefaults.cardColors(containerColor = Color.White)
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("REMOTE CONTROL PLANE", color = Teal, fontWeight = FontWeight.SemiBold)
-                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this phone to your independently hosted PocketHost backend.", color = Slate, fontSize = 11.sp)
+                            Text("REMOTE CONTROL PLANE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this phone to your independently hosted PocketHost backend.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             OutlinedTextField(
                                 value = controlPlaneEndpoint,
                                 onValueChange = { controlPlaneEndpoint = it },
@@ -469,67 +515,63 @@ private fun PocketHostDashboard() {
                                     status = "Remote control credentials removed from this device."
                                 }, enabled = remoteControlConfigured) { Text("Disconnect") }
                             }
-                            Text("The device makes outbound HTTPS requests only. The backend cannot open inbound ports or execute arbitrary shell commands on this phone.", color = Slate, fontSize = 10.sp)
+                            Text("The device makes outbound HTTPS requests only. The backend cannot open inbound ports or execute arbitrary shell commands on this phone.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                     }
                 }
 
+                }
+                if (selectedTab == "Dashboard") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("HOSTING STATUS", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text(if (hosting) "Local hosting active" else "Stopped", color = Teal, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                        Text(status, color = Slate, fontSize = 13.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
-                                onClick = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                                    ) {
-                                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    } else {
-                                        startHosting(false)
-                                    }
-                                },
-                                enabled = !hosting && !importing
-                            ) { Text("Start hosting") }
-                            OutlinedButton(
-                                onClick = {
+                        Text("HOSTING STATUS", color = palette.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(if (hosting) "Local hosting active" else "Stopped", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                        Text(status, color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Button(
+                            onClick = {
+                                if (hosting) {
                                     context.stopService(Intent(context, HostingService::class.java))
                                     status = "Stopping hosting service…"
-                                },
-                                enabled = hosting
-                            ) { Text("Stop") }
-                        }
+                                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    startHosting(false)
+                                }
+                            },
+                            enabled = hosting || !importing,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(if (hosting) "Stop hosting" else "Start hosting") }
                     }
                 }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("STATIC ENGINE TRAFFIC · ALL HOSTING SESSIONS", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("STATIC ENGINE TRAFFIC · ALL HOSTING SESSIONS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column(Modifier.weight(1f)) {
-                                Text("Requests", color = Slate, fontSize = 11.sp)
-                                Text(requests.toString(), color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text("Requests", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                                Text(requests.toString(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                             Column(Modifier.weight(1f)) {
-                                Text("Active", color = Slate, fontSize = 11.sp)
-                                Text(activeConnections.toString(), color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text("Active", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                                Text(activeConnections.toString(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                             Column(Modifier.weight(1f)) {
-                                Text("Transferred", color = Slate, fontSize = 11.sp)
-                                Text(formatBytes(bytesServed), color = Teal, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text("Transferred", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                                Text(formatBytes(bytesServed), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                        Text("Today: $todayRequests requests · ${formatBytes(todayBytes)} transferred.", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Static-engine totals persist across service restarts. Python WSGI and tunnel traffic are not included yet.", color = Slate, fontSize = 10.sp)
+                        Text("Today: $todayRequests requests · ${formatBytes(todayBytes)} transferred.", color = palette.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Static-engine totals persist across service restarts. Python WSGI and tunnel traffic are not included yet.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
@@ -539,11 +581,11 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("CAPACITY & AUTOMATIC PROTECTION", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("CAPACITY & AUTOMATIC PROTECTION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text("Admission budget: ${capacityInfo.optInt("effectiveConcurrencyLimit", 16)} active connections · ${capacityInfo.optInt("percent", 100)}% of ${if (capacityInfo.optLong("calibratedAt") > 0L) "measured" else "provisional"} concurrency ceiling",
-                            color = Slate, fontSize = 12.sp)
+                            color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Slider(value = capacityPercent, onValueChange = { capacityPercent = it }, valueRange = 1f..100f)
-                        Text("${capacityPercent.toInt()}% capacity profile", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("${capacityPercent.toInt()}% capacity profile", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(onClick = {
                             runCatching { CapacityController.setPercent(context, capacityPercent.toInt()) }
                                 .onSuccess { capacityInfo = CapacityController.snapshot(context); status = "Capacity profile applied." }
@@ -567,34 +609,34 @@ private fun PocketHostDashboard() {
                         }, enabled = hosting && capacityBenchmark.optString("state") != "RUNNING",
                             modifier = Modifier.fillMaxWidth()) { Text(if (capacityBenchmark.optString("state") == "RUNNING") "Benchmark running…" else "Measure safe capacity") }
                         Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
-                            color = Slate, fontSize = 11.sp)
+                            color = palette.onSurfaceVariant, fontSize = 14.sp)
                         val benchmarkLevels = capacityBenchmark.optJSONArray("levels")
                         val chartRows = (0 until (benchmarkLevels?.length() ?: 0)).mapNotNull { index ->
                             benchmarkLevels?.optJSONObject(index)?.let { it.optInt("concurrency") to it.optLong("p95LatencyMs") }
                         }
                         if (chartRows.isNotEmpty()) {
-                            Text("P95 response latency by concurrency", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text("P95 response latency by concurrency", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             Canvas(Modifier.fillMaxWidth().height(112.dp)) {
                                 val maxLatency = maxOf(750L, chartRows.maxOf { it.second }).toFloat()
                                 val rowHeight = size.height / chartRows.size
                                 chartRows.forEachIndexed { index, row ->
                                     val top = index * rowHeight + rowHeight * 0.2f
                                     val barWidth = size.width * (row.second.toFloat() / maxLatency).coerceIn(0f, 1f)
-                                    drawRect(color = Bronze, topLeft = Offset(0f, top), size = Size(barWidth, rowHeight * 0.48f))
-                                    drawLine(color = Teal.copy(alpha = 0.55f),
+                                    drawRect(color = palette.primary, topLeft = Offset(0f, top), size = Size(barWidth, rowHeight * 0.48f))
+                                    drawLine(color = palette.onSurface.copy(alpha = 0.55f),
                                         start = Offset(size.width * (750f / maxLatency), top - 2f),
                                         end = Offset(size.width * (750f / maxLatency), top + rowHeight * 0.7f), strokeWidth = 2f)
                                 }
                             }
                             Text("Bars show p95 milliseconds; vertical marker = 750 ms acceptance threshold. Concurrency levels: ${chartRows.joinToString { it.first.toString() }}.",
-                                color = Slate, fontSize = 10.sp)
+                                color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                         Text("Device: ${deviceTelemetry.optString("manufacturer")} ${deviceTelemetry.optString("model")} · Android API ${deviceTelemetry.optInt("androidApi")} · ${deviceTelemetry.optInt("cpuCores")} CPU cores",
-                            color = Slate, fontSize = 11.sp)
+                            color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Text("CPU load: ${if (deviceTelemetry.isNull("cpuUsagePercent")) "warming up / unavailable" else deviceTelemetry.optDouble("cpuUsagePercent").toInt().toString() + "%"} · app PSS: ${formatBytes(deviceTelemetry.optLong("processPssKb") * 1024L)} · RAM available: ${formatBytes(deviceTelemetry.optLong("availableMemoryBytes"))} · storage free: ${formatBytes(deviceTelemetry.optLong("storageAvailableBytes"))} · battery: ${if (deviceTelemetry.isNull("batteryPercent")) "unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "%"} · thermal: ${deviceTelemetry.optString("thermalLabel", "UNKNOWN")} · network: ${deviceTelemetry.optString("networkTransport", "unknown")}",
-                            color = Slate, fontSize = 11.sp)
+                            color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Text("Automatic health state: ${capacityInfo.optString("healthState", "NORMAL")}. Daily reports retained: ${DailyOperationsReport.list(context).size}. The percentage controls admission concurrency, not CPU usage or a guaranteed visitor count. Android can still stop the app.",
-                            color = Slate, fontSize = 10.sp)
+                            color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(onClick = { dailyReportExportPicker.launch("pockethost-daily-report.json") },
                             enabled = DailyOperationsReport.list(context).isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
                             Text("Export latest daily report")
@@ -602,13 +644,20 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                }
+                if (selectedTab == "Logs") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("RECENT OPERATIONS", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("RECENT OPERATIONS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("All", "Errors", "Today").forEach { filter ->
+                                FilterChip(selected = logFilterMode == filter, onClick = { logFilterMode = filter }, label = { Text(filter) })
+                            }
+                        }
                         OutlinedTextField(
                             value = logFilter,
                             onValueChange = { logFilter = it },
@@ -617,27 +666,33 @@ private fun PocketHostDashboard() {
                             modifier = Modifier.fillMaxWidth()
                         )
                         val filteredEvents = recentEvents.filter { event ->
-                            logFilter.isBlank() ||
+                            val matchesText = logFilter.isBlank() ||
                                 event.level.contains(logFilter, ignoreCase = true) ||
                                 event.event.contains(logFilter, ignoreCase = true) ||
                                 event.message.contains(logFilter, ignoreCase = true)
-                        }.take(8)
+                            val matchesMode = when (logFilterMode) {
+                                "Errors" -> event.level.equals("ERROR", ignoreCase = true)
+                                "Today" -> event.timestamp.startsWith(LocalDate.now().toString())
+                                else -> true
+                            }
+                            matchesText && matchesMode
+                        }.take(100)
                         if (filteredEvents.isEmpty()) {
-                            Text(if (recentEvents.isEmpty()) "No operational events recorded yet." else "No events match this filter.", color = Slate, fontSize = 12.sp)
+                            Text(if (recentEvents.isEmpty()) "No operational events recorded yet." else "No events match this filter.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         } else {
                             filteredEvents.forEach { event ->
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else Bronze, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                        Text(event.event.replace('_', ' '), color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else palette.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                        Text(event.event.replace('_', ' '), color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                         Spacer(Modifier.weight(1f))
-                                        Text(event.timestamp.take(19).replace('T', ' '), color = Slate, fontSize = 9.sp)
+                                        Text(event.timestamp.take(19).replace('T', ' '), color = palette.onSurfaceVariant, fontSize = 14.sp)
                                     }
-                                    if (event.message.isNotBlank()) Text(event.message, color = Slate, fontSize = 11.sp)
+                                    if (event.message.isNotBlank()) Text(event.message, color = palette.onSurfaceVariant, fontSize = 14.sp)
                                 }
                             }
                         }
-                        Text("App-private rotating log · credentials and bearer tokens are redacted.", color = Slate, fontSize = 10.sp)
+                        Text("App-private rotating log · credentials and bearer tokens are redacted.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(
                             onClick = { logExportPicker.launch("pockethost-operations.jsonl") },
                             modifier = Modifier.fillMaxWidth()
@@ -649,14 +704,36 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                }
+                if (selectedTab == "Files") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("WEBSITE", fontWeight = FontWeight.SemiBold, color = Teal)
-                        Text(importedSummary, color = Slate, fontSize = 13.sp)
+                        Text("WEBSITE", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
+                        Text(importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        val siteRoot = File(context.filesDir, "site")
+                        val siteFiles = remember(importedSummary) {
+                            if (siteRoot.isDirectory) siteRoot.walkTopDown().maxDepth(8).filter { it.isFile }.take(100).toList()
+                            else emptyList()
+                        }
+                        Text("Site files", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        if (siteFiles.isEmpty()) {
+                            Text("No imported site files yet. Choose a folder or ZIP to deploy your website.", color = palette.onSurfaceVariant)
+                        } else {
+                            siteFiles.forEach { file ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    Text(file.relativeTo(siteRoot).path, Modifier.weight(1f), color = palette.onSurface,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${formatBytes(file.length())} · ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(file.lastModified()))}",
+                                        color = palette.onSurfaceVariant, maxLines = 1)
+                                }
+                            }
+                        }
+                        Text(if (File(siteRoot, "index.html").isFile) "Entry page: index.html" else "No index.html found at the site root yet.", color = palette.onSurfaceVariant)
                         Button(
                             onClick = { folderPicker.launch(null) },
                             enabled = !hosting && !importing,
@@ -667,7 +744,7 @@ private fun PocketHostDashboard() {
                             enabled = !hosting && !importing,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Import website ZIP") }
-                        Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = Slate, fontSize = 11.sp)
+                        Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedTextField(
                             value = backupPassphrase,
                             onValueChange = { backupPassphrase = it },
@@ -687,7 +764,7 @@ private fun PocketHostDashboard() {
                             enabled = !hosting && !importing && backupPassphrase.length >= 12,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Restore encrypted website backup") }
-                        Text("Backups use AES-256-GCM with a passphrase-derived key. Only the static website is included; Python projects, tunnel credentials and device settings are excluded. Restores are authenticated and validated before deployment.", color = Slate, fontSize = 10.sp)
+                        Text("Backups use AES-256-GCM with a passphrase-derived key. Only the static website is included; Python projects, tunnel credentials and device settings are excluded. Restores are authenticated and validated before deployment.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         if (previousReleases.isNotEmpty()) {
                             OutlinedButton(
                                 onClick = {
@@ -703,18 +780,20 @@ private fun PocketHostDashboard() {
                                 enabled = !hosting && !importing,
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Rollback previous deployment") }
-                            Text("${previousReleases.size} previous release(s) retained · latest first", color = Slate, fontSize = 11.sp)
+                            Text("${previousReleases.size} previous release(s) retained · latest first", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                     }
                 }
 
+                }
+                if (selectedTab == "Settings") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("CLOUDFLARE TUNNEL", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("CLOUDFLARE TUNNEL", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text(
                             when (tunnelStatus) {
                                 "CONNECTED" -> "Tunnel connected to Cloudflare."
@@ -722,7 +801,7 @@ private fun PocketHostDashboard() {
                                 "ERROR" -> "Tunnel process stopped with an error. Check the service status."
                                 else -> if (cloudflareTokenSaved) "Named tunnel token is encrypted on this device." else "No tunnel token saved."
                             },
-                            color = Slate, fontSize = 12.sp
+                            color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
                         OutlinedTextField(
                             value = cloudflareTokenText,
@@ -790,11 +869,11 @@ private fun PocketHostDashboard() {
                         }
                         Text(
                             "Create a remotely managed tunnel in Cloudflare Zero Trust, then configure its Public Hostname origin as http://127.0.0.1:${portText.toIntOrNull() ?: 8080}. DNS and hostname setup remain in the Cloudflare dashboard.",
-                            color = Slate, fontSize = 10.sp
+                            color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
                         Text(
                             "Public exposure is not visitor-authenticated by PocketHost. Add Cloudflare Access before exposing private sites. Tunnel connector and ABI support still require physical-device validation.",
-                            color = Slate, fontSize = 10.sp
+                            color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
                     }
                 }
@@ -802,15 +881,15 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4DF))
+                    colors = CardDefaults.cardColors(containerColor = palette.surfaceVariant)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("TRUSTED APPLICATION CODE ONLY", color = Teal, fontWeight = FontWeight.SemiBold)
-                        Text("Python and Node applications execute with PocketHost's Android app privileges. A separate process or V8 heap limit is NOT a security sandbox. Never run code you do not own or trust. Strong OS-backed sandboxing is not implemented yet.", color = Slate, fontSize = 11.sp)
+                        Text("TRUSTED APPLICATION CODE ONLY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text("Python and Node applications execute with PocketHost's Android app privileges. A separate process or V8 heap limit is NOT a security sandbox. Never run code you do not own or trust. Strong OS-backed sandboxing is not implemented yet.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("I understand and will run trusted code only", color = Teal, fontWeight = FontWeight.SemiBold)
-                                Text("Required before either optional runtime can start.", color = Slate, fontSize = 10.sp)
+                                Text("I understand and will run trusted code only", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Required before either optional runtime can start.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             }
                             Switch(checked = trustedRuntimeCodeAck, onCheckedChange = { accepted ->
                                 trustedRuntimeCodeAck = accepted
@@ -843,8 +922,8 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("PYTHON BACKEND · CPYTHON 3.11", color = Teal, fontWeight = FontWeight.SemiBold)
-                        Text(pythonProjectSummary, color = Slate, fontSize = 12.sp)
+                        Text("PYTHON BACKEND · CPYTHON 3.11", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(pythonProjectSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(
                             onClick = { pythonProjectPicker.launch(null) },
                             enabled = !importing && !pythonHosting,
@@ -893,9 +972,9 @@ private fun PocketHostDashboard() {
                         }
                         if (pythonHosting) Text(
                             if (allowLan && lanAddress != null) "Python preview: http://$lanAddress:$pythonPortText" else "Python preview: http://127.0.0.1:$pythonPortText",
-                            color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
+                            color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
                         )
-                        Text("Runs trusted WSGI applications from wsgi.py. Loopback by default; LAN access follows the explicit hosting setting. Python project code runs with app privileges.", color = Slate, fontSize = 10.sp)
+                        Text("Runs trusted WSGI applications from wsgi.py. Loopback by default; LAN access follows the explicit hosting setting. Python project code runs with app privileges.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
@@ -905,8 +984,8 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("CUSTOM HOSTNAME ROUTING", color = Teal, fontWeight = FontWeight.SemiBold)
-                        Text("Map a domain to an imported website or backend. Configure Cloudflare's public hostname origin to the Rust static server port.", color = Slate, fontSize = 10.sp)
+                        Text("CUSTOM HOSTNAME ROUTING", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text("Map a domain to an imported website or backend. Configure Cloudflare's public hostname origin to the Rust static server port.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedTextField(value = hostnameText, onValueChange = { hostnameText = it.trim().lowercase() },
                             label = { Text("Hostname, e.g. app.example.com") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -955,7 +1034,7 @@ private fun PocketHostDashboard() {
                             }.onFailure { status = it.message ?: "Could not save hostname route." }
                         }, enabled = hostnameText.isNotBlank() && !importing) { Text("Save hostname route") }
                         SiteRegistry.list(context).filter { it.hostnames.isNotEmpty() }.forEach { site ->
-                            Text(site.name + " · " + site.hostnames.joinToString(), color = Slate, fontSize = 10.sp)
+                            Text(site.name + " · " + site.hostnames.joinToString(), color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                     }
                 }
@@ -966,8 +1045,8 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("NODE.JS 24 LTS · EMBEDDED RUNTIME", color = Teal, fontWeight = FontWeight.SemiBold)
-                        Text(nodeProjectSummary, color = Slate, fontSize = 12.sp)
+                        Text("NODE.JS 24 LTS · EMBEDDED RUNTIME", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(nodeProjectSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(onClick = { nodeProjectPicker.launch(null) }, enabled = !importing && !nodeHosting,
                             modifier = Modifier.fillMaxWidth()) { Text("Import Node.js project") }
                         OutlinedTextField(value = nodePortText,
@@ -998,23 +1077,30 @@ private fun PocketHostDashboard() {
                                 status = "Stopping the isolated Node.js process."
                             }, enabled = nodeHosting) { Text("Stop Node.js") }
                         }
-                        if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Runs one Node.js application in a separate Android process under the same app security identity. This is not a sandbox. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = Slate, fontSize = 10.sp)
+                        if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Runs one Node.js application in a separate Android process under the same app security identity. This is not a sandbox. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
+                }
+                if (selectedTab == "Dashboard") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEAE3D2))
+                    colors = CardDefaults.cardColors(containerColor = palette.surfaceVariant)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("LOCAL PREVIEW", fontWeight = FontWeight.SemiBold, color = Teal)
-                        Text(if (allowLan && lanAddress != null) "http://$lanAddress:$portText" else "http://127.0.0.1:$portText", color = Teal)
+                        Text("DEVICE HEALTH & LOCAL PREVIEW", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
+                        Text("Battery: ${if (deviceTelemetry.isNull("batteryPercent")) "Unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "%"} · Temperature: ${deviceTelemetry.optString("batteryTemperatureC", "Unavailable")} · Network: ${deviceTelemetry.optString("networkTransport", "Unknown")}", color = palette.onSurfaceVariant)
+                        if ((!deviceTelemetry.isNull("batteryPercent") && deviceTelemetry.optInt("batteryPercent") < 20) ||
+                            deviceTelemetry.optString("thermalLabel").uppercase() in listOf("SEVERE", "CRITICAL", "EMERGENCY", "SHUTDOWN")) {
+                            Text("Device protection warning: battery is low or thermal pressure is high. Reduce hosting load and allow the phone to cool.", color = palette.error, fontWeight = FontWeight.SemiBold)
+                        }
+                        Text(if (allowLan && lanAddress != null) "http://$lanAddress:$portText" else "http://127.0.0.1:$portText", color = palette.onSurface)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Allow local network access", color = Teal, fontWeight = FontWeight.SemiBold)
-                                Text("Lets devices on your current Wi-Fi open this site. No visitor authentication is provided.", color = Slate, fontSize = 11.sp)
+                                Text("Allow local network access", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Lets devices on your current Wi-Fi open this site. No visitor authentication is provided.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             }
                             Switch(checked = allowLan, onCheckedChange = { enabled ->
                                 allowLan = enabled
@@ -1022,16 +1108,15 @@ private fun PocketHostDashboard() {
                                     .putBoolean("allow_lan", enabled).apply()
                             }, enabled = !hosting)
                         }
-                        Text(if (allowLan) "LAN mode enabled · port $portText · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = Slate, fontSize = 12.sp)
+                        Text(if (allowLan) "LAN mode enabled · port $portText · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(
-                            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:${portText.toIntOrNull() ?: 8080}"))) },
+                            onClick = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },
                             enabled = hosting
-                        ) { Text("Open preview") }
+                        ) { Text("Preview site") }
                     }
                 }
-                Text(if (advancedMode) "ADVANCED MODE · ENGINE DETAILS" else "SIMPLE MODE · SAFE STATIC SITE HOSTING", color = Bronze, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Cloudflare Tunnel integration is under validation. Python WSGI is available; Node.js hosting is embedded through the pinned Android Node 24 LTS SDK. Multi-runtime hostname routing and physical-device compatibility remain under validation. Public access requires a configured Cloudflare hostname and an access policy for private content.", color = Slate, fontSize = 11.sp)
-                Text("AssayFlux PocketHost · v0.1.0", color = Slate, fontSize = 11.sp)
+                }
+                Text("Cloudflare Tunnel integration is under validation. Python WSGI is available; Node.js hosting is embedded through the pinned Android Node 24 LTS SDK. Multi-runtime hostname routing and physical-device compatibility remain under validation. Public access requires a configured Cloudflare hostname and an access policy for private content.", color = palette.onSurfaceVariant, fontSize = 14.sp)
             }
         }
     }
