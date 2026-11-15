@@ -78,16 +78,29 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         run: gradle :app:assembleDebug
-      - name: Verify APK contents and ABI libraries
+      - name: Verify ABI-specific APK contents
         run: |
-          APK=app/build/outputs/apk/debug/app-debug.apk
-          test -s "$APK"
-          unzip -l "$APK" | grep -E 'lib/(arm64-v8a|armeabi-v7a|x86_64)/lib(cloudflared|pockethost)\.so'
-          sha256sum "$APK"
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/debug/*.apk)
+          test \${#apks[@]} -eq 3
+          for apk in "\${apks[@]}"; do
+            case "$apk" in
+              *arm64-v8a*) abi=arm64-v8a ;;
+              *armeabi-v7a*) abi=armeabi-v7a ;;
+              *x86_64*) abi=x86_64 ;;
+              *) echo "Unexpected APK: $apk"; exit 1 ;;
+            esac
+            unzip -l "$apk" | grep -q "lib/$abi/libnode.so"
+            unzip -l "$apk" | grep -q "lib/$abi/libnodebridge.so"
+            unzip -l "$apk" | grep -q "lib/$abi/libpockethost.so"
+            unzip -l "$apk" | grep -q "lib/$abi/libcloudflared.so"
+            sha256sum "$apk"
+          done
       - uses: actions/upload-artifact@v4
         with:
-          name: pockethost-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: pockethost-debug-apks
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
