@@ -263,6 +263,7 @@ object CapacityLab {
                     if (memory.lowMemory) { stopReason = "low_memory"; break }
                     if (thermal >= 4) { stopReason = "severe_thermal"; break }
                     if (batteryPercent in 0..10 && !charging) { stopReason = "low_battery"; break }
+                    val deviceBefore = DeviceTelemetry.snapshot(context)
                     val executor = java.util.concurrent.Executors.newFixedThreadPool(level)
                     val requestCount = (level * 2).coerceAtMost(32)
                     val latencies = java.util.Collections.synchronizedList(mutableListOf<Long>())
@@ -318,15 +319,33 @@ object CapacityLab {
                     val throughputBytesPerSecond = bytesServed.get() * 1_000L / elapsed
                     val requestsPerSecond = successes.get() * 1_000.0 / elapsed
                     val averageLatency = if (ordered.isEmpty()) 0L else ordered.sum() / ordered.size
-                    val ok = failures.get() == 0 && ordered.size == requestCount && p95 <= 750L
+                    val deviceAfter = DeviceTelemetry.snapshot(context)
+                    val afterThermal = deviceAfter.optInt("thermalStatus", -1)
+                    val afterBattery = deviceAfter.optInt("batteryPercent", -1)
+                    val afterCpu = if (deviceAfter.isNull("cpuUsagePercent")) null else deviceAfter.optDouble("cpuUsagePercent")
+                    val environmentSafe = !deviceAfter.optBoolean("lowMemory", false) &&
+                        afterThermal < 4 && !(afterBattery in 0..10 && !deviceAfter.optBoolean("charging", false)) &&
+                        (afterCpu == null || afterCpu < 95.0)
+                    val ok = failures.get() == 0 && ordered.size == requestCount && p95 <= 750L && environmentSafe
                     results.put(JSONObject().put("concurrency", level).put("samples", ordered.size)
                         .put("successfulRequests", successes.get()).put("errors", failures.get())
                         .put("bytesServed", bytesServed.get()).put("requestsPerSecond", requestsPerSecond)
                         .put("throughputBytesPerSecond", throughputBytesPerSecond)
                         .put("averageLatencyMs", averageLatency).put("p50LatencyMs", p50)
                         .put("p95LatencyMs", p95).put("maxLatencyMs", maxLatency)
-                        .put("elapsedMs", elapsed).put("withinSafeThreshold", ok))
-                    if (ok) { safe = level; hasSafeLevel = true } else break
+                        .put("elapsedMs", elapsed).put("withinSafeThreshold", ok)
+                        .put("environmentSafe", environmentSafe)
+                        .put("deviceBefore", deviceBefore).put("deviceAfter", deviceAfter))
+                    if (ok) { safe = level; hasSafeLevel = true } else {
+                        if (!environmentSafe) stopReason = when {
+                            deviceAfter.optBoolean("lowMemory", false) -> "low_memory_after_load"
+                            afterThermal >= 4 -> "severe_thermal_after_load"
+                            afterBattery in 0..10 && !deviceAfter.optBoolean("charging", false) -> "low_battery_after_load"
+                            afterCpu != null && afterCpu >= 95.0 -> "high_cpu_after_load"
+                            else -> "environment_guard"
+                        }
+                        break
+                    }
                 }
                 val cancelled = cancelRequested || stopReason == "user_cancelled"
                 val result = JSONObject().put("state", when {
@@ -338,8 +357,8 @@ object CapacityLab {
                     .put("safeConcurrency", if (hasSafeLevel && !cancelled) safe else JSONObject.NULL)
                     .put("stopReason", stopReason)
                     .put("levels", results)
-                    .put("workload", "Loopback static-origin GET / with unique query strings and no-cache headers; reports request rate, byte throughput and latency distribution.")
-                    .put("threshold", "Zero errors and p95 latency <= 750 ms; stopped on user cancellation, Android low-memory, severe thermal status or <=10% battery while not charging.")
+                    .put("workload", "Loopback static-origin GET / with unique query strings and no-cache headers; reports request rate, byte throughput, latency distribution and before/after device health snapshots for each concurrency level.")
+                    .put("threshold", "Zero errors, p95 latency <= 750 ms and safe post-load memory, CPU, thermal and battery state; stopped on cancellation or device health guards.")
                 if (cancelled) {
                     OperationalLog.record(context, "INFO", "CAPACITY_BENCHMARK_CANCELLED", "Capacity benchmark cancelled by the owner; previous calibration retained.")
                 } else if (hasSafeLevel) {
