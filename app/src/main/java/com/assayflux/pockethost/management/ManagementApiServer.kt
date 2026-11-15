@@ -97,8 +97,18 @@ object ManagementApiServer {
                     offset += n
                 }
                 val body = runCatching { JSONObject(String(bodyBytes, Charsets.UTF_8)) }.getOrDefault(JSONObject())
+                val origin = headers["origin"]
+                if (method == "OPTIONS") {
+                    if (!allowedOrigin(origin)) { respond(output, 403, JSONObject().put("error", "origin_not_allowed"), origin); return }
+                    respond(output, 204, JSONObject(), origin)
+                    return
+                }
+                if (origin != null && !allowedOrigin(origin)) {
+                    respond(output, 403, JSONObject().put("error", "origin_not_allowed"), origin)
+                    return
+                }
                 val result = route(method, path, headers["authorization"], body)
-                respond(output, result.first, result.second)
+                respond(output, result.first, result.second, origin)
             } catch (_: Exception) {
                 runCatching { respond(output, 400, JSONObject().put("error", "bad_request")) }
             }
