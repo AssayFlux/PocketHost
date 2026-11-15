@@ -68,7 +68,7 @@ impl Drop for QueuedConnection {
 
 async fn reject_overloaded(mut stream: tokio::net::TcpStream) {
     REJECTED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\\r\\nRetry-After: 2\\r\\nCache-Control: no-store\\r\\nContent-Length: 0\\r\\nConnection: close\\r\\n\\r\\n").await;
+    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 2\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
     let _ = stream.shutdown().await;
 }
 
@@ -330,9 +330,8 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
 
 async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
-    // Keep overload waiting bounded: at most 32 accepted sockets may wait up to
-    // 200 ms for a slot. Beyond that, reject explicitly rather than spawning an
-    // unbounded number of connection tasks or consuming memory indefinitely.
+    // At most 32 accepted sockets may wait up to 200 ms for an active slot.
+    // Queue permits are acquired before spawning, so task creation stays bounded.
     let queue_slots = Arc::new(Semaphore::new(MAX_QUEUED_CONNECTIONS));
     loop {
         tokio::select! {
@@ -343,45 +342,37 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
             },
             accepted = listener.accept() => {
                 let Ok((stream, _peer)) = accepted else { continue };
-                let limit = CAPACITY_LIMIT.load(Ordering::Acquire);
-                let reserved = try_reserve_connection(&ACTIVE_CONNECTIONS, limit);
-                let queue_permit = if reserved {
-                    None
-                } else {
-                    match queue_slots.clone().try_acquire_owned() {
-                        Ok(permit) => Some(permit),
-                        Err(_) => {
-                            reject_overloaded(stream).await;
-                            continue;
-                        }
+                let queue_permit = match queue_slots.clone().try_acquire_owned() {
+                    Ok(permit) => permit,
+                    Err(_) => {
+                        reject_overloaded(stream).await;
+                        continue;
                     }
                 };
                 let site_root = root.clone();
                 let site_roots = host_roots.clone();
                 connections.spawn(async move {
-                    let queued_guard = if reserved { None } else { Some(QueuedConnection::new()) };
-                    if !reserved {
-                        let acquired = tokio::time::timeout(QUEUE_WAIT, async {
-                            loop {
-                                let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
-                                if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) {
-                                    break true;
-                                }
-                                tokio::time::sleep(Duration::from_millis(10)).await;
+                    let queued_guard = QueuedConnection::new();
+                    let acquired = tokio::time::timeout(QUEUE_WAIT, async {
+                        loop {
+                            let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
+                            if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) {
+                                break true;
                             }
-                        }).await.unwrap_or(false);
-                        if !acquired {
-                            drop(queued_guard);
-                            drop(queue_permit);
-                            reject_overloaded(stream).await;
-                            return;
+                            tokio::time::sleep(Duration::from_millis(10)).await;
                         }
+                    }).await.unwrap_or(false);
+                    if !acquired {
+                        drop(queued_guard);
+                        drop(queue_permit);
+                        reject_overloaded(stream).await;
+                        return;
                     }
-                    // Release queue accounting as soon as a connection obtains
-                    // an active slot so the bounded queue can accept another waiter.
+                    // No await occurs between reserving the active count and
+                    // constructing its RAII guard, so cancellation cannot leak a slot.
+                    let _active = ActiveConnection;
                     drop(queued_guard);
                     drop(queue_permit);
-                    let _active = ActiveConnection;
                     let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
