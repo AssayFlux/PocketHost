@@ -414,11 +414,12 @@ object ApplicationBackupManager {
             "python-wsgi" to python.canonicalPath,
             "node" to node.canonicalPath
         )
+        val defaultArchiveRoots = mapOf("static" to "site", "python-wsgi" to "python", "node" to "node")
         val privateRoot = context.filesDir.canonicalFile.toPath()
         SiteRegistry.list(context).forEach { entry ->
             val root = File(entry.root).canonicalFile
             val canonicalRoot = root.canonicalPath
-            var archiveRoot = expected[entry.runtime]
+            var archiveRoot = defaultArchiveRoots[entry.runtime]
             if (canonicalRoot != archiveRoot) {
                 if (entry.runtime != "static") {
                     throw IOException("Site '${entry.name}' uses a custom runtime project directory that is not supported by portable backup.")
@@ -434,6 +435,13 @@ object ApplicationBackupManager {
                     node.canonicalFile.toPath().startsWith(root.toPath())) {
                     throw IOException("Custom static site '${entry.name}' must be a separate, real directory inside Pocket Host private storage and contain index.html.")
                 }
+                val overlapping = extraRoots.values.firstOrNull { existing ->
+                    val existingPath = existing.root.canonicalFile.toPath()
+                    val candidatePath = root.toPath()
+                    existingPath != candidatePath &&
+                        (existingPath.startsWith(candidatePath) || candidatePath.startsWith(existingPath))
+                }
+                if (overlapping != null) throw IOException("Custom static site roots must not overlap.")
                 archiveRoot = extraRoots.values.firstOrNull { it.root.canonicalPath == canonicalRoot }?.archivePath
                     ?: "custom-static/${entry.id}"
                 extraRoots.putIfAbsent(archiveRoot, ExtraStaticRoot(archiveRoot, root))
@@ -489,13 +497,16 @@ object ApplicationBackupManager {
             val defaultArchive = roots.getValue(runtime).substringAfterLast('/')
             val archiveRoot = if (version >= 3) item.optString("archiveRoot", defaultArchive) else defaultArchive
             val root = if (runtime == "static" && archiveRoot != "site") {
-                val expectedArchive = "custom-static/$id"
-                if (archiveRoot != expectedArchive) throw IOException("The backup contains an invalid custom static root mapping.")
+                val archiveId = archiveRoot.removePrefix("custom-static/")
+                if (!archiveRoot.startsWith("custom-static/") ||
+                    !archiveId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) {
+                    throw IOException("The backup contains an invalid custom static root mapping.")
+                }
                 val parent = File(context.filesDir, "site-roots").canonicalFile
                 if (!parent.toPath().startsWith(context.filesDir.canonicalFile.toPath())) {
                     throw IOException("The custom static restore path is unsafe.")
                 }
-                val target = File(parent, id).canonicalFile
+                val target = File(parent, archiveId).canonicalFile
                 if (!target.toPath().startsWith(parent.toPath())) throw IOException("The custom static restore path escapes app storage.")
                 customRoots.putIfAbsent(archiveRoot, target)
                 target.absolutePath
