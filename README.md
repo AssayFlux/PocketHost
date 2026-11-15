@@ -1,6 +1,6 @@
 <!-- POCKETHOST · DESIGNED BY ASSAYFLUX -->
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:1D292B,48:24434A,100:B18B5E&height=150&section=header&text=ASSAYFLUX%20POCKETHOST&fontSize=34&fontColor=F6F4EF&fontAlignY=48&desc=NATIVE%20ANDROID%20HOSTING%20PLATFORM&descSize=13&descAlignY=76&descColor=E4D5BD" alt="AssayFlux PocketHost" width="100%">
+  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:1D292B,48:24434A,100:B18B5E&height=150&section=header&text=ASSAYFLUX%20POCKET%20HOST&fontSize=34&fontColor=F6F4EF&fontAlignY=48&desc=NATIVE%20ANDROID%20HOSTING%20PLATFORM&descSize=13&descAlignY=76&descColor=E4D5BD" alt="AssayFlux Pocket Host" width="100%">
 </p>
 <p align="center"><strong>Your website. Your device. Your control.</strong><br><sub>Designed by AssayFlux · Native Android hosting without Termux or root</sub></p>
 
@@ -10,7 +10,7 @@
   <a href="https://github.com/AssayFlux/PocketHost/actions/workflows/android-integration.yml"><img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/android-integration.yml?branch=main&style=flat-square&label=Android%20integration" alt="Android integration"></a>
 </p>
 
-**AssayFlux PocketHost** turns a compatible Android phone into a compact website origin. The phone hosts the website; Rust owns HTTP serving and routing; Kotlin manages Android lifecycle and native controls; TypeScript powers the management console. Optional Python and Node.js runtimes execute trusted application code. Cloudflare Tunnel provides outbound connectivity. An optional remote control plane manages devices but never replaces the phone as the website origin.
+**AssayFlux Pocket Host** turns a compatible Android phone into a compact website origin. The phone hosts the website; Rust owns HTTP serving and routing; Kotlin manages Android lifecycle and native controls; TypeScript powers the management console. Optional Python and Node.js runtimes execute trusted application code. Cloudflare Tunnel provides outbound connectivity. An optional remote control plane manages devices but never replaces the phone as the website origin.
 
 > **Status: integrated development build — not production approved.** The Android dashboard and TypeScript console now include a device-specific static-workload Capacity Lab, calibrated connection-admission budget, temporary capacity schedules, explicit HTTP 503 overload rejection and daily aggregate operations reports. These are bounded first implementations, not a complete adaptive governor or a universal capacity guarantee. Physical-device, public-domain, runtime-isolation and independent security gates remain. See [current status](docs/PHASE_0_STATUS.md).
 
@@ -115,7 +115,7 @@ A phone is not a cloud region. Battery, heat, Android Doze/OEM process managemen
 
 ## UI design
 
-The canonical screen, navigation, responsive-layout, keyboard and implementation specification is [UI Design](docs/UI_DESIGN.md). Read it before changing any Android screen; obtain owner approval between screens.
+The canonical screen, navigation, responsive-layout, keyboard and implementation specification for **AssayFlux Pocket Host** is [UI Design](docs/UI_DESIGN.md). Read it before changing any Android screen; obtain owner approval between screens.
 
 ## Documentation map
 
