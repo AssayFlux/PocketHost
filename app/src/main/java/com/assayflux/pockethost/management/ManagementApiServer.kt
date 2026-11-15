@@ -2,6 +2,9 @@ package com.assayflux.pockethost.management
 
 import android.content.Context
 import com.assayflux.pockethost.diagnostics.MetricsStore
+import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
+import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.sites.SiteRegistry
@@ -218,10 +221,72 @@ object ManagementApiServer {
         }
         if (method == "GET" && path == "/api/v1/metrics") {
             val m = MetricsStore.snapshot(context)
-            return 200 to JSONObject().put("sampledAt", Instant.now().toString())
-                .put("sources", org.json.JSONArray().put(JSONObject().put("source", "rust-static")
-                    .put("requests", m.totalRequests).put("bytesServed", m.totalBytes)
-                    .put("scopeNote", "Persisted Rust static-server counters; Python and Node metrics are not yet available.")))
+            val sources = org.json.JSONArray().put(JSONObject().put("source", "rust-static")
+                .put("requests", m.totalRequests).put("bytesServed", m.totalBytes)
+                .put("todayRequests", m.todayRequests).put("todayBytes", m.todayBytes))
+            val python = runCatching { PythonHostRuntime.metrics(context) }.getOrNull()
+            if (python != null) sources.put(python)
+            sources.put(JSONObject().put("source", "node").put("available", false)
+                .put("scopeNote", "Node.js runtime is not integrated in this build."))
+            return 200 to JSONObject().put("sampledAt", Instant.now().toString()).put("sources", sources)
+        }
+        if (method == "GET" && path == "/api/v1/logs") {
+            val entries = org.json.JSONArray()
+            OperationalLog.read(context, body.optInt("limit", 100).coerceIn(1, 500)).forEach { entry ->
+                entries.put(JSONObject().put("timestamp", entry.timestamp).put("level", entry.level)
+                    .put("event", entry.event).put("message", entry.message))
+            }
+            return 200 to JSONObject().put("items", entries)
+        }
+        if (method == "GET" && path == "/api/v1/tunnel") {
+            return 200 to JSONObject().put("state", CloudflareTunnelRuntime.status())
+                .put("configured", CloudflareTokenStore.hasToken(context))
+        }
+        if (method == "POST" && path == "/api/v1/tunnel/actions") {
+            return when (body.optString("action")) {
+                "stop" -> 200 to JSONObject().put("state", CloudflareTunnelRuntime.stop())
+                "start" -> {
+                    val tokenValue = runCatching { CloudflareTokenStore.read(context) }.getOrNull()
+                    if (tokenValue.isNullOrBlank()) 409 to JSONObject().put("error", "tunnel_token_not_configured")
+                    else runCatching { CloudflareTunnelRuntime.start(context, tokenValue) }
+                        .fold({ 200 to JSONObject().put("state", it) }, { 503 to JSONObject().put("error", it.message ?: "tunnel_start_failed") })
+                }
+                else -> 400 to JSONObject().put("error", "unsupported_tunnel_action")
+            }
+        }
+        if (method == "POST" && path.startsWith("/api/v1/sites/") && path.endsWith("/actions")) {
+            val siteId = path.removePrefix("/api/v1/sites/").removeSuffix("/actions").trim('/')
+            val site = SiteRegistry.list(context).firstOrNull { it.id == siteId }
+                ?: return 404 to JSONObject().put("error", "site_not_found")
+            val action = body.optString("action")
+            return when (site.runtime) {
+                "static" -> when (action) {
+                    "start" -> {
+                        val hosts = SiteRegistry.staticHostnameMap(context).toString()
+                        val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080)
+                        val lan = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)
+                        val result = if (hosts != "{}") NativeEngine.startMultiSite(site.root, hosts, port, lan)
+                            else NativeEngine.start(site.root, port, lan)
+                        if (result == "OK") 200 to JSONObject().put("state", "RUNNING")
+                        else 503 to JSONObject().put("error", result)
+                    }
+                    "stop" -> 200 to JSONObject().put("state", NativeEngine.stop())
+                    else -> 400 to JSONObject().put("error", "unsupported_site_action")
+                }
+                "python-wsgi" -> when (action) {
+                    "start" -> {
+                        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                        val result = runCatching { PythonHostRuntime.start(context, site.root, prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false)) }
+                            .getOrElse { "ERROR: ${it.message}" }
+                        if (result == "RUNNING" || result == "ALREADY_RUNNING") 200 to JSONObject().put("state", result)
+                        else 503 to JSONObject().put("error", result)
+                    }
+                    "stop" -> 200 to JSONObject().put("state", PythonHostRuntime.stop(context))
+                    else -> 400 to JSONObject().put("error", "unsupported_site_action")
+                }
+                "node" -> 501 to JSONObject().put("error", "node_runtime_not_integrated")
+                else -> 400 to JSONObject().put("error", "unsupported_runtime")
+            }
         }
         return 404 to JSONObject().put("error", "not_found")
     }
