@@ -151,7 +151,7 @@ async fn create_user(
     sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,$2,$3,$4)")
         .bind(id).bind(name).bind(&input.role).bind(token_hash(&token))
         .execute(&s.db).await.map_err(internal)?;
-    audit(&s, "owner", "user.create", &id.to_string(), json!({"name":name,"role":input.role})).await?;
+    audit(&s, &actor.name, "user.create", &id.to_string(), json!({"name":name,"role":input.role})).await?;
     Ok((StatusCode::CREATED, Json(UserCreated { id, name:name.into(), role:input.role, token })))
 }
 
@@ -177,7 +177,7 @@ async fn revoke_user(
     let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1")
         .bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "user_not_found".into())); }
-    audit(&s, "owner", "user.revoke", &id.to_string(), json!({})).await?;
+    audit(&s, &actor.name, "user.revoke", &id.to_string(), json!({})).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
