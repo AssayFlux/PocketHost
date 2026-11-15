@@ -221,3 +221,8 @@ PocketHost should make self-hosting affordable and understandable, not claim tha
 ## Capacity Lab measurement detail (2026-11-15)
 
 The Capacity Lab performs a bounded loopback static GET sweep against the active Rust origin. Each concurrency level records successful requests, errors, bytes served, requests per second, bytes per second, average/p50/p95/maximum latency and elapsed time. Requests use unique query strings and no-cache headers. The sweep retains its cancellation, low-memory, severe-thermal and low-battery stop conditions and only calibrates when the zero-error and p95-latency threshold is met. It remains a static-origin microbenchmark, not a representative multi-workload or long-duration thermal benchmark.
+
+
+## Rust admission queue (2026-11-15)
+
+The Rust listener reserves active connection slots atomically under the configured ceiling (hard maximum 16). When all active slots are occupied, it accepts at most 32 additional sockets into a bounded queue and waits up to 200 ms for a slot. Queue overflow or timeout receives HTTP 503 with Retry-After: 2. Queue depth, active connections and rejected connections are exposed through the native metrics, Android dashboard and authenticated management API. This is global admission control; per-site fairness and per-client request-rate limits are not implemented by this queue.

@@ -422,6 +422,7 @@ object ManagementApiServer {
         if (method == "GET" && path == "/api/v1/capacity") {
             val profile = CapacityController.tick(context)
                 .put("activeConnections", NativeEngine.activeConnections())
+                .put("queuedConnections", NativeEngine.queuedConnections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections())
                 .put("engineState", NativeEngine.status())
             return 200 to profile

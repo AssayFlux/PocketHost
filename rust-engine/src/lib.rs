@@ -25,6 +25,8 @@ use tokio_util::io::ReaderStream;
 
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_CONNECTIONS: usize = 16;
+const MAX_QUEUED_CONNECTIONS: usize = 32;
+const QUEUE_WAIT: Duration = Duration::from_millis(200);
 type ResponseBody = UnsyncBoxBody<Bytes, std::io::Error>;
 
 #[derive(Clone)]
@@ -35,10 +37,39 @@ static BYTES_SERVED: AtomicU64 = AtomicU64::new(0);
 static ACTIVE_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 static CAPACITY_LIMIT: AtomicU64 = AtomicU64::new(MAX_CONNECTIONS as u64);
 static REJECTED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
+static QUEUED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
+
+fn try_reserve_connection(counter: &AtomicU64, limit: u64) -> bool {
+    let limit = limit.clamp(1, MAX_CONNECTIONS as u64);
+    loop {
+        let current = counter.load(Ordering::Acquire);
+        if current >= limit { return false; }
+        if counter.compare_exchange_weak(current, current + 1, Ordering::AcqRel, Ordering::Relaxed).is_ok() {
+            return true;
+        }
+    }
+}
 
 struct ActiveConnection;
 impl Drop for ActiveConnection {
-    fn drop(&mut self) { ACTIVE_CONNECTIONS.fetch_sub(1, Ordering::Relaxed); }
+    fn drop(&mut self) { ACTIVE_CONNECTIONS.fetch_sub(1, Ordering::Release); }
+}
+
+struct QueuedConnection;
+impl QueuedConnection {
+    fn new() -> Self {
+        QUEUED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+        Self
+    }
+}
+impl Drop for QueuedConnection {
+    fn drop(&mut self) { QUEUED_CONNECTIONS.fetch_sub(1, Ordering::Relaxed); }
+}
+
+async fn reject_overloaded(mut stream: tokio::net::TcpStream) {
+    REJECTED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 2\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
+    let _ = stream.shutdown().await;
 }
 
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
@@ -299,7 +330,9 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
 
 async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
-    let permits = Arc::new(Semaphore::new(MAX_CONNECTIONS));
+    // At most 32 accepted sockets may wait up to 200 ms for an active slot.
+    // Queue permits are acquired before spawning, so task creation stays bounded.
+    let queue_slots = Arc::new(Semaphore::new(MAX_QUEUED_CONNECTIONS));
     loop {
         tokio::select! {
             _ = &mut stop => {
@@ -308,27 +341,48 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                 break;
             },
             accepted = listener.accept() => {
-                let Ok((mut stream, _peer)) = accepted else { continue };
-                let current_limit = CAPACITY_LIMIT.load(Ordering::Relaxed).clamp(1, MAX_CONNECTIONS as u64);
-                if ACTIVE_CONNECTIONS.load(Ordering::Relaxed) >= current_limit {
-                    REJECTED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-                    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 2\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
-                    let _ = stream.shutdown().await;
-                    continue;
-                }
-                let Ok(permit) = permits.clone().try_acquire_owned() else {
-                    REJECTED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-                    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 2\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
-                    let _ = stream.shutdown().await;
-                    continue;
+                let Ok((stream, _peer)) = accepted else { continue };
+                let queue_permit = match queue_slots.clone().try_acquire_owned() {
+                    Ok(permit) => permit,
+                    Err(_) => {
+                        reject_overloaded(stream).await;
+                        continue;
+                    }
                 };
                 let site_root = root.clone();
                 let site_roots = host_roots.clone();
-                ACTIVE_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-                let active = ActiveConnection;
                 connections.spawn(async move {
-                    let _active = active;
-                    let _permit = permit;
+                    // Try the active slot first. If this future is cancelled before
+                    // its first poll, no active count has been reserved or leaked.
+                    let immediately_acquired = try_reserve_connection(
+                        &ACTIVE_CONNECTIONS,
+                        CAPACITY_LIMIT.load(Ordering::Acquire)
+                    );
+                    let queued_guard = if immediately_acquired { None } else { Some(QueuedConnection::new()) };
+                    let acquired = if immediately_acquired {
+                        true
+                    } else {
+                        tokio::time::timeout(QUEUE_WAIT, async {
+                            loop {
+                                let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
+                                if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) {
+                                    break true;
+                                }
+                                tokio::time::sleep(Duration::from_millis(10)).await;
+                            }
+                        }).await.unwrap_or(false)
+                    };
+                    if !acquired {
+                        drop(queued_guard);
+                        drop(queue_permit);
+                        reject_overloaded(stream).await;
+                        return;
+                    }
+                    // No await occurs between reserving the active count and
+                    // constructing its RAII guard, so cancellation cannot leak a slot.
+                    let _active = ActiveConnection;
+                    drop(queued_guard);
+                    drop(queue_permit);
                     let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
@@ -370,6 +424,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     REQUESTS.store(0, Ordering::Relaxed);
     BYTES_SERVED.store(0, Ordering::Relaxed);
     ACTIVE_CONNECTIONS.store(0, Ordering::Relaxed);
+    QUEUED_CONNECTIONS.store(0, Ordering::Relaxed);
     REJECTED_CONNECTIONS.store(0, Ordering::Relaxed);
 
     // LAN exposure is opt-in from the Android dashboard. Public tunnel exposure is separate.
@@ -504,9 +559,26 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rejecte
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeConnections(_env: JNIEnv, _class: JClass) -> jlong {
     ACTIVE_CONNECTIONS.load(Ordering::Relaxed) as jlong
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_queuedConnections(_env: JNIEnv, _class: JClass) -> jlong {
+    QUEUED_CONNECTIONS.load(Ordering::Relaxed) as jlong
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn reserves_connection_slots_atomically_and_respects_limit() {
+        let active = AtomicU64::new(0);
+        assert!(try_reserve_connection(&active, 2));
+        assert!(try_reserve_connection(&active, 2));
+        assert!(!try_reserve_connection(&active, 2));
+        assert_eq!(active.load(Ordering::Relaxed), 2);
+        active.fetch_sub(1, Ordering::Release);
+        assert!(try_reserve_connection(&active, 2));
+        assert_eq!(active.load(Ordering::Relaxed), 2);
+    }
+
     #[test]
     fn extensionless_routes_fall_back_to_spa_index_but_missing_assets_stay_404() {
         let root = std::env::temp_dir().join(format!("pockethost-spa-{}", std::process::id()));
