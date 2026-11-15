@@ -21,7 +21,7 @@ val prepareNodeRuntime by tasks.registering {
     outputs.dir(output)
     doLast {
         val root = output.get().asFile
-        val downloadDir = layout.buildDirectory.dir("downloads").get().asFile
+        val downloadDir = File(gradle.gradleUserHomeDir, "caches/pockethost-node-runtime")
         downloadDir.mkdirs()
         val archive = File(downloadDir, "nodejs-mobile-android-24.22.1-0.zip")
         val expectedSha256 = "d6fd9f610fe5d81fede8f0d400c5a62723247725a19831835f15abf4f0604250"
