@@ -35,9 +35,11 @@ object CapacityController {
         val emergency = thermal >= 5 || freeBytes < 128L * 1024L * 1024L || (cpuPercent ?: 0.0) >= 98.0
         val critical = memory.lowMemory || memory.availMem < memory.totalMem / 20L ||
             thermal >= 4 || freeBytes < 256L * 1024L * 1024L || (cpuPercent ?: 0.0) >= 95.0
+        // Missing or stale CPU telemetry is not evidence of idle CPU. Apply a
+        // conservative admission derating until a fresh sample is available.
         val constrained = thermal >= 3 || memory.availMem < memory.totalMem / 8L ||
             freeBytes < 1024L * 1024L * 1024L || (batteryPercent <= 10 && !charging) ||
-            (cpuPercent ?: 0.0) >= 80.0
+            cpuPercent == null || cpuPercent >= 80.0
         if (emergency) { recoveryUntilElapsed = 0L; return 0.05 to "EMERGENCY" }
         if (critical) { recoveryUntilElapsed = 0L; return 0.1 to "PROTECTIVE" }
         if (constrained) { recoveryUntilElapsed = 0L; return 0.5 to "CONSTRAINED" }
