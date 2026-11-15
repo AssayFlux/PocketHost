@@ -209,12 +209,12 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                     continue;
                 };
                 let site_root = root.clone();
+                let site_roots = host_roots.clone();
                 ACTIVE_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
                 let active = ActiveConnection;
                 connections.spawn(async move {
                     let _active = active;
                     let _permit = permit;
-                    let site_roots = host_roots.clone();
                     let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
