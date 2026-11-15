@@ -240,7 +240,7 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
     };
     let canonical = match resolve_static_file(&selected_root, &relative).await {
         Ok(path) => path,
-        Err(StatusCode::FORBIDDEN) => return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden")),
+        Err(status) if status == StatusCode::FORBIDDEN => return Ok(text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Forbidden")),
         Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
     };
     let metadata = match tokio::fs::metadata(&canonical).await {
