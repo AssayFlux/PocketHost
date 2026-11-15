@@ -30,7 +30,6 @@ object NodeHostRuntime {
         }
         val metrics = File(metadata, "metrics.json")
         metrics.delete()
-        val prefs = context.getSharedPreferences("pockethost_node_runtime", Context.MODE_PRIVATE)
         val statePrefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         val memory = android.app.ActivityManager.MemoryInfo()
         context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
