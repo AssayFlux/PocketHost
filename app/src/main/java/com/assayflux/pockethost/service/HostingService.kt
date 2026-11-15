@@ -182,8 +182,10 @@ class HostingService : Service() {
                             continue
                         }
                         val result = runCatching {
-                            PythonHostRuntime.start(this, projectRoot, pythonPort, allowLan)
-                        }.getOrElse { "ERROR: ${it.message ?: "Python runtime failed"}" }
+                            val pythonHosts = SiteRegistry.pythonHostnameMap(this)
+                            if (pythonHosts.length() > 0) PythonHostRuntime.startSites(this, pythonHosts.toString(), pythonPort, allowLan)
+                            else PythonHostRuntime.start(this, projectRoot, pythonPort, allowLan)
+                        }.getOrElse { "ERROR: " + (it.message ?: "Python runtime failed") }
                         if (result == "RUNNING" || result == "ALREADY_RUNNING") {
                             failures = 0
                             val message = "$baseMessage · Python WSGI supervised on port $pythonPort"
