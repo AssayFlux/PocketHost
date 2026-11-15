@@ -8,5 +8,5 @@ object NodeBridge {
     }
 
     /** Blocks until the Node event loop exits; call only from a dedicated background thread. */
-    @JvmStatic external fun start(projectRoot: String, entryFile: String, port: Int): Int
+    @JvmStatic external fun start(projectRoot: String, entryFile: String, cacheDirectory: String, port: Int): Int
 }
