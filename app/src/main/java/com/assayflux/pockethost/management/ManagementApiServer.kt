@@ -17,8 +17,10 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.Base64
-import java.util.concurrent.Executors
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * Loopback-only management API. Pairing is explicitly approved on the Android device;
@@ -29,7 +31,7 @@ object ManagementApiServer {
     private const val SESSION_SECONDS = 12 * 60 * 60L
     private const val MAX_HEADER = 16 * 1024
     private val random = SecureRandom()
-    private val workers = Executors.newFixedThreadPool(4)
+    private val workers = ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(32), ThreadPoolExecutor.AbortPolicy())
     @Volatile private var listener: ServerSocket? = null
     @Volatile private var acceptThread: Thread? = null
     @Volatile private var appContext: Context? = null
@@ -50,7 +52,7 @@ object ManagementApiServer {
             while (!socket.isClosed) {
                 try {
                     val client = socket.accept()
-                    workers.execute { handle(client) }
+                    try { workers.execute { handle(client) } } catch (_: RejectedExecutionException) { runCatching { client.close() } }
                 } catch (_: Exception) {
                     if (!socket.isClosed) Thread.sleep(100)
                 }
@@ -94,7 +96,14 @@ object ManagementApiServer {
                 val headers = lines.drop(1).mapNotNull {
                     val i = it.indexOf(':'); if (i <= 0) null else it.substring(0, i).trim().lowercase() to it.substring(i + 1).trim()
                 }.toMap()
-                val length = headers["content-length"]?.toIntOrNull() ?: 0
+                if (headers.containsKey("transfer-encoding")) {
+                    respond(output, 400, JSONObject().put("error", "transfer_encoding_not_supported")); return
+                }
+                val rawLength = headers["content-length"]
+                if (rawLength != null && rawLength.toIntOrNull() == null) {
+                    respond(output, 400, JSONObject().put("error", "invalid_content_length")); return
+                }
+                val length = rawLength?.toIntOrNull() ?: 0
                 if (length !in 0..8192) { respond(output, 413, JSONObject().put("error", "body_too_large")); return }
                 val bodyBytes = ByteArray(length)
                 var offset = 0
@@ -305,7 +314,7 @@ object ManagementApiServer {
 
     private fun respond(output: BufferedOutputStream, status: Int, body: JSONObject, origin: String? = null) {
         val bytes = body.toString().toByteArray(Charsets.UTF_8)
-        val reason = when (status) { 200 -> "OK"; 201 -> "Created"; 204 -> "No Content"; 400 -> "Bad Request"; 401 -> "Unauthorized"; 403 -> "Forbidden"; 404 -> "Not Found"; 413 -> "Payload Too Large"; else -> "Service Unavailable" }
+        val reason = when (status) { 200 -> "OK"; 201 -> "Created"; 204 -> "No Content"; 400 -> "Bad Request"; 401 -> "Unauthorized"; 403 -> "Forbidden"; 404 -> "Not Found"; 409 -> "Conflict"; 413 -> "Payload Too Large"; 429 -> "Too Many Requests"; 501 -> "Not Implemented"; 503 -> "Service Unavailable"; else -> "Internal Server Error" }
         val cors = if (allowedOrigin(origin)) "Access-Control-Allow-Origin: $origin\r\nVary: Origin\r\nAccess-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\nAccess-Control-Max-Age: 300\r\nAccess-Control-Allow-Private-Network: true\r\n" else ""
         val header = "HTTP/1.1 $status $reason\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: ${if (status == 204) 0 else bytes.size}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n$cors" + "Connection: close\r\n\r\n"
         output.write(header.toByteArray(Charsets.US_ASCII))
