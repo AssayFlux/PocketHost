@@ -102,8 +102,7 @@ object ApplicationBackupManager {
             val pythonPath = python.toPath()
             val nodePath = node.toPath()
             if (!pythonPath.startsWith(privateRoot) || !nodePath.startsWith(privateRoot) ||
-                python == files.canonicalFile || node == files.canonicalFile ||
-                false) {
+                python == files.canonicalFile || node == files.canonicalFile) {
                 throw IOException("Python and Node project folders must be real directories inside Pocket Host private storage.")
             }
             if (pythonPath.startsWith(sitePath) || sitePath.startsWith(pythonPath) ||
