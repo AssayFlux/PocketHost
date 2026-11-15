@@ -77,7 +77,7 @@ The separate Rust/PostgreSQL Remote Control Plane is optional and is not the web
 ## Current automated validation evidence
 
 ### Quality workflow
-The quality run associated with PR #12 / commit `cf268a4991b82fb428569f20cbc523464a91c362` completed successfully. Jobs included:
+The latest completed quality run on `main` before this documentation branch, run [43680399477](https://github.com/AssayFlux/PocketHost/actions/runs/43680399477) for commit `5d1a62bdabca590b2cf4ddc1312eb5ed7265faab`, completed successfully. The earlier PR #12 quality run [43678133728](https://github.com/AssayFlux/PocketHost/actions/runs/43678133728) on commit `cf268a4991b82fb428569f20cbc523464a91c362` also passed. Jobs included:
 - Rust engine unit tests.
 - Control-plane Rust tests with PostgreSQL service and migrations.
 - Python syntax and WSGI lifecycle tests.
@@ -88,13 +88,13 @@ The quality run associated with PR #12 / commit `cf268a4991b82fb428569f20cbc5234
 PR #12 was merged into `main` as commit `5d1a62bdabca590b2cf4ddc1312eb5ed7265faab`.
 
 ### Android integration workflow
-Run [43678133737](https://github.com/AssayFlux/PocketHost/actions/runs/43678133737) is the integration run for the same source head. At the last live check:
+Run [43678133737](https://github.com/AssayFlux/PocketHost/actions/runs/43678133737) is the integration run for PR #12's source head. At the last live check:
 - cloudflared Android ABI build: passed.
-- ABI-specific debug APK assembly and verification: running.
+- ABI-specific debug APK assembly and verification: passed.
 - API 26 emulator instrumentation: running.
 - API 33 and API 35 emulator instrumentation: queued.
 
-These are not final results. Recheck the run before changing any state below to PASS. An earlier integration attempt had API 26 and API 33 pass but API 35 was still running; that earlier attempt is not a substitute for the current merged source.
+An earlier integration run [43677996409](https://github.com/AssayFlux/PocketHost/actions/runs/43677996409) completed successfully for cloudflared, ABI APK assembly and API 26, 33 and 35 emulator instrumentation on an earlier source SHA (`dfab8966b9a8118e2ab92fe20b4bffb42040727f`). That proves the earlier source passed the matrix, not that the latest Node-locking changes have passed it. Recheck run #43678133737 before changing the latest-source gates to PASS.
 
 ## Not yet verified / production release gates
 
