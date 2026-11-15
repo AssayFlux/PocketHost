@@ -108,6 +108,7 @@ A phone is not a cloud region. Battery, heat, Android Doze/OEM process managemen
 | [Roadmap](docs/ROADMAP.md) | Sequenced product work, priorities and release gates |
 | [Master Plan](docs/MASTER_PLAN.md) | System architecture, module contracts and technical design |
 | [Development Context](docs/DEVELOPMENT_CONTEXT.md) | Canonical handoff and rules for every future contributor/assistant |
+| [Architecture Decisions](docs/DECISIONS.md) | Accepted decisions and change-control process |
 | [Implementation Status](docs/PHASE_0_STATUS.md) | Commit-specific source and validation evidence |
 | [Completion Milestone](docs/COMPLETION_MILESTONE.md) | Definition of done and release checklist |
 | [Adaptive Capacity & Security](docs/ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md) | Hardware intelligence, governor, payments, audit and logs |
