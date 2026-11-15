@@ -32,6 +32,7 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.Semaphore
 
 /**
  * Loopback-only management API. Pairing is explicitly approved on the Android device;
@@ -43,6 +44,8 @@ object ManagementApiServer {
     private const val MAX_HEADER = 16 * 1024
     private val random = SecureRandom()
     private val workers = ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(32), ThreadPoolExecutor.AbortPolicy())
+    // Keep password derivation from occupying every request worker during login bursts.
+    private val loginVerificationSlots = Semaphore(2)
     @Volatile private var listener: ServerSocket? = null
     @Volatile private var acceptThread: Thread? = null
     @Volatile private var appContext: Context? = null
@@ -283,12 +286,25 @@ object ManagementApiServer {
                     }
                 }
             } ?: return 429 to JSONObject().put("error", "login_rate_limited")
+            if (!loginVerificationSlots.tryAcquire()) {
+                synchronized(loginAttemptsLock) {
+                    throttle.inFlight = (throttle.inFlight - 1).coerceAtLeast(0)
+                    if (throttle.inFlight == 0 && throttle.failures == 0 && username.length <= 32) {
+                        loginAttempts.remove(normalizedUsername, throttle)
+                    }
+                }
+                return 429 to JSONObject().put("error", "login_verification_busy")
+            }
             var account: HostAccountStore.Account? = null
             var verificationFailed = false
             try {
-                account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
-            } catch (_: Exception) {
-                verificationFailed = true
+                try {
+                    account = HostAccountStore.verify(context, username, body.optString("password").toCharArray())
+                } catch (_: Exception) {
+                    verificationFailed = true
+                }
+            } finally {
+                loginVerificationSlots.release()
             }
             synchronized(loginAttemptsLock) {
                 throttle.inFlight = (throttle.inFlight - 1).coerceAtLeast(0)
