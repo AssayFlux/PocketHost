@@ -415,6 +415,87 @@ object ManagementApiServer {
         return 404 to JSONObject().put("error", "not_found")
     }
 
+    /**
+     * Executes only the typed remote-control operations accepted by the control plane.
+     * The temporary in-process session reuses the same validation and route handlers as
+     * the local console; remote requests never get direct filesystem or shell access.
+     */
+    fun executeRemoteCommand(context: Context, kind: String, payload: JSONObject): JSONObject {
+        appContext = context.applicationContext
+        val token = randomToken(32)
+        synchronized(sessions) { sessions[tokenHash(token)] = Instant.now().epochSecond + 60 }
+        try {
+            val result = when (kind) {
+                "site_action" -> {
+                    val siteId = payload.optString("siteId")
+                    if (!siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) {
+                        400 to JSONObject().put("error", "invalid_site_id")
+                    } else route("POST", "/api/v1/sites/$siteId/actions", "Bearer $token", payload)
+                }
+                "tunnel_action" -> route("POST", "/api/v1/tunnel/actions", "Bearer $token", payload)
+                "apply_config" -> {
+                    val config = payload.optJSONObject("config")
+                        ?: return JSONObject().put("status", 400).put("error", "missing_config")
+                    val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                    val results = org.json.JSONArray()
+                    var applied = false
+                    if (config.has("pythonMaxWorkers") || config.has("nodeHeapMb")) {
+                        val current = route("GET", "/api/v1/resources", "Bearer $token", JSONObject()).second
+                        val resourceBody = JSONObject()
+                            .put("pythonMaxWorkers", config.optInt("pythonMaxWorkers", current.optInt("pythonMaxWorkers", 8)))
+                            .put("nodeHeapMb", config.optInt("nodeHeapMb", current.optInt("nodeHeapMb", 192)))
+                        val resourceResult = route("POST", "/api/v1/resources", "Bearer $token", resourceBody)
+                        if (resourceResult.first !in 200..299) return JSONObject()
+                            .put("status", resourceResult.first).put("body", resourceResult.second)
+                        results.put(JSONObject().put("resourceLimits", resourceResult.second))
+                        applied = true
+                    }
+                    if (config.has("tunnelEnabled")) {
+                        val action = if (config.optBoolean("tunnelEnabled")) "start" else "stop"
+                        val tunnelResult = route("POST", "/api/v1/tunnel/actions", "Bearer $token",
+                            JSONObject().put("action", action))
+                        if (tunnelResult.first !in 200..299) return JSONObject()
+                            .put("status", tunnelResult.first).put("body", tunnelResult.second)
+                        results.put(JSONObject().put("tunnel", tunnelResult.second))
+                        applied = true
+                    }
+                    if (!applied) return JSONObject().put("status", 400)
+                        .put("error", "config_has_no_supported_device_settings")
+                    200 to JSONObject().put("applied", results)
+                }
+                "restart_runtime" -> {
+                    val runtime = payload.optString("runtime")
+                    when (runtime) {
+                        "python" -> {
+                            PythonHostRuntime.stop(context)
+                            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                .putBoolean("python_enabled", true).apply()
+                            context.startForegroundService(Intent(context, HostingService::class.java))
+                            202 to JSONObject().put("state", "STARTING")
+                        }
+                        "node" -> {
+                            NodeHostRuntime.stop(context)
+                            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                .putBoolean("node_enabled", true).apply()
+                            context.startForegroundService(Intent(context, HostingService::class.java))
+                            202 to JSONObject().put("state", "STARTING")
+                        }
+                        "static" -> {
+                            NativeEngine.stop()
+                            context.startForegroundService(Intent(context, HostingService::class.java))
+                            202 to JSONObject().put("state", "STARTING")
+                        }
+                        else -> 400 to JSONObject().put("error", "unsupported_runtime")
+                    }
+                }
+                else -> 400 to JSONObject().put("error", "unsupported_remote_command")
+            }
+            return JSONObject().put("status", result.first).put("body", result.second)
+        } finally {
+            synchronized(sessions) { sessions.remove(tokenHash(token)) }
+        }
+    }
+
     private fun restartEngineRoutes(context: Context) {
         val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         val engineRunning = NativeEngine.status() == "RUNNING"
