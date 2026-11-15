@@ -10,7 +10,7 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 ## Current implementation checkpoint — 2026-11-15
 
-The following foundation upgrades are now present in source: the Activity Result request-code crash correction, five-destination card-first Android navigation, grouped Settings, collapsed Learn guides, and encrypted full-app backup/restore for the active website plus supported Python/Node roots and hostname routes. The latest quality CI passed Android source compilation. ABI-specific debug APK packaging is being verified separately.
+The following foundation upgrades are now present in source: the Activity Result request-code crash correction, five-destination card-first Android navigation, grouped Settings, collapsed Learn guides, and encrypted full-app backup/restore for the active website plus supported Python/Node roots and hostname routes. The latest quality CI passed Android source compilation, and Android integration run 43720035704 produced verified ARM64, ARMv7 and x86_64 debug APKs (artifact 14164002620).
 
 These changes do **not** close the remaining P0 gates: OS-backed Python/Node isolation and enforceable quotas; remote control-plane deployment and real-device pairing if that feature is included; payment-provider integration; independent security review; and physical Android 8/15 lifecycle, public HTTPS, thermal and battery acceptance. Release signing remains owner-controlled. Custom static roots outside the main website directory are not yet included in portable full backups.
 
