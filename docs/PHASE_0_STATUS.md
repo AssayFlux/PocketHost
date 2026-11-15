@@ -46,6 +46,7 @@
 - Sensitive-name rejection for common secrets and repository metadata.
 - Staging before activation, up to five previous releases retained, and rollback while hosting is stopped.
 - A failed activation attempts to restore the previous active site.
+- Portable static-website backup and restore using AES-256-GCM, PBKDF2-HMAC-SHA-256 and authenticated-before-activation ZIP validation; credentials, Python projects and device settings are excluded.
 
 ### Python runtime
 - Embedded CPython 3.11 and WSGI entrypoint contract: root `wsgi.py` exporting `application`.
@@ -91,7 +92,6 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Multi-site hosting, hostname routing and per-site listener/origin configuration.
 - Rust reverse proxy and runtime-to-site routing.
 - Log filtering and advanced event search are not implemented; a redacted diagnostics ZIP export is now implemented alongside JSONL export.
-- Encrypted backup/restore and restore validation.
 - Configurable cache policies, custom 404 pages and site-level request policies.
 - Python resource quotas, request timeouts, stronger isolation and dependency management.
 - Tunnel external-hostname/DNS validation and real-device network recovery testing.
