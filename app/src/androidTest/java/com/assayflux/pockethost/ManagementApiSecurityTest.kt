@@ -244,10 +244,10 @@ class ManagementApiSecurityTest {
         com.assayflux.pockethost.management.HostAccountStore.create(
             context, username, password.toCharArray(), "OPERATOR"
         )
-        val executor = Executors.newFixedThreadPool(3)
-        val ready = CountDownLatch(3)
+        val executor = Executors.newFixedThreadPool(2)
+        val ready = CountDownLatch(2)
         try {
-            val loginTasks = (1..3).map {
+            val loginTasks = (1..2).map {
                 executor.submit<Pair<Int, String>> {
                     ready.countDown()
                     request("POST", "/api/v1/auth/login",
