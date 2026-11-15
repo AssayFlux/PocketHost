@@ -1497,7 +1497,7 @@ private fun PocketHostDashboard() {
                                     preferences.edit().putInt("node_port", port).putBoolean("node_enabled", true)
                                         .putString("node_project_root", root).apply()
                                     startHosting(false)
-                                    status = "Node.js runtime requested. The foreground supervisor will launch the isolated process."
+                                    status = "Node.js runtime requested. The foreground supervisor will launch the separate Node.js process."
                                 }
                             }, enabled = !nodeHosting && !importing) { Text("Start Node.js") }
                             OutlinedButton(onClick = {
