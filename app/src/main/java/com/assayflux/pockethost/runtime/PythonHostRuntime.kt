@@ -33,18 +33,29 @@ object PythonHostRuntime {
     fun start(context: Context, projectRoot: String, port: Int, allowLan: Boolean = false): String {
         RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
+        val ownedRoot = RuntimeProjectRoot.requireOwnedProjectRoot(context, projectRoot)
         configure(context)
         return python(context).getModule("pockethost_runtime")
-            .callAttr("start", projectRoot, port, allowLan).toString()
+            .callAttr("start", ownedRoot.absolutePath, port, allowLan).toString()
     }
 
     @Synchronized
     fun startSites(context: Context, hostnameRootsJson: String, port: Int, allowLan: Boolean = false): String {
         RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
+        val requestedRoutes = JSONObject(hostnameRootsJson)
+        val ownedRoutes = JSONObject()
+        val keys = requestedRoutes.keys()
+        while (keys.hasNext()) {
+            val hostname = keys.next()
+            val root = requestedRoutes.optString(hostname, "")
+            val ownedRoot = RuntimeProjectRoot.requireOwnedProjectRoot(context, root)
+            ownedRoutes.put(hostname, ownedRoot.absolutePath)
+        }
+        require(ownedRoutes.length() in 1..100) { "Python hostname registry must contain between 1 and 100 routes." }
         configure(context)
         return python(context).getModule("pockethost_runtime")
-            .callAttr("start_many", hostnameRootsJson, port, allowLan).toString()
+            .callAttr("start_many", ownedRoutes.toString(), port, allowLan).toString()
     }
 
     @Synchronized

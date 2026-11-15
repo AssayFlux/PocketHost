@@ -13,8 +13,7 @@ object NodeHostRuntime {
     fun start(context: Context, projectRoot: String, port: Int = NodeHostingService.DEFAULT_PORT): String {
         RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Node port must be between 1024 and 65535." }
-        val root = File(projectRoot).canonicalFile
-        require(root.isDirectory) { "Node project directory does not exist." }
+        val root = RuntimeProjectRoot.requireOwnedProjectRoot(context, projectRoot)
         val entry = NodeProjectImporter.resolveEntry(root)
         val state = status(context)
         require(state !in setOf("RUNNING", "STARTING")) { "Only one Node.js application can run at a time." }
