@@ -27,28 +27,28 @@ export function App() {
   const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
   const [busy, setBusy] = useState(false);
 
-  const request = useCallback(async (path: string, init: RequestInit = {}) => {
+  const request = useCallback(async <T extends Record<string, unknown>>(path: string, init: RequestInit = {}): Promise<T> => {
     const response = await fetch(apiBase.replace(/\/$/, "") + path, {
       ...init,
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
       cache: "no-store",
     });
     const text = await response.text();
-    let data: { error?: string } = {};
+    let data: Record<string, unknown> = {};
     if (text) {
       try { data = JSON.parse(text) as { error?: string }; }
       catch { data = { error: text.slice(0, 240) }; }
     }
-    if (!response.ok) throw new Error(data.error || `Device API returned ${response.status}`);
-    return data;
+    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : `Device API returned ${response.status}`);
+    return data as T;
   }, [apiBase, token]);
 
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
       const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel, nextResources] = await Promise.all([
-        request("/api/v1/status"), request("/api/v1/metrics"), request("/api/v1/sites"),
-        request("/api/v1/logs"), request("/api/v1/tunnel"), request("/api/v1/resources"),
+        request<DeviceStatus>("/api/v1/status"), request<Metrics>("/api/v1/metrics"), request<{ items: Site[] }>("/api/v1/sites"),
+        request<{ items: LogEntry[] }>("/api/v1/logs"), request<{ state: string; configured: boolean }>("/api/v1/tunnel"), request<ResourceLimits>("/api/v1/resources"),
       ]);
       setStatus(nextStatus);
       setMetrics(nextMetrics);
@@ -81,7 +81,7 @@ export function App() {
     setBusy(true);
     try {
       localStorage.setItem("pockethost_api_base", apiBase);
-      const result = await request("/api/v1/pair/challenge", { method: "POST", body: "{}" });
+      const result = await request<{ challengeId: string }>("/api/v1/pair/challenge", { method: "POST", body: "{}" });
       setChallengeId(result.challengeId);
       setMessage("A six-digit approval code is now displayed in the PocketHost Android app. Approve this browser only if you initiated this request.");
     } catch (error) {
@@ -92,7 +92,7 @@ export function App() {
   async function completePairing() {
     setBusy(true);
     try {
-      const result = await request("/api/v1/pair/complete", {
+      const result = await request<{ accessToken: string }>("/api/v1/pair/complete", {
         method: "POST",
         body: JSON.stringify({ challengeId, code: approvalCode }),
       });
@@ -121,7 +121,7 @@ export function App() {
   async function saveResources() {
     setBusy(true);
     try {
-      const result = await request("/api/v1/resources", {
+      const result = await request<Partial<ResourceLimits>>("/api/v1/resources", {
         method: "POST", body: JSON.stringify({ pythonMaxWorkers: pythonWorkers, nodeHeapMb: nodeHeap }),
       });
       setResources(current => current ? { ...current, ...result } : current);
@@ -134,7 +134,7 @@ export function App() {
   async function tunnelAction(action: "start" | "stop") {
     setBusy(true);
     try {
-      const result = await request("/api/v1/tunnel/actions", { method: "POST", body: JSON.stringify({ action }) });
+      const result = await request<{ state: string }>("/api/v1/tunnel/actions", { method: "POST", body: JSON.stringify({ action }) });
       setTunnel(current => ({ configured: current?.configured ?? false, state: result.state }));
       setMessage("Cloudflare Tunnel: " + result.state);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Tunnel action failed."); }
