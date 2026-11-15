@@ -35,11 +35,11 @@ fun PocketHostLearnScreen(onOpenDashboard: () -> Unit, onOpenFiles: () -> Unit, 
         LearnTopic("08", "Keep the phone safe", "A phone is a small server with real power and thermal limits.", listOf("Keep the phone ventilated and avoid direct sunlight.", "Monitor battery, temperature, free storage and available memory.", "Use conservative capacity settings for sustained workloads.", "Expect hosting interruptions from Android, OEM power management or network changes.", "Do not promise 24/7 uptime or unlimited traffic."))
     )
     val palette = MaterialTheme.colorScheme
-    var expanded by remember { mutableStateOf("01") }
+    var expanded by remember { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Learn Pocket Host", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text("Short, practical guides for setting up, operating and protecting your phone-hosted website.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+            Text("Quick guides for running a website from your phone.", color = palette.onSurfaceVariant, fontSize = 14.sp)
         }
         Card(colors = CardDefaults.cardColors(containerColor = palette.surfaceVariant)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
