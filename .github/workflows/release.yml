@@ -93,9 +93,13 @@ jobs:
           for apk in "${apks[@]}"; do
             "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
           done
+          sha256sum "${apks[@]}" > app/build/outputs/apk/release/SHA256SUMS
+          sha256sum -c app/build/outputs/apk/release/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: pockethost-signed-release-apks
-          path: app/build/outputs/apk/release/*.apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
