@@ -36,7 +36,13 @@ object SiteRegistry {
         }
         val normalizedHosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
         require(normalizedHosts.all { hostnamePattern.matches(it) }) { "One or more hostnames are invalid." }
-        val existing = list(context).filterNot { it.id == site.id }
+        val existingAll = list(context)
+        val existing = existingAll.filterNot { it.id == site.id }
+        require(existing.size < 100) { "PocketHost supports up to 100 registered sites." }
+        require(normalizedHosts.size <= 100) { "A site can have at most 100 hostnames." }
+        require(existing.sumOf { it.hostnames.size } + normalizedHosts.size <= 1_000) {
+            "PocketHost supports up to 1,000 hostname routes."
+        }
         val used = existing.flatMap { it.hostnames }.toSet()
         require(normalizedHosts.distinct().size == normalizedHosts.size && normalizedHosts.none { it in used }) {
             "A hostname can belong to only one site."
