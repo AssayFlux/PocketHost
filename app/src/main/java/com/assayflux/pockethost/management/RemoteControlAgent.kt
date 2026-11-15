@@ -26,6 +26,8 @@ object RemoteControlAgent {
     @Volatile private var worker: Thread? = null
     @Volatile private var running = false
 
+    fun endpoint(context: Context): String = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("endpoint", "") ?: ""
+
     fun isConfigured(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return !prefs.getString("endpoint", null).isNullOrBlank() &&
