@@ -2,19 +2,17 @@
 
 > **Current reconciliation — 2026-11-16**
 >
-> - **Current main:** `eee3b82d8071fdb06acb4cea0393dfebab2fc869`. PRs #48–#62 are merged.
-> - **Quality CI:** PR #62 head quality run [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs. Fresh main quality run [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) passed all six jobs.
-> - **Android build:** main integration run [43769131790](https://github.com/AssayFlux/PocketHost/actions/runs/43769131790) passed cloudflared Android build and is assembling ARM64, ARMv7 and x86_64 debug APKs. Emulator smoke is skipped on push events. PR-triggered run [43769116977](https://github.com/AssayFlux/PocketHost/actions/runs/43769116977) remains pending. Previous main artifact [14168200339](https://github.com/AssayFlux/PocketHost/actions/runs/43728985708/artifacts/14168200339) predates PR #62.
+> - **Current main:** `15557ec937892c125e5c3e287e5e232de825e26e`. PRs #48–#63 are merged; no open PRs at this reconciliation.
+> - **Quality CI:** PR #62 and fresh main quality workflows [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) and [43771123954](https://github.com/AssayFlux/PocketHost/actions/runs/43771123954) passed all six jobs.
+> - **Android build:** integration workflow [43769645571](https://github.com/AssayFlux/PocketHost/actions/runs/43769645571) completed successfully. Cloudflared Android native build and ARM64, ARMv7 and x86_64 debug APK assembly/content verification passed. Artifact [14183708123](https://github.com/AssayFlux/PocketHost/actions/runs/43769645571/artifacts/14183708123) is available. This run used the same implementation as merged main; its head was the docs-only PR #63 commit. Emulator smoke was skipped because PR #63 changed documentation only.
 > - **Management API:** route dispatch no longer serializes health and authentication behind all configuration writes; pairing/login state has dedicated locks, login verification is capped at two concurrent slots, and concurrent health behavior has an instrumentation regression test.
 > - **Runtime filesystem boundary:** Python/Node project roots must resolve beneath PocketHost app-private directories; canonical path and symlink-escape tests cover `files`, `cache`, `noBackup` and `codeCache`. This is not an OS sandbox; Python and Node still run with the app UID.
-> - **Emulator regression:** an earlier API 33 run recorded four management-auth socket timeouts; API 35 failed during emulator startup. PR #62 increases emulator memory/cores, captures test reports/screenshots and enables management-triggered matrix execution. The rerun has not yet passed.
-> - **Capacity/UI:** capacity recovery preserves runtime intent; the Dashboard website overview and five destinations remain implemented. A rendered dashboard screenshot is now captured by the emulator workflow, but the new screenshot artifact is not yet available for review.
+> - **Emulator regression:** earlier API 33 tests recorded four management-auth socket timeouts; API 35 failed during emulator startup. No passing API 26/33/35 matrix is yet recorded. The workflow is being changed to run the matrix for every Android/native/runtime pull request rather than relying on PR title keywords.
+> - **Capacity/UI:** capacity recovery preserves runtime intent; the Dashboard website overview and five destinations remain implemented. Rendered dashboard screenshots are captured by emulator jobs when those jobs run; no new screenshot review is claimed yet.
 > - **Remote control:** source and Compose profile validation exist, but no production host is deployed or paired. Deployment still requires the Linux Docker host, SSH/database/admin secrets and a separate management hostname.
 > - **Release:** signed-APK workflow and verification exist, but no signed production APK has been built; owner-controlled keystore secrets are still required.
 > - **Device acceptance:** physical installation, Android lifecycle, public website HTTPS, thermal, battery and OEM/Doze behavior remain owner-run acceptance tasks.
-> - **Release state:** integrated development build; not production approved. Independent security review and payment-provider integration remain open.
->
-> The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this current reconciliation, use the current commit/run identifiers above.
+> - **Release state:** integrated development build; not production approved.
 
 **Last reconciled:** 2026-11-16  
 **Default branch:** `main`  
