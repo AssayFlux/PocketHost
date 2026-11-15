@@ -2,8 +2,9 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `4a5284fc6f5cdc7481252445d05dfe721d17b027`  
-**Quality CI:** [run 43693751852](https://github.com/AssayFlux/PocketHost/actions/runs/43693751852) passed all six jobs on implementation commit `ad0ccab69920b32070d4ef60fe866a6c413c1a7c`, including Android Kotlin and Android-test source compilation, without packaging an APK. This does not include emulator UI screenshots or physical-device validation.  
+**Latest implementation commit:** `34f8d5329223d59e984e98b977e92d86e6efd555`  
+**Quality CI:** [run 43703703022](https://github.com/AssayFlux/PocketHost/actions/runs/43703703022) passed all six jobs, including Rust, Node, Python, console, control plane and Android source compilation. No APK packaging or emulator UI acceptance is implied.  
+**Android integration:** [run 43703702835](https://github.com/AssayFlux/PocketHost/actions/runs/43703702835) pending at reconciliation time.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -234,3 +235,20 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Commit `4a5284fc6f5cdc7481252445d05dfe721d17b027` bounds the in-memory management-login throttle map: expired entries are pruned, the map is capped at 256 attacker-controlled username keys, and oversized usernames are not retained as throttle keys.
 - Quality workflow [43700940364](https://github.com/AssayFlux/PocketHost/actions/runs/43700940364) and Android integration workflow [43700940297](https://github.com/AssayFlux/PocketHost/actions/runs/43700940297) were queued at the time this status was updated. No pass is claimed for this commit until those runs complete.
 - This narrow hardening does not resolve runtime isolation, native biometric unlock, physical-device acceptance, external Cloudflare validation, remote control-plane deployment, payment integration or production release signing.
+
+
+## Latest implementation update — 2026-11-15
+
+Main commit `34f8d5329223d59e984e98b977e92d86e6efd555` includes the merged work in PRs [#18](https://github.com/AssayFlux/PocketHost/pull/18), [#19](https://github.com/AssayFlux/PocketHost/pull/19), [#20](https://github.com/AssayFlux/PocketHost/pull/20), [#21](https://github.com/AssayFlux/PocketHost/pull/21), [#22](https://github.com/AssayFlux/PocketHost/pull/22) and [#23](https://github.com/AssayFlux/PocketHost/pull/23).
+
+Implemented in this update:
+- Management login throttle state is bounded; password character arrays and derived credential buffers are cleared after use.
+- Static website file manager supports rename for files/folders and bounded single-file upload; the Rust server serves extensionless SPA routes from root `index.html` while preserving 404s for missing file assets.
+- A website deployment guide explains frontend build outputs, Python WSGI and Node runtime boundaries.
+- Android app-launch biometric gate uses AndroidX BiometricPrompt. Android 11+ can use a strong biometric or secure device credential; Android 8–10 uses strong biometrics only. This is a local UI gate, not API authentication.
+- Owner/Operator accounts can change their password; previous sessions are revoked and a replacement token is issued.
+- Owner password recovery requires a fresh pairing session approved on the Android device; recovery revokes all Owner and pairing sessions.
+
+[Quality CI 43703703022](https://github.com/AssayFlux/PocketHost/actions/runs/43703703022) passed all six jobs on this main commit. [Android integration 43703702835](https://github.com/AssayFlux/PocketHost/actions/runs/43703702835) was pending at the time of this update.
+
+Still open: OS-enforced Python/Node isolation, complete adaptive governor and multi-workload capacity acceptance, full runtime/configuration backup, physical-device and external Cloudflare acceptance, optional remote control-plane deployment, optional payment integration, and production signing/release.
