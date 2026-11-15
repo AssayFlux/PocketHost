@@ -37,6 +37,7 @@
 - Canonical path validation, percent-decoding validation, traversal rejection and no directory listing.
 - Startup readiness handshake and graceful connection shutdown.
 - In-memory session metrics: request count, bytes served and active connections; persistent aggregate traffic totals and daily counters survive engine/service restarts.
+- **Metrics scope:** persistent traffic aggregates count the Rust static HTTP engine only. Python WSGI and Cloudflare Tunnel traffic are not included; the dashboard and diagnostics export label this limitation explicitly.
 
 ### Website import and deployment
 - Android 13+ notification permission onboarding; hosting can still start when permission is denied.
