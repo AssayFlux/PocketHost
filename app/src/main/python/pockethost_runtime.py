@@ -10,6 +10,7 @@ import importlib.util
 import os
 import sys
 import threading
+import time
 from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
@@ -18,6 +19,8 @@ _server = None
 _thread = None
 _module_name = None
 _project_root = None
+_metrics_lock = threading.Lock()
+_metrics = {"requests": 0, "bytes_sent": 0, "errors": 0, "active": 0, "peak_active": 0, "last_request_ms": 0}
 MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024
 SOCKET_TIMEOUT_SECONDS = 15
 
@@ -74,6 +77,50 @@ class _RequestBodyLimit:
         return self.application(environ, start_response)
 
 
+class _MetricsMiddleware:
+    def __init__(self, application):
+        self.application = application
+
+    def __call__(self, environ, start_response):
+        started = time.monotonic()
+        with _metrics_lock:
+            _metrics["requests"] += 1
+            _metrics["active"] += 1
+            _metrics["peak_active"] = max(_metrics["peak_active"], _metrics["active"])
+
+        def finish(iterable, failed=False):
+            def counted():
+                try:
+                    for chunk in iterable:
+                        if chunk:
+                            with _metrics_lock:
+                                _metrics["bytes_sent"] += len(chunk)
+                        yield chunk
+                except BaseException:
+                    with _metrics_lock:
+                        _metrics["errors"] += 1
+                    raise
+                finally:
+                    close = getattr(iterable, "close", None)
+                    if close:
+                        close()
+                    with _metrics_lock:
+                        if failed:
+                            _metrics["errors"] += 1
+                        _metrics["active"] = max(0, _metrics["active"] - 1)
+                        _metrics["last_request_ms"] = int((time.monotonic() - started) * 1000)
+            return counted()
+
+        try:
+            return finish(self.application(environ, start_response))
+        except BaseException:
+            with _metrics_lock:
+                _metrics["errors"] += 1
+                _metrics["active"] = max(0, _metrics["active"] - 1)
+                _metrics["last_request_ms"] = int((time.monotonic() - started) * 1000)
+            raise
+
+
 class _QuietRequestHandler(WSGIRequestHandler):
     server_version = "PocketHost"
     sys_version = ""
@@ -127,6 +174,7 @@ def start(project_root: str, port: int, allow_lan: bool = False) -> str:
         if _server is not None:
             return "ALREADY_RUNNING"
         application, module_name = _load_application(project_root)
+        application = _MetricsMiddleware(application)
         host = "0.0.0.0" if bool(allow_lan) else "127.0.0.1"
         try:
             server = make_server(
@@ -183,3 +231,10 @@ def stop() -> str:
 def status() -> str:
     with _lock:
         return "RUNNING" if _server is not None and _thread is not None and _thread.is_alive() else "STOPPED"
+
+
+
+def metrics() -> dict:
+    """Return process-local WSGI counters, not OS-enforced resource limits."""
+    with _metrics_lock:
+        return dict(_metrics)
