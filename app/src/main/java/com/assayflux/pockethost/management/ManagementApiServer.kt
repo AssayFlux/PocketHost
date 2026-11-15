@@ -1,6 +1,8 @@
 package com.assayflux.pockethost.management
 
+import android.app.ActivityManager
 import android.content.Context
+import android.os.Debug
 import android.content.Intent
 import com.assayflux.pockethost.service.HostingService
 import java.io.File
@@ -254,9 +256,25 @@ object ManagementApiServer {
                 .put("requests", m.totalRequests).put("bytesServed", m.totalBytes)
                 .put("todayRequests", m.todayRequests).put("todayBytes", m.todayBytes))
             val python = runCatching { PythonHostRuntime.metrics(context) }.getOrNull()
-            if (python != null) sources.put(python)
+            if (python != null) {
+                python.put("processPssKb", Debug.getPss())
+                    .put("resourceScope", "Shared Android app process; includes the UI, Python and native engine.")
+                sources.put(python)
+            }
             NodeHostRuntime.metrics(context)?.let { sources.put(it) }
-            return 200 to JSONObject().put("sampledAt", Instant.now().toString()).put("sources", sources)
+            val memoryInfo = ActivityManager.MemoryInfo()
+            context.getSystemService(ActivityManager::class.java).getMemoryInfo(memoryInfo)
+            val javaRuntime = Runtime.getRuntime()
+            val resources = JSONObject()
+                .put("processPssKb", Debug.getPss())
+                .put("nativeHeapAllocatedBytes", Debug.getNativeHeapAllocatedSize())
+                .put("javaHeapUsedBytes", javaRuntime.totalMemory() - javaRuntime.freeMemory())
+                .put("javaHeapMaxBytes", javaRuntime.maxMemory())
+                .put("availableDeviceMemoryBytes", memoryInfo.availMem)
+                .put("totalDeviceMemoryBytes", memoryInfo.totalMem)
+                .put("lowMemory", memoryInfo.lowMemory)
+            return 200 to JSONObject().put("sampledAt", Instant.now().toString())
+                .put("sources", sources).put("deviceResources", resources)
         }
         if (method == "GET" && path == "/api/v1/logs") {
             val entries = org.json.JSONArray()
