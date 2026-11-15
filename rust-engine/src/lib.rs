@@ -549,6 +549,11 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rejecte
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeConnections(_env: JNIEnv, _class: JClass) -> jlong {
     ACTIVE_CONNECTIONS.load(Ordering::Relaxed) as jlong
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_queuedConnections(_env: JNIEnv, _class: JClass) -> jlong {
+    QUEUED_CONNECTIONS.load(Ordering::Relaxed) as jlong
+}
 #[cfg(test)]
 mod tests {
     use super::*;
