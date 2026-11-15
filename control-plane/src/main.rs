@@ -109,21 +109,26 @@ fn new_token() -> String {
     hex::encode(bytes)
 }
 
-async fn admin(headers: &HeaderMap, state: &AppState) -> Result<String, (StatusCode, String)> {
+#[derive(Clone)]
+struct AdminActor { name: String, role: String }
+
+async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_auth_required".into()))?;
-    if secure_equal(supplied, &state.admin_token) { return Ok("owner".into()); }
-    let role = sqlx::query("SELECT role FROM control_users WHERE token_hash=$1 AND active=TRUE")
-        .bind(token_hash(supplied)).fetch_optional(&state.db).await.map_err(internal)?
-        .map(|row| row.get::<String,_>("role"));
-    role.ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_token".into()))
+    if secure_equal(supplied, &state.admin_token) {
+        return Ok(AdminActor { name: "Bootstrap Owner".into(), role: "owner".into() });
+    }
+    let row = sqlx::query("SELECT name,role FROM control_users WHERE token_hash=$1 AND active=TRUE")
+        .bind(token_hash(supplied)).fetch_optional(&state.db).await.map_err(internal)?;
+    row.map(|row| AdminActor { name: row.get("name"), role: row.get("role") })
+        .ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_token".into()))
 }
 
-async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<String, (StatusCode, String)> {
-    let role = admin(headers, state).await?;
-    if !role_can_write(&role) {
+async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
+    let actor = admin(headers, state).await?;
+    if !role_can_write(&actor.role) {
         return Err((StatusCode::FORBIDDEN, "insufficient_role".into()));
     }
-    Ok(role)
+    Ok(actor)
 }
 
 #[derive(Deserialize)]
@@ -136,7 +141,7 @@ async fn create_user(
     State(s): State<AppState>, headers: HeaderMap, Json(input): Json<CreateUser>,
 ) -> Result<(StatusCode, Json<UserCreated>), (StatusCode, String)> {
     let actor = admin(&headers, &s).await?;
-    if actor != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let name = input.name.trim();
     if name.is_empty() || name.len() > 120 || !["editor","viewer"].contains(&input.role.as_str()) {
         return Err((StatusCode::BAD_REQUEST, "invalid_user".into()));
@@ -225,7 +230,7 @@ async fn register_device(
     sqlx::query("INSERT INTO device_configs(device_id,config) VALUES($1,'{}'::jsonb)")
         .bind(id).execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, &role, "device.register", &id.to_string(), json!({"name":name})).await?;
+    audit(&s, &role.name, "device.register", &id.to_string(), json!({"name":name})).await?;
     Ok((StatusCode::CREATED, Json(RegisteredDevice {
         id, name: name.to_owned(), device_token: token,
         warning: "Store this token securely. It is shown only once.",
@@ -493,7 +498,7 @@ mod tests {
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap());
-        assert_eq!(admin(&headers, &state).await.unwrap(), "viewer");
+        assert_eq!(admin(&headers, &state).await.unwrap().role, "viewer");
         assert_eq!(admin_write(&headers, &state).await.unwrap_err().0, StatusCode::FORBIDDEN);
         audit(&state, "viewer", "test.read", &id.to_string(), json!({"test":true})).await.unwrap();
         let count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_events WHERE target=$1")
