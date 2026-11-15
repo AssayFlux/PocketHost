@@ -18,7 +18,7 @@ Pocket Host exports a portable, passphrase-encrypted `.afbackup` containing the 
 - Optional Python WSGI project (`files/python-project`).
 - Optional Node.js project (`files/node-project-default`), including prebundled dependencies when present.
 - Registered hostname routes for the supported static, Python and Node project roots.
-- Non-secret settings: server/runtime ports, keep-awake preference and boot-start preference.
+- Non-secret settings: server/runtime ports, keep-awake preference, boot-start preference and light/dark theme.
 
 ## Excluded data
 
