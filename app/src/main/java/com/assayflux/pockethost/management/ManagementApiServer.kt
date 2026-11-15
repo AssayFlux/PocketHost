@@ -291,15 +291,8 @@ object ManagementApiServer {
                     "start" -> {
                         val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
                         prefs.edit().putBoolean("python_enabled", true).putString("python_project_root", site.root).apply()
-                        if (NativeEngine.status() != "RUNNING") {
-                            context.startForegroundService(Intent(context, HostingService::class.java))
-                            202 to JSONObject().put("state", "STARTING")
-                        } else {
-                            val result = runCatching { PythonHostRuntime.start(context, site.root, prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false)) }
-                                .getOrElse { "ERROR: " + (it.message ?: "Python start failed") }
-                            if (result == "RUNNING" || result == "ALREADY_RUNNING") 200 to JSONObject().put("state", result)
-                            else 503 to JSONObject().put("error", result)
-                        }
+                        context.startForegroundService(Intent(context, HostingService::class.java))
+                        202 to JSONObject().put("state", "STARTING")
                     }
                     "stop" -> {
                         context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("python_enabled", false).apply()
@@ -312,10 +305,8 @@ object ManagementApiServer {
                         val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
                         val port = prefs.getInt("node_port", 3000)
                         prefs.edit().putBoolean("node_enabled", true).putString("node_project_root", site.root).apply()
-                        if (NativeEngine.status() != "RUNNING") {
-                            context.startForegroundService(Intent(context, HostingService::class.java))
-                            "STARTING"
-                        } else NodeHostRuntime.start(context, site.root, port)
+                        context.startForegroundService(Intent(context, HostingService::class.java))
+                        "STARTING"
                     }.fold({ 202 to JSONObject().put("state", it) }, { 503 to JSONObject().put("error", it.message ?: "node_start_failed") })
                     "stop" -> {
                         context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("node_enabled", false).apply()
