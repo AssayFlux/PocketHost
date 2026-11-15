@@ -204,7 +204,7 @@ async fn health() -> Json<Value> {
 async fn register_device(
     State(s): State<AppState>, headers: HeaderMap, Json(input): Json<RegisterDevice>,
 ) -> Result<(StatusCode, Json<RegisteredDevice>), (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin_write(&headers, &s).await?;
     let name = input.name.trim();
     if name.is_empty() || name.len() > 120 {
         return Err((StatusCode::BAD_REQUEST, "invalid_device_name".into()));
@@ -226,7 +226,7 @@ async fn register_device(
 async fn list_devices(
     State(s): State<AppState>, headers: HeaderMap,
 ) -> Result<Json<Vec<DeviceView>>, (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin(&headers, &s).await?;
     let rows = sqlx::query("SELECT id,name,state,last_seen,created_at FROM devices ORDER BY created_at DESC")
         .fetch_all(&s.db).await.map_err(internal)?;
     Ok(Json(rows.into_iter().map(|r| DeviceView {
@@ -238,7 +238,7 @@ async fn list_devices(
 async fn delete_device(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin_write(&headers, &s).await?;
     let result = sqlx::query("DELETE FROM devices WHERE id=$1")
         .bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 {
@@ -251,7 +251,7 @@ async fn delete_device(
 async fn get_config(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<Json<ConfigView>, (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin(&headers, &s).await?;
     let row = sqlx::query("SELECT version,config,updated_at FROM device_configs WHERE device_id=$1")
         .bind(id).fetch_optional(&s.db).await.map_err(internal)?
         .ok_or((StatusCode::NOT_FOUND, "device_config_not_found".into()))?;
@@ -261,7 +261,7 @@ async fn get_config(
 async fn put_config(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, Json(input): Json<ConfigUpdate>,
 ) -> Result<Json<ConfigView>, (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin_write(&headers, &s).await?;
     let encoded = serde_json::to_vec(&input.config).map_err(internal)?;
     if encoded.len() > 256 * 1024 { return Err((StatusCode::PAYLOAD_TOO_LARGE, "config_too_large".into())); }
     let mut tx = s.db.begin().await.map_err(internal)?;
@@ -289,7 +289,7 @@ async fn put_config(
 async fn queue_command(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, Json(input): Json<QueueCommand>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin_write(&headers, &s).await?;
     const ALLOWED: &[&str] = &["site_action", "tunnel_action", "restart_runtime"];
     if !ALLOWED.contains(&input.kind.as_str()) {
         return Err((StatusCode::BAD_REQUEST, "unsupported_command".into()));
@@ -308,7 +308,7 @@ async fn queue_command(
 async fn upload_site_archive(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, body: Bytes,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
-    admin(&headers, &s)?;
+    let role = admin_write(&headers, &s).await?;
     if body.is_empty() || body.len() > 50 * 1024 * 1024 {
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "archive_must_be_1_to_50_mib".into()));
     }
