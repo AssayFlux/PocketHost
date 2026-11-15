@@ -8,7 +8,7 @@ type LogEntry = { timestamp: string; level: string; event: string; message: stri
 type ResourceLimits = { pythonMaxWorkers: number; nodeHeapMb: number; deviceTotalMemoryBytes: number; deviceAvailableMemoryBytes: number; note: string };
 
 const defaultApi = "http://127.0.0.1:17841";
-const storedToken = () => { try { return localStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
+const storedToken = () => { try { return sessionStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
 
 export function App() {
   const [apiBase, setApiBase] = useState(() => localStorage.getItem("pockethost_api_base") || defaultApi);
@@ -61,7 +61,7 @@ export function App() {
       setMessage(error instanceof Error ? error.message : "Could not reach the device.");
       if (error instanceof Error && error.message === "unauthorized") {
         setToken("");
-        localStorage.removeItem("pockethost_device_token");
+        sessionStorage.removeItem("pockethost_device_token");
       }
     }
   }, [request, token, resourceDirty]);
@@ -92,7 +92,7 @@ export function App() {
         method: "POST",
         body: JSON.stringify({ challengeId, code: approvalCode }),
       });
-      localStorage.setItem("pockethost_device_token", result.accessToken);
+      sessionStorage.setItem("pockethost_device_token", result.accessToken);
       setToken(result.accessToken);
       setApprovalCode("");
       setChallengeId("");
