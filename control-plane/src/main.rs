@@ -154,6 +154,18 @@ async fn list_devices(
     }).collect()))
 }
 
+async fn delete_device(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    admin(&headers, &s)?;
+    let result = sqlx::query("DELETE FROM devices WHERE id=$1")
+        .bind(id).execute(&s.db).await.map_err(internal)?;
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
 async fn get_config(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<Json<ConfigView>, (StatusCode, String)> {
@@ -195,7 +207,7 @@ async fn queue_command(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, Json(input): Json<QueueCommand>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
     admin(&headers, &s)?;
-    const ALLOWED: &[&str] = &["deploy_site", "site_action", "tunnel_action", "restart_runtime"];
+    const ALLOWED: &[&str] = &["site_action", "tunnel_action", "restart_runtime"];
     if !ALLOWED.contains(&input.kind.as_str()) {
         return Err((StatusCode::BAD_REQUEST, "unsupported_command".into()));
     }
@@ -214,12 +226,12 @@ async fn poll_commands(
 ) -> Result<Json<Vec<CommandView>>, (StatusCode, String)> {
     let id = device_id(&headers, &s).await?;
     let mut tx = s.db.begin().await.map_err(internal)?;
-    let rows = sqlx::query("SELECT id,kind,payload,created_at FROM device_commands WHERE device_id=$1 AND state='queued' ORDER BY created_at LIMIT 32 FOR UPDATE SKIP LOCKED")
+    let rows = sqlx::query("SELECT id,kind,payload,created_at FROM device_commands WHERE device_id=$1 AND (state='queued' OR (state='delivered' AND delivered_at < now() - interval '2 minutes')) ORDER BY created_at LIMIT 32 FOR UPDATE SKIP LOCKED")
         .bind(id).fetch_all(&mut *tx).await.map_err(internal)?;
     let mut commands = Vec::new();
     for row in rows {
         let command_id: Uuid = row.get("id");
-        sqlx::query("UPDATE device_commands SET state='delivered' WHERE id=$1")
+        sqlx::query("UPDATE device_commands SET state='delivered',delivered_at=now(),delivery_attempts=delivery_attempts+1 WHERE id=$1")
             .bind(command_id).execute(&mut *tx).await.map_err(internal)?;
         commands.push(CommandView { id: command_id, kind: row.get("kind"), payload: row.get("payload"), created_at: row.get("created_at") });
     }
@@ -270,6 +282,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
+        .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
         .route("/v1/admin/devices/:id/commands", post(queue_command))
         .route("/v1/device/commands", get(poll_commands))
