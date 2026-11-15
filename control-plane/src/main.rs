@@ -337,6 +337,7 @@ async fn acknowledge(
     let result = sqlx::query("UPDATE device_commands SET state=$3,result=$4,acknowledged_at=now() WHERE id=$1 AND device_id=$2 AND state='delivered'")
         .bind(command).bind(id).bind(state).bind(input.result).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "command_not_found_or_already_acknowledged".into())); }
+    audit(&s, "command.acknowledge", &command.to_string(), json!({"deviceId":id,"state":state})).await?;
     Ok(Json(json!({"acknowledged":true,"state":state})))
 }
 
