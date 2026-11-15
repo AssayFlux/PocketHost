@@ -131,6 +131,28 @@ fn parse_byte_range(value: &str, size: u64) -> Result<(u64, u64), ()> {
     Ok((first, last))
 }
 
+fn strip_hop_by_hop(headers: &mut hyper::HeaderMap) {
+    let mut nominated = Vec::new();
+    for value in headers.get_all(hyper::header::CONNECTION).iter() {
+        if let Ok(value) = value.to_str() {
+            for token in value.split(',').map(str::trim).filter(|token| !token.is_empty()) {
+                if let Ok(name) = hyper::header::HeaderName::from_bytes(token.as_bytes()) {
+                    nominated.push(name);
+                }
+            }
+        }
+    }
+    for name in nominated {
+        headers.remove(name);
+    }
+    for name in [
+        "connection", "proxy-connection", "keep-alive", "transfer-encoding",
+        "trailer", "te", "upgrade", "proxy-authenticate", "proxy-authorization",
+    ] {
+        headers.remove(name);
+    }
+}
+
 async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let original_host = req.headers().get(hyper::header::HOST).cloned();
     let forwarded_proto = if req.headers().get("cf-visitor").and_then(|v| v.to_str().ok())
@@ -142,21 +164,21 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
     };
     *req.uri_mut() = uri;
     let headers = req.headers_mut();
+    // RFC 9110: Connection may nominate additional hop-by-hop headers.
+    // Remove those dynamically as well as the standard hop-by-hop set before
+    // forwarding to an application runtime.
+    strip_hop_by_hop(headers);
     if let Some(host) = original_host {
         headers.insert("x-forwarded-host", host);
     }
     headers.insert("x-forwarded-proto", forwarded_proto.parse().unwrap());
-    for name in ["connection", "proxy-connection", "keep-alive", "transfer-encoding", "trailer", "te"] {
-        headers.remove(name);
-    }
     let mut connector = HttpConnector::new();
     connector.set_connect_timeout(Some(Duration::from_secs(5)));
     let client: Client<_, Incoming> = Client::builder(TokioExecutor::new()).build(connector);
     match tokio::time::timeout(Duration::from_secs(15), client.request(req)).await {
         Ok(Ok(upstream)) => {
             let (mut parts, body) = upstream.into_parts();
-            parts.headers.remove("connection");
-            parts.headers.remove("transfer-encoding");
+            strip_hop_by_hop(&mut parts.headers);
             if !parts.headers.contains_key("x-content-type-options") {
                 parts.headers.insert("x-content-type-options", "nosniff".parse().unwrap());
             }
@@ -467,6 +489,24 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeC
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn strips_standard_and_connection_nominated_hop_by_hop_headers() {
+        let mut headers = hyper::HeaderMap::new();
+        headers.insert("connection", "keep-alive, x-private-hop".parse().unwrap());
+        headers.insert("keep-alive", "timeout=5".parse().unwrap());
+        headers.insert("x-private-hop", "must-not-cross-proxy".parse().unwrap());
+        headers.insert("upgrade", "websocket".parse().unwrap());
+        headers.insert("content-type", "application/json".parse().unwrap());
+
+        strip_hop_by_hop(&mut headers);
+
+        assert!(!headers.contains_key("connection"));
+        assert!(!headers.contains_key("keep-alive"));
+        assert!(!headers.contains_key("x-private-hop"));
+        assert!(!headers.contains_key("upgrade"));
+        assert_eq!(headers.get("content-type").unwrap(), "application/json");
+    }
+
     #[test]
     fn normalizes_and_validates_dns_hostnames() {
         assert_eq!(normalize_hostname("Example.COM").unwrap(), "example.com");
