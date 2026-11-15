@@ -352,16 +352,26 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                 let site_root = root.clone();
                 let site_roots = host_roots.clone();
                 connections.spawn(async move {
-                    let queued_guard = QueuedConnection::new();
-                    let acquired = tokio::time::timeout(QUEUE_WAIT, async {
-                        loop {
-                            let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
-                            if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) {
-                                break true;
+                    // Try the active slot first. If this future is cancelled before
+                    // its first poll, no active count has been reserved or leaked.
+                    let immediately_acquired = try_reserve_connection(
+                        &ACTIVE_CONNECTIONS,
+                        CAPACITY_LIMIT.load(Ordering::Acquire)
+                    );
+                    let queued_guard = if immediately_acquired { None } else { Some(QueuedConnection::new()) };
+                    let acquired = if immediately_acquired {
+                        true
+                    } else {
+                        tokio::time::timeout(QUEUE_WAIT, async {
+                            loop {
+                                let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
+                                if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) {
+                                    break true;
+                                }
+                                tokio::time::sleep(Duration::from_millis(10)).await;
                             }
-                            tokio::time::sleep(Duration::from_millis(10)).await;
-                        }
-                    }).await.unwrap_or(false);
+                        }).await.unwrap_or(false)
+                    };
                     if !acquired {
                         drop(queued_guard);
                         drop(queue_permit);
