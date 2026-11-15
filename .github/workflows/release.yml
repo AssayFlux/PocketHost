@@ -76,11 +76,18 @@ jobs:
           test -n "$POCKETHOST_KEY_ALIAS"
           test -n "$POCKETHOST_KEY_PASSWORD"
           gradle :app:assembleRelease
-      - name: Verify APK signature
-        run: "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+      - name: Verify every ABI APK signature
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/release/*.apk)
+          test \${#apks[@]} -eq 3
+          for apk in "\${apks[@]}"; do
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
+          done
       - uses: actions/upload-artifact@v4
         with:
-          name: pockethost-signed-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          name: pockethost-signed-release-apks
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
