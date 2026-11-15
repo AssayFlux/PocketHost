@@ -183,6 +183,7 @@ async fn delete_device(
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
     }
+    audit(&s, "device.revoke", &id.to_string(), json!({})).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -220,6 +221,7 @@ async fn put_config(
         .bind(json!({"version":next,"config":committed_config}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    audit(&s, "config.update", &id.to_string(), json!({"version":next})).await?;
     Ok(Json(ConfigView { version: row.get("version"), config: row.get("config"), updated_at: row.get("updated_at") }))
 }
 
@@ -238,6 +240,7 @@ async fn queue_command(
     let result = sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) SELECT $1,id,$2,$3 FROM devices WHERE id=$4")
         .bind(command_id).bind(input.kind).bind(input.payload).bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "device_not_found".into())); }
+    audit(&s, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"commandId":command_id,"state":"queued"}))))
 }
 
@@ -272,6 +275,7 @@ async fn upload_site_archive(
         .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    audit(&s, "site.deploy.queue", &id.to_string(), json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len(),"state":"queued"}))))
 }
 
@@ -356,6 +360,7 @@ async fn main() -> anyhow::Result<()> {
     };
     let app = Router::new()
         .route("/health", get(health))
+        .route("/v1/admin/audit", get(list_audit))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
         .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
