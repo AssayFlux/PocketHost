@@ -13,6 +13,7 @@ import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.management.ManagementApiServer
+import com.assayflux.pockethost.sites.SiteRegistry
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import java.io.File
@@ -57,8 +58,14 @@ class HostingService : Service() {
         }
 
         val engineAlreadyRunning = NativeEngine.status() == "RUNNING"
+        val registeredHosts = SiteRegistry.staticHostnameMap(this).toString()
         val result = if (engineAlreadyRunning) "OK"
-            else NativeEngine.start(site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false))
+            else if (registeredHosts != "{}") NativeEngine.startMultiSite(
+                site.absolutePath, registeredHosts, statePreferences.getInt("port", 8080),
+                statePreferences.getBoolean("allow_lan", false)
+            ) else NativeEngine.start(
+                site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false)
+            )
         if (result == "OK") {
             if (!engineAlreadyRunning) MetricsStore.beginSession(this)
             startMetricsMonitor()
