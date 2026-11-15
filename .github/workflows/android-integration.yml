@@ -12,7 +12,7 @@ on:
       - "settings.gradle.kts"
       - "gradle/**"
       - ".github/workflows/android-integration.yml"
-  # Run the device-level emulator matrix for integration pull requests.
+  # Emulator instrumentation is opt-in; physical-device acceptance is owner-run.
   pull_request:
     branches: [main]
   # Full ABI APK build can also be requested manually.
@@ -63,7 +63,6 @@ jobs:
           retention-days: 7
 
   android-apk:
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || inputs.run_emulators
     needs: cloudflared-android
     runs-on: ubuntu-latest
     steps:
@@ -132,7 +131,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || inputs.run_emulators
+    if: github.event_name == 'workflow_dispatch' && inputs.run_emulators
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
