@@ -143,8 +143,8 @@ object ApplicationBackupManager {
                 addTree(zip, site, "site", STATIC_LIMIT, counters)
                 if (includePython) addTree(zip, python, "python", PYTHON_LIMIT, counters)
                 if (includeNode) addTree(zip, node, "node", NODE_LIMIT, counters)
-                addSmallEntry(zip, "settings.json", settings.toByteArray(), counters)
-                addSmallEntry(zip, "routes.json", routes.toByteArray(), counters)
+                addSmallEntry(zip, "settings.json", settings.toString().toByteArray(Charsets.UTF_8), counters)
+                addSmallEntry(zip, "routes.json", routes.toString().toByteArray(Charsets.UTF_8), counters)
                 if (counters.files > MAX_FILES || counters.entries > MAX_ENTRIES || counters.bytes > MAX_TOTAL_BYTES) {
                     throw IOException("The full app backup exceeds its file, entry or total-size safety limit.")
                 }
