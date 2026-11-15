@@ -43,13 +43,16 @@ export function App() {
     try {
       const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel] = await Promise.all([
         request("/api/v1/status"), request("/api/v1/metrics"), request("/api/v1/sites"),
-        request("/api/v1/logs"), request("/api/v1/tunnel"),
+        request("/api/v1/logs"), request("/api/v1/tunnel"), request("/api/v1/resources"),
       ]);
       setStatus(nextStatus);
       setMetrics(nextMetrics);
       setSites(nextSites.items || []);
       setLogs(nextLogs.items || []);
       setTunnel(nextTunnel);
+      setResources(nextResources);
+      setPythonWorkers(nextResources.pythonMaxWorkers);
+      setNodeHeap(nextResources.nodeHeapMb);
       setMessage("Secure device session active. Metrics are labelled by their actual source.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not reach the device.");
@@ -133,6 +136,7 @@ export function App() {
       setSites([]);
       setLogs([]);
       setTunnel(null);
+      setResources(null);
       setBusy(false);
     }
   }
