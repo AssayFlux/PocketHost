@@ -155,4 +155,7 @@ Do not claim a configuration was tested unless a test or inspection actually ran
 ## 10. Change Log
 
 - **2026-11-15:** Initial UI specification recorded from the owner's Phone Web Host design brief.
-- **2026-11-15:** Owner explicitly approved the classic navy palette and set the app display name to **AssayFlux Pocket Host**. Repository name and technical identifiers remain unchanged. UI implementation is still gated on the owner's Dashboard approval.
+- **2026-11-15:** Owner explicitly approved the classic navy palette and set the app display name to **AssayFlux Pocket Host**. Repository name and technical identifiers remain unchanged. UI implementation was awaiting owner approval at the time of this entry.
+
+- **2026-11-15:** Owner authorized implementation in one pass. Added the four-tab Compose shell, top-bar server status, central navy light/dark theme, one Start/Stop control, telemetry warnings, local URL copy/share, file metadata listing, website import/backup actions, Logs filters, and an in-app loopback WebView preview.
+- **2026-11-15:** Implementation boundary recorded: request-level IP/path/status logs, log clearing, arbitrary file create/edit/delete/index selection, boot auto-start, local TLS and visitor password controls are not represented as working controls because they are not yet implemented in the existing backend. Device-size/landscape/large-font/keyboard screenshot validation remains pending; CI source compilation is the first gate.

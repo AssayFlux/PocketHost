@@ -2,6 +2,8 @@ package com.assayflux.pockethost
 
 import android.Manifest
 import android.content.Context
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
@@ -17,6 +19,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontFamily
 import java.time.LocalDate
 import com.assayflux.pockethost.ui.theme.PocketHostTheme
 import androidx.compose.foundation.rememberScrollState
@@ -371,7 +374,7 @@ private fun PocketHostDashboard() {
                 }
             },
             bottomBar = {
-                NavigationBar(containerColor = palette.surface) {
+                NavigationBar(modifier = Modifier.imePadding(), containerColor = palette.surface) {
                     listOf("Dashboard", "Files", "Logs", "Settings").forEach { destination ->
                         val symbol = when (destination) { "Dashboard" -> "⌂"; "Files" -> "▤"; "Logs" -> "≡"; else -> "⚙" }
                         NavigationBarItem(
@@ -431,7 +434,7 @@ private fun PocketHostDashboard() {
                 if (advancedMode) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("SERVER CONFIGURATION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
@@ -726,6 +729,7 @@ private fun PocketHostDashboard() {
                             siteFiles.forEach { file ->
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    Text("▤", Modifier.padding(end = 8.dp), color = palette.onSurfaceVariant)
                                     Text(file.relativeTo(siteRoot).path, Modifier.weight(1f), color = palette.onSurface,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("${formatBytes(file.length())} · ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(file.lastModified()))}",
@@ -734,6 +738,11 @@ private fun PocketHostDashboard() {
                             }
                         }
                         Text(if (File(siteRoot, "index.html").isFile) "Entry page: index.html" else "No index.html found at the site root yet.", color = palette.onSurfaceVariant)
+                        OutlinedButton(
+                            onClick = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },
+                            enabled = hosting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Preview site") }
                         Button(
                             onClick = { folderPicker.launch(null) },
                             enabled = !hosting && !importing,
@@ -1096,7 +1105,22 @@ private fun PocketHostDashboard() {
                             deviceTelemetry.optString("thermalLabel").uppercase() in listOf("SEVERE", "CRITICAL", "EMERGENCY", "SHUTDOWN")) {
                             Text("Device protection warning: battery is low or thermal pressure is high. Reduce hosting load and allow the phone to cool.", color = palette.error, fontWeight = FontWeight.SemiBold)
                         }
-                        Text(if (allowLan && lanAddress != null) "http://$lanAddress:$portText" else "http://127.0.0.1:$portText", color = palette.onSurface)
+                        val localSiteUrl = if (allowLan && lanAddress != null) "http://$lanAddress:${portText.toIntOrNull() ?: 8080}/" else "http://127.0.0.1:${portText.toIntOrNull() ?: 8080}/"
+                        Text(localSiteUrl, color = palette.onSurface, fontFamily = FontFamily.Monospace)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Pocket Host site URL", localSiteUrl))
+                                status = "Local site URL copied."
+                            }) { Text("Copy URL") }
+                            OutlinedButton(onClick = {
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, localSiteUrl)
+                                }
+                                context.startActivity(Intent.createChooser(share, "Share site URL"))
+                            }) { Text("Share URL") }
+                        }
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Allow local network access", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
@@ -1116,7 +1140,6 @@ private fun PocketHostDashboard() {
                     }
                 }
                 }
-                Text("Cloudflare Tunnel integration is under validation. Python WSGI is available; Node.js hosting is embedded through the pinned Android Node 24 LTS SDK. Multi-runtime hostname routing and physical-device compatibility remain under validation. Public access requires a configured Cloudflare hostname and an access policy for private content.", color = palette.onSurfaceVariant, fontSize = 14.sp)
             }
         }
     }
