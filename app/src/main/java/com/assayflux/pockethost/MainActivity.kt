@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
+import com.assayflux.pockethost.diagnostics.DiagnosticsBundle
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
@@ -151,6 +152,17 @@ private fun PocketHostDashboard() {
             scope.launch {
                 val exported = withContext(Dispatchers.IO) { OperationalLog.export(context, uri) }
                 status = if (exported) "Redacted operational logs exported." else "Could not export operational logs."
+            }
+        }
+    }
+
+    val diagnosticsExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val exported = withContext(Dispatchers.IO) { DiagnosticsBundle.export(context, uri) }
+                status = if (exported) "Diagnostics bundle exported. Review it before sharing." else "Could not export diagnostics bundle."
             }
         }
     }
@@ -373,6 +385,10 @@ private fun PocketHostDashboard() {
                             onClick = { logExportPicker.launch("pockethost-operations.jsonl") },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Export redacted logs") }
+                        OutlinedButton(
+                            onClick = { diagnosticsExportPicker.launch("pockethost-diagnostics.zip") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Export diagnostics bundle") }
                     }
                 }
 
