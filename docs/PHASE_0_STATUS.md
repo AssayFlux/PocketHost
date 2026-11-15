@@ -1,6 +1,6 @@
 # PocketHost implementation status
 
-**Last updated:** 2026-11-14  
+**Last updated:** 2026-11-15  
 **Branch:** `main`  
 **Release state:** Development prototype. Not approved for public production hosting.  
 **Compatibility target:** Android 8.0 (API 26)+, 4 GB RAM minimum target, ARMv7 + ARM64 phone ABIs; x86_64 for emulator tests.
@@ -12,7 +12,7 @@
 - Minimum Android API 26; ARMv7 and ARM64 phone ABIs, plus x86_64 emulator ABI.
 - Simple and Advanced dashboard modes.
 - User-started foreground hosting service with persistent notification and status reporting.
-- Optional Advanced Mode partial CPU wake lock while hosting; off by default, released on service shutdown, with explicit battery-use warning.
+- Optional Advanced Mode partial CPU wake lock while hosting; off by default, renewed with a bounded ten-minute lease and released on service shutdown, with explicit battery-use warning.
 - JNI bridge for Rust lifecycle and session metrics.
 - Configurable HTTP port (1024–65535).
 - Loopback listener by default; explicit LAN opt-in.
@@ -59,6 +59,7 @@
 - Redaction for token, authorization, secret, password and API-key assignments and bearer credentials.
 - Dashboard display of the latest eight events; file reads run off the main thread.
 - User-controlled export of redacted operational logs as JSONL through Android's Storage Access Framework.
+- User-controlled diagnostics ZIP containing redacted logs, app/Android compatibility metadata, non-secret hosting configuration and aggregate traffic counters; excludes project contents and tunnel credentials.
 
 ### Companion console and CI
 - React + TypeScript + Vite console foundation.
@@ -90,7 +91,7 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Multi-site hosting, hostname routing and per-site listener/origin configuration.
 - Rust reverse proxy and runtime-to-site routing.
 - Persistent analytics across engine restarts.
-- Log filtering and a redacted diagnostics bundle; the current bounded status-event log and JSONL export are implemented, but not a full diagnostics bundle.
+- Log filtering and advanced event search are not implemented; a redacted diagnostics ZIP export is now implemented alongside JSONL export.
 - Encrypted backup/restore and restore validation.
 - Configurable cache policies, custom 404 pages and site-level request policies.
 - Python resource quotas, request timeouts, stronger isolation and dependency management.
