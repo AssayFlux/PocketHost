@@ -423,6 +423,7 @@ object ApplicationBackupManager {
             val root = File(entry.root).canonicalFile
             val canonicalRoot = root.canonicalPath
             var archiveRoot = defaultArchiveRoots[entry.runtime]
+                ?: throw IOException("The backup encountered an unsupported site runtime.")
             if (canonicalRoot != expected[entry.runtime]) {
                 if (entry.runtime != "static") {
                     throw IOException("Site '${entry.name}' uses a custom runtime project directory that is not supported by portable backup.")
