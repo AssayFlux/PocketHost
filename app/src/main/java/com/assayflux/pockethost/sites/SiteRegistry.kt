@@ -82,6 +82,9 @@ object SiteRegistry {
             require(hosts.distinct().size == hosts.size) { "Restored site contains duplicate hostnames." }
             site.copy(root = root.absolutePath, hostnames = hosts)
         }
+        require(normalized.map { it.id }.distinct().size == normalized.size) {
+            "Restored routes contain duplicate site IDs."
+        }
         val allHosts = normalized.flatMap { it.hostnames }
         require(allHosts.size <= 1_000 && allHosts.distinct().size == allHosts.size) {
             "Restored routes contain duplicate hostnames or exceed the route limit."
