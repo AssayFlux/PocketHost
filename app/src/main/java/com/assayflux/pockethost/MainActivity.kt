@@ -1221,6 +1221,33 @@ private fun PocketHostDashboard() {
                     }
                 }
 
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("CONNECTION & SECURITY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Public HTTPS is provided at the Cloudflare edge for your existing configured hostname; the phone's local origin remains HTTP.", color = palette.onSurfaceVariant)
+                            Text("Pocket Host does not currently provide built-in visitor password protection. Use Cloudflare Access for private sites before sharing the public hostname.", color = palette.onSurfaceVariant)
+                            Text("Automatic start on boot is not available in this build. Android background and OEM power policies still apply.", color = palette.onSurfaceVariant)
+                            OutlinedButton(onClick = { selectedTab = "Files" }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Open backup and restore")
+                            }
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("ABOUT", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("AssayFlux Pocket Host", color = palette.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Version 0.1.0 · Designed by AssayFlux", color = palette.onSurfaceVariant)
+                            Text("Native Android website hosting powered by Rust, Kotlin and optional trusted Python/Node runtimes.", color = palette.onSurfaceVariant)
+                        }
+                    }
                 }
                 if (selectedTab == "Dashboard") {
                 Card(
