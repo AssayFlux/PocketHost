@@ -188,9 +188,12 @@ object HostAccountStore {
     }
 
     private fun write(context: Context, accounts: JSONArray) {
-        val nonce = ByteArray(12).also(random::nextBytes)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, key(), GCMParameterSpec(128, nonce))
+        // Android Keystore requires a provider-generated IV when randomized encryption
+        // is enabled. Supplying our own GCM IV is rejected on API 26 devices.
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+        val nonce = cipher.iv?.copyOf() ?: error("keystore_did_not_return_gcm_iv")
+        require(nonce.size == 12) { "unexpected_gcm_iv_length" }
         val plain = accounts.toString().toByteArray(Charsets.UTF_8)
         val encrypted = try { cipher.doFinal(plain) } finally { plain.fill(0) }
         val file = File(context.noBackupFilesDir, FILE_NAME)
