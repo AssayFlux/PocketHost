@@ -117,12 +117,6 @@ Implement a provider-neutral payment integration boundary:
 
 Use a conventional append-only audit log as the source of truth. Each event includes event ID, sequence, UTC timestamp, actor/device, action, target, outcome, reason, correlation ID and redacted metadata. Link records using a cryptographic hash chain; periodically sign checkpoints with a key protected by Android Keystore or a remote KMS. Detect missing, reordered or modified records during verification.
 
-Optional blockchain feature:
-- Batch audit checkpoint hashes (not full events) and anchor them to a suitable low-cost public or permissioned chain.
-- Never put payment details, personal data, secrets, IP addresses, raw logs or transaction payloads on-chain; public-chain data is effectively permanent.
-- Queue anchors while offline, retry safely and display confirmation/finality status.
-- Keep local signed audit data authoritative; blockchain anchoring proves a checkpoint existed, not that the underlying event was truthful.
-- Make anchoring optional, explain fees/network dependencies, and do not make core hosting depend on blockchain availability.
 
 ## 9. Operational logs, daily reports and retention
 

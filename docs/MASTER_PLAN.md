@@ -133,7 +133,7 @@ Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTI
 - Use a payment provider's hosted/tokenized checkout; never store PAN/CVV/PIN.
 - Verify raw-body webhook signatures, timestamps, idempotency and replay; reconcile provider events.
 - Store an encrypted event ledger with provider references and integer minor-unit amounts.
-- Keep append-only hash-chained audit records and signed checkpoints with local verification; no blockchain or distributed-ledger integration.
+- Keep append-only hash-chained audit records and signed checkpoints with local verification.
 - No PCI/security certification claim without qualified independent assessment.
 
 ## 8. Logs, reporting and recovery (partially implemented; expansion planned)
