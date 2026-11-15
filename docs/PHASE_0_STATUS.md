@@ -1,5 +1,19 @@
 # PocketHost implementation and validation status
 
+> **Current reconciliation — 2026-11-15**
+>
+> - **Current main:** `501d2e8f7d6164678c3e7bdfb36d463f4d6b4710` (PR #25 merged).
+> - **Quality CI:** [run 43706278144](https://github.com/AssayFlux/PocketHost/actions/runs/43706278144) passed all six jobs on current main: Rust, Node runtime, Android source compilation, control plane, Python runtime and console.
+> - **Android build:** [run 43706235774](https://github.com/AssayFlux/PocketHost/actions/runs/43706235774) successfully built the cloudflared Android JNI libraries and three ABI-specific debug APKs (ARM64, ARMv7 and x86_64). The API 26/33/35 emulator matrix was still running/queued at this reconciliation; no emulator result is claimed here.
+> - **Release APK:** signed release is not built because release signing secrets are intentionally external to the repository. Debug APK packaging is complete.
+> - **Device acceptance:** physical-device installation, lifecycle, network, thermal and OEM battery behavior are owner-run acceptance tasks. Source/CI results do not replace those tests.
+> - **Release state:** integrated development build; not production approved.
+>
+> PR #25 corrected the Android Keystore AES-GCM IV behavior for API 26, increased a slow-device instrumentation socket timeout, and made the Python smoke test explicitly acknowledge trusted code execution while restoring its previous preference.
+>
+> The following historical sections below retain earlier evidence and implementation notes. When a historical run conflicts with this current reconciliation, use the current commit/run identifiers above.
+
+
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
 **Latest implementation commit:** `34f8d5329223d59e984e98b977e92d86e6efd555`  
