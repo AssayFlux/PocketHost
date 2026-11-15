@@ -38,7 +38,7 @@ Support presets and timed schedules, including 30% of safe capacity for three ho
 Use hosted/tokenized checkout and store provider references/events, not raw cardholder data. No PAN/CVV/PIN storage; verify signed webhooks and reconcile against provider.
 
 ### ADR-012 — Conventional tamper-evident audit only
-Use conventional append-only hash-chained records and signed checkpoints, with local verification and controlled export. Distributed-ledger and blockchain technology are explicitly excluded from PocketHost. Audit integrity must not introduce a network dependency into hosting.
+Use conventional append-only hash-chained records and signed checkpoints, with local verification and controlled export. Audit integrity must not introduce a network dependency into hosting.
 
 ### ADR-013 — Logs are bounded and redacted
 Structured operational logs, rotation, retention caps and daily reports are core operations features. Logging cannot exhaust storage or leak credentials/payment data.

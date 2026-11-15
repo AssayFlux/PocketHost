@@ -83,7 +83,7 @@
 - [ ] Raw card numbers, CVVs and PINs are never stored.
 - [ ] Payment records and backups are encrypted and restore-tested.
 - [ ] Audit hash-chain tampering, deletion and reordering are detected.
-- [ ] Audit integrity uses conventional local hash chaining and signed checkpoints; no blockchain dependency or component.
+- [ ] Audit integrity uses conventional local hash chaining and signed checkpoints.
 - [ ] Logs redact tokens, cookies, payment data and sensitive request bodies.
 - [ ] Daily report is reproducible and reconciles totals with the PSP.
 

@@ -107,7 +107,7 @@ Full requirements and acceptance criteria: [Adaptive Capacity, Security, Payment
 
 Security must be designed into each boundary. Python and Node currently execute with PocketHost's app UID; neither is a hostile-code sandbox. A local trusted-code acknowledgement gate now blocks accidental runtime starts and removes optional public routes when revoked, but this is not isolation. Strong project isolation, filesystem/network restrictions and OS-enforced resource limits are release-blocking before accepting untrusted workloads.
 
-For payments, integrate a reputable payment service provider using hosted/tokenized checkout and signed, replay-resistant webhooks. Store provider transaction references and an encrypted durable event ledger, never raw card numbers or CVVs. Use conventional append-only hash-chained audit records and signed checkpoints; no distributed-ledger or blockchain components are part of this product. Do not claim PCI compliance without qualified assessment.
+For payments, integrate a reputable payment service provider using hosted/tokenized checkout and signed, replay-resistant webhooks. Store provider transaction references and an encrypted durable event ledger, never raw card numbers or CVVs. Use conventional append-only hash-chained audit records and signed checkpoints. Do not claim PCI compliance without qualified assessment.
 
 ## Product constraints
 
