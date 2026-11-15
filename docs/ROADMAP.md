@@ -118,7 +118,7 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 4. Offline checkpoint queue and recovery.
 5. Provide local verification, signed checkpoint export and controlled retention.
 
-**Gate:** detect tampering, reordering and deletion; verify signatures and checkpoint continuity; review privacy and recovery. No blockchain or distributed-ledger technology is included.
+**Gate:** detect tampering, reordering and deletion; verify signatures and checkpoint continuity; review privacy and recovery.
 
 ## Stage 7 — Website performance and product polish
 

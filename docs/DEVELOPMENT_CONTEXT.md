@@ -63,7 +63,7 @@ Do not infer production readiness:
 - Local management sessions are in-memory and expire; process restart requires pairing again.
 - Connected tunnel does not prove public hostname serves the expected website.
 - Control-plane source does not prove deployed service or paired physical device.
-- Payment processing, encrypted payment ledger and the full Rust-native rate/fairness/queue governor are not implemented merely because PR #14 specifies them. Blockchain and distributed-ledger technology are excluded from the product.
+- Payment processing, encrypted payment ledger and the full Rust-native rate/fairness/queue governor are not implemented merely because PR #14 specifies them.
 
 Read runtime-specific docs before changing these components.
 
@@ -79,7 +79,7 @@ Current main `c6e07a7248a123aac757a7358dc2df13caec9e86` includes versioned low-f
 7. Implement conventional audit verification, signed checkpoints and recovery.
 8. Complete website performance, advanced controls, physical tests and signed release.
 
-Do not add blockchain or distributed-ledger components. Do not enable live payments before payment security. Do not call runtime execution sandboxed before OS-level isolation evidence.
+Do not enable live payments before payment security. Do not call runtime execution sandboxed before OS-level isolation evidence.
 
 ## 6. Capacity semantics
 
@@ -104,7 +104,7 @@ Do not add blockchain or distributed-ledger components. Do not enable live payme
 - Client redirect is not proof of payment; reconcile with provider.
 - Store integer minor-unit amounts, ISO currency, provider IDs and necessary redacted metadata only.
 - Encrypt payment ledger/backups and test restoration.
-- Hash-chain audit events; sign checkpoints. Use local hash-chain audit events and signed checkpoints; no blockchain.
+- Hash-chain audit events; sign checkpoints.
 - No PCI/security certification claims without qualified independent assessment.
 
 ## 8. How every coding session must operate

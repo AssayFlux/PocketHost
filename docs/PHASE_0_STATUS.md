@@ -125,7 +125,6 @@ Do not describe these as live, secure or production-ready until implemented and 
 - Static-site backup excludes runtime projects, credentials, settings and deployment history.
 - Remote management API cannot browse phone filesystem or execute arbitrary shell commands.
 - Never store raw card data. PSP integration does not equal PCI compliance.
-- Blockchain and distributed-ledger technology are excluded from PocketHost.
 
 ## Build prerequisites
 
