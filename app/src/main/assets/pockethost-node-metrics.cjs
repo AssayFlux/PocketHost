@@ -3,6 +3,20 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
+const net = require('node:net');
+
+// All Node TCP listeners stay on loopback. Public/LAN ingress must pass through
+// the Rust front door, which enforces the user's LAN exposure setting.
+const originalListen = net.Server.prototype.listen;
+net.Server.prototype.listen = function (...args) {
+  if (args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+    args[0] = { ...args[0], host: '127.0.0.1' };
+  } else if (typeof args[0] === 'number') {
+    if (typeof args[1] === 'function' || args.length < 2) args.splice(1, 0, '127.0.0.1');
+    else args[1] = '127.0.0.1';
+  }
+  return originalListen.apply(this, args);
+};
 
 const target = process.env.POCKETHOST_METRICS_FILE;
 const counters = { requests: 0, bytesSent: 0, errors: 0, active: 0 };
