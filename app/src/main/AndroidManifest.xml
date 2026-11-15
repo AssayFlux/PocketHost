@@ -12,5 +12,8 @@
         <service android:name=".service.HostingService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started local website hosting service"/>
         </service>
+        <service android:name=".runtime.NodeHostingService" android:exported="false" android:process=":node" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started embedded Node.js application hosting service"/>
+        </service>
     </application>
 </manifest>
