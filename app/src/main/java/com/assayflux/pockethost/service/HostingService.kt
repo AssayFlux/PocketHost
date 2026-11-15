@@ -47,7 +47,7 @@ class HostingService : Service() {
         super.onCreate()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(channelId, "PocketHost", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(channelId, "AssayFlux Pocket Host", NotificationManager.IMPORTANCE_LOW)
             )
         }
     }
@@ -361,7 +361,7 @@ class HostingService : Service() {
 
     private fun notification(text: String): Notification =
         Notification.Builder(this, channelId)
-            .setContentTitle("AssayFlux PocketHost")
+            .setContentTitle("AssayFlux Pocket Host")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_sys_upload_done)
             .setOngoing(true)

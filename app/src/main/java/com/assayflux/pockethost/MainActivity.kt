@@ -479,7 +479,7 @@ private fun PocketHostDashboard() {
                     }
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("REMOTE CONTROL PLANE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
@@ -528,9 +528,9 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("HOSTING STATUS", color = palette.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text(if (hosting) "Local hosting active" else "Stopped", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                         Text(status, color = palette.onSurfaceVariant, fontSize = 14.sp)
@@ -555,9 +555,9 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("STATIC ENGINE TRAFFIC · ALL HOSTING SESSIONS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column(Modifier.weight(1f)) {
@@ -580,10 +580,10 @@ private fun PocketHostDashboard() {
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("CAPACITY & AUTOMATIC PROTECTION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text("Admission budget: ${capacityInfo.optInt("effectiveConcurrencyLimit", 16)} active connections · ${capacityInfo.optInt("percent", 100)}% of ${if (capacityInfo.optLong("calibratedAt") > 0L) "measured" else "provisional"} concurrency ceiling",
                             color = palette.onSurfaceVariant, fontSize = 14.sp)
@@ -651,10 +651,10 @@ private fun PocketHostDashboard() {
                 if (selectedTab == "Logs") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("RECENT OPERATIONS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("All", "Errors", "Today").forEach { filter ->
@@ -712,9 +712,9 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("WEBSITE", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
                         Text(importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                         val siteRoot = File(context.filesDir, "site")
@@ -798,10 +798,10 @@ private fun PocketHostDashboard() {
                 if (selectedTab == "Settings") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("CLOUDFLARE TUNNEL", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text(
                             when (tunnelStatus) {
@@ -877,7 +877,7 @@ private fun PocketHostDashboard() {
                             ) { Text("Remove token") }
                         }
                         Text(
-                            "Create a remotely managed tunnel in Cloudflare Zero Trust, then configure its Public Hostname origin as http://127.0.0.1:${portText.toIntOrNull() ?: 8080}. DNS and hostname setup remain in the Cloudflare dashboard.",
+                            "Reuse your existing named Cloudflare Tunnel and Public Hostname. Do not create another tunnel. Confirm its Public Hostname origin is http://127.0.0.1:${portText.toIntOrNull() ?: 8080}. DNS and hostname setup remain in the Cloudflare dashboard.",
                             color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
                         Text(
@@ -889,10 +889,10 @@ private fun PocketHostDashboard() {
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = palette.surfaceVariant)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("TRUSTED APPLICATION CODE ONLY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text("Python and Node applications execute with PocketHost's Android app privileges. A separate process or V8 heap limit is NOT a security sandbox. Never run code you do not own or trust. Strong OS-backed sandboxing is not implemented yet.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -927,10 +927,10 @@ private fun PocketHostDashboard() {
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text("PYTHON BACKEND · CPYTHON 3.11", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text(pythonProjectSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(
@@ -989,10 +989,10 @@ private fun PocketHostDashboard() {
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text("CUSTOM HOSTNAME ROUTING", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text("Map a domain to an imported website or backend. Configure Cloudflare's public hostname origin to the Rust static server port.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedTextField(value = hostnameText, onValueChange = { hostnameText = it.trim().lowercase() },
@@ -1050,10 +1050,10 @@ private fun PocketHostDashboard() {
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text("NODE.JS 24 LTS · EMBEDDED RUNTIME", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text(nodeProjectSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(onClick = { nodeProjectPicker.launch(null) }, enabled = !importing && !nodeHosting,
@@ -1095,10 +1095,10 @@ private fun PocketHostDashboard() {
                 if (selectedTab == "Dashboard") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = palette.surfaceVariant)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("DEVICE HEALTH & LOCAL PREVIEW", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
                         Text("Battery: ${if (deviceTelemetry.isNull("batteryPercent")) "Unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "%"} · Temperature: ${deviceTelemetry.optString("batteryTemperatureC", "Unavailable")} · Network: ${deviceTelemetry.optString("networkTransport", "Unknown")}", color = palette.onSurfaceVariant)
                         if ((!deviceTelemetry.isNull("batteryPercent") && deviceTelemetry.optInt("batteryPercent") < 20) ||
@@ -1107,6 +1107,11 @@ private fun PocketHostDashboard() {
                         }
                         val localSiteUrl = if (allowLan && lanAddress != null) "http://$lanAddress:${portText.toIntOrNull() ?: 8080}/" else "http://127.0.0.1:${portText.toIntOrNull() ?: 8080}/"
                         Text(localSiteUrl, color = palette.onSurface, fontFamily = FontFamily.Monospace)
+                        val configuredPublicHost = SiteRegistry.list(context).flatMap { it.hostnames }.firstOrNull()
+                        if (tunnelStatus == "CONNECTED" && configuredPublicHost != null) {
+                            Text("Public URL: https://$configuredPublicHost", color = palette.onSurface,
+                                fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -1143,4 +1148,5 @@ private fun PocketHostDashboard() {
             }
         }
     }
+}
 }

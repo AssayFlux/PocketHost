@@ -1,6 +1,6 @@
 <!-- POCKETHOST · DESIGNED BY ASSAYFLUX -->
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:1D292B,48:24434A,100:B18B5E&height=150&section=header&text=ASSAYFLUX%20POCKET%20HOST&fontSize=34&fontColor=F6F4EF&fontAlignY=48&desc=NATIVE%20ANDROID%20HOSTING%20PLATFORM&descSize=13&descAlignY=76&descColor=E4D5BD" alt="AssayFlux Pocket Host" width="100%">
+  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:1F3A5F,48:1F3A5F,100:1F3A5F&height=150&section=header&text=ASSAYFLUX%20POCKET%20HOST&fontSize=34&fontColor=FFFFFF&fontAlignY=48&desc=NATIVE%20ANDROID%20HOSTING%20PLATFORM&descSize=13&descAlignY=76&descColor=E5EAF1" alt="AssayFlux Pocket Host" width="100%">
 </p>
 <p align="center"><strong>Your website. Your device. Your control.</strong><br><sub>Designed by AssayFlux · Native Android hosting without Termux or root</sub></p>
 
