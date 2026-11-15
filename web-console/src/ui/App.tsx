@@ -182,7 +182,7 @@ export function App() {
         {sites.length === 0 ? <p>No registered websites yet. Import a project and assign its hostname in the Android app.</p> : sites.map(site => <div className="status-line" key={site.id}><span><strong>{site.name}</strong><small className="site-hosts">{site.hostnames.join(", ") || "No hostname assigned"}</small></span><span className="site-actions"><strong>{site.runtime} · {site.state}</strong><button disabled={busy} onClick={() => siteAction(site, "start")}>Start</button><button disabled={busy} onClick={() => siteAction(site, "stop")}>Stop</button></span></div>)}
       </section>
       <section className="metric-grid" id="metrics">
-        <article className="metric-card"><span>Rust static requests</span><strong>{metrics?.sources.find(x => x.source === "rust-static")?.requests.toLocaleString() ?? "—"}</strong><small>Persisted device counter</small></article>
+        <article className="metric-card"><span>Rust static requests</span><strong>{metrics?.sources.find(x => x.source === "rust-static")?.requests?.toLocaleString() ?? "—"}</strong><small>Persisted device counter</small></article>
         <article className="metric-card"><span>Static data served</span><strong>{metrics ? bytes(metrics.sources.find(x => x.source === "rust-static")?.bytesServed ?? 0) : "—"}</strong><small>Rust static server only</small></article>
         <article className="metric-card"><span>Last sample</span><strong>{metrics ? new Date(metrics.sampledAt).toLocaleTimeString() : "—"}</strong><small>Device-reported timestamp</small></article>
       </section>
