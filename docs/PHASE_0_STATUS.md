@@ -2,8 +2,8 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `d291557e3aed4c0412590d80af75df196d9632a6`  
-**Quality CI:** [run 43692174009](https://github.com/AssayFlux/PocketHost/actions/runs/43692174009) passed all six jobs on UI implementation commit `d291557e3aed4c0412590d80af75df196d9632a6`, including Android Kotlin and Android-test source compilation, without packaging an APK. This does not include emulator UI screenshots or physical-device validation.  
+**Latest implementation commit:** `ad0ccab69920b32070d4ef60fe866a6c413c1a7c`  
+**Quality CI:** [run 43693751852](https://github.com/AssayFlux/PocketHost/actions/runs/43693751852) passed all six jobs on implementation commit `ad0ccab69920b32070d4ef60fe866a6c413c1a7c`, including Android Kotlin and Android-test source compilation, without packaging an APK. This does not include emulator UI screenshots or physical-device validation.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -184,7 +184,7 @@ The following first implementations were added directly to the Android/Rust/Type
 ## 2026-11-15 UI implementation update
 
 - Android app display name is **AssayFlux Pocket Host**; repository and package identifiers remain unchanged.
-- Added the four-tab Dashboard / Files / Logs / Settings navigation, centralized navy light/dark theme, server status, single Start/Stop action, device telemetry warning, local URL copy/share, file metadata listing, website import/backup, operational log filters and a loopback WebView preview.
+- Added the four-tab Dashboard / Files / Logs / Settings navigation, centralized navy light/dark theme, server status, single Start/Stop action, uptime and device telemetry, local/public URL display and copy/share, file metadata and guarded text-file create/edit/delete/index selection, website import/backup, operational log filters and clear action, and a loopback WebView preview. Settings includes opt-in boot start, battery settings, About and honest capability notes.
 - Updated foreground notification branding and Cloudflare instructions to reuse the owner's existing named tunnel and Public Hostname.
 - Quality CI run 43692174009 passed all six jobs, including Kotlin/Android-test source compilation. No APK was packaged and no emulator/physical-device UI test matrix was run.
-- The UI is an initial implementation, not a claim that every item in the design brief is finished. Request-level access logs, file CRUD/index selection, boot auto-start, local TLS, built-in visitor passwords, and full responsive/screenshot acceptance remain outstanding.
+- The UI is an initial implementation, not a claim that every item in the design brief is finished. Request-level IP/path/status logs, local TLS, built-in visitor passwords, full two-column tablet behavior and responsive screenshot acceptance remain outstanding. Boot start has not been validated on a physical device.
