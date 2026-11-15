@@ -18,8 +18,9 @@ object NodeHostRuntime {
         val state = status(context)
         require(state !in setOf("RUNNING", "STARTING")) { "Only one Node.js application can run at a time." }
 
-        val metadata = File(root, ".pockethost")
-        require(metadata.exists() || metadata.mkdirs()) { "Cannot create Node runtime directory." }
+        // Keep runtime instrumentation, caches and HOME outside the user-served project tree.
+        val metadata = File(context.noBackupFilesDir, "node-runtime")
+        require(metadata.exists() || metadata.mkdirs()) { "Cannot create private Node runtime directory." }
         val preload = File(metadata, "metrics-preload.cjs")
         if (!preload.isFile) {
             context.assets.open("pockethost-node-metrics.cjs").use { input ->
