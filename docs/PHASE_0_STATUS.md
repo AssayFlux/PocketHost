@@ -2,9 +2,9 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`. PRs #40–#45 merged: Activity Result crash correction, five-tab UI refresh, encrypted full-app backup/restore, passphrase and archive limits, ZIP path normalization, and restore counter correction.
+> - **Current main:** `bf22b10c22f5c2f77058acee7905595b7edd3e81`. PRs #40–#45 merged: Activity Result crash correction, five-tab UI refresh, encrypted full-app backup/restore, passphrase and archive limits, ZIP path normalization, and restore counter correction.
 > - **Quality CI:** [run 43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Rust, Node, Python, control plane, TypeScript console and Android source compilation.
-> - **Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704): cloudflared Android build passed; ARM64/ARMv7/x86_64 debug APK assembly and ABI verification are in progress at this reconciliation. Emulator instrumentation is skipped by design.
+> - **Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed. [Debug APK bundle artifact 14164002620](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620) contains ARM64, ARMv7 and x86_64 APKs. Workflow verification confirmed Node, Node bridge, Rust engine and cloudflared native libraries in each ABI APK. Emulator instrumentation is skipped by design.
 > - **Android crash fix:** MainActivity now uses ComponentActivity for all Compose Activity Result launchers; the biometric prompt runs in a dedicated BiometricHostActivity. No request-code masking was introduced.
 > - **UI:** five destinations—Dashboard, Sites, Activity, Learn and Settings. Settings are grouped into General, Network, Runtimes and About; Learn guides start collapsed; Dashboard has a high-contrast hosting status hero.
 > - **Backup:** versioned AES-256-GCM full-app backup includes the active static site, optional Python/Node project roots, hostname routes and selected non-secret settings. Device-bound credentials are excluded; restored runtimes stay stopped and require fresh trusted-code acknowledgement. Legacy static-only AFPHB01 backups remain restorable.
@@ -19,9 +19,9 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`  
+**Latest implementation commit:** `bf22b10c22f5c2f77058acee7905595b7edd3e81`  
 **Quality CI:** [run 43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Android source compilation.  
-**Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) is building and verifying ABI-specific debug APKs; emulator instrumentation is skipped by design.  
+**Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed; [artifact 14164002620](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620) contains three ABI debug APKs. Emulator instrumentation is skipped by design.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -115,7 +115,7 @@ Do not describe these as live, secure or production-ready until implemented and 
 
 ## Not yet verified / production release gates
 
-1. Complete current ABI-specific APK assembly/content verification. Emulator instrumentation is skipped by design; physical Android 8/15 device acceptance is owner-run.
+1. ABI-specific APK assembly and native-library content verification passed on the latest implementation PR head. Emulator instrumentation is skipped by design; physical Android 8/15 device acceptance is owner-run.
 2. Actual Node instrumentation: load `libnode.so`, confirm version, import bundled dependency, verify loopback ingress, Rust proxy, stop and fresh-process restart.
 3. Foreground-service behavior, notification permission, Doze, screen-off, battery saver, Wi-Fi/mobile transitions, low memory and process death.
 4. Physical testing on Vivo Y95 (Android 8.1 / 4 GB / ARM64), Moto G54 (Android 15 / ARM64), and representative Android 8 ARMv7 device.

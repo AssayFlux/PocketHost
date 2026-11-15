@@ -64,9 +64,9 @@ The public hostname must point to the Rust website listener. It must never point
 ## Build and validation
 
 - Repository: [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)
-- Latest implementation: `467f42e23d12eb3879677b36f6dd8c04c5da0d1a`
+- Latest main: `bf22b10c22f5c2f77058acee7905595b7edd3e81`
 - [Quality CI](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Android source compilation.
-- [Android integration build](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) is building and verifying ARM64, ARMv7 and x86_64 debug APKs. Emulator instrumentation is skipped by design; physical-device acceptance is owner-run.
+- [Android integration build](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed. [Download the ARM64, ARMv7 and x86_64 debug APK bundle](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620). The workflow verified all three APKs contain Node, Node bridge, Rust engine and cloudflared native libraries. Emulator instrumentation is skipped by design; physical-device acceptance is owner-run.
 - Debug APKs are not signed production releases. Release signing requires owner-controlled signing material.
 
 See [PHASE_0_STATUS.md](docs/PHASE_0_STATUS.md) for exact validation evidence and outstanding gates.
