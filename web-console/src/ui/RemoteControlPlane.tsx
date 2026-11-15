@@ -8,6 +8,8 @@ type Device = {
   created_at: string;
 };
 type Config = { version: number; config: Record<string, unknown>; updated_at: string };
+type AuditEntry = { id: number; actor: string; action: string; target: string; details: Record<string, unknown>; createdAt: string };
+type ControlUser = { id: string; name: string; role: "editor" | "viewer"; active: boolean };
 
 const initialPayloads: Record<string, string> = {
   site_action: JSON.stringify({ siteId: "my-site", action: "stop" }, null, 2),
@@ -20,6 +22,11 @@ export function RemoteControlPlane() {
   const [adminToken, setAdminToken] = useState(() => sessionStorage.getItem("pockethost_control_admin") || "");
   const [deviceName, setDeviceName] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [users, setUsers] = useState<ControlUser[]>([]);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"editor" | "viewer">("viewer");
+  const [newUserToken, setNewUserToken] = useState("");
   const [selected, setSelected] = useState("");
   const [issuedToken, setIssuedToken] = useState("");
   const [configText, setConfigText] = useState('{"pythonMaxWorkers":8,"nodeHeapMb":192,"tunnelEnabled":false}');
@@ -28,6 +35,7 @@ export function RemoteControlPlane() {
   const [payloadText, setPayloadText] = useState(initialPayloads.site_action);
   const [message, setMessage] = useState("Connect to your independently deployed PocketHost Control Plane.");
   const [busy, setBusy] = useState(false);
+  const [archive, setArchive] = useState<File | null>(null);
 
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const response = await fetch(endpoint.replace(/\/$/, "") + path, {
@@ -57,6 +65,7 @@ export function RemoteControlPlane() {
       sessionStorage.setItem("pockethost_control_admin", adminToken);
       const next = await request<Device[]>("/v1/admin/devices");
       setDevices(next);
+      setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit"));
       setMessage(`Connected. ${next.length} registered device(s).`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not connect to the Control Plane.");
@@ -68,6 +77,7 @@ export function RemoteControlPlane() {
     try {
       const next = await request<Device[]>("/v1/admin/devices");
       setDevices(next);
+      setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit"));
       setMessage(`Device inventory refreshed · ${next.length} device(s).`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not refresh devices."); }
     finally { setBusy(false); }
@@ -89,6 +99,30 @@ export function RemoteControlPlane() {
     finally { setBusy(false); }
   }
 
+  async function loadUsers() {
+    setBusy(true);
+    try { setUsers(await request<ControlUser[]>("/v1/admin/users")); setMessage("Team accounts loaded."); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Only the owner can manage team accounts."); }
+    finally { setBusy(false); }
+  }
+
+  async function createUser() {
+    setBusy(true); setNewUserToken("");
+    try {
+      const created = await request<{ id: string; name: string; role: string; token: string }>("/v1/admin/users", { method: "POST", body: JSON.stringify({ name: newUserName, role: newUserRole }) });
+      setNewUserToken(created.token); setNewUserName(""); await loadUsers();
+      setMessage("Team account created. Copy its token; it is displayed only once.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create team account."); }
+    finally { setBusy(false); }
+  }
+
+  async function revokeUser(user: ControlUser) {
+    if (!window.confirm("Revoke " + user.name + "? Their API token will stop working immediately.")) return;
+    setBusy(true);
+    try { await request<void>("/v1/admin/users/" + encodeURIComponent(user.id), { method: "DELETE" }); setUsers(items => items.filter(item => item.id !== user.id)); setMessage("Team account revoked."); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Could not revoke account."); }
+    finally { setBusy(false); }
+  }
   async function revokeDevice(device: Device) {
     if (!window.confirm(`Revoke ${device.name}? Its device token and queued commands will be invalidated.`)) return;
     setBusy(true);
@@ -128,6 +162,17 @@ export function RemoteControlPlane() {
     finally { setBusy(false); }
   }
 
+  async function deployArchive() {
+    if (!selected || !archive) return;
+    if (!archive.name.toLowerCase().endsWith('.zip') || archive.size < 1 || archive.size > 50 * 1024 * 1024) { setMessage('Choose a ZIP no larger than 50 MiB.'); return; }
+    setBusy(true);
+    try {
+      const result = await request<{ artifactId: string; sha256: string; state: string }>( '/v1/admin/devices/' + encodeURIComponent(selected) + '/artifacts', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: await archive.arrayBuffer() });
+      setMessage('Website archive queued: ' + result.artifactId + '.');
+      setArchive(null);
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Website deployment failed.'); }
+    finally { setBusy(false); }
+  }
   async function queueCommand() {
     if (!selected) return;
     setBusy(true);
@@ -146,7 +191,7 @@ export function RemoteControlPlane() {
     <p>Manage registered PocketHost phones while their hosting services remain active. The backend queues typed commands; the phone initiates outbound HTTPS polling.</p>
     <div className="resource-panel">
       <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => setEndpoint(event.target.value)} placeholder="https://control.example.com" /></label>
-      <label>Administrator token<input type="password" value={adminToken} onChange={event => setAdminToken(event.target.value)} placeholder="Administrator bearer token" /></label>
+      <label>Control Plane access token<input type="password" value={adminToken} onChange={event => setAdminToken(event.target.value)} placeholder="Owner, Editor or Viewer bearer token" /></label>
       <div className="site-actions">
         <button disabled={busy || !endpoint.startsWith("https://") || adminToken.length < 32} onClick={connect}>Connect</button>
         <button disabled={busy || !adminToken} onClick={refreshDevices}>Refresh devices</button>
@@ -161,7 +206,7 @@ export function RemoteControlPlane() {
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
       <span><strong>{device.name}</strong><small>{device.id} · Last seen: {device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</small></span>
-      <span className="site-actions"><strong>{device.last_seen ? "Registered" : "Awaiting heartbeat"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke</button></span>
+      <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke</button></span>
     </div>)}
     {selected && <div className="lower-grid">
       <article className="panel">
@@ -169,6 +214,12 @@ export function RemoteControlPlane() {
         <p>Supported keys currently include pythonMaxWorkers, nodeHeapMb and tunnelEnabled. The phone validates settings before applying them.</p>
         <textarea rows={9} value={configText} onChange={event => setConfigText(event.target.value)} spellCheck={false}/>
         <button disabled={busy || configVersion === null} onClick={saveConfig}>Save and queue configuration</button>
+      </article>
+      <article className="panel">
+        <div className="panel-heading"><h3>Deploy website archive</h3><span className="muted-tag">ZIP · 50 MiB MAX</span></div>
+        <p>Upload a ZIP containing index.html at its root. The phone verifies SHA-256 and atomically activates the release while hosting stays online.</p>
+        <label>Website ZIP<input type="file" accept=".zip,application/zip" onChange={event => setArchive(event.target.files?.[0] || null)} /></label>
+        <button disabled={busy || !archive} onClick={deployArchive}>Upload and deploy</button>
       </article>
       <article className="panel">
         <div className="panel-heading"><h3>Remote actions</h3><span className="muted-tag">TYPED COMMANDS</span></div>
@@ -181,6 +232,23 @@ export function RemoteControlPlane() {
         <button disabled={busy} onClick={queueCommand}>Queue command</button>
       </article>
     </div>}
-    <p className="scope-note">The backend does not access phone files directly and exposes no shell command endpoint. Site deployment still uses the native import workflow; remote archive deployment is not yet supported.</p>
+    <p className="scope-note">The backend cannot browse the phone filesystem or execute shell commands. Website archives are validated on-device and activated using the native release importer.</p>
+    <div className="section-heading"><div><span className="eyebrow">ACCESS CONTROL</span><h2>Team permissions</h2></div><span className="muted-tag">OWNER MANAGED</span></div>
+    <div className="resource-panel">
+      <p>Owner credentials can create revocable Editor and Viewer accounts. Editors can manage devices and deployments; Viewers can inspect device state, configuration and audit history.</p>
+      <label>Account name<input value={newUserName} onChange={event => setNewUserName(event.target.value)} placeholder="Team member" /></label>
+      <label>Permission role<select value={newUserRole} onChange={event => setNewUserRole(event.target.value as "editor" | "viewer")}><option value="viewer">Viewer · read only</option><option value="editor">Editor · manage devices</option></select></label>
+      <div className="site-actions"><button disabled={busy || !newUserName.trim()} onClick={createUser}>Create account</button><button disabled={busy} onClick={loadUsers}>Load team</button></div>
+      {newUserToken && <div className="notice"><strong>One-time team token</strong><code>{newUserToken}</code><button onClick={() => void navigator.clipboard.writeText(newUserToken)}>Copy token</button></div>}
+      {users.map(user => <div className="status-line" key={user.id}><span><strong>{user.name}</strong><small>{user.role} · {user.active ? "Active" : "Revoked"}</small></span><button className="danger-button" disabled={busy || !user.active} onClick={() => void revokeUser(user)}>Revoke</button></div>)}
+    </div>
+    <div className="section-heading"><div><span className="eyebrow">SECURITY & GOVERNANCE</span><h2>Audit history</h2></div><span className="muted-tag">LATEST 200 EVENTS</span></div>
+    <div className="resource-panel">
+      {auditEntries.length === 0 ? <p>No audit events recorded yet.</p> : auditEntries.map(entry => <div className="status-line" key={entry.id}>
+        <span><strong>{entry.action}</strong><small>{entry.actor} · {entry.target}</small></span>
+        <span>{new Date(entry.createdAt).toLocaleString()}</span>
+      </div>)}
+    </div>
+    <p className="scope-note">Audit events record device registration/revocation, configuration changes, command queueing/acknowledgement and website deployment. Owner, Editor and Viewer roles are enforced by the backend. Audit history is a latest-200 view; configure secure database backups for long-term retention.</p>
   </section>;
 }

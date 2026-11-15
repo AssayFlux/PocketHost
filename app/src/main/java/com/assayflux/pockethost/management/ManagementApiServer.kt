@@ -279,13 +279,19 @@ object ManagementApiServer {
             val nodeHeap = body.optInt("nodeHeapMb", -1)
             if (pythonWorkers !in 2..16 || nodeHeap !in 96..512)
                 return 400 to JSONObject().put("error", "resource_limits_out_of_range")
-            if (runCatching { PythonHostRuntime.status(context) }.getOrDefault("STOPPED") == "RUNNING" ||
-                NodeHostRuntime.status(context) in setOf("RUNNING", "STARTING"))
-                return 409 to JSONObject().put("error", "stop_python_and_node_before_changing_limits")
+            val pythonWasRunning = runCatching { PythonHostRuntime.status(context) }.getOrDefault("STOPPED") == "RUNNING"
+            val nodeWasRunning = NodeHostRuntime.status(context) in setOf("RUNNING", "STARTING")
             context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                .putInt("python_max_workers", pythonWorkers).putInt("node_heap_mb", nodeHeap).apply()
-            OperationalLog.record(context, "INFO", "RESOURCE_LIMITS_UPDATED", "Python workers=$pythonWorkers; Node V8 heap=$nodeHeap MB")
+                .putInt("python_max_workers", pythonWorkers).putInt("node_heap_mb", nodeHeap).commit()
+            // Keep the Rust static server online. Runtime supervisors observe the
+            // stopped workers and relaunch them with the newly persisted limits.
+            if (pythonWasRunning) PythonHostRuntime.stop(context)
+            if (nodeWasRunning) NodeHostRuntime.stop(context)
+            OperationalLog.record(context, "INFO", "RESOURCE_LIMITS_UPDATED",
+                "Python workers=$pythonWorkers; Node V8 heap=$nodeHeap MB; Python restarted=$pythonWasRunning; Node restarted=$nodeWasRunning")
             return 200 to JSONObject().put("pythonMaxWorkers", pythonWorkers).put("nodeHeapMb", nodeHeap)
+                .put("pythonRestarted", pythonWasRunning).put("nodeRestarted", nodeWasRunning)
+                .put("staticHostingPreserved", NativeEngine.status() == "RUNNING")
         }
         if (method == "GET" && path == "/api/v1/metrics") {
             val m = MetricsStore.snapshot(context)

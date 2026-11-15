@@ -5,6 +5,11 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.storage.SiteImporter
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileInputStream
+import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -97,8 +102,9 @@ object RemoteControlAgent {
             .put("node", com.assayflux.pockethost.runtime.NodeHostRuntime.status(context))
             .put("tunnel", com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime.status())
             .put("reportedAt", System.currentTimeMillis())
+            .put("config_version", prefs.getLong("config_version", 0L))
         post(endpoint, token, "/v1/device/heartbeat",
-            JSONObject().put("state", state).put("config_version", JSONObject.NULL))
+            JSONObject().put("state", state).put("config_version", prefs.getLong("config_version", 0L)))
         val commands = get(endpoint, token, "/v1/device/commands")
         for (index in 0 until commands.length()) {
             val command = commands.getJSONObject(index)
@@ -109,20 +115,41 @@ object RemoteControlAgent {
             val processed = runCatching {
                 JSONObject(commandPrefs.getString("processed_commands", "{}") ?: "{}")
             }.getOrDefault(JSONObject())
-            val outcome = processed.optJSONObject(id) ?: runCatching {
-                ManagementApiServer.executeRemoteCommand(context, kind, payload)
-            }.getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
-            if (!processed.has(id)) {
-                processed.put(id, outcome)
-                while (processed.length() > 100) {
-                    val oldest = processed.keys().asSequence().firstOrNull() ?: break
-                    processed.remove(oldest)
+            val saved = processed.optJSONObject(id)
+            val outcome = when {
+                saved?.optString("_state") == "started" ->
+                    JSONObject().put("status", 409).put("error", "previous_execution_interrupted_operator_retry_required")
+                saved != null -> saved
+                else -> {
+                    // Persist a start marker before side effects. If Android kills the
+                    // process mid-command, a lease retry must not execute it twice.
+                    processed.put(id, JSONObject().put("_state", "started"))
+                    commandPrefs.edit().putString("processed_commands", processed.toString()).commit()
+                    runCatching {
+                        if (kind == "deploy_site") {
+                            val artifactId = payload.getString("artifactId")
+                            val expectedSha = payload.getString("sha256")
+                            val archive = downloadArtifact(endpoint, token, artifactId, expectedSha, context)
+                            try {
+                                val report = FileInputStream(archive).use { SiteImporter.importZipStream(context, it) }
+                                JSONObject().put("status", 200).put("files", report.fileCount)
+                                    .put("bytes", report.totalBytes).put("source", report.source)
+                            } finally { archive.delete() }
+                        } else ManagementApiServer.executeRemoteCommand(context, kind, payload)
+                    }.getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
                 }
-                // Persist the result before acknowledging, so lease-based redelivery
-                // does not repeat non-idempotent runtime restart actions.
-                commandPrefs.edit().putString("processed_commands", processed.toString()).commit()
             }
+            processed.put(id, outcome)
+            while (processed.length() > 500) {
+                val oldest = processed.keys().asSequence().firstOrNull() ?: break
+                processed.remove(oldest)
+            }
+            // Persist the final result before acknowledging; a lost ACK is safe to retry.
+            commandPrefs.edit().putString("processed_commands", processed.toString()).commit();
             val success = outcome.optInt("status", 500) in 200..299
+            if (success && kind == "apply_config") {
+                commandPrefs.edit().putLong("config_version", payload.optLong("version", 0L)).commit()
+            }
             runCatching {
                 post(endpoint, token, "/v1/device/commands/$id/ack",
                     JSONObject().put("success", success).put("result", outcome))
@@ -130,6 +157,47 @@ object RemoteControlAgent {
                 OperationalLog.record(context, "WARN", "REMOTE_COMMAND_ACK_FAILED", "Remote command acknowledgement failed.")
             }
         }
+    }
+
+    private fun downloadArtifact(endpoint: String, token: String, artifactId: String, expectedSha: String, context: Context): File {
+        require(artifactId.matches(Regex("[0-9a-fA-F-]{36}"))) { "Invalid deployment artifact ID." }
+        require(expectedSha.matches(Regex("[0-9a-f]{64}"))) { "Invalid deployment checksum." }
+        val connection = URL(endpoint.trimEnd('/') + "/v1/device/artifacts/" + artifactId).openConnection() as HttpURLConnection
+        val target = File(context.cacheDir, "remote-deploy-" + artifactId + ".zip")
+        try {
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 30_000
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Authorization", "Bearer " + token)
+            connection.setRequestProperty("Accept", "application/zip")
+            val status = connection.responseCode
+            if (status !in 200..299) throw IllegalStateException("Artifact download returned HTTP " + status)
+            val declared = connection.contentLengthLong
+            require(declared in 1..(50L * 1024L * 1024L)) { "Deployment archive exceeds the 50 MiB limit." }
+            val digest = MessageDigest.getInstance("SHA-256")
+            var total = 0L
+            connection.inputStream.use { input ->
+                FileOutputStream(target).use { output ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= 50L * 1024L * 1024L) { "Deployment archive exceeds the 50 MiB limit." }
+                        digest.update(buffer, 0, count)
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            require(total == declared) { "Deployment archive was truncated." }
+            val actualSha = digest.digest().joinToString("") { "%02x".format(it) }
+            require(actualSha == expectedSha) { "Deployment archive checksum mismatch." }
+            return target
+        } catch (error: Exception) {
+            target.delete()
+            throw error
+        } finally { connection.disconnect() }
     }
 
     private fun get(endpoint: String, token: String, path: String): JSONArray {
