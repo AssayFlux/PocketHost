@@ -424,6 +424,8 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health))
         .route("/v1/admin/audit", get(list_audit))
+        .route("/v1/admin/users", get(list_users).post(create_user))
+        .route("/v1/admin/users/:id", axum::routing::delete(revoke_user))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
         .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
