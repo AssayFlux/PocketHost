@@ -55,7 +55,7 @@ The current device configuration contract supports `pythonMaxWorkers` (2–16), 
 
 ## Boundaries
 
-The control plane cannot remotely access the phone's filesystem. Site archive upload/deployment, account-level multi-user roles, audit export, push delivery, and Android-side offline command expiry are not yet implemented. The phone must be online, the hosting service running, and Android background execution permitted for remote commands to be processed. Do not expose private websites without a visitor access policy such as Cloudflare Access.
+The control plane cannot browse the phone's filesystem or execute arbitrary shell commands. Audit history is a latest-200 view rather than an export service. Delivery is polling-based rather than push-based. Commands expire after 24 hours. Android persists a command-start marker before side effects; if the process dies mid-action, it reports interrupted execution instead of blindly repeating it. A fresh operator command may be required. The phone must be online, the hosting service running, and Android background execution permitted for remote commands to be processed. Do not expose private websites without a visitor access policy such as Cloudflare Access.
 
 ## Team roles
 
