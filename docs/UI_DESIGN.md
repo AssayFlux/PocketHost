@@ -231,3 +231,11 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Do not claim universal visitor counts, complete sandboxing, payment compliance, deployed remote control, production readiness or a signed release without the corresponding evidence.
 
 **Release decision:** integrated development build; not production approved. This status changes only when the relevant code, tests, device/network evidence and security review are recorded against the exact release commit.
+
+## 14. Compact control-panel refinement — 2026-11-15
+
+- Replaced text-glyph bottom navigation with consistent Material outlined icons and compact labels.
+- Reduced dashboard helper copy so live state and measurements carry the visual hierarchy.
+- Split Settings into General, Network, Runtimes and About sections; only the selected group is displayed, reducing scrolling and cognitive load.
+- Kept the approved navy palette, five primary destinations, existing hosting controls and optional Python/Node runtime workflows.
+- Validation is pending the PR quality and Android integration workflows. Responsive screenshots and real-device acceptance are not claimed by source compilation alone.
