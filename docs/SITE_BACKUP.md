@@ -34,7 +34,7 @@ Credentials remain device-bound and must be configured independently on a replac
 
 - Export and restore require static hosting, Python and Node runtimes to be stopped.
 - Static files, Python and Node projects have separate size caps (50 MiB, 50 MiB and 100 MiB); total uncompressed content is capped at 200 MiB.
-- The archive is capped at 20,000 files, 30,000 entries and 32 directory levels.
+- The archive is capped at 20,000 files, 30,000 total entries and 32 directory levels; static/Python projects are limited to 5,000 files each and Node projects to 10,000 files.
 - Path traversal, absolute paths, symbolic links, duplicate paths and sensitive filenames are rejected.
 - Python projects must contain `wsgi.py`; Node projects must contain a valid `package.json` and a safe entry file; static sites must contain root `index.html`.
 - Hostnames are revalidated for syntax, uniqueness and route limits before the route table is replaced.
