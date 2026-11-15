@@ -540,6 +540,57 @@ mod tests {
         assert!(!secure_equal("short", "longer"));
     }
 
+    #[tokio::test]
+    async fn disconnected_device_commands_are_released_after_lease_and_expire() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+
+        let device = Uuid::new_v4();
+        let command = Uuid::new_v4();
+        let expired_command = Uuid::new_v4();
+        sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'CI recovery device',$2)")
+            .bind(device).bind(token_hash(&new_token())).execute(&db).await.unwrap();
+        sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) VALUES($1,$2,'site_action',$3)")
+            .bind(command).bind(device).bind(json!({"action":"start"})).execute(&db).await.unwrap();
+
+        // A disconnected phone leaves its command queued; reconnecting can lease it.
+        let queued: i64 = sqlx::query_scalar("SELECT count(*) FROM device_commands WHERE id=$1 AND state='queued' AND expires_at > now()")
+            .bind(command).fetch_one(&db).await.unwrap();
+        assert_eq!(queued, 1);
+
+        sqlx::query("UPDATE device_commands SET state='delivered',delivered_at=now(),delivery_attempts=delivery_attempts+1 WHERE id=$1")
+            .bind(command).execute(&db).await.unwrap();
+        let immediate_retry: i64 = sqlx::query_scalar("SELECT count(*) FROM device_commands WHERE id=$1 AND (state='queued' OR (state='delivered' AND delivered_at < now() - interval '2 minutes'))")
+            .bind(command).fetch_one(&db).await.unwrap();
+        assert_eq!(immediate_retry, 0, "an active delivery lease must prevent duplicate delivery");
+
+        // Simulate the phone disconnecting after delivery but before its ACK.
+        sqlx::query("UPDATE device_commands SET delivered_at=now()-interval '3 minutes' WHERE id=$1")
+            .bind(command).execute(&db).await.unwrap();
+        let recovered: i64 = sqlx::query_scalar("SELECT count(*) FROM device_commands WHERE id=$1 AND state='delivered' AND delivered_at < now()-interval '2 minutes' AND expires_at > now()")
+            .bind(command).fetch_one(&db).await.unwrap();
+        assert_eq!(recovered, 1, "an expired delivery lease must make the command available again");
+
+        sqlx::query("UPDATE device_commands SET delivered_at=now(),delivery_attempts=delivery_attempts+1 WHERE id=$1")
+            .bind(command).execute(&db).await.unwrap();
+        sqlx::query("UPDATE device_commands SET state='succeeded',acknowledged_at=now(),result=$2 WHERE id=$1 AND state='delivered' AND expires_at > now()")
+            .bind(command).bind(json!({"status":200})).execute(&db).await.unwrap();
+        let acknowledged: String = sqlx::query_scalar("SELECT state FROM device_commands WHERE id=$1")
+            .bind(command).fetch_one(&db).await.unwrap();
+        assert_eq!(acknowledged, "succeeded");
+
+        sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload,expires_at) VALUES($1,$2,'site_action',$3,now()-interval '1 second')")
+            .bind(expired_command).bind(device).bind(json!({"action":"stop"})).execute(&db).await.unwrap();
+        sqlx::query("UPDATE device_commands SET state='expired' WHERE id=$1 AND state IN ('queued','delivered') AND expires_at <= now()")
+            .bind(expired_command).execute(&db).await.unwrap();
+        let expiry_state: String = sqlx::query_scalar("SELECT state FROM device_commands WHERE id=$1")
+            .bind(expired_command).fetch_one(&db).await.unwrap();
+        assert_eq!(expiry_state, "expired");
+
+        sqlx::query("DELETE FROM devices WHERE id=$1").bind(device).execute(&db).await.unwrap();
+    }
+
     #[test]
     fn command_allowlist_excludes_arbitrary_shell_execution() {
         let allowed = ["deploy_site", "site_action", "tunnel_action", "restart_runtime"];
