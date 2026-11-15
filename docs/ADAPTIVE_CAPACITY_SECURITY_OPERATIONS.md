@@ -216,3 +216,8 @@ Use monotonic time for durations and UTC wall-clock timestamps for durable event
 ## 15. Product promise and honest limits
 
 PocketHost should make self-hosting affordable and understandable, not claim that a smartphone equals a cloud region. The product promise is transparent capacity, automatic protection, secure defaults, portability, clear diagnostics and owner control. Never promise a fixed visitor count independent of website workload, unlimited uptime, full hostile-code isolation, PCI compliance, or guaranteed payment processing on a disconnected phone.
+
+
+## Capacity Lab measurement detail (2026-11-15)
+
+The Capacity Lab performs a bounded loopback static GET sweep against the active Rust origin. Each concurrency level records successful requests, errors, bytes served, requests per second, bytes per second, average/p50/p95/maximum latency and elapsed time. Requests use unique query strings and no-cache headers. The sweep retains its cancellation, low-memory, severe-thermal and low-battery stop conditions and only calibrates when the zero-error and p95-latency threshold is met. It remains a static-origin microbenchmark, not a representative multi-workload or long-duration thermal benchmark.
