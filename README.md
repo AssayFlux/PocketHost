@@ -64,9 +64,9 @@ The public hostname must point to the Rust website listener. It must never point
 ## Build and validation
 
 - Repository: [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)
-- Latest main: `1453e7a6d7b4e9d00ef7721cf88b7bafe00cc8e7`
-- [Quality CI](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Android source compilation.
-- [Android integration build](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed. [Download the ARM64, ARMv7 and x86_64 debug APK bundle](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620). The workflow verified all three APKs contain Node, Node bridge, Rust engine and cloudflared native libraries. Emulator instrumentation is skipped by design; physical-device acceptance is owner-run.
+- Latest main: `05afe2041c80ace4bddbd0711e554f40e32aa6a6`
+- [Quality CI](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs on the implementation through the custom-root depth fix; the latest main validation is [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859).
+- [Android integration build](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) is building the current main app source for ARM64, ARMv7 and x86_64. The backup-specific API 26/33/35 emulator matrix is tracked separately in [run 43724908863](https://github.com/AssayFlux/PocketHost/actions/runs/43724908863); physical-device acceptance is owner-run.
 - Debug APKs are not signed production releases. Release signing requires owner-controlled signing material.
 
 See [PHASE_0_STATUS.md](docs/PHASE_0_STATUS.md) for exact validation evidence and outstanding gates.
@@ -77,7 +77,7 @@ See [PHASE_0_STATUS.md](docs/PHASE_0_STATUS.md) for exact validation evidence an
 - Python and Node currently run under the app UID. A separate process is not an OS sandbox. Only run code you trust; proper OS-backed runtime isolation, filesystem/network confinement and enforceable resource quotas remain release blockers.
 - The management API is loopback-only and authenticated. Do not expose it through Cloudflare.
 - Full backups exclude device-bound credentials and common secret files. Secrets embedded in ordinary source/config files cannot be detected reliably; review project contents before sharing a backup.
-- Backups currently reject registered custom static roots outside the main website directory rather than silently omitting them.
+- Route manifest v3 now includes registered custom static roots under app-private storage. Custom Python/Node route roots outside their configured project roots remain unsupported.
 - The optional remote control-plane source is not proof of a deployed backend or a paired device.
 - Payment-provider integration and independent security review are not complete.
 - Physical Android 8/15 device acceptance, public HTTPS verification, sustained thermal/battery tests and OEM lifecycle checks remain outstanding.
