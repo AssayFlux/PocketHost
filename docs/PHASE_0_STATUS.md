@@ -20,8 +20,8 @@
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
 **Latest implementation commit:** `05afe2041c80ace4bddbd0711e554f40e32aa6a6`  
-**Quality CI:** PR #48 run [43722553055](https://github.com/AssayFlux/PocketHost/actions/runs/43722553055) and PR #49 run [43722682803](https://github.com/AssayFlux/PocketHost/actions/runs/43722682803) passed all six jobs, including Android source compilation.  
-**Android integration:** [run 43722682844](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844) passed and produced [artifact 14165701365](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844/artifacts/14165701365), containing three ABI debug APKs. Emulator instrumentation is skipped by design.  
+**Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs; latest main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) is validating Compose ingress profiles and Android source compilation.  
+**Android integration:** current main run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) is building the latest three-ABI debug APKs. Backup-specific emulator matrix [43724908863](https://github.com/AssayFlux/PocketHost/actions/runs/43724908863) is running API 26/33/35.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
