@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { RemoteControlPlane } from "./RemoteControlPlane";
 
 type Runtime = { name: string; state: string; detail?: string };
 type DeviceStatus = { state: string; apiVersion: string; runtimes: Runtime[] };
@@ -169,7 +170,7 @@ export function App() {
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">P</span><div><strong>PocketHost</strong><small>BY ASSAYFLUX</small></div></div>
       <div className="workspace-label">WORKSPACE</div>
-      <nav aria-label="Console sections"><a className="nav-item active" href="#overview">◈ Overview</a><a className="nav-item" href="#runtimes">▣ Runtimes</a><a className="nav-item" href="#metrics">⌁ Metrics</a><a className="nav-item" href="#connection">⚙ Connection</a></nav>
+      <nav aria-label="Console sections"><a className="nav-item active" href="#overview">◈ Overview</a><a className="nav-item" href="#runtimes">▣ Runtimes</a><a className="nav-item" href="#metrics">⌁ Metrics</a><a className="nav-item" href="#connection">⚙ Connection</a><a className="nav-item" href="#remote-control">⌘ Remote control</a></nav>
       <div className="sidebar-bottom"><span className="connection-dot" /> {token ? "Paired device session" : "Device not paired"}<small>Loopback management API · v1</small></div>
     </aside>
     <section className="main-panel" id="overview">
@@ -219,6 +220,7 @@ export function App() {
       <section className="lower-grid"><article className="panel"><div className="panel-heading"><h3>Runtime status</h3><span className="status-muted">{status ? "Live device data" : "Waiting for pairing"}</span></div>
         {(status?.runtimes ?? [{ name: "rust-static", state: "—" }, { name: "python", state: "—" }, { name: "node", state: "—" }]).map(runtime => <div className="status-line" key={runtime.name}><span>{runtime.name}</span><strong>{runtime.state}</strong></div>)}
       </article><article className="panel"><div className="panel-heading"><h3>Session controls</h3><span className="muted-tag">LOCAL DEVICE</span></div><p>Revoking this session invalidates its bearer credential on the device.</p><button className="danger-button" disabled={!token || busy} onClick={revoke}>Revoke this session</button><p className="scope-note">Python and Node metrics are process-local and include runtime-specific request counters and memory samples when those runtimes are active.</p></article></section>
+      <RemoteControlPlane />
       <footer>Designed by AssayFlux <span>·</span> Your website. Your device. Your control.</footer>
     </section>
   </main>;
