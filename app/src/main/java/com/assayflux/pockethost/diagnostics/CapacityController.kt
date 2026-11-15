@@ -191,23 +191,38 @@ object CapacityLab {
                     if (thermal >= 4) { stopReason = "severe_thermal"; break }
                     if (batteryPercent in 0..10 && !charging) { stopReason = "low_battery"; break }
                     val executor = java.util.concurrent.Executors.newFixedThreadPool(level)
+                    val requestCount = (level * 2).coerceAtMost(32)
                     val latencies = java.util.Collections.synchronizedList(mutableListOf<Long>())
                     val failures = java.util.concurrent.atomic.AtomicInteger(0)
+                    val successes = java.util.concurrent.atomic.AtomicInteger(0)
+                    val bytesServed = java.util.concurrent.atomic.AtomicLong(0L)
                     val started = System.nanoTime()
                     try {
-                        val futures = (0 until (level * 2).coerceAtMost(32)).map {
+                        val futures = (0 until requestCount).map { sample ->
                             executor.submit {
                                 val begin = System.nanoTime()
                                 try {
-                                    val connection = java.net.URL("http://127.0.0.1:$port/").openConnection() as java.net.HttpURLConnection
+                                    // Unique query strings and no-cache request headers make each
+                                    // sample an explicit origin request rather than a browser-cache test.
+                                    val connection = java.net.URL("http://127.0.0.1:$port/?__pockethost_capacity=$sample").openConnection() as java.net.HttpURLConnection
                                     try {
                                         connection.connectTimeout = 1_500
                                         connection.readTimeout = 1_500
                                         connection.requestMethod = "GET"
+                                        connection.setRequestProperty("Cache-Control", "no-cache, no-store")
+                                        connection.setRequestProperty("Pragma", "no-cache")
                                         val code = connection.responseCode
-                                        if (code !in 200..299) failures.incrementAndGet()
+                                        if (code in 200..299) successes.incrementAndGet()
+                                        else failures.incrementAndGet()
                                         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                                        stream?.use { input -> val buffer = ByteArray(4096); while (input.read(buffer) >= 0) {} }
+                                        stream?.use { input ->
+                                            val buffer = ByteArray(4096)
+                                            while (true) {
+                                                val count = input.read(buffer)
+                                                if (count < 0) break
+                                                if (count > 0) bytesServed.addAndGet(count.toLong())
+                                            }
+                                        }
                                     } finally {
                                         connection.disconnect()
                                     }
@@ -220,11 +235,24 @@ object CapacityLab {
                         executor.shutdownNow()
                     }
                     val ordered = latencies.sorted()
-                    val p95 = if (ordered.isEmpty()) 0L else ordered[((ordered.size - 1) * 95) / 100]
-                    val elapsed = (System.nanoTime() - started) / 1_000_000L
-                    val ok = failures.get() == 0 && ordered.size == (level * 2).coerceAtMost(32) && p95 <= 750L
+                    val percentile = { p: Int ->
+                        if (ordered.isEmpty()) 0L else ordered[((ordered.size - 1) * p) / 100]
+                    }
+                    val p50 = percentile(50)
+                    val p95 = percentile(95)
+                    val maxLatency = ordered.lastOrNull() ?: 0L
+                    val elapsed = ((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(1L)
+                    val throughputBytesPerSecond = bytesServed.get() * 1_000L / elapsed
+                    val requestsPerSecond = successes.get() * 1_000.0 / elapsed
+                    val averageLatency = if (ordered.isEmpty()) 0L else ordered.sum() / ordered.size
+                    val ok = failures.get() == 0 && ordered.size == requestCount && p95 <= 750L
                     results.put(JSONObject().put("concurrency", level).put("samples", ordered.size)
-                        .put("errors", failures.get()).put("p95LatencyMs", p95).put("elapsedMs", elapsed).put("withinSafeThreshold", ok))
+                        .put("successfulRequests", successes.get()).put("errors", failures.get())
+                        .put("bytesServed", bytesServed.get()).put("requestsPerSecond", requestsPerSecond)
+                        .put("throughputBytesPerSecond", throughputBytesPerSecond)
+                        .put("averageLatencyMs", averageLatency).put("p50LatencyMs", p50)
+                        .put("p95LatencyMs", p95).put("maxLatencyMs", maxLatency)
+                        .put("elapsedMs", elapsed).put("withinSafeThreshold", ok))
                     if (ok) { safe = level; hasSafeLevel = true } else break
                 }
                 val cancelled = cancelRequested || stopReason == "user_cancelled"
@@ -237,7 +265,7 @@ object CapacityLab {
                     .put("safeConcurrency", if (hasSafeLevel && !cancelled) safe else JSONObject.NULL)
                     .put("stopReason", stopReason)
                     .put("levels", results)
-                    .put("workload", "Loopback GET / against the active static Rust origin; bounded request sweep.")
+                    .put("workload", "Loopback static-origin GET / with unique query strings and no-cache headers; reports request rate, byte throughput and latency distribution.")
                     .put("threshold", "Zero errors and p95 latency <= 750 ms; stopped on user cancellation, Android low-memory, severe thermal status or <=10% battery while not charging.")
                 if (cancelled) {
                     OperationalLog.record(context, "INFO", "CAPACITY_BENCHMARK_CANCELLED", "Capacity benchmark cancelled by the owner; previous calibration retained.")
