@@ -55,7 +55,7 @@ jobs:
           python-version: "3.11"
       - uses: android-actions/setup-android@v3
         with:
-          packages: "platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018"
+          packages: "platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
       - name: Configure Android NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
