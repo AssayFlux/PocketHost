@@ -43,6 +43,21 @@ struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
 fn engine() -> &'static Mutex<Option<RunningEngine>> { ENGINE.get_or_init(|| Mutex::new(None)) }
 
+fn normalize_hostname(value: &str) -> Result<String, String> {
+    let host = value.strip_suffix('.').unwrap_or(value).to_ascii_lowercase();
+    if host.is_empty() || host.len() > 253 || !host.is_ascii() {
+        return Err(format!("Invalid hostname: {value}"));
+    }
+    for label in host.split('.') {
+        if label.is_empty() || label.len() > 63 ||
+            label.starts_with('-') || label.ends_with('-') ||
+            !label.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-') {
+            return Err(format!("Invalid hostname: {value}"));
+        }
+    }
+    Ok(host)
+}
+
 fn full_body(bytes: Bytes) -> ResponseBody {
     Full::new(bytes).map_err(|never| match never {}).boxed_unsync()
 }
@@ -155,7 +170,7 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
-        .map(|authority| authority.host().trim_end_matches('.').to_ascii_lowercase())
+        .and_then(|authority| normalize_hostname(authority.host()).ok())
         .unwrap_or_default();
     let selected_target = if host_roots.is_empty() {
         SiteTarget::Static(root)
@@ -282,10 +297,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut canonical_hosts = HashMap::new();
     for (host, path) in host_paths {
-        let normalized = host.trim().trim_end_matches('.').to_ascii_lowercase();
-        if normalized.is_empty() || normalized.contains('/') || normalized.contains(':') || normalized.contains(' ') {
-            return Err(format!("Invalid hostname: {host}"));
-        }
+        let normalized = normalize_hostname(&host)?;
         let target = match path {
             SiteTarget::Static(site_path) => {
                 let canonical = std::fs::canonicalize(&site_path).map_err(|e| format!("Invalid root for {normalized}: {e}"))?;
@@ -431,6 +443,19 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeC
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn normalizes_and_validates_dns_hostnames() {
+        assert_eq!(normalize_hostname("Example.COM").unwrap(), "example.com");
+        assert_eq!(normalize_hostname("www.example.com.").unwrap(), "www.example.com");
+        assert!(normalize_hostname("").is_err());
+        assert!(normalize_hostname("-bad.example").is_err());
+        assert!(normalize_hostname("bad-.example").is_err());
+        assert!(normalize_hostname("bad..example").is_err());
+        assert!(normalize_hostname("bad/name").is_err());
+        assert!(normalize_hostname("bad:8080").is_err());
+        assert!(normalize_hostname("éxample.com").is_err());
+    }
+
     #[test]
     fn parses_single_byte_ranges_and_suffix_ranges() {
         assert_eq!(parse_byte_range("bytes=0-9", 100).unwrap(), (0, 9));
