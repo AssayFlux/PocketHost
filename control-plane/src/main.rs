@@ -248,10 +248,16 @@ async fn delete_device(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let role = admin_write(&headers, &s).await?;
+    let artifacts = sqlx::query("SELECT storage_path FROM device_artifacts WHERE device_id=$1")
+        .bind(id).fetch_all(&s.db).await.map_err(internal)?;
     let result = sqlx::query("DELETE FROM devices WHERE id=$1")
         .bind(id).execute(&s.db).await.map_err(internal)?;
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
+    }
+    for row in artifacts {
+        let path: String = row.get("storage_path");
+        let _ = fs::remove_file(path);
     }
     audit(&s, &role, "device.revoke", &id.to_string(), json!({})).await?;
     Ok(StatusCode::NO_CONTENT)
