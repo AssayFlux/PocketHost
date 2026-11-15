@@ -1,6 +1,9 @@
 package com.assayflux.pockethost.management
 
 import android.content.Context
+import android.content.Intent
+import com.assayflux.pockethost.service.HostingService
+import java.io.File
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
@@ -210,6 +213,7 @@ object ManagementApiServer {
                     body.optString("runtime", "static"), body.getString("root"),
                     (0 until hosts.length()).map { hosts.getString(it) }, body.optBoolean("enabled", true))
                 SiteRegistry.put(context, site)
+                restartEngineRoutes(context)
                 201 to JSONObject().put("status", "configured").put("id", site.id)
             }.getOrElse { 400 to JSONObject().put("error", it.message ?: "invalid_site") }
         }
@@ -218,6 +222,7 @@ object ManagementApiServer {
             if (!id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) return 400 to JSONObject().put("error", "invalid_site_id")
             if (SiteRegistry.list(context).none { it.id == id }) return 404 to JSONObject().put("error", "site_not_found")
             SiteRegistry.remove(context, id)
+            restartEngineRoutes(context)
             return 204 to JSONObject()
         }
         if (method == "GET" && path == "/api/v1/status") {
@@ -285,26 +290,55 @@ object ManagementApiServer {
                 "python-wsgi" -> when (action) {
                     "start" -> {
                         val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
-                        val result = runCatching { PythonHostRuntime.start(context, site.root, prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false)) }
-                            .getOrElse { "ERROR: ${it.message}" }
-                        if (result == "RUNNING" || result == "ALREADY_RUNNING") 200 to JSONObject().put("state", result)
-                        else 503 to JSONObject().put("error", result)
+                        prefs.edit().putBoolean("python_enabled", true).putString("python_project_root", site.root).apply()
+                        if (NativeEngine.status() != "RUNNING") {
+                            context.startForegroundService(Intent(context, HostingService::class.java))
+                            202 to JSONObject().put("state", "STARTING")
+                        } else {
+                            val result = runCatching { PythonHostRuntime.start(context, site.root, prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false)) }
+                                .getOrElse { "ERROR: " + (it.message ?: "Python start failed") }
+                            if (result == "RUNNING" || result == "ALREADY_RUNNING") 200 to JSONObject().put("state", result)
+                            else 503 to JSONObject().put("error", result)
+                        }
                     }
-                    "stop" -> 200 to JSONObject().put("state", PythonHostRuntime.stop(context))
+                    "stop" -> {
+                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("python_enabled", false).apply()
+                        200 to JSONObject().put("state", PythonHostRuntime.stop(context))
+                    }
                     else -> 400 to JSONObject().put("error", "unsupported_site_action")
                 }
                 "node" -> when (action) {
                     "start" -> runCatching {
-                        val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("node_port", 3000)
-                        NodeHostRuntime.start(context, site.root, port)
+                        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                        val port = prefs.getInt("node_port", 3000)
+                        prefs.edit().putBoolean("node_enabled", true).putString("node_project_root", site.root).apply()
+                        if (NativeEngine.status() != "RUNNING") {
+                            context.startForegroundService(Intent(context, HostingService::class.java))
+                            "STARTING"
+                        } else NodeHostRuntime.start(context, site.root, port)
                     }.fold({ 202 to JSONObject().put("state", it) }, { 503 to JSONObject().put("error", it.message ?: "node_start_failed") })
-                    "stop" -> 200 to JSONObject().put("state", NodeHostRuntime.stop(context))
+                    "stop" -> {
+                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("node_enabled", false).apply()
+                        200 to JSONObject().put("state", NodeHostRuntime.stop(context))
+                    }
                     else -> 400 to JSONObject().put("error", "unsupported_site_action")
                 }
                 else -> 400 to JSONObject().put("error", "unsupported_runtime")
             }
         }
         return 404 to JSONObject().put("error", "not_found")
+    }
+
+    private fun restartEngineRoutes(context: Context) {
+        if (NativeEngine.status() != "RUNNING") return
+        val prefs = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        runCatching { MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed()) }
+        NativeEngine.stop()
+        val routes = SiteRegistry.hostRoutingJson(context, prefs.getInt("python_port", 8081), prefs.getInt("node_port", 3000))
+        val root = File(context.filesDir, "site")
+        val result = NativeEngine.startMultiSite(root.absolutePath, routes.toString(),
+            prefs.getInt("port", 8080), prefs.getBoolean("allow_lan", false))
+        if (result != "OK") OperationalLog.record(context, "ERROR", "ROUTE_RELOAD_FAILED", result)
     }
 
     private fun randomToken(size: Int): String = ByteArray(size).also(random::nextBytes).let {
