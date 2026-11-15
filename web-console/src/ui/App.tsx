@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type Runtime = { name: string; state: string; detail?: string };
 type DeviceStatus = { state: string; apiVersion: string; runtimes: Runtime[] };
-type Metrics = { sampledAt: string; sources: Array<{ source: string; requests: number; bytesServed: number; scopeNote?: string }> };
+type Metrics = { sampledAt: string; sources: Array<{ source: string; requests?: number; bytesServed?: number; bytesSent?: number; bytes_sent?: number; errors?: number; active?: number; peak_active?: number; processPssKb?: number; rssBytes?: number; heapUsedBytes?: number; last_request_ms?: number; scopeNote?: string }>; deviceResources?: { processPssKb?: number; availableDeviceMemoryBytes?: number; totalDeviceMemoryBytes?: number; lowMemory?: boolean } };
 type Site = { id: string; name: string; runtime: string; hostnames: string[]; state: string };
 type LogEntry = { timestamp: string; level: string; event: string; message: string };
 type ResourceLimits = { pythonMaxWorkers: number; nodeHeapMb: number; deviceTotalMemoryBytes: number; deviceAvailableMemoryBytes: number; note: string };
@@ -159,6 +159,8 @@ export function App() {
 
   const bytes = (value: number) => value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1048576).toFixed(1)} MB`;
 
+  const runtimeMetrics = metrics?.sources ?? [];
+
   return <main className="app-shell">
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">P</span><div><strong>PocketHost</strong><small>BY ASSAYFLUX</small></div></div>
@@ -184,11 +186,25 @@ export function App() {
         <article className="metric-card"><span>Static data served</span><strong>{metrics ? bytes(metrics.sources.find(x => x.source === "rust-static")?.bytesServed ?? 0) : "—"}</strong><small>Rust static server only</small></article>
         <article className="metric-card"><span>Last sample</span><strong>{metrics ? new Date(metrics.sampledAt).toLocaleTimeString() : "—"}</strong><small>Device-reported timestamp</small></article>
       </section>
+      <div className="section-heading"><div><span className="eyebrow">RUNTIME OBSERVABILITY</span><h2>Application traffic</h2></div><span className="muted-tag">SOURCE-ATTRIBUTED</span></div>
+      <section className="metric-grid">
+        {(["python-wsgi", "node"] as const).map(source => {
+          const item = runtimeMetrics.find(metric => metric.source === source);
+          const label = source === "python-wsgi" ? "Python WSGI" : "Node.js";
+          return <article className="metric-card" key={source}>
+            <span>{label} requests</span>
+            <strong>{item?.requests?.toLocaleString() ?? "Not running"}</strong>
+            <small>{item ? \`\${bytes(item.bytes_sent ?? item.bytesSent ?? 0)} sent · \${item.errors ?? 0} errors · \${item.active ?? 0} active\` : "Runtime-specific counters appear while the service is running."}</small>
+            {item && <small>{item.processPssKb ? \`Process memory \${bytes(item.processPssKb * 1024)}\` : item.rssBytes ? \`RSS \${bytes(item.rssBytes)}\` : "Memory sample unavailable"}</small>}
+          </article>;
+        })}
+      </section>
       <div className="section-heading"><div><span className="eyebrow">RESOURCE POLICY</span><h2>Runtime resource limits</h2></div><span className="muted-tag">DEVICE-AWARE</span></div>
       <section className="panel resource-panel">
         <div className="resource-control"><label>Python WSGI worker ceiling <strong>{pythonWorkers}</strong><input type="range" min="2" max="16" step="1" value={pythonWorkers} onChange={event => { setPythonWorkers(Number(event.target.value)); setResourceDirty(true); }} /></label></div>
         <div className="resource-control"><label>Node.js V8 heap ceiling <strong>{nodeHeap} MB</strong><input type="range" min="96" max="512" step="16" value={nodeHeap} onChange={event => { setNodeHeap(Number(event.target.value)); setResourceDirty(true); }} /></label></div>
         <p>{resources?.note ?? "Resource limits are device-managed."}</p>
+        <p>Available device memory: {metrics?.deviceResources?.availableDeviceMemoryBytes ? bytes(metrics.deviceResources.availableDeviceMemoryBytes) : "—"} · App process PSS: {metrics?.deviceResources?.processPssKb ? bytes(metrics.deviceResources.processPssKb * 1024) : "—"}</p>
         <button disabled={busy || !resources} onClick={saveResources}>Save resource limits</button>
       </section>
       <div className="section-heading" id="runtimes"><div><span className="eyebrow">DEVICE RUNTIMES</span><h2>Runtime health</h2></div><span className="muted-tag">{status?.state ?? "NOT CONNECTED"}</span></div>
