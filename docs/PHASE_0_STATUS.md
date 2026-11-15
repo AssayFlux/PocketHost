@@ -2,26 +2,27 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `bf22b10c22f5c2f77058acee7905595b7edd3e81`. PRs #40–#45 merged: Activity Result crash correction, five-tab UI refresh, encrypted full-app backup/restore, passphrase and archive limits, ZIP path normalization, and restore counter correction.
-> - **Quality CI:** [run 43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Rust, Node, Python, control plane, TypeScript console and Android source compilation.
-> - **Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed. [Debug APK bundle artifact 14164002620](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620) contains ARM64, ARMv7 and x86_64 APKs. Workflow verification confirmed Node, Node bridge, Rust engine and cloudflared native libraries in each ABI APK. Emulator instrumentation is skipped by design.
-> - **Android crash fix:** MainActivity now uses ComponentActivity for all Compose Activity Result launchers; the biometric prompt runs in a dedicated BiometricHostActivity. No request-code masking was introduced.
-> - **UI:** five destinations—Dashboard, Sites, Activity, Learn and Settings. Settings are grouped into General, Network, Runtimes and About; Learn guides start collapsed; Dashboard has a high-contrast hosting status hero.
-> - **Backup:** versioned AES-256-GCM full-app backup includes the active static site, optional Python/Node project roots, hostname routes and selected non-secret settings. Device-bound credentials are excluded; restored runtimes stay stopped and require fresh trusted-code acknowledgement. Legacy static-only AFPHB01 backups remain restorable.
-> - **Capacity protections:** 16 active connections, bounded 32-socket/200 ms wait queue, per-client token-bucket rate limiting, per-site streaming concurrency caps, explicit 503/Retry-After overload handling, observable active/queued/rejected counts, and up-to-three-second graceful shutdown drain.
-> - **Capacity Lab:** bounded static-origin sweep reports request rate, byte throughput and average/p50/p95/maximum latency. It remains a static microbenchmark, not multi-workload or long-duration device calibration.
-> - **Blockchain:** no blockchain implementation/dependency; obsolete blockchain references were removed from project documentation.
-> - **Release APK:** debug ABI builds are being packaged; a signed production release is not built because signing material is owner-controlled.
+> - **Current main:** `90af8231481a224392df2adb3f1bcf338deb1de7`. PR #48 (capacity-protection runtime recovery) and PR #49 (polished navigation header) are merged.
+> - **Quality CI:** PR #48 run [43722553055](https://github.com/AssayFlux/PocketHost/actions/runs/43722553055) and PR #49 run [43722682803](https://github.com/AssayFlux/PocketHost/actions/runs/43722682803) passed all six jobs, including Android source compilation.
+> - **Android integration:** runs [43722553064](https://github.com/AssayFlux/PocketHost/actions/runs/43722553064) and [43722682844](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844) are building ABI-specific APKs; emulator instrumentation is skipped by design. Earlier verified debug APKs are not a substitute for a build from the latest UI/capacity source.
+> - **Capacity recovery:** automatic protective suspension now retains the Owner's Python/Node enabled preferences and attempts restart after the device returns to NORMAL following recovery hysteresis. CI compilation passed; thermal/recovery behavior still requires physical-device acceptance.
+> - **UI:** the five-destination structure remains. PR #49 adds a compact AssayFlux product header and hosting-status pill. This is a first visual refinement, not completion of the full dashboard/site-screen redesign or screenshot acceptance.
+> - **Backup:** versioned AES-256-GCM full-app backup includes the active static site, configured Python/Node project roots, hostname routes and selected non-secret settings. Custom static roots outside the main website directory remain unsupported; wrong-passphrase/tamper/interruption rollback still needs dedicated acceptance.
+> - **Capacity Lab:** bounded static-origin sweep only. Multi-workload runtime benchmarks, sustained safe-capacity calibration and full telemetry/recovery validation remain open.
+> - **Runtime security:** Python executes in the app process and Node in a separate process with the same app UID. Neither is an OS security sandbox. Only trusted owner-installed code may run.
+> - **Remote control:** Android agent and Rust/PostgreSQL control-plane source exist. Production deployment, real-device pairing, live configuration changes and command-recovery acceptance are not proven. Deployment requires owner-controlled host/SSH/database/admin secrets.
+> - **Release:** signed-release workflow exists. PR #50 is correcting APK signature-loop handling and publishing SHA-256 checksums. No signed production APK has been built; the owner must configure the release keystore secrets.
 > - **Device acceptance:** physical installation, Android lifecycle, existing Cloudflare tunnel/public HTTPS, thermal, battery and OEM behavior are owner-run acceptance tasks.
-> - **Release state:** integrated development build; not production approved. Python/Node run under the app UID and are not OS-sandboxed; execute only trusted owner-installed code. Remote control-plane deployment, payment-provider integration and independent security review remain open.
+> - **Release state:** integrated development build; not production approved. Independent security review and payment-provider integration remain open.
 >
+>>
 > The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this current reconciliation, use the current commit/run identifiers above.
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest implementation commit:** `bf22b10c22f5c2f77058acee7905595b7edd3e81`  
-**Quality CI:** [run 43720035682](https://github.com/AssayFlux/PocketHost/actions/runs/43720035682) passed all six jobs on the latest implementation PR head, including Android source compilation.  
-**Android integration:** [run 43720035704](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704) passed; [artifact 14164002620](https://github.com/AssayFlux/PocketHost/actions/runs/43720035704/artifacts/14164002620) contains three ABI debug APKs. Emulator instrumentation is skipped by design.  
+**Latest implementation commit:** `90af8231481a224392df2adb3f1bcf338deb1de7`  
+**Quality CI:** PR #48 run [43722553055](https://github.com/AssayFlux/PocketHost/actions/runs/43722553055) and PR #49 run [43722682803](https://github.com/AssayFlux/PocketHost/actions/runs/43722682803) passed all six jobs, including Android source compilation.  
+**Android integration:** current-source ABI builds [43722553064](https://github.com/AssayFlux/PocketHost/actions/runs/43722553064) and [43722682844](https://github.com/AssayFlux/PocketHost/actions/runs/43722682844) are in progress; emulator instrumentation is skipped by design.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
