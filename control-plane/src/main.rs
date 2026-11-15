@@ -417,7 +417,7 @@ async fn main() -> anyhow::Result<()> {
     let cors = match std::env::var("POCKETHOST_CONTROL_ORIGIN") {
         Ok(origin) => CorsLayer::new()
             .allow_origin(origin.parse::<HeaderValue>()?)
-            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::OPTIONS])
+            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
             .allow_headers([AUTHORIZATION, CONTENT_TYPE]),
         Err(_) => CorsLayer::new(),
     };
