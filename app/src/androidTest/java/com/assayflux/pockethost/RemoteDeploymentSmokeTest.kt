@@ -63,7 +63,7 @@ class RemoteDeploymentSmokeTest {
             val response = Socket("127.0.0.1", port).use { socket ->
                 socket.soTimeout = 5_000
                 socket.getOutputStream().write(
-                    "GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n".toByteArray()
+                    "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".toByteArray()
                 )
                 socket.getOutputStream().flush()
                 socket.getInputStream().bufferedReader().use { it.readText() }
