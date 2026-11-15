@@ -529,7 +529,8 @@ object ApplicationBackupManager {
             while (true) {
                 val entry = zip.nextEntry ?: break
                 counters.entries++
-                val rootName = entry.name.substringBefore('/')
+                val normalized = entry.name.replace('\\', '/')
+                val rootName = normalized.substringBefore('/')
                 if (rootName in rootEntries) {
                     rootEntries[rootName] = (rootEntries[rootName] ?: 0) + 1
                     if ((rootEntries[rootName] ?: 0) > 10_000) {
@@ -537,7 +538,6 @@ object ApplicationBackupManager {
                     }
                 }
                 if (counters.entries > MAX_ENTRIES) throw IOException("The backup contains too many archive entries.")
-                val normalized = entry.name.replace('\\', '/')
                 if (normalized.startsWith('/') || normalized.contains('\u0000') || normalized.contains(':')) {
                     throw IOException("The backup contains an unsafe archive path.")
                 }
