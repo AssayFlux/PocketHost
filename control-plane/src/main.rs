@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode},
     routing::{get, post, put},
     Json, Router,
 };
@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
-use tower_http::trace::TraceLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -260,7 +260,7 @@ async fn main() -> anyhow::Result<()> {
     let db = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
     sqlx::migrate!("./migrations").run(&db).await?;
     let state = AppState { db, admin_token };
-    let app = Router::new()
+    let cors = match std::env::var("POCKETHOST_CONTROL_ORIGIN") {\n        Ok(origin) => CorsLayer::new()\n            .allow_origin(origin.parse::<HeaderValue>()?)\n            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::OPTIONS])\n            .allow_headers([AUTHORIZATION, CONTENT_TYPE]),\n        Err(_) => CorsLayer::new(),\n    };\n    let app = Router::new()
         .route("/health", get(health))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
