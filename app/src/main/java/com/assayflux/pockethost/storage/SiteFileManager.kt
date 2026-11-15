@@ -1,7 +1,11 @@
 package com.assayflux.pockethost.storage
 
 import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
 
 /** Safe app-private file operations for the currently deployed static website. */
 object SiteFileManager {
@@ -29,6 +33,52 @@ object SiteFileManager {
                 isEditable = !directory && file.length() <= MAX_EDIT_BYTES && ext in textExtensions
             )
         }.toList()
+    }
+
+    /** Copies one SAF-selected file into the deployed site with a strict byte limit. */
+    fun importFile(context: Context, uri: Uri, relativePath: String? = null): Entry {
+        val displayName = relativePath ?: run {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            } ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("The selected file has no usable filename.")
+        }
+        val root = root(context)
+        val target = resolve(root, displayName)
+        require(!target.exists()) { "A file or folder already exists at this path." }
+        val parts = displayName.split('/')
+        require(parts.none { part ->
+            val lower = part.lowercase()
+            lower in setOf(".git", ".ssh", ".pockethost", ".env", "id_rsa", "id_ed25519", "authorized_keys", "known_hosts") ||
+                lower.startsWith(".env.") || lower.endsWith(".pem") || lower.endsWith(".key") ||
+                lower.endsWith(".p12") || lower.endsWith(".pfx")
+        }) { "Sensitive files cannot be added to the public website." }
+        val parent = target.parentFile ?: error("Invalid destination path.")
+        require(parent.mkdirs() || parent.isDirectory) { "Could not create the destination folder." }
+        val temporary = File(parent, "." + target.name + "." + UUID.randomUUID() + ".upload")
+        var total = 0L
+        try {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: throw IllegalArgumentException("The selected file cannot be opened.")
+            input.use { source ->
+                FileOutputStream(temporary).use { output ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val count = source.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= 50L * 1024L * 1024L) { "Individual website files are limited to 50 MiB." }
+                        output.write(buffer, 0, count)
+                    }
+                    output.fd.sync()
+                }
+            }
+            java.nio.file.Files.move(temporary.toPath(), target.toPath())
+        } finally {
+            temporary.delete()
+        }
+        return Entry(target.relativeTo(root).invariantSeparatorsPath, false, total, target.lastModified(),
+            total <= MAX_EDIT_BYTES && target.extension.lowercase() in textExtensions)
     }
 
     fun hasIndex(context: Context): Boolean = File(root(context), "index.html").isFile
