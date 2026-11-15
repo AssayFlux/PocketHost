@@ -104,7 +104,10 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        ndk { abiFilters += selectedAbis }
+        ndk {
+            abiFilters.clear()
+            abiFilters.addAll(selectedAbis)
+        }
         externalNativeBuild {
             cmake {
                 arguments += listOf("-DNODE_SDK_DIR=" + nodeRuntimeDir.get().asFile.absolutePath, "-DANDROID_STL=c++_shared")
