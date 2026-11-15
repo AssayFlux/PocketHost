@@ -128,6 +128,73 @@ paths:
                 result: { type: object }
       responses:
         "200": { description: Acknowledgement recorded }
+
+  /v1/admin/users:
+    get:
+      summary: List team accounts (Owner only)
+      responses:
+        "200": { description: Team accounts without token material }
+    post:
+      summary: Create a named Editor or Viewer and return a one-time token (Owner only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, role]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+                role: { type: string, enum: [editor, viewer] }
+      responses:
+        "201": { description: User created; token returned once }
+  /v1/admin/users/{id}:
+    delete:
+      summary: Revoke a team user (Owner only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: User revoked }
+  /v1/admin/audit:
+    get:
+      summary: Read the latest 200 administrative audit events
+      responses:
+        "200": { description: Audit events }
+  /v1/admin/devices/{id}/artifacts:
+    post:
+      summary: Upload a website ZIP and queue authenticated deployment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "202": { description: Archive stored and deployment queued }
+        "413": { description: Archive exceeds 50 MiB }
+  /v1/device/artifacts/{artifact}:
+    get:
+      security:
+        - DeviceBearer: []
+      summary: Download an artifact belonging to the authenticated device
+      parameters:
+        - in: path
+          name: artifact
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: ZIP artifact with no-store cache policy }
+        "404": { description: Artifact not found for this device }
+
 components:
   securitySchemes:
     AdminBearer:
