@@ -6,7 +6,7 @@ The Android phone remains the website origin and connects directly to Cloudflare
 
 The current deployment workflow uses a Linux host with Docker Compose. This is an additional infrastructure requirement only if the owner chooses to deploy the optional remote-management feature. Do not treat a VPS as a prerequisite for the core PocketHost phone-hosting product.
 
-The owner has confirmed that their website domain and Cloudflare Tunnel are already connected. That existing tunnel may be used for the website origin; it does not automatically mean the control-plane API is deployed or routed. If the control plane is to be exposed through Cloudflare, configure a distinct hostname and route it to the control-plane service using an explicitly supported deployment topology. The current Compose file includes Caddy on ports 80/443 and should not be assumed to work unchanged behind an existing tunnel.
+The owner has confirmed that their website domain and Cloudflare Tunnel are already connected. PR #58 adds an explicit Cloudflare Tunnel ingress profile for the control plane. It can use a connector token for the same named tunnel, but it requires a **separate public hostname** and a Cloudflare Tunnel Public Hostname route targeting `http://control-plane:8080` on the Compose network. This is separate from the phone's website origin. When the optional tunnel secret is absent, the deployment workflow uses the existing Caddy public-TLS profile instead.
 
 ## Host requirements for the current Compose deployment
 
@@ -34,18 +34,21 @@ The owner has confirmed that their website domain and Cloudflare Tunnel are alre
 | `POCKETHOST_CONTROL_KNOWN_HOSTS` | Pre-verified SSH host-key line(s) |
 | `POCKETHOST_CONTROL_ADMIN_TOKEN` | Unique high-entropy Owner token |
 | `POCKETHOST_POSTGRES_PASSWORD` | Independent strong PostgreSQL password |
+| `POCKETHOST_CONTROL_TUNNEL_TOKEN` | Optional named Cloudflare Tunnel connector token. When set, deployment uses the Cloudflare Tunnel profile and does not publish inbound host ports. |
 
 Put these only in GitHub Actions secrets/variables. Never paste private keys, tokens or passwords into chat, issues or repository files. Use a protected `production` environment and require approval.
 
 ## Deployment
 
-1. Review `control-plane/compose.yaml`, `control-plane/Caddyfile` and `.github/workflows/deploy-control-plane.yml` for the intended network topology.
-2. Populate the variables and secrets above.
+1. Review `control-plane/compose.yaml` and `.github/workflows/deploy-control-plane.yml`.
+2. Populate the required host, SSH, database and Owner-token variables/secrets.
 3. Configure the exact allowed console origin.
-4. Run **Actions → Deploy PocketHost Control Plane → Run workflow**.
-5. Confirm `https://<control-plane-domain>/health` returns HTTP 200, CORS preflight succeeds for the console origin and only intended ports are reachable.
-6. Register a device and pair it in PocketHost → Advanced → Remote Control Plane.
-7. Verify heartbeat, command queue/acknowledgement, device revocation and audit events.
+4. For Cloudflare mode, add a distinct Public Hostname in the named tunnel with service `http://control-plane:8080`, then add `POCKETHOST_CONTROL_TUNNEL_TOKEN` as a GitHub Actions secret. The phone's website hostname must continue to target the phone's Rust listener, not this service.
+5. If the optional tunnel secret is absent, the workflow uses the Caddy public-TLS profile and requires inbound TCP 80/443.
+6. Run **Actions → Deploy PocketHost Control Plane → Run workflow**.
+7. Confirm `https://<control-plane-domain>/health` returns HTTP 200, CORS preflight succeeds for the console origin and no unintended ports are reachable.
+8. Register a device and pair it in PocketHost → Advanced → Remote Control Plane.
+9. Verify heartbeat, live configuration, command queue/acknowledgement, device revocation and audit events.
 
 The workflow does not create DNS records, configure Cloudflare Access, deploy the frontend, register the phone or perform physical-device testing.
 
@@ -59,4 +62,4 @@ The workflow does not create DNS records, configure Cloudflare Access, deploy th
 
 ## Production limitation
 
-The existence of this workflow and backend source does not mean the control plane is deployed. The included Caddy topology is a conventional public-host deployment and is not automatically Cloudflare Tunnel-compatible. A Cloudflare-only/no-inbound-port deployment needs an explicit supported topology and a separate acceptance test before being described as production-ready.
+The existence of this workflow and backend source does not mean the control plane is deployed. The Cloudflare Tunnel profile removes the inbound-port requirement but still needs a configured hostname route, a Linux Docker host, owner-controlled secrets and end-to-end pairing/command-recovery acceptance. Neither ingress mode is production-approved until the live service and phone agent are tested together.
