@@ -23,6 +23,7 @@ export function App() {
   const [resources, setResources] = useState<ResourceLimits | null>(null);
   const [pythonWorkers, setPythonWorkers] = useState(8);
   const [nodeHeap, setNodeHeap] = useState(192);
+  const [resourceDirty, setResourceDirty] = useState(false);
   const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
   const [busy, setBusy] = useState(false);
 
@@ -51,8 +52,10 @@ export function App() {
       setLogs(nextLogs.items || []);
       setTunnel(nextTunnel);
       setResources(nextResources);
-      setPythonWorkers(nextResources.pythonMaxWorkers);
-      setNodeHeap(nextResources.nodeHeapMb);
+      if (!resourceDirty) {
+        setPythonWorkers(nextResources.pythonMaxWorkers);
+        setNodeHeap(nextResources.nodeHeapMb);
+      }
       setMessage("Secure device session active. Metrics are labelled by their actual source.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not reach the device.");
@@ -61,7 +64,7 @@ export function App() {
         localStorage.removeItem("pockethost_device_token");
       }
     }
-  }, [request, token]);
+  }, [request, token, resourceDirty]);
 
   useEffect(() => {
     if (!token) return;
@@ -118,6 +121,7 @@ export function App() {
         method: "POST", body: JSON.stringify({ pythonMaxWorkers: pythonWorkers, nodeHeapMb: nodeHeap }),
       });
       setResources(current => current ? { ...current, ...result } : current);
+      setResourceDirty(false);
       setMessage("Runtime resource limits saved. Restart Python and Node runtimes to apply them.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Resource settings could not be saved."); }
     finally { setBusy(false); }
@@ -182,8 +186,8 @@ export function App() {
       </section>
       <div className="section-heading"><div><span className="eyebrow">RESOURCE POLICY</span><h2>Runtime resource limits</h2></div><span className="muted-tag">DEVICE-AWARE</span></div>
       <section className="panel resource-panel">
-        <div className="resource-control"><label>Python WSGI worker ceiling <strong>{pythonWorkers}</strong><input type="range" min="2" max="16" step="1" value={pythonWorkers} onChange={event => setPythonWorkers(Number(event.target.value))} /></label></div>
-        <div className="resource-control"><label>Node.js V8 heap ceiling <strong>{nodeHeap} MB</strong><input type="range" min="96" max="512" step="16" value={nodeHeap} onChange={event => setNodeHeap(Number(event.target.value))} /></label></div>
+        <div className="resource-control"><label>Python WSGI worker ceiling <strong>{pythonWorkers}</strong><input type="range" min="2" max="16" step="1" value={pythonWorkers} onChange={event => { setPythonWorkers(Number(event.target.value)); setResourceDirty(true); }} /></label></div>
+        <div className="resource-control"><label>Node.js V8 heap ceiling <strong>{nodeHeap} MB</strong><input type="range" min="96" max="512" step="16" value={nodeHeap} onChange={event => { setNodeHeap(Number(event.target.value)); setResourceDirty(true); }} /></label></div>
         <p>{resources?.note ?? "Resource limits are device-managed."}</p>
         <button disabled={busy || !resources} onClick={saveResources}>Save resource limits</button>
       </section>
