@@ -138,7 +138,7 @@ private fun PocketHostDashboard() {
     var capacityInfo by remember { mutableStateOf(CapacityController.snapshot(context)) }
     var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot()) }
     var capacityDuration by remember { mutableStateOf("180") }
-    var deviceTelemetry by remember { mutableStateOf(TelemetryStore.latest(context) ?: DeviceTelemetry.snapshot(context)) }
+    var deviceTelemetry by remember { mutableStateOf(DeviceTelemetry.snapshot(context)) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -159,6 +159,7 @@ private fun PocketHostDashboard() {
 
     LaunchedEffect(Unit) {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        var lastIdleTelemetryAt = 0L
         while (true) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
             val metrics = withContext(Dispatchers.IO) { MetricsStore.snapshot(context) }
@@ -177,7 +178,15 @@ private fun PocketHostDashboard() {
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections()) }
             capacityBenchmark = CapacityLab.snapshot()
-            deviceTelemetry = TelemetryStore.latest(context) ?: deviceTelemetry
+            val telemetryNow = android.os.SystemClock.elapsedRealtime()
+            if (hosting) {
+                deviceTelemetry = TelemetryStore.latest(context) ?: DeviceTelemetry.snapshot(context)
+            } else if (telemetryNow - lastIdleTelemetryAt >= 30_000L) {
+                // Keep the device panel live while the web server is stopped, without writing
+                // a persistent history row every UI refresh.
+                deviceTelemetry = DeviceTelemetry.snapshot(context)
+                lastIdleTelemetryAt = telemetryNow
+            }
             delay(1_000)
         }
     }
