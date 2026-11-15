@@ -26,14 +26,14 @@ void make_directory(const std::string& path) {
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_assayflux_pockethost_runtime_NodeBridge_start(
-    JNIEnv* env, jclass, jstring project_root, jstring entry_file, jstring cache_directory, jint port) {
+    JNIEnv* env, jclass, jstring project_root, jstring entry_file, jstring cache_directory, jint port, jint heap_limit_mb) {
     bool expected = false;
     if (!g_node_started.compare_exchange_strong(expected, true)) return -2;
 
     const std::string root = from_java(env, project_root);
     const std::string entry = from_java(env, entry_file);
     const std::string cache = from_java(env, cache_directory);
-    if (root.empty() || entry.empty() || cache.empty() || port < 1024 || port > 65535) {
+    if (root.empty() || entry.empty() || cache.empty() || port < 1024 || port > 65535 || heap_limit_mb < 96 || heap_limit_mb > 512) {
         g_node_started.store(false);
         return -3;
     }
@@ -62,7 +62,7 @@ Java_com_assayflux_pockethost_runtime_NodeBridge_start(
     const std::string preload = root + "/.pockethost/metrics-preload.cjs";
     std::vector<std::string> arguments{
         "node",
-        "--max-old-space-size=384",
+        "--max-old-space-size=" + std::to_string(heap_limit_mb),
         "--require",
         preload,
         entry
