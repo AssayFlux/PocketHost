@@ -181,10 +181,13 @@ async fn put_config(
     let next = current + 1;
     let row = sqlx::query("UPDATE device_configs SET version=$2,config=$3,updated_at=now() WHERE device_id=$1 RETURNING version,config,updated_at")
         .bind(id).bind(next).bind(input.config).fetch_one(&mut *tx).await.map_err(internal)?;
-    tx.commit().await.map_err(internal)?;
-    // A config update is also queued for the phone; it applies only after local validation.
+    let committed_config: Value = row.get("config");
+    // Persist the desired config and its delivery command atomically.
     sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) VALUES($1,$2,'apply_config',$3)")
-        .bind(Uuid::new_v4()).bind(id).bind(json!({"version":next})).execute(&s.db).await.map_err(internal)?;
+        .bind(Uuid::new_v4()).bind(id)
+        .bind(json!({"version":next,"config":committed_config}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
     Ok(Json(ConfigView { version: row.get("version"), config: row.get("config"), updated_at: row.get("updated_at") }))
 }
 
