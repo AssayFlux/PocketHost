@@ -2,7 +2,7 @@
 
 **Purpose:** single actionable definition of completion. Source presence, documentation or a green compile is not production approval. Every gate must be marked PASS, FAIL or NOT TESTED with commit-specific evidence.
 
-> **Implementation snapshot — 2026-11-15:** main `1453e7a6d7b4e9d00ef7721cf88b7bafe00cc8e7`. PRs #48–#51 are merged. Quality runs 43722553055, 43722682803, 43723107713 and 43723228974 passed; the current app-source Android integration run 43722682844 passed and produced artifact 14165701365 with ARM64, ARMv7 and x86_64 debug APKs. Emulator instrumentation is skipped and physical-device acceptance remains owner-run. The capacity controller now preserves desired Python/Node state through protective suspension and attempts restart after recovery hysteresis. The app has five destinations and a refined branded header, but the full UI redesign is not visually accepted. Encrypted full-app backup excludes device-bound credentials; custom static roots and failure-injection restore acceptance remain open. Python/Node are not OS-sandboxed. Remote deployment and signed production release still require owner infrastructure and signing secrets. PR #50 corrected the release APK verification loop and added SHA-256 checksums; it does not create or sign a production key. This remains a development build, not production approval.
+> **Implementation snapshot — 2026-11-15:** main `05afe2041c80ace4bddbd0711e554f40e32aa6a6`. PRs #48–#59 are merged. Main quality run 43726081859 passed all six jobs, including control-plane Compose profile validation. The current app-source three-ABI Android build 43725437477 passed and produced artifact 14166696548. Emulator backup regression run 43724908863 is exercising API 26/33/35. Capacity recovery preserves runtime intent, the dashboard includes a website preview/copy card, and Capacity Lab captures before/after device-health snapshots for its static-origin workload. Encrypted backup route-manifest v3 supports custom static roots, with rollback instrumentation added; custom Python/Node route roots outside configured runtime roots remain unsupported. Python/Node are not OS-sandboxed. Remote-control Cloudflare ingress is implemented but not deployed. Signed production release still requires owner signing secrets. This remains a development build, not production approval.
 
 ## Product baseline
 
@@ -18,23 +18,23 @@
 
 | Workstream | Current source status | Production completion evidence |
 |---|---|---|
-| Android shell/lifecycle | Integrated; MainActivity uses ComponentActivity for Compose Activity Result APIs, biometric prompt is hosted separately, five-tab card-first UI | API 26/33/35 and physical-device lifecycle acceptance; current emulator instrumentation is skipped by design |
+| Android shell/lifecycle | Integrated; MainActivity uses ComponentActivity for Compose Activity Result APIs, biometric prompt is hosted separately, five-tab card-first UI | API 26/33/35 and physical-device lifecycle acceptance; the backup-specific API 26/33/35 regression matrix is running |
 | Rust static engine | Integrated: static streaming/ranges, multi-host routing, bounded 16-active/32-waiting admission, per-client 429 rate limiting, per-site streaming concurrency caps, and three-second graceful drain | HTTP security, load, fault and multi-site end-to-end tests on target phones |
 | Python WSGI | Preview runtime | Device tests, failure recovery, quotas and reviewed isolation model |
 | Node.js | Integrated mobile SDK | Device execution, ABI, memory, restart and isolation acceptance |
 | Local management API | Integrated | Pairing, CORS/PNA, abuse, revocation and DNS-rebinding review |
 | TypeScript console | Connected in source | Full browser/device end-to-end validation |
 | Cloudflare Tunnel | Connector source/build integrated | Existing tunnel configured in app; external HTTPS content verified |
-| Remote control plane | Optional source implemented | Deploy and test real phone pairing/commands only if included in release |
+| Remote control plane | Cloudflare Tunnel ingress profile and Compose CI validation implemented | Deploy and test real phone pairing/commands only if included in release |
 | Adaptive telemetry | Partial implementation: versioned 30-second hardware samples and bounded history | Verify accuracy/missing values, battery/thermal behavior, retention, restart and physical-device performance |
-| Capacity Lab | Bounded static-origin loopback sweep records requests/sec, bytes/sec, errors, average/p50/p95/max latency and safe concurrency | Add representative workload classes, resource trends, repeatability and long-duration tests |
+| Capacity Lab | Bounded static-origin loopback sweep records requests/sec, bytes/sec, errors, average/p50/p95/max latency and safe concurrency | Add representative Python/Node workload classes, resource trends, repeatability and long-duration tests |
 | Resource Governor | Source integrated: global active/queue caps, per-client rate limiting, per-site concurrency protection, 429/503 responses, graceful drain, and five-state Android health derating | Fault injection, stress, thermal hysteresis and recovery acceptance |
 | Capacity schedules | Source implemented: custom timed percentage, expiry and previous-profile restoration | Verify restart, wall-clock changes, schedule replacement and failure recovery |
-| Runtime sandbox | Critical gap | Distinct UID/OS boundary, filesystem/network restrictions, quotas and adversarial tests |
+| Runtime sandbox | Critical gap — requires a separate-UID architecture decision | Distinct UID/OS boundary, filesystem/network restrictions, quotas and adversarial tests |
 | Payments | Not implemented by PR #14 | PSP integration, signed webhooks, idempotency, durable ledger, reconciliation and security assessment |
 | Audit integrity | Planned/specification | Conventional hash-chain tamper detection and signed checkpoints |
 | Daily reports/logs | Partial source: bounded redacted logs, hourly daily snapshots, rollover archive, 90-report retention and JSON export | Verify midnight rollover, process restart, storage exhaustion, reproducibility and full uptime/latency/tunnel reporting |
-| Backup/restore | Encrypted full-app backup for active static site, Python/Node project roots, hostname routes and selected non-secret settings; legacy static-only restore supported | Wrong-passphrase/tamper/interruption rollback acceptance; custom static roots are not yet supported; no payment-ledger backup claim |
+| Backup/restore | Encrypted full-app backup for active static site, custom static roots, configured Python/Node project roots, hostname routes and selected non-secret settings; v2 and legacy static-only restore supported | Complete API 26/33/35 custom-root rollback matrix and custom runtime-root compatibility; no payment-ledger backup claim |
 | Release | Workflow/signing guide | Signed APKs, upgrade tests, checksums and compatibility evidence |
 
 ## Non-negotiable implementation order
