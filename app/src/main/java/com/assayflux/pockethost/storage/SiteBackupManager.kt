@@ -2,6 +2,7 @@ package com.assayflux.pockethost.storage
 
 import android.content.Context
 import android.net.Uri
+import com.assayflux.pockethost.engine.NativeEngine
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -36,6 +37,7 @@ object SiteBackupManager {
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
         require(passphrase.size >= 12) { "Use a backup passphrase with at least 12 characters." }
+        if (NativeEngine.status() == "RUNNING") throw IOException("Stop hosting before exporting a website backup.")
         val root = File(context.filesDir, "site").canonicalFile
         if (!File(root, "index.html").isFile) throw IOException("There is no deployed website to back up.")
         val salt = ByteArray(SALT_BYTES).also(SecureRandom()::nextBytes)
@@ -95,6 +97,7 @@ object SiteBackupManager {
         val temporary = File(context.cacheDir, "pockethost-restore-${System.nanoTime()}.zip")
         try {
             require(passphrase.size >= 12) { "Use the passphrase that was set when this backup was created." }
+            if (NativeEngine.status() == "RUNNING") throw IOException("Stop hosting before restoring a website backup.")
             val input = context.contentResolver.openInputStream(source)
                 ?: throw IOException("The selected backup cannot be opened.")
             input.use { raw ->
