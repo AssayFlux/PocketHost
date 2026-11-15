@@ -17,7 +17,7 @@
 | Workstream | Current source status | Production completion evidence |
 |---|---|---|
 | Android shell/lifecycle | Integrated | API 26/33/35 and physical-device lifecycle acceptance |
-| Rust static engine | Integrated | HTTP security, load, fault and multi-site end-to-end tests |
+| Rust static engine | Integrated: static streaming/ranges, multi-host routing, bounded 16-active/32-waiting admission, per-client 429 rate limiting, per-site streaming concurrency caps, and three-second graceful drain | HTTP security, load, fault and multi-site end-to-end tests on target phones |
 | Python WSGI | Preview runtime | Device tests, failure recovery, quotas and reviewed isolation model |
 | Node.js | Integrated mobile SDK | Device execution, ABI, memory, restart and isolation acceptance |
 | Local management API | Integrated | Pairing, CORS/PNA, abuse, revocation and DNS-rebinding review |
@@ -25,8 +25,8 @@
 | Cloudflare Tunnel | Connector source/build integrated | Existing tunnel configured in app; external HTTPS content verified |
 | Remote control plane | Optional source implemented | Deploy and test real phone pairing/commands only if included in release |
 | Adaptive telemetry | Partial implementation: versioned 30-second hardware samples and bounded history | Verify accuracy/missing values, battery/thermal behavior, retention, restart and physical-device performance |
-| Capacity Lab | First static-GET loopback sweep implemented; p95 latency and safe concurrency ceiling recorded | Add representative workload classes, throughput/resource trends, repeatability and long-duration tests |
-| Resource Governor | Partial: Rust concurrency cap/503 plus five-state Android health derating and optional-runtime suspension | Add Rust-native rate/fairness/queue policies, graceful drain, fault injection and hysteresis acceptance |
+| Capacity Lab | Bounded static-origin loopback sweep records requests/sec, bytes/sec, errors, average/p50/p95/max latency and safe concurrency | Add representative workload classes, resource trends, repeatability and long-duration tests |
+| Resource Governor | Source integrated: global active/queue caps, per-client rate limiting, per-site concurrency protection, 429/503 responses, graceful drain, and five-state Android health derating | Fault injection, stress, thermal hysteresis and recovery acceptance |
 | Capacity schedules | Source implemented: custom timed percentage, expiry and previous-profile restoration | Verify restart, wall-clock changes, schedule replacement and failure recovery |
 | Runtime sandbox | Critical gap | Distinct UID/OS boundary, filesystem/network restrictions, quotas and adversarial tests |
 | Payments | Not implemented by PR #14 | PSP integration, signed webhooks, idempotency, durable ledger, reconciliation and security assessment |
@@ -42,7 +42,7 @@
 3. Validate static hosting, routing, deployment, tunnel and local management on target devices.
 4. Extend and validate device telemetry, rollover reports and bounded operational logging.
 5. Expand Capacity Lab beyond static GET and validate evidence-based safe capacity.
-6. Complete the Rust-native Resource Governor, rate/fairness/queue handling and configurable schedules.
+6. Validate the integrated Rust-native Resource Governor, rate/fairness/queue handling and configurable schedules under stress and fault injection.
 7. Resolve runtime isolation before accepting third-party/untrusted code.
 8. Implement durable audit, secrets management and payment provider integration.
 9. Implement reconciliation, encrypted backups and daily financial/operations reports.
@@ -51,8 +51,8 @@
 
 ## Required device and network evidence
 
-- [ ] Quality workflow green on exact release commit.
-- [ ] Android integration workflow green on exact release commit.
+- [x] Quality workflow [43711272472](https://github.com/AssayFlux/PocketHost/actions/runs/43711272472) passed all six jobs on merged main commit `a6bc0f77`.
+- [x] Android integration [43711203835](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835) built and verified ARM64, ARMv7 and x86_64 debug APKs on the source merged as `a6bc0f77`; emulator instrumentation was skipped by design.
 - [ ] API 26, 33 and 35 emulator instrumentation pass.
 - [ ] ARMv7 and ARM64 physical-device tests pass.
 - [ ] Vivo Y95 and Moto G54 lifecycle/network results recorded.
@@ -66,9 +66,9 @@
 ## Adaptive capacity acceptance
 
 - [x] First versioned device telemetry is implemented for model/API/ABIs/cores, sampled CPU, RAM/PSS/heaps, storage, battery/temperature, thermal state and network transport; physical accuracy and sustained behavior remain NOT TESTED.
-- [ ] Benchmark covers representative static and trusted-runtime workloads and stops safely on thermal, memory, battery, timeout and cancellation triggers.
-- [ ] Graph separates observed peak, sustainable safe capacity and current admission budget; current graph is a static-workload p95 chart only.
-- [x] First concurrency admission cap and HTTP 503/Retry-After rejection are implemented; bounded waiting queues and rate/fairness policies remain NOT IMPLEMENTED.
+- [ ] Benchmark covers representative static and trusted-runtime workloads and stops safely on thermal, memory, battery, timeout and cancellation triggers. Current benchmark is static-origin only.
+- [ ] Graph separates observed peak, sustainable safe capacity and current admission budget; current graph is a static-workload p95 chart only (throughput and latency distribution are available in benchmark results).
+- [x] Global concurrency admission, bounded waiting queue, HTTP 503/Retry-After, per-client 429 rate limiting, per-site concurrency caps and graceful drain are implemented; physical stress/fairness behavior remains NOT TESTED.
 - [ ] Critical management/logging reserve survives visitor overload under stress.
 - [ ] 30% capacity profile source workflow exists; three-hour wall-clock, process-restart and restoration acceptance remain NOT TESTED.
 - [x] Initial CPU/memory/storage/battery/thermal device-side health derating and protective runtime suspension are implemented; physical hysteresis/recovery acceptance remains NOT TESTED.

@@ -2,16 +2,19 @@
 
 > **Current reconciliation — 2026-11-15**
 >
-> - **Current main:** `3023118f786f52064e169c80f6afaac42402c9f0` (PR #26 and PR #27 merged).
-> - **Quality CI:** [run 43707912326](https://github.com/AssayFlux/PocketHost/actions/runs/43707912326) passed all six jobs on the PR #26 source now present in main: Rust, Node runtime, Android source compilation, control plane, Python runtime and console.
-> - **Android build:** [run 43707912276](https://github.com/AssayFlux/PocketHost/actions/runs/43707912276) successfully built cloudflared Android JNI libraries and three ABI-specific debug APKs (ARM64, ARMv7 and x86_64). APK artifact SHA-256: `30672b7390a38a39f32cfa9c37cd78baf5759c1960513d435a78aa918d02341e`. API 26 emulator smoke was still running and API 33/35 were queued at reconciliation; no emulator result is claimed here.
-> - **Release APK:** signed release is not built because release signing secrets are intentionally external to the repository. Debug APK packaging is complete.
-> - **Device acceptance:** physical-device installation, lifecycle, network, thermal and OEM battery behavior are owner-run acceptance tasks. Source/CI results do not replace those tests.
-> - **Release state:** integrated development build; not production approved.
+> - **Current main:** `a6bc0f77dac43d335bba36ad24e5d6e801e1b58e` (PRs #30–#36 merged; PR #31 removed obsolete blockchain references).
+> - **Quality CI:** [run 43711272472](https://github.com/AssayFlux/PocketHost/actions/runs/43711272472) passed all six jobs on current main: Rust, Node runtime, Python runtime, control plane, TypeScript console and Android source compilation.
+> - **Android APK build:** [run 43711203835](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835) passed cloudflared JNI build, three-ABI APK packaging and ABI-content verification. Emulator instrumentation was skipped by design; it is opt-in and physical-device acceptance is owner-run.
+> - **APK artifact:** [GitHub Actions artifact 14161340221](https://github.com/AssayFlux/PocketHost/actions/runs/43711203835/artifacts/14161340221), SHA-256 `bd7e25439239f6c507b2c5762a2f8a8c353b37b8fdc129bfef10bd972deaa8c5`.
+> - **ABI APK SHA-256:** ARM64 `13d972bf6ad6579d511c1df9bb8e359a3422c8f39b8cd8c99ef6d2a408c1438a`; ARMv7 `4b207bfee30cafec1700def36692a742b982f55f3e2a1eaa9aa632941a6948f5`; x86_64 `e4ac7779962b742406675ec235c783b34cf97765017ca142823d8cb183305cb8`.
+> - **Implemented capacity protections:** bounded 16-active/32-waiting connection admission, 200 ms queue window, per-client token-bucket rate limit, per-site streaming concurrency caps, observable rejection counters, and up-to-three-second graceful shutdown drain.
+> - **Capacity Lab:** bounded static-origin sweep reports request rate, byte throughput and average/p50/p95/maximum latency. It is still a microbenchmark, not long-duration or multi-workload device calibration.
+> - **Blockchain references:** removed from the six project documents; no blockchain implementation/dependency is part of the repository.
+> - **Release APK:** signed release is not built because release signing secrets are external. The supplied APKs are debug builds.
+> - **Device acceptance:** physical installation, Android lifecycle, existing Cloudflare tunnel/public HTTPS, thermal, battery and OEM behavior are owner-run acceptance tasks.
+> - **Release state:** integrated development build; not production approved. Python/Node run under the app UID and are not OS-sandboxed; execute only trusted code. Remote control-plane deployment and any payment-provider integration require their own external configuration.
 >
-> PR #25 corrected Android Keystore AES-GCM IV behavior for API 26, increased a slow-device instrumentation socket timeout, and made the Python smoke test explicitly acknowledge trusted code execution while restoring its previous preference. PR #26 added request-rate, byte-throughput and latency-distribution measurements to the static-origin Capacity Lab.
->
-> The following historical sections below retain earlier evidence and implementation notes. When a historical run conflicts with this current reconciliation, use the current commit/run identifiers above.
+> The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this reconciliation, use the current commit/run identifiers above.
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
