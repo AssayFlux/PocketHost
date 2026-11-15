@@ -165,3 +165,20 @@ Do not claim a configuration was tested unless a test or inspection actually ran
 - **2026-11-15:** Added guarded static-site file create/edit/delete and HTML entry-page selection, with traversal checks, 256 KiB text-editor limit, hosting-stopped requirement and destructive-action confirmations. Added confirmed operational-log clearing.
 - **2026-11-15:** Added opt-in boot receiver, battery-optimisation settings shortcut, About/connection-security information and persistent elapsed-time uptime display.
 - **2026-11-15:** Quality CI [43693751852](https://github.com/AssayFlux/PocketHost/actions/runs/43693751852) passed all six jobs on `ad0ccab69920b32070d4ef60fe866a6c413c1a7c`, including Android Kotlin and Android-test source compilation. No APK, emulator screenshot matrix or physical-device boot/tunnel test was run.
+
+
+## 11. Card-first navigation and Learn
+
+- The owner requested a compact, interactive control-panel experience inspired by the supplied dashboard/login references.
+- Add **Sites**, **Activity** and **Learn** destinations while retaining Dashboard, Files and Settings. Activity is the user-facing label for operational logs.
+- Use minimal monochrome iconography with consistent visual weight. Avoid emoji icons, gradients, neon and glass effects.
+- Make the dashboard a card overview. Each card presents concise status/metrics and opens a focused detail area; avoid presenting every setting as one long continuous document.
+- Use interactive charts only when backed by measured data. Label units, time window, sample count and limitations. Never fabricate time-series history from one current sample. Capacity Lab p95 measurements may be charted by concurrency; do not imply visitor-traffic trends.
+- Add expandable beginner-friendly guides for website import, local/LAN/public access, dashboard metrics, capacity benchmarking, trusted Python/Node runtimes, activity/logs, backup/restore and device safety. Guides must reflect current implementation boundaries.
+- Account/login UI must distinguish Owner and Operator. A login mockup is not security: credentials, sessions, roles and revocation must be enforced by the management API before account controls are called secure. Biometric unlock is optional and must use Android biometric APIs.
+- The supplied pastel-pink reference is a layout/interaction reference, not approval to replace the approved navy palette.
+- Responsive behavior remains subject to the validation matrix in section 9.
+
+## 12. Change Log
+
+- **2026-11-15:** Added Sites, Activity and Learn navigation destinations and an expandable in-app learning guide. Added first-use, domain/tunnel, dashboard, capacity, runtime safety, activity, backup and phone-safety lessons. Updated card-first design and chart-data integrity requirements. Device screenshot and accessibility validation remains pending.

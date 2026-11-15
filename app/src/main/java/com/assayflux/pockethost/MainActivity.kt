@@ -404,8 +404,8 @@ private fun PocketHostDashboard() {
             },
             bottomBar = {
                 NavigationBar(modifier = Modifier.imePadding(), containerColor = palette.surface) {
-                    listOf("Dashboard", "Files", "Logs", "Settings").forEach { destination ->
-                        val symbol = when (destination) { "Dashboard" -> "⌂"; "Files" -> "▤"; "Logs" -> "≡"; else -> "⚙" }
+                    listOf("Dashboard", "Sites", "Files", "Activity", "Learn", "Settings").forEach { destination ->
+                        val symbol = when (destination) { "Dashboard" -> "⌂"; "Sites" -> "▦"; "Files" -> "▤"; "Activity" -> "⌁"; "Learn" -> "ⓘ"; else -> "⚙" }
                         NavigationBarItem(
                             selected = selectedTab == destination,
                             onClick = { selectedTab = destination },
@@ -423,6 +423,9 @@ private fun PocketHostDashboard() {
                         .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                if (selectedTab == "Learn") {
+                    PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenFiles = { selectedTab = "Files" }, onOpenSettings = { selectedTab = "Settings" })
+                }
                 if (selectedTab == "Dashboard") {
                 if (pendingPairingCode != null) {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
