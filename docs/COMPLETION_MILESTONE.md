@@ -2,7 +2,7 @@
 
 **Purpose:** single actionable definition of completion. Source presence, documentation or a green compile is not production approval. Every gate must be marked PASS, FAIL or NOT TESTED with commit-specific evidence.
 
-> **Implementation snapshot — 2026-11-15:** main `05afe2041c80ace4bddbd0711e554f40e32aa6a6`. PRs #48–#59 are merged. Main quality run 43725437551 passed six jobs; run 43726081859 is validating the final control-plane Compose CI update. The current app-source three-ABI Android build 43725437477 is in progress. Emulator backup regression run 43724908863 is exercising API 26/33/35. Capacity recovery preserves runtime intent, the dashboard includes a website preview/copy card, and Capacity Lab captures before/after device-health snapshots for its static-origin workload. Encrypted backup route-manifest v3 supports custom static roots, with rollback instrumentation added; custom Python/Node route roots outside configured runtime roots remain unsupported. Python/Node are not OS-sandboxed. Remote-control Cloudflare ingress is implemented but not deployed. Signed production release still requires owner signing secrets. This remains a development build, not production approval. This remains a development build, not production approval.
+> **Implementation snapshot — 2026-11-15:** main `05afe2041c80ace4bddbd0711e554f40e32aa6a6`. PRs #48–#59 are merged. Main quality run 43725437551 passed six jobs; run 43726081859 is validating the final control-plane Compose CI update. The current app-source three-ABI Android build 43725437477 is in progress. Emulator backup regression run 43724908863 is exercising API 26/33/35. Capacity recovery preserves runtime intent, the dashboard includes a website preview/copy card, and Capacity Lab captures before/after device-health snapshots for its static-origin workload. Encrypted backup route-manifest v3 supports custom static roots, with rollback instrumentation added; custom Python/Node route roots outside configured runtime roots remain unsupported. Python/Node are not OS-sandboxed. Remote-control Cloudflare ingress is implemented but not deployed. Signed production release still requires owner signing secrets. This remains a development build, not production approval.
 
 ## Product baseline
 
@@ -18,7 +18,7 @@
 
 | Workstream | Current source status | Production completion evidence |
 |---|---|---|
-| Android shell/lifecycle | Integrated; MainActivity uses ComponentActivity for Compose Activity Result APIs, biometric prompt is hosted separately, five-tab card-first UI | API 26/33/35 and physical-device lifecycle acceptance; current emulator instrumentation is skipped by design |
+| Android shell/lifecycle | Integrated; MainActivity uses ComponentActivity for Compose Activity Result APIs, biometric prompt is hosted separately, five-tab card-first UI | API 26/33/35 and physical-device lifecycle acceptance; the backup-specific API 26/33/35 regression matrix is running |
 | Rust static engine | Integrated: static streaming/ranges, multi-host routing, bounded 16-active/32-waiting admission, per-client 429 rate limiting, per-site streaming concurrency caps, and three-second graceful drain | HTTP security, load, fault and multi-site end-to-end tests on target phones |
 | Python WSGI | Preview runtime | Device tests, failure recovery, quotas and reviewed isolation model |
 | Node.js | Integrated mobile SDK | Device execution, ABI, memory, restart and isolation acceptance |
@@ -34,7 +34,7 @@
 | Payments | Not implemented by PR #14 | PSP integration, signed webhooks, idempotency, durable ledger, reconciliation and security assessment |
 | Audit integrity | Planned/specification | Conventional hash-chain tamper detection and signed checkpoints |
 | Daily reports/logs | Partial source: bounded redacted logs, hourly daily snapshots, rollover archive, 90-report retention and JSON export | Verify midnight rollover, process restart, storage exhaustion, reproducibility and full uptime/latency/tunnel reporting |
-| Backup/restore | Encrypted full-app backup for active static site, Python/Node project roots, hostname routes and selected non-secret settings; legacy static-only restore supported | Wrong-passphrase/tamper/interruption rollback acceptance; custom static roots are not yet supported; no payment-ledger backup claim |
+| Backup/restore | Encrypted full-app backup for active static site, custom static roots, configured Python/Node project roots, hostname routes and selected non-secret settings; v2 and legacy static-only restore supported | Complete API 26/33/35 custom-root rollback matrix and custom runtime-root compatibility; no payment-ledger backup claim |
 | Release | Workflow/signing guide | Signed APKs, upgrade tests, checksums and compatibility evidence |
 
 ## Non-negotiable implementation order
