@@ -104,7 +104,7 @@ object RemoteControlAgent {
             .put("reportedAt", System.currentTimeMillis())
             .put("config_version", prefs.getLong("config_version", 0L))
         post(endpoint, token, "/v1/device/heartbeat",
-            JSONObject().put("state", state).put("config_version", JSONObject.NULL))
+            JSONObject().put("state", state).put("config_version", prefs.getLong("config_version", 0L)))
         val commands = get(endpoint, token, "/v1/device/commands")
         for (index in 0 until commands.length()) {
             val command = commands.getJSONObject(index)
