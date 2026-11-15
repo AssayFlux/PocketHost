@@ -12,9 +12,17 @@ on:
       - "settings.gradle.kts"
       - "gradle/**"
       - ".github/workflows/android-integration.yml"
-  # Emulator instrumentation is opt-in generally; backup changes run the API 26/33/35 regression matrix.
+  # Run device-level regression on every Android/native/runtime change, not only PRs with selected title keywords.
   pull_request:
     branches: [main]
+    paths:
+      - "app/**"
+      - "rust-engine/**"
+      - "scripts/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/android-integration.yml"
   # Full ABI APK build can also be requested manually.
   workflow_dispatch:
     inputs:
@@ -131,7 +139,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, 'backup') || contains(github.event.pull_request.title, 'runtime') || contains(github.event.pull_request.title, 'security') || contains(github.event.pull_request.title, 'management')))
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || github.event_name == 'pull_request'
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
