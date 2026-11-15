@@ -327,6 +327,7 @@ async fn serve(
     req: Request<Incoming>,
     peer: SocketAddr,
 ) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+    let close_http1 = req.version() != hyper::Version::HTTP_2;
     let client_ip = effective_client_ip(
         peer.ip(),
         req.headers().get("cf-connecting-ip").and_then(|value| value.to_str().ok())
@@ -336,6 +337,9 @@ async fn serve(
         let mut response = text_response(StatusCode::TOO_MANY_REQUESTS, "text/plain; charset=utf-8", "Request rate limit exceeded");
         response.headers_mut().insert("retry-after", "1".parse().unwrap());
         response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
+        if close_http1 {
+            response.headers_mut().insert(hyper::header::CONNECTION, "close".parse().unwrap());
+        }
         return Ok(response);
     }
 
@@ -360,6 +364,9 @@ async fn serve(
             let mut response = text_response(StatusCode::SERVICE_UNAVAILABLE, "text/plain; charset=utf-8", "Site concurrency limit reached");
             response.headers_mut().insert("retry-after", "1".parse().unwrap());
             response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
+            if close_http1 {
+                response.headers_mut().insert(hyper::header::CONNECTION, "close".parse().unwrap());
+            }
             return Ok(response);
         }
     };
