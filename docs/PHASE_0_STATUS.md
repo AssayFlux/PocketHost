@@ -36,7 +36,7 @@
 - Content-Length, nosniff and no-cache response headers.
 - Canonical path validation, percent-decoding validation, traversal rejection and no directory listing.
 - Startup readiness handshake and graceful connection shutdown.
-- In-memory session metrics: request count, bytes served and active connections.
+- In-memory session metrics: request count, bytes served and active connections; persistent aggregate traffic totals and daily counters survive engine/service restarts.
 
 ### Website import and deployment
 - Android 13+ notification permission onboarding; hosting can still start when permission is denied.
@@ -90,7 +90,6 @@ A successful source build is not proof of physical-device compatibility. Do not 
 - Connected TypeScript console, pairing flow and remote-control authorization.
 - Multi-site hosting, hostname routing and per-site listener/origin configuration.
 - Rust reverse proxy and runtime-to-site routing.
-- Persistent analytics across engine restarts.
 - Log filtering and advanced event search are not implemented; a redacted diagnostics ZIP export is now implemented alongside JSONL export.
 - Encrypted backup/restore and restore validation.
 - Configurable cache policies, custom 404 pages and site-level request policies.
