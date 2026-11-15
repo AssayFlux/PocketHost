@@ -42,6 +42,16 @@ jobs:
       - run: npm install
       - run: npm run build
 
+  node-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test Node runtime metrics preload
+        run: node tests/node/metrics-smoke.cjs
+
   android-source-compile:
     runs-on: ubuntu-latest
     steps:
