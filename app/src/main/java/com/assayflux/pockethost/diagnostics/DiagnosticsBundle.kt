@@ -41,7 +41,6 @@ object DiagnosticsBundle {
                 .put("tunnelEnabled", preferences.getBoolean("tunnel_enabled", false))
                 .put("keepCpuAwake", preferences.getBoolean("keep_awake", false))
                 .put("serviceStatus", preferences.getString("service_status", "unknown") ?: "unknown")
-                .put("cloudflareTokenPresent", preferences.getBoolean("cloudflare_token_present", false))
             putText(zip, "configuration.json", configuration.toString(2))
 
             val traffic = JSONObject()
