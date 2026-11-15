@@ -459,6 +459,28 @@ async fn main() -> anyhow::Result<()> {
 mod tests {
     use super::*;
 
+    #[tokio::test]
+    async fn postgres_migrations_support_revocable_viewer_accounts_and_audit() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let id = Uuid::new_v4();
+        let token = new_token();
+        sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'CI viewer','viewer',$2)")
+            .bind(id).bind(token_hash(&token)).execute(&db).await.unwrap();
+        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap());
+        assert_eq!(admin(&headers, &state).await.unwrap(), "viewer");
+        assert_eq!(admin_write(&headers, &state).await.unwrap_err().0, StatusCode::FORBIDDEN);
+        audit(&state, "viewer", "test.read", &id.to_string(), json!({"test":true})).await.unwrap();
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_events WHERE target=$1")
+            .bind(id.to_string()).fetch_one(&db).await.unwrap();
+        assert_eq!(count, 1);
+        sqlx::query("DELETE FROM control_users WHERE id=$1").bind(id).execute(&db).await.unwrap();
+        assert!(admin(&headers, &state).await.is_err());
+    }
+
     #[test]
     fn generated_tokens_are_unique_and_not_stored_as_plaintext() {
         let a = new_token();
