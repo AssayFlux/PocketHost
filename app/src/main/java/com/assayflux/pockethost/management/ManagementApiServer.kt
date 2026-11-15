@@ -94,12 +94,22 @@ object ManagementApiServer {
                 val header = readHeader(input) ?: return
                 val lines = header.split("\r\n")
                 val request = lines.firstOrNull()?.split(' ') ?: return
-                if (request.size < 2) return
+                if (request.size != 3 || request[2] != "HTTP/1.1" || !request[1].startsWith("/")) {
+                    respond(output, 400, JSONObject().put("error", "invalid_request_line")); return
+                }
                 val method = request[0]
                 val path = request[1].substringBefore('?')
-                val headers = lines.drop(1).mapNotNull {
+                val headerPairs = lines.drop(1).mapNotNull {
                     val i = it.indexOf(':'); if (i <= 0) null else it.substring(0, i).trim().lowercase() to it.substring(i + 1).trim()
-                }.toMap()
+                }
+                if (headerPairs.groupingBy { it.first }.eachCount().values.any { it > 1 }) {
+                    respond(output, 400, JSONObject().put("error", "duplicate_header")); return
+                }
+                val headers = headerPairs.toMap()
+                val requestHost = headers["host"]?.substringBefore(':')?.lowercase()
+                if (requestHost != "127.0.0.1" && requestHost != "localhost") {
+                    respond(output, 403, JSONObject().put("error", "host_not_allowed")); return
+                }
                 if (headers.containsKey("transfer-encoding")) {
                     respond(output, 400, JSONObject().put("error", "transfer_encoding_not_supported")); return
                 }
@@ -116,7 +126,11 @@ object ManagementApiServer {
                     if (n < 0) { respond(output, 400, JSONObject().put("error", "incomplete_body")); return }
                     offset += n
                 }
-                val body = runCatching { JSONObject(String(bodyBytes, Charsets.UTF_8)) }.getOrDefault(JSONObject())
+                val body = if (length == 0) JSONObject() else runCatching {
+                    JSONObject(String(bodyBytes, Charsets.UTF_8))
+                }.getOrElse {
+                    respond(output, 400, JSONObject().put("error", "invalid_json_body")); return
+                }
                 val origin = headers["origin"]
                 if (method == "OPTIONS") {
                     if (!allowedOrigin(origin)) { respond(output, 403, JSONObject().put("error", "origin_not_allowed"), origin); return }
@@ -341,6 +355,7 @@ object ManagementApiServer {
     private fun allowedOrigin(origin: String?): Boolean = origin != null && (
         origin.matches(Regex("http://localhost:[0-9]{1,5}")) ||
         origin.matches(Regex("http://127\\.0\\.0\\.1:[0-9]{1,5}")) ||
+        origin == "https://assayflux.xyz" ||
         origin.matches(Regex("https://[a-zA-Z0-9.-]+\\.assayflux\\.xyz"))
     )
 
