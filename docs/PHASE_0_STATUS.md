@@ -3,8 +3,8 @@
 > **Current reconciliation — 2026-11-15**
 >
 > - **Current main:** `05afe2041c80ace4bddbd0711e554f40e32aa6a6`. PRs #48–#59 are merged.
-> - **Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs on the implementation through the custom-root depth fix. Main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) is validating the final Cloudflare Compose CI update.
-> - **Android build:** current-source main integration run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) is building the three ABI debug APKs. The app source in that run matches main; the latest artifact will be recorded after the job completes.
+> - **Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs on the implementation through the custom-root depth fix. Main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) passed all six jobs, including Compose ingress profile validation.
+> - **Android build:** current-source main integration run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) passed and produced [three-ABI debug APK artifact 14166696548](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477/artifacts/14166696548). The APK source matches current main; the later change was documentation only.
 > - **Backup:** route-manifest v3 supports custom static roots under app-private storage, with v2 and legacy static-only compatibility. PR #56 adds successful restore and transactional rollback instrumentation; API 26/33/35 emulator execution is still in progress. Custom Python/Node route roots that differ from the configured runtime roots remain unsupported.
 > - **Capacity:** protective suspension retains the Owner's Python/Node enabled preferences and attempts restart after recovery hysteresis. Capacity Lab now captures device health before/after each tested concurrency level and refuses unsafe post-load levels. It remains a bounded static-origin workload, not Python/Node or sustained-capacity certification.
 > - **UI:** five destinations, branded header/status pill and Dashboard website overview with preview/copy actions and Cloudflare state are implemented. Full rendered-screen review and physical acceptance are not complete.
@@ -20,8 +20,8 @@
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
 **Latest implementation commit:** `05afe2041c80ace4bddbd0711e554f40e32aa6a6`  
-**Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs; latest main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) is validating Compose ingress profiles and Android source compilation.  
-**Android integration:** current main run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) is building the latest three-ABI debug APKs. Backup-specific emulator matrix [43724908863](https://github.com/AssayFlux/PocketHost/actions/runs/43724908863) is running API 26/33/35.  
+**Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs; latest main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) passed all six jobs, including Compose ingress profile validation.  
+**Android integration:** current main run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) passed and produced [artifact 14166696548](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477/artifacts/14166696548) with ARM64, ARMv7 and x86_64 debug APKs. Backup-specific emulator matrix [43724908863](https://github.com/AssayFlux/PocketHost/actions/runs/43724908863) is running API 26/33/35.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
