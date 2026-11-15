@@ -90,11 +90,11 @@ object NodeProjectImporter {
         require(packageFile.isFile) { "Node project must contain package.json." }
         val packageJson = JSONObject(packageFile.readText(Charsets.UTF_8))
         val start = packageJson.optJSONObject("scripts")?.optString("start").orEmpty()
-        val scriptEntry = Regex("^(?:node\\s+)?([A-Za-z0-9_./-]+\\.m?js)$").matchEntire(start)?.groupValues?.get(1)
+        val scriptEntry = Regex("^(?:node\\s+)?([A-Za-z0-9_./-]+\\.(?:[cm]?js|[cm]?ts))$").matchEntire(start)?.groupValues?.get(1)
         val candidates = listOfNotNull(
             scriptEntry,
             packageJson.optString("main").takeIf { it.isNotBlank() },
-            "server.js", "index.js", "app.js"
+            "server.js", "index.js", "app.js", "server.ts", "index.ts", "app.ts"
         ).distinct()
         val selected = candidates.firstNotNullOfOrNull { relative ->
             val candidate = File(canonicalRoot, relative).canonicalFile
