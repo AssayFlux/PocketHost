@@ -513,14 +513,37 @@ private fun PocketHostDashboard() {
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("AssayFlux Pocket Host", color = palette.onSurface,
-                                fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(selectedTab, color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Surface(
+                            modifier = Modifier.size(42.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = palette.primary
+                        ) {
+                            Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                Text("AF", color = palette.onPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (hosting) Color(0xFF2E7D32) else Color(0xFFC62828)))
-                        Text(if (hosting) "Running" else "Stopped", color = palette.onSurface,
-                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text("Pocket Host", color = palette.onSurface,
+                                fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("ASSAYFLUX  ·  $selectedTab", color = palette.onSurfaceVariant,
+                                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (hosting) Color(0xFFE8F3E9) else palette.surfaceVariant
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Box(Modifier.size(7.dp).clip(CircleShape)
+                                    .background(if (hosting) Color(0xFF2E7D32) else palette.onSurfaceVariant))
+                                Text(if (hosting) "Live" else "Offline",
+                                    color = if (hosting) Color(0xFF246B35) else palette.onSurfaceVariant,
+                                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                     }
                 }
             },
