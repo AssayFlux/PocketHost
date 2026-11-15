@@ -1,42 +1,55 @@
-# PocketHost Control Plane
+# PocketHost Remote Management Deployment
 
-Independent Rust service for remotely managing registered PocketHost Android devices. The Android phone remains the hosting origin; this service stores device inventory/configuration and queues narrowly-scoped commands for an authenticated device agent to poll and acknowledge.
+This is an independently hosted management service. It does not host website traffic. The Android phone remains the website origin and maintains an outbound HTTPS polling connection while the hosting foreground service is running.
 
-## Requirements
+## Deploy with Docker Compose
 
-- Rust stable
-- PostgreSQL 14+
-- TLS termination at a trusted reverse proxy (Caddy, nginx, or a managed HTTPS edge)
-
-## Run
+1. Copy `.env.example` to `.env`.
+2. Set `CONTROL_PLANE_DOMAIN` to a DNS name pointing to this server.
+3. Set `POCKETHOST_CONTROL_ORIGIN` to the exact HTTPS origin where the web console is hosted.
+4. Generate independent high-entropy values for `POCKETHOST_CONTROL_ADMIN_TOKEN` and `POSTGRES_PASSWORD`.
+5. Run:
 
 ```sh
-export DATABASE_URL='postgres://pockethost:change-me@127.0.0.1/pockethost'
-export POCKETHOST_CONTROL_ADMIN_TOKEN="$(openssl rand -hex 32)"
-export POCKETHOST_CONTROL_BIND='127.0.0.1:8080'
-cargo run --manifest-path control-plane/Cargo.toml
+docker compose --env-file .env -f compose.yaml up -d --build
 ```
 
-Apply migrations automatically at startup. Keep the service behind HTTPS; never expose its HTTP listener directly to the public internet. Use a secret manager for the administrator token and rotate it after staff changes.
+Caddy obtains and renews the public TLS certificate. The API and PostgreSQL ports are not published directly to the host; only Caddy exposes 80/443. Persist the Docker volumes and back them up securely. Never commit `.env`.
 
-## API
+## Register a phone
 
-- `GET /health`: liveness.
-- `POST /v1/admin/devices`: register a device; returns its device token once.
-- `GET /v1/admin/devices`: inventory and last heartbeat.
-- `GET /v1/admin/devices/{id}/config`: read desired configuration.
-- `PUT /v1/admin/devices/{id}/config`: optimistic versioned update; queues `apply_config`.
-- `POST /v1/admin/devices/{id}/commands`: queue a typed deployment/site/tunnel/runtime command.
-- `GET /v1/device/commands`: authenticated device agent polls queued commands.
-- `POST /v1/device/heartbeat`: authenticated agent reports bounded JSON state.
-- `POST /v1/device/commands/{command}/ack`: agent acknowledges execution.
+Use the web console's Remote Control Plane section or call the API:
 
-All protected routes require `Authorization: Bearer <token>`. Device tokens are random 256-bit values; only SHA-256 hashes are persisted. Commands are allowlisted and payloads are size-bounded. No arbitrary shell/SQL execution endpoint exists.
+```sh
+curl --fail-with-body -X POST "https://$CONTROL_PLANE_DOMAIN/v1/admin/devices" \
+  -H "Authorization: Bearer $POCKETHOST_CONTROL_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"PocketHost phone"}'
+```
 
-## Device agent protocol
+Copy the returned `device_token` into PocketHost → Advanced → Remote Control Plane. The token is shown once and encrypted on the phone with Android Keystore. Start hosting; the foreground service then begins outbound heartbeat and command polling.
 
-The Android management agent must use an outbound HTTPS connection to poll commands and send heartbeats. It must validate every command against the local site registry, allowed filesystem roots, current runtime state and resource policy before applying it. It must report rejected commands as failed with a sanitized result. The backend never receives filesystem access to the phone.
+## Supported remote operations
 
-## Current integration boundary
+- Read registered devices and their latest reported runtime state.
+- Store and version desired device configuration.
+- Queue site start/stop, tunnel start/stop and runtime restart commands.
+- Receive command acknowledgements and sanitized results.
+- Revoke a device by deleting its registry entry.
 
-This control plane is a separately deployable service and its device protocol is implemented here. Android-side registration, polling, heartbeat scheduling, command execution/acknowledgement and browser console integration are separate integration tasks; until those are connected and tested, remote management is not end-to-end available.
+The current device configuration contract supports `pythonMaxWorkers` (2–16), `nodeHeapMb` (96–512) and `tunnelEnabled` (boolean). The phone refuses to apply unsupported or invalid settings. Resource ceilings may require the relevant runtimes to be stopped before applying.
+
+## Delivery and security model
+
+- Administrator and device APIs use bearer authentication.
+- Device tokens are 256-bit random values; only SHA-256 hashes are stored in PostgreSQL.
+- Device commands are allowlisted; arbitrary shell and SQL execution are not exposed.
+- Command delivery uses a two-minute lease. A device persists the last 100 command results before acknowledging, preventing a retried restart command from running twice in ordinary process restarts.
+- A deleted device loses its token immediately and its queued commands/configuration are cascade-deleted.
+- Browser CORS is restricted to the exact `POCKETHOST_CONTROL_ORIGIN`.
+- Caddy terminates HTTPS; keep the application and database on the private Docker network.
+- Rotate the administrator token through deployment secrets and restart the service.
+
+## Boundaries
+
+The control plane cannot remotely access the phone's filesystem. Site archive upload/deployment, account-level multi-user roles, audit export, push delivery, and Android-side offline command expiry are not yet implemented. The phone must be online, the hosting service running, and Android background execution permitted for remote commands to be processed. Do not expose private websites without a visitor access policy such as Cloudflare Access.
