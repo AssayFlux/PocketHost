@@ -81,9 +81,20 @@ object ApplicationBackupManager {
             requireAllRuntimesStopped(context)
 
             val files = context.filesDir
+            val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             val site = File(files, "site").canonicalFile
-            val python = File(files, "python-project").canonicalFile
-            val node = File(files, "node-project-default").canonicalFile
+            val python = File(
+                preferences.getString("python_project_root", File(files, "python-project").absolutePath)
+                    ?: File(files, "python-project").absolutePath
+            ).canonicalFile
+            val node = File(
+                preferences.getString("node_project_root", File(files, "node-project-default").absolutePath)
+                    ?: File(files, "node-project-default").absolutePath
+            ).canonicalFile
+            val privateRoot = files.canonicalFile.toPath()
+            if (!python.toPath().startsWith(privateRoot) || !node.toPath().startsWith(privateRoot)) {
+                throw IOException("Python and Node project folders must remain inside Pocket Host private storage to be backed up.")
+            }
             if (!File(site, "index.html").isFile) throw IOException("There is no deployed website to back up.")
             val includePython = python.exists()
             val includeNode = node.exists()
@@ -556,10 +567,13 @@ object ApplicationBackupManager {
     }.isSuccess
 
     private fun applySafeSettings(context: Context, settings: SafeSettings) {
+        val files = context.filesDir
         val saved = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
             .putInt("port", settings.port)
             .putInt("python_port", settings.pythonPort)
             .putInt("node_port", settings.nodePort)
+            .putString("python_project_root", File(files, "python-project").absolutePath)
+            .putString("node_project_root", File(files, "node-project-default").absolutePath)
             .putBoolean("keep_awake", settings.keepAwake)
             .putBoolean("auto_start_on_boot", settings.autoStartOnBoot)
             .putBoolean("dark_theme", settings.darkTheme)
@@ -577,6 +591,8 @@ object ApplicationBackupManager {
             .put("port", prefs.getInt("port", 8080))
             .put("python_port", prefs.getInt("python_port", 8081))
             .put("node_port", prefs.getInt("node_port", 3000))
+            .put("python_project_root", prefs.getString("python_project_root", File(context.filesDir, "python-project").absolutePath))
+            .put("node_project_root", prefs.getString("node_project_root", File(context.filesDir, "node-project-default").absolutePath))
             .put("keep_awake", prefs.getBoolean("keep_awake", false))
             .put("auto_start_on_boot", prefs.getBoolean("auto_start_on_boot", false))
             .put("dark_theme", prefs.getBoolean("dark_theme", false))
@@ -591,6 +607,8 @@ object ApplicationBackupManager {
             .putInt("port", old.optInt("port", 8080))
             .putInt("python_port", old.optInt("python_port", 8081))
             .putInt("node_port", old.optInt("node_port", 3000))
+            .putString("python_project_root", old.optString("python_project_root", File(context.filesDir, "python-project").absolutePath))
+            .putString("node_project_root", old.optString("node_project_root", File(context.filesDir, "node-project-default").absolutePath))
             .putBoolean("keep_awake", old.optBoolean("keep_awake", false))
             .putBoolean("auto_start_on_boot", old.optBoolean("auto_start_on_boot", false))
             .putBoolean("dark_theme", old.optBoolean("dark_theme", false))
