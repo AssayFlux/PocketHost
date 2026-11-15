@@ -5,6 +5,11 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.storage.SiteImporter
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileInputStream
+import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -110,7 +115,16 @@ object RemoteControlAgent {
                 JSONObject(commandPrefs.getString("processed_commands", "{}") ?: "{}")
             }.getOrDefault(JSONObject())
             val outcome = processed.optJSONObject(id) ?: runCatching {
-                ManagementApiServer.executeRemoteCommand(context, kind, payload)
+                if (kind == "deploy_site") {
+                    val artifactId = payload.getString("artifactId")
+                    val expectedSha = payload.getString("sha256")
+                    val archive = downloadArtifact(endpoint, token, artifactId, expectedSha, context)
+                    try {
+                        val report = FileInputStream(archive).use { SiteImporter.importZipStream(context, it) }
+                        JSONObject().put("status", 200).put("files", report.fileCount)
+                            .put("bytes", report.totalBytes).put("source", report.source)
+                    } finally { archive.delete() }
+                } else ManagementApiServer.executeRemoteCommand(context, kind, payload)
             }.getOrElse { JSONObject().put("status", 500).put("error", it.message ?: "command_failed") }
             if (!processed.has(id)) {
                 processed.put(id, outcome)
@@ -130,6 +144,47 @@ object RemoteControlAgent {
                 OperationalLog.record(context, "WARN", "REMOTE_COMMAND_ACK_FAILED", "Remote command acknowledgement failed.")
             }
         }
+    }
+
+    private fun downloadArtifact(endpoint: String, token: String, artifactId: String, expectedSha: String, context: Context): File {
+        require(artifactId.matches(Regex("[0-9a-fA-F-]{36}"))) { "Invalid deployment artifact ID." }
+        require(expectedSha.matches(Regex("[0-9a-f]{64}"))) { "Invalid deployment checksum." }
+        val connection = URL(endpoint.trimEnd('/') + "/v1/device/artifacts/" + artifactId).openConnection() as HttpURLConnection
+        val target = File(context.cacheDir, "remote-deploy-" + artifactId + ".zip")
+        try {
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 30_000
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Authorization", "Bearer " + token)
+            connection.setRequestProperty("Accept", "application/zip")
+            val status = connection.responseCode
+            if (status !in 200..299) throw IllegalStateException("Artifact download returned HTTP " + status)
+            val declared = connection.contentLengthLong
+            require(declared in 1..(50L * 1024L * 1024L)) { "Deployment archive exceeds the 50 MiB limit." }
+            val digest = MessageDigest.getInstance("SHA-256")
+            var total = 0L
+            connection.inputStream.use { input ->
+                FileOutputStream(target).use { output ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= 50L * 1024L * 1024L) { "Deployment archive exceeds the 50 MiB limit." }
+                        digest.update(buffer, 0, count)
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            require(total == declared) { "Deployment archive was truncated." }
+            val actualSha = digest.digest().joinToString("") { "%02x".format(it) }
+            require(actualSha == expectedSha) { "Deployment archive checksum mismatch." }
+            return target
+        } catch (error: Exception) {
+            target.delete()
+            throw error
+        } finally { connection.disconnect() }
     }
 
     private fun get(endpoint: String, token: String, path: String): JSONArray {
