@@ -31,14 +31,18 @@ object SiteImporter {
     }
 
     fun importZip(context: Context, zipUri: Uri): ImportReport {
+        val input = context.contentResolver.openInputStream(zipUri)
+            ?: throw IOException("The selected ZIP file cannot be opened.")
+        return input.use { importZipStream(context, it) }
+    }
+
+    /** Imports a ZIP stream after any caller-managed decryption or transport decoding. */
+    fun importZipStream(context: Context, input: java.io.InputStream): ImportReport {
         val stagingBase = File(context.filesDir, "site-staging-${UUID.randomUUID()}")
         if (!stagingBase.mkdirs()) throw IOException("Could not create a staging directory.")
         val counter = Counter()
         try {
-            val input = context.contentResolver.openInputStream(zipUri)
-                ?: throw IOException("The selected ZIP file cannot be opened.")
-            input.use { raw ->
-                ZipInputStream(CappedInputStream(raw, MAX_BYTES).buffered()).use { zip ->
+            ZipInputStream(CappedInputStream(input, MAX_BYTES).buffered()).use { zip ->
                     while (true) {
                         val entry = zip.nextEntry ?: break
                         counter.entries++
@@ -76,7 +80,6 @@ object SiteImporter {
                         zip.closeEntry()
                     }
                 }
-            }
             val siteRoot = resolveZipRoot(stagingBase)
             if (!File(siteRoot, "index.html").isFile) throw IOException("ZIP must contain index.html at its root (or inside one top-level folder).")
             activate(context, stagingBase, siteRoot)
