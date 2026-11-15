@@ -78,6 +78,11 @@ object ManagementApiServer {
         acceptThread = null
         synchronized(sessions) { sessions.clear() }
         pending = null
+        // A stopped listener has no active clients; start a fresh rate-limit window
+        // when the local management service is explicitly restarted.
+        lastChallengeAt = 0L
+        challengeWindowAt = 0L
+        challengeWindowCount = 0
     }
 
     @Synchronized fun pendingApprovalCode(): String? {
