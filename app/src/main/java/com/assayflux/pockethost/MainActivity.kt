@@ -757,12 +757,12 @@ private fun PocketHostDashboard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    colors = CardDefaults.cardColors(containerColor = palette.primary)
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("HOSTING STATUS", color = palette.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text(if (hosting) "Local hosting active" else "Stopped", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (status.length > 90) status.take(87) + "…" else status, color = palette.onSurfaceVariant, fontSize = 13.sp)
+                        Text("HOSTING STATUS", color = palette.onPrimary.copy(alpha = 0.78f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(if (hosting) "Local hosting active" else "Stopped", color = palette.onPrimary, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (status.length > 90) status.take(87) + "…" else status, color = palette.onPrimary.copy(alpha = 0.82f), fontSize = 13.sp)
                         Button(
                             onClick = {
                                 if (hosting) {
@@ -776,6 +776,7 @@ private fun PocketHostDashboard() {
                                 }
                             },
                             enabled = hosting || !importing,
+                            colors = ButtonDefaults.buttonColors(containerColor = palette.surface, contentColor = palette.primary),
                             modifier = Modifier.fillMaxWidth()
                         ) { Text(if (hosting) "Stop hosting" else "Start hosting") }
                     }
