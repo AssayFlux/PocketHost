@@ -3,6 +3,7 @@ package com.assayflux.pockethost.runtime
 import android.content.Context
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import org.json.JSONObject
 
 /**
  * Starts a user-provided WSGI application inside the app's embedded CPython 3.11 runtime.
@@ -36,5 +37,13 @@ object PythonHostRuntime {
     fun status(context: Context): String {
         if (!Python.isStarted()) return "STOPPED"
         return Python.getInstance().getModule("pockethost_runtime").callAttr("status").toString()
+    }
+
+    @Synchronized
+    fun metrics(context: Context): JSONObject? {
+        if (!Python.isStarted()) return null
+        val module = Python.getInstance().getModule("pockethost_runtime")
+        if (module.callAttr("status").toString() != "RUNNING") return null
+        return JSONObject(module.callAttr("metrics_json").toString()).put("source", "python-wsgi")
     }
 }
