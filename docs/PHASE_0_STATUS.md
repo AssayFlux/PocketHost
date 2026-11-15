@@ -1,27 +1,26 @@
 # PocketHost implementation and validation status
 
-> **Current reconciliation — 2026-11-15**
+> **Current reconciliation — 2026-11-16**
 >
-> - **Current main:** `05afe2041c80ace4bddbd0711e554f40e32aa6a6`. PRs #48–#59 are merged.
-> - **Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs on the implementation through the custom-root depth fix. Main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) passed all six jobs, including Compose ingress profile validation.
-> - **Android build:** current-source main integration run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) passed and produced [three-ABI debug APK artifact 14166696548](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477/artifacts/14166696548). The APK source matches current main; the later change was documentation only.
-> - **Backup:** route-manifest v3 supports custom static roots under app-private storage, with v2 and legacy static-only compatibility. PR #56 adds successful restore and transactional rollback instrumentation; API 26/33/35 emulator execution is still in progress. Custom Python/Node route roots that differ from the configured runtime roots remain unsupported.
-> - **Capacity:** protective suspension retains the Owner's Python/Node enabled preferences and attempts restart after recovery hysteresis. Capacity Lab now captures device health before/after each tested concurrency level and refuses unsafe post-load levels. It remains a bounded static-origin workload, not Python/Node or sustained-capacity certification.
-> - **UI:** five destinations, branded header/status pill and Dashboard website overview with preview/copy actions and Cloudflare state are implemented. Full rendered-screen review and physical acceptance are not complete.
-> - **Runtime security:** Python executes in the app process; Node uses a separate process with the same app UID. Neither is an OS security sandbox. Only trusted owner-installed code may run. A separate-UID runtime architecture remains a release decision.
-> - **Remote control:** PR #58 adds a Cloudflare Tunnel ingress profile for the separate Rust/PostgreSQL control plane; PR #59 validates the public and Cloudflare Compose profiles. No production host is deployed or paired. Deployment still requires the Linux Docker host, SSH/database/admin secrets and a separate control-plane hostname route.
-> - **Release:** PR #50 fixes signed-APK verification and publishes a portable SHA-256 manifest. No signed production APK has been built; owner-controlled keystore secrets are still required.
+> - **Current main:** `eee3b82d8071fdb06acb4cea0393dfebab2fc869`. PRs #48–#62 are merged.
+> - **Quality CI:** PR #62 head quality run [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs. Fresh main quality run [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) is in progress.
+> - **Android build:** main integration run [43769131790](https://github.com/AssayFlux/PocketHost/actions/runs/43769131790) passed cloudflared Android build and is assembling ARM64, ARMv7 and x86_64 debug APKs. Emulator smoke is skipped on push events. PR-triggered run [43769116977](https://github.com/AssayFlux/PocketHost/actions/runs/43769116977) remains pending. Previous main artifact [14168200339](https://github.com/AssayFlux/PocketHost/actions/runs/43728985708/artifacts/14168200339) predates PR #62.
+> - **Management API:** route dispatch no longer serializes health and authentication behind all configuration writes; pairing/login state has dedicated locks, login verification is capped at two concurrent slots, and concurrent health behavior has an instrumentation regression test.
+> - **Runtime filesystem boundary:** Python/Node project roots must resolve beneath PocketHost app-private directories; canonical path and symlink-escape tests cover `files`, `cache`, `noBackup` and `codeCache`. This is not an OS sandbox; Python and Node still run with the app UID.
+> - **Emulator regression:** an earlier API 33 run recorded four management-auth socket timeouts; API 35 failed during emulator startup. PR #62 increases emulator memory/cores, captures test reports/screenshots and enables management-triggered matrix execution. The rerun has not yet passed.
+> - **Capacity/UI:** capacity recovery preserves runtime intent; the Dashboard website overview and five destinations remain implemented. A rendered dashboard screenshot is now captured by the emulator workflow, but the new screenshot artifact is not yet available for review.
+> - **Remote control:** source and Compose profile validation exist, but no production host is deployed or paired. Deployment still requires the Linux Docker host, SSH/database/admin secrets and a separate management hostname.
+> - **Release:** signed-APK workflow and verification exist, but no signed production APK has been built; owner-controlled keystore secrets are still required.
 > - **Device acceptance:** physical installation, Android lifecycle, public website HTTPS, thermal, battery and OEM/Doze behavior remain owner-run acceptance tasks.
 > - **Release state:** integrated development build; not production approved. Independent security review and payment-provider integration remain open.
 >
->
 > The following historical sections below retain earlier evidence and implementation notes. When historical results conflict with this current reconciliation, use the current commit/run identifiers above.
 
-**Last reconciled:** 2026-11-15  
+**Last reconciled:** 2026-11-16  
 **Default branch:** `main`  
-**Latest implementation commit:** `05afe2041c80ace4bddbd0711e554f40e32aa6a6`  
-**Quality CI:** main run [43725437551](https://github.com/AssayFlux/PocketHost/actions/runs/43725437551) passed all six jobs; latest main run [43726081859](https://github.com/AssayFlux/PocketHost/actions/runs/43726081859) passed all six jobs, including Compose ingress profile validation.  
-**Android integration:** current main run [43725437477](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477) passed and produced [artifact 14166696548](https://github.com/AssayFlux/PocketHost/actions/runs/43725437477/artifacts/14166696548) with ARM64, ARMv7 and x86_64 debug APKs. Backup-specific emulator matrix [43724908863](https://github.com/AssayFlux/PocketHost/actions/runs/43724908863) is running API 26/33/35.  
+**Latest implementation commit:** `eee3b82d8071fdb06acb4cea0393dfebab2fc869`  
+**Quality CI:** PR #62 quality run [43769117084](https://github.com/AssayFlux/PocketHost/actions/runs/43769117084) passed all six jobs; fresh main run [43769131802](https://github.com/AssayFlux/PocketHost/actions/runs/43769131802) is in progress.  
+**Android integration:** main run [43769131790](https://github.com/AssayFlux/PocketHost/actions/runs/43769131790) has passed cloudflared build and is assembling three ABI APKs; emulator smoke is skipped on push events. PR-triggered emulator run [43769116977](https://github.com/AssayFlux/PocketHost/actions/runs/43769116977) is pending. Previous artifact [14168200339](https://github.com/AssayFlux/PocketHost/actions/runs/43728985708/artifacts/14168200339) is pre-PR-#62.  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
