@@ -377,7 +377,7 @@ private fun PocketHostDashboard() {
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("PERSISTENT TRAFFIC · ALL HOSTING SESSIONS", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("STATIC ENGINE TRAFFIC · ALL HOSTING SESSIONS", color = Teal, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column(Modifier.weight(1f)) {
                                 Text("Requests", color = Slate, fontSize = 11.sp)
@@ -393,7 +393,7 @@ private fun PocketHostDashboard() {
                             }
                         }
                         Text("Today: $todayRequests requests · ${formatBytes(todayBytes)} transferred.", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Totals are persisted across service restarts. Transferred bytes are counted as file chunks stream into the HTTP response.", color = Slate, fontSize = 10.sp)
+                        Text("Static-engine totals persist across service restarts. Python WSGI and tunnel traffic are not included yet.", color = Slate, fontSize = 10.sp)
                     }
                 }
 
