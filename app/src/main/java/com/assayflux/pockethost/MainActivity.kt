@@ -99,6 +99,7 @@ private fun PocketHostDashboard() {
     var todayBytes by remember { mutableLongStateOf(0L) }
     var activeConnections by remember { mutableLongStateOf(0L) }
     var recentEvents by remember { mutableStateOf(emptyList<OperationalLog.Entry>()) }
+    var logFilter by remember { mutableStateOf("") }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getString("site_summary", "Bundled sample website is available.") ?: "Bundled sample website is available.")
@@ -142,7 +143,7 @@ private fun PocketHostDashboard() {
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
             preferences.getString("service_status", null)?.let { status = it }
-            recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 8) }
+            recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
             delay(1_000)
         }
     }
@@ -403,10 +404,23 @@ private fun PocketHostDashboard() {
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("RECENT OPERATIONS", color = Teal, fontWeight = FontWeight.SemiBold)
-                        if (recentEvents.isEmpty()) {
-                            Text("No operational events recorded yet.", color = Slate, fontSize = 12.sp)
+                        OutlinedTextField(
+                            value = logFilter,
+                            onValueChange = { logFilter = it },
+                            label = { Text("Filter events, levels or messages") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        val filteredEvents = recentEvents.filter { event ->
+                            logFilter.isBlank() ||
+                                event.level.contains(logFilter, ignoreCase = true) ||
+                                event.event.contains(logFilter, ignoreCase = true) ||
+                                event.message.contains(logFilter, ignoreCase = true)
+                        }.take(8)
+                        if (filteredEvents.isEmpty()) {
+                            Text(if (recentEvents.isEmpty()) "No operational events recorded yet." else "No events match this filter.", color = Slate, fontSize = 12.sp)
                         } else {
-                            recentEvents.forEach { event ->
+                            filteredEvents.forEach { event ->
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else Bronze, fontSize = 10.sp, fontWeight = FontWeight.Bold)
