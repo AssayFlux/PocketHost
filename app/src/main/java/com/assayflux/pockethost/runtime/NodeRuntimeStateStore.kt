@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Process
 import org.json.JSONObject
 import java.io.File
+import java.io.RandomAccessFile
 
 /** File-backed IPC state shared safely between the main process and the isolated :node process. */
 object NodeRuntimeStateStore {
@@ -18,17 +19,23 @@ object NodeRuntimeStateStore {
         metrics: JSONObject? = null
     ) {
         val target = file(context)
-        val current = readObject(target)
-        if (state != null) current.put("state", state)
-        if (detail != null) current.put("detail", detail)
-        if (projectRoot != null) current.put("projectRoot", projectRoot)
-        if (metrics != null) current.put("metrics", metrics)
-        current.put("updatedAt", System.currentTimeMillis())
-        val temporary = File(target.parentFile, target.name + "." + Process.myPid() + ".tmp")
-        temporary.writeText(current.toString(), Charsets.UTF_8)
-        if (!temporary.renameTo(target)) {
-            temporary.copyTo(target, overwrite = true)
-            temporary.delete()
+        target.parentFile?.mkdirs()
+        val lockFile = File(target.parentFile, target.name + ".lock")
+        RandomAccessFile(lockFile, "rw").channel.use { channel ->
+            channel.lock().use {
+                val current = readObject(target)
+                if (state != null) current.put("state", state)
+                if (detail != null) current.put("detail", detail)
+                if (projectRoot != null) current.put("projectRoot", projectRoot)
+                if (metrics != null) current.put("metrics", metrics)
+                current.put("updatedAt", System.currentTimeMillis())
+                val temporary = File(target.parentFile, target.name + "." + Process.myPid() + ".tmp")
+                temporary.writeText(current.toString(), Charsets.UTF_8)
+                if (!temporary.renameTo(target)) {
+                    temporary.copyTo(target, overwrite = true)
+                    temporary.delete()
+                }
+            }
         }
     }
 
