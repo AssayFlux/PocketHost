@@ -17,7 +17,7 @@ use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
@@ -33,6 +33,8 @@ enum SiteTarget { Static(PathBuf), Proxy { port: u16 } }
 static REQUESTS: AtomicU64 = AtomicU64::new(0);
 static BYTES_SERVED: AtomicU64 = AtomicU64::new(0);
 static ACTIVE_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
+static CAPACITY_LIMIT: AtomicU64 = AtomicU64::new(MAX_CONNECTIONS as u64);
+static REJECTED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 
 struct ActiveConnection;
 impl Drop for ActiveConnection {
@@ -266,9 +268,18 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                 break;
             },
             accepted = listener.accept() => {
-                let Ok((stream, _peer)) = accepted else { continue };
+                let Ok((mut stream, _peer)) = accepted else { continue };
+                let current_limit = CAPACITY_LIMIT.load(Ordering::Relaxed).clamp(1, MAX_CONNECTIONS as u64);
+                if ACTIVE_CONNECTIONS.load(Ordering::Relaxed) >= current_limit {
+                    REJECTED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+                    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 2\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
+                    let _ = stream.shutdown().await;
+                    continue;
+                }
                 let Ok(permit) = permits.clone().try_acquire_owned() else {
-                    drop(stream);
+                    REJECTED_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+                    let _ = stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 2\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
+                    let _ = stream.shutdown().await;
                     continue;
                 };
                 let site_root = root.clone();
@@ -319,6 +330,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     REQUESTS.store(0, Ordering::Relaxed);
     BYTES_SERVED.store(0, Ordering::Relaxed);
     ACTIVE_CONNECTIONS.store(0, Ordering::Relaxed);
+    REJECTED_CONNECTIONS.store(0, Ordering::Relaxed);
 
     // LAN exposure is opt-in from the Android dashboard. Public tunnel exposure is separate.
     let bind_host = if allow_lan { "0.0.0.0" } else { "127.0.0.1" };
@@ -435,6 +447,18 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_request
 #[no_mangle]
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_bytesServed(_env: JNIEnv, _class: JClass) -> jlong {
     BYTES_SERVED.load(Ordering::Relaxed) as jlong
+}
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_setCapacityLimit(mut env: JNIEnv, _class: JClass, limit: jint) -> jstring {
+    if !(1..=MAX_CONNECTIONS as jint).contains(&limit) {
+        return to_jstring(&mut env, "Capacity limit must be between 1 and 16".to_string());
+    }
+    CAPACITY_LIMIT.store(limit as u64, Ordering::Relaxed);
+    to_jstring(&mut env, "OK".to_string())
+}
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rejectedConnections(_env: JNIEnv, _class: JClass) -> jlong {
+    REJECTED_CONNECTIONS.load(Ordering::Relaxed) as jlong
 }
 #[no_mangle]
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_activeConnections(_env: JNIEnv, _class: JClass) -> jlong {

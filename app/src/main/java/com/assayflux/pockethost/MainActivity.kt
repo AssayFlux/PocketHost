@@ -29,6 +29,9 @@ import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.diagnostics.DiagnosticsBundle
+import com.assayflux.pockethost.diagnostics.CapacityController
+import com.assayflux.pockethost.diagnostics.CapacityLab
+import com.assayflux.pockethost.diagnostics.DailyOperationsReport
 import com.assayflux.pockethost.service.HostingService
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.PythonProjectImporter
@@ -126,6 +129,10 @@ private fun PocketHostDashboard() {
     var controlPlaneEndpoint by remember { mutableStateOf(RemoteControlAgent.endpoint(context)) }
     var controlPlaneToken by remember { mutableStateOf("") }
     var remoteControlConfigured by remember { mutableStateOf(RemoteControlAgent.isConfigured(context)) }
+    var capacityPercent by remember { mutableFloatStateOf(CapacityController.snapshot(context).optInt("percent", 100).toFloat()) }
+    var capacityInfo by remember { mutableStateOf(CapacityController.snapshot(context)) }
+    var capacityBenchmark by remember { mutableStateOf(CapacityLab.snapshot()) }
+    var capacityDuration by remember { mutableStateOf("180") }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -160,6 +167,10 @@ private fun PocketHostDashboard() {
             pendingPairingCode = ManagementApiServer.pendingApprovalCode()
             preferences.getString("service_status", null)?.let { status = it }
             recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
+            capacityInfo = withContext(Dispatchers.IO) { CapacityController.tick(context)
+                .put("activeConnections", NativeEngine.activeConnections())
+                .put("rejectedConnections", NativeEngine.rejectedConnections()) }
+            capacityBenchmark = CapacityLab.snapshot()
             delay(1_000)
         }
     }
@@ -491,6 +502,41 @@ private fun PocketHostDashboard() {
                         }
                         Text("Today: $todayRequests requests · ${formatBytes(todayBytes)} transferred.", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         Text("Static-engine totals persist across service restarts. Python WSGI and tunnel traffic are not included yet.", color = Slate, fontSize = 10.sp)
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("CAPACITY & AUTOMATIC PROTECTION", color = Teal, fontWeight = FontWeight.SemiBold)
+                        Text("Admission budget: ${capacityInfo.optInt("effectiveConcurrencyLimit", 16)} active connections · ${capacityInfo.optInt("percent", 100)}% of ${if (capacityInfo.optLong("calibratedAt") > 0L) "measured" else "provisional"} concurrency ceiling",
+                            color = Slate, fontSize = 12.sp)
+                        Slider(value = capacityPercent, onValueChange = { capacityPercent = it }, valueRange = 1f..100f)
+                        Text("${capacityPercent.toInt()}% capacity profile", color = Teal, fontWeight = FontWeight.SemiBold)
+                        OutlinedButton(onClick = {
+                            runCatching { CapacityController.setPercent(context, capacityPercent.toInt()) }
+                                .onSuccess { capacityInfo = CapacityController.snapshot(context); status = "Capacity profile applied." }
+                                .onFailure { status = it.message ?: "Capacity profile rejected." }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Apply capacity profile") }
+                        OutlinedTextField(value = capacityDuration, onValueChange = { capacityDuration = it.filter(Char::isDigit).take(4) },
+                            label = { Text("Schedule duration in minutes (max 1440)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedButton(onClick = {
+                            runCatching { CapacityController.schedule(context, 30, capacityDuration.toInt()) }
+                                .onSuccess { capacityInfo = it; status = "30% capacity schedule started." }
+                                .onFailure { status = it.message ?: "Capacity schedule rejected." }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Schedule 30% capacity") }
+                        Button(onClick = {
+                            runCatching { capacityBenchmark = CapacityLab.start(context, portText.toIntOrNull() ?: 8080) }
+                                .onFailure { status = it.message ?: "Benchmark could not start." }
+                        }, enabled = hosting && capacityBenchmark.optString("state") != "RUNNING",
+                            modifier = Modifier.fillMaxWidth()) { Text(if (capacityBenchmark.optString("state") == "RUNNING") "Benchmark running…" else "Measure safe capacity") }
+                        Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
+                            color = Slate, fontSize = 11.sp)
+                        Text("Daily reports retained: ${DailyOperationsReport.list(context).size}. The percentage controls admission concurrency, not CPU usage or a guaranteed visitor count. Android can still stop the app.",
+                            color = Slate, fontSize = 10.sp)
                     }
                 }
 

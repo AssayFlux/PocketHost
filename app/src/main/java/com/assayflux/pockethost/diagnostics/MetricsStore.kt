@@ -43,6 +43,7 @@ object MetricsStore {
             .putLong("session_requests", requestCount)
             .putLong("session_bytes", bytesServed)
             .apply()
+        DailyOperationsReport.refreshCurrent(context, today, todayRequests + requestDelta, todayBytes + byteDelta)
     }
 
     fun snapshot(context: Context): Snapshot {

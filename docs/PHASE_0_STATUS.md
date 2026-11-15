@@ -2,7 +2,7 @@
 
 **Last reconciled:** 2026-11-15  
 **Default branch:** `main`  
-**Latest known main commit:** `cb6acbc7e2d9de5dd9fcdb6211330df349f9c6d0` (merge of PR #14)  
+**Latest known main commit before this implementation pass:** `de7dca0219a51a7b594e56feb1db0b2d964e0fb0` (merge of PR #15)  
 **Release state:** integrated development build; not production approved  
 **Compatibility target:** Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 + ARM64 phones, x86_64 emulator
 
@@ -147,3 +147,19 @@ Final release decision must use current workflow evidence and recorded physical-
 - [Architecture Decisions](DECISIONS.md)
 - [Completion Milestone](COMPLETION_MILESTONE.md)
 - [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
+
+
+## 2026-11-15 implementation pass — capacity and daily operations (source added; CI pending)
+
+The following first implementations were added directly to the Android/Rust/TypeScript codebase:
+
+- Rust admission ceiling is dynamically adjustable from 1–16 concurrent connections. Connections above the current ceiling receive HTTP 503 with Retry-After instead of being silently dropped. A rejection counter is exposed.
+- Android Capacity Lab runs a bounded local static GET sweep at concurrency levels 1, 2, 4, 8, 12 and 16. It records sample count, failures, elapsed time and p95 latency; it stops escalating on errors, p95 above 750 ms, Android low-memory state or severe thermal state.
+- The selected safe concurrency ceiling and 1–100% capacity profile persist across restarts. Timed schedules (1–1440 minutes) restore the previous profile on expiry; the dashboard includes the requested 30%-for-three-hours action.
+- Authenticated management API routes expose capacity state, profile changes, benchmark state and daily reports.
+- Android dashboard and TypeScript console expose the profile, benchmark results, active/rejected connection counters and report summaries.
+- Daily rollover archives aggregate static-engine request/byte totals and retained redacted operational events. Reports are stored privately with a 90-report retention cap.
+
+**Important limitations:** this is a static GET concurrency smoke benchmark, not a complete Capacity Lab. It does not measure Python/Node, external Cloudflare/network throughput, sustained multi-hour thermal behavior, p99, CPU/RPS graphs or arbitrary website workloads. The limiter is a concurrency admission ceiling, not a full rate/fairness/queue governor. Daily reports do not yet contain complete uptime, battery, latency, tunnel or financial metrics. CI and device validation on this new commit are pending.
+
+**Still not implemented/approved:** OS-enforced per-project runtime UID sandbox and network/filesystem isolation; full multi-state thermal/memory/battery Resource Governor; PSP payment integration, webhook inbox, encrypted payment ledger and reconciliation; hash-chained signed audit checkpoints and optional blockchain anchoring; external Cloudflare hostname validation; deployed remote control plane; physical-device acceptance; signed release. Do not run untrusted Python/Node projects or accept live payments under the current architecture.

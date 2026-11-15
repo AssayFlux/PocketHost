@@ -8,6 +8,9 @@ import com.assayflux.pockethost.service.HostingService
 import java.io.File
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.diagnostics.CapacityController
+import com.assayflux.pockethost.diagnostics.CapacityLab
+import com.assayflux.pockethost.diagnostics.DailyOperationsReport
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.engine.NativeEngine
@@ -297,6 +300,37 @@ object ManagementApiServer {
             return 200 to JSONObject().put("pythonMaxWorkers", pythonWorkers).put("nodeHeapMb", nodeHeap)
                 .put("pythonRestarted", pythonWasRunning).put("nodeRestarted", nodeWasRunning)
                 .put("staticHostingPreserved", NativeEngine.status() == "RUNNING")
+        }
+        if (method == "GET" && path == "/api/v1/capacity") {
+            val profile = CapacityController.tick(context)
+                .put("activeConnections", NativeEngine.activeConnections())
+                .put("rejectedConnections", NativeEngine.rejectedConnections())
+                .put("engineState", NativeEngine.status())
+            return 200 to profile
+        }
+        if (method == "POST" && path == "/api/v1/capacity") {
+            return runCatching {
+                val percent = body.getInt("percent")
+                val duration = body.optInt("durationMinutes", 0)
+                val result = if (duration > 0) CapacityController.schedule(context, percent, duration)
+                    else { CapacityController.setPercent(context, percent); CapacityController.snapshot(context) }
+                200 to result
+            }.getOrElse { 400 to JSONObject().put("error", it.message ?: "invalid_capacity_profile") }
+        }
+        if (method == "POST" && path == "/api/v1/capacity/benchmark") {
+            if (NativeEngine.status() != "RUNNING") return 409 to JSONObject().put("error", "hosting_must_be_running")
+            return runCatching {
+                val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080)
+                202 to CapacityLab.start(context, port)
+            }.getOrElse { 409 to JSONObject().put("error", it.message ?: "benchmark_unavailable") }
+        }
+        if (method == "GET" && path == "/api/v1/capacity/benchmark") {
+            return 200 to CapacityLab.snapshot()
+        }
+        if (method == "GET" && path == "/api/v1/reports") {
+            val reports = org.json.JSONArray()
+            DailyOperationsReport.list(context).forEach(reports::put)
+            return 200 to JSONObject().put("items", reports).put("retentionDays", 90)
         }
         if (method == "GET" && path == "/api/v1/metrics") {
             val m = MetricsStore.snapshot(context)

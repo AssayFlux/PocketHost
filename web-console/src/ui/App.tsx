@@ -7,6 +7,9 @@ type Metrics = { sampledAt: string; sources: Array<{ source: string; requests?: 
 type Site = { id: string; name: string; runtime: string; hostnames: string[]; state: string };
 type LogEntry = { timestamp: string; level: string; event: string; message: string };
 type ResourceLimits = { pythonMaxWorkers: number; nodeHeapMb: number; deviceTotalMemoryBytes: number; deviceAvailableMemoryBytes: number; note: string };
+type CapacityState = { percent: number; safeConcurrency: number; effectiveConcurrencyLimit: number; activeConnections?: number; rejectedConnections?: number; scheduled?: boolean; scheduleExpiresAt?: number; semantics: string };
+type CapacityBenchmark = { state: string; safeConcurrency?: number; workload?: string; error?: string; levels?: Array<{ concurrency: number; samples: number; errors: number; p95LatencyMs: number; withinSafeThreshold: boolean }> };
+type DailyReport = { date: string; totalRequests: number; totalBytes: number; eventCount: number; errorCount: number; warningCount: number };
 
 const defaultApi = "http://127.0.0.1:17841";
 const storedToken = () => { try { return sessionStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
@@ -25,6 +28,11 @@ export function App() {
   const [pythonWorkers, setPythonWorkers] = useState(8);
   const [nodeHeap, setNodeHeap] = useState(192);
   const [resourceDirty, setResourceDirty] = useState(false);
+  const [capacity, setCapacity] = useState<CapacityState | null>(null);
+  const [capacityPercent, setCapacityPercent] = useState(100);
+  const [capacityDirty, setCapacityDirty] = useState(false);
+  const [benchmark, setBenchmark] = useState<CapacityBenchmark | null>(null);
+  const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
   const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
   const [busy, setBusy] = useState(false);
 
@@ -47,9 +55,10 @@ export function App() {
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel, nextResources] = await Promise.all([
+      const [nextStatus, nextMetrics, nextSites, nextLogs, nextTunnel, nextResources, nextCapacity, nextBenchmark, nextReports] = await Promise.all([
         request<DeviceStatus>("/api/v1/status"), request<Metrics>("/api/v1/metrics"), request<{ items: Site[] }>("/api/v1/sites"),
         request<{ items: LogEntry[] }>("/api/v1/logs"), request<{ state: string; configured: boolean }>("/api/v1/tunnel"), request<ResourceLimits>("/api/v1/resources"),
+        request<CapacityState>("/api/v1/capacity"), request<CapacityBenchmark>("/api/v1/capacity/benchmark"), request<{ items: DailyReport[] }>("/api/v1/reports"),
       ]);
       setStatus(nextStatus);
       setMetrics(nextMetrics);
@@ -57,6 +66,10 @@ export function App() {
       setLogs(nextLogs.items || []);
       setTunnel(nextTunnel);
       setResources(nextResources);
+      setCapacity(nextCapacity);
+      if (!capacityDirty) setCapacityPercent(nextCapacity.percent);
+      setBenchmark(nextBenchmark);
+      setDailyReports(nextReports.items || []);
       if (!resourceDirty) {
         setPythonWorkers(nextResources.pythonMaxWorkers);
         setNodeHeap(nextResources.nodeHeapMb);
@@ -69,7 +82,7 @@ export function App() {
         sessionStorage.removeItem("pockethost_device_token");
       }
     }
-  }, [request, token, resourceDirty]);
+  }, [request, token, resourceDirty, capacityDirty]);
 
   useEffect(() => {
     if (!token) return;
@@ -129,6 +142,30 @@ export function App() {
       setResourceDirty(false);
       setMessage("Runtime resource limits saved. Restart Python and Node runtimes to apply them.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Resource settings could not be saved."); }
+    finally { setBusy(false); }
+  }
+
+  async function saveCapacity(percent: number, durationMinutes = 0) {
+    setBusy(true);
+    try {
+      const result = await request<CapacityState>("/api/v1/capacity", {
+        method: "POST", body: JSON.stringify({ percent, durationMinutes }),
+      });
+      setCapacity(result);
+      setCapacityPercent(result.percent);
+      setCapacityDirty(false);
+      setMessage(durationMinutes > 0 ? `Capacity scheduled at ${percent}% for ${durationMinutes} minutes.` : `Capacity admission profile set to ${percent}%.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Capacity profile could not be applied."); }
+    finally { setBusy(false); }
+  }
+
+  async function runCapacityBenchmark() {
+    setBusy(true);
+    try {
+      const result = await request<CapacityBenchmark>("/api/v1/capacity/benchmark", { method: "POST", body: "{}" });
+      setBenchmark(result);
+      setMessage("Capacity Lab started on the connected Android device. Results will appear as the bounded workload sweep completes.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Capacity benchmark could not start."); }
     finally { setBusy(false); }
   }
 
@@ -211,6 +248,16 @@ export function App() {
         <p>{resources?.note ?? "Resource limits are device-managed."}</p>
         <p>Available device memory: {metrics?.deviceResources?.availableDeviceMemoryBytes ? bytes(metrics.deviceResources.availableDeviceMemoryBytes) : "—"} · App process PSS: {metrics?.deviceResources?.processPssKb ? bytes(metrics.deviceResources.processPssKb * 1024) : "—"}</p>
         <button disabled={busy || !resources} onClick={saveResources}>Save resource limits</button>
+      </section>
+      <div className="section-heading" id="capacity"><div><span className="eyebrow">DEVICE PROTECTION</span><h2>Capacity & operations</h2></div><span className="muted-tag">{capacity?.scheduled ? "SCHEDULED PROFILE" : "ADMISSION CONTROL"}</span></div>
+      <section className="panel resource-panel">
+        <div className="resource-control"><label>Safe capacity profile <strong>{capacityPercent}%</strong><input type="range" min="1" max="100" step="1" value={capacityPercent} onChange={event => { setCapacityPercent(Number(event.target.value)); setCapacityDirty(true); }} /></label></div>
+        <div className="resource-control"><label>Effective connection ceiling <strong>{capacity?.effectiveConcurrencyLimit ?? "—"}</strong><span className="scope-note">{capacity?.semantics ?? "Waiting for device telemetry."}</span></label></div>
+        <p>Active connections: {capacity?.activeConnections ?? "—"} · Rejected with HTTP 503: {capacity?.rejectedConnections ?? "—"} · Measured safe ceiling: {capacity?.safeConcurrency ?? "—"}</p>
+        <div className="site-actions"><button disabled={busy || !capacity} onClick={() => void saveCapacity(capacityPercent)}>Apply profile</button><button disabled={busy || !capacity} onClick={() => void saveCapacity(30, 180)}>30% for 3 hours</button><button disabled={busy || !status || status.state !== "local"} onClick={() => void runCapacityBenchmark()}>Run Capacity Lab</button></div>
+        <p>Benchmark state: {benchmark?.state ?? "NOT_RUN"} · {benchmark?.workload ?? "No completed workload measurement."}</p>
+        {benchmark?.levels?.map(level => <div className="status-line" key={level.concurrency}><span>{level.concurrency} concurrent · {level.samples} samples · {level.errors} errors</span><strong>p95 {level.p95LatencyMs} ms</strong></div>)}
+        <p>Daily operations reports retained: {dailyReports.length}. Latest report: {dailyReports[0]?.date ?? "Not yet generated"} · {dailyReports[0] ? dailyReports[0].totalRequests.toLocaleString() + " requests · " + bytes(dailyReports[0].totalBytes) : "Reports are created at local-day rollover."}</p>
       </section>
       <div className="section-heading" id="runtimes"><div><span className="eyebrow">DEVICE RUNTIMES</span><h2>Runtime health</h2></div><span className="muted-tag">{status?.state ?? "NOT CONNECTED"}</span></div>
       <section className="lower-grid">

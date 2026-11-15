@@ -1,6 +1,6 @@
 # PocketHost — Adaptive Capacity, Security, Payments and Operations
 
-**Status: specification added; runtime implementation is not yet complete.** A feature is not complete until code, automated tests, device evidence and security review exist. Do not advertise any item below as implemented merely because it is specified here.
+**Status: partially implemented; not production approved.** The static-route Capacity Lab, concurrency admission ceiling, temporary capacity schedules and basic daily aggregate reports now have source implementations. The full adaptive governor, broad telemetry, durable financial reporting, runtime sandbox, PSP payment flow and tamper-evident audit remain unimplemented. A feature is not complete until code, automated tests, device evidence and security review exist.
 
 ## 1. Product objective
 

@@ -34,6 +34,8 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 **Priority: P0**
 
+**Implementation update:** bounded rotating logs and aggregate counters already exist. A first daily rollover report is now persisted (90-report retention), and the dashboard/console expose the report count. This is partial: the report currently summarizes static-engine counters and retained redacted events, not complete uptime, latency, battery, tunnel or financial data.
+
 1. Versioned hardware/device profile.
 2. CPU, RAM/PSS, storage, battery, thermal, network and runtime telemetry.
 3. Rust metrics: RPS, concurrency, queue, latency percentiles, errors and bytes.
@@ -47,6 +49,8 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 **Priority: P0**
 
+**Implementation update:** a first bounded loopback GET sweep tests concurrency levels 1, 2, 4, 8, 12 and 16, records sample/error counts and p95 latency, aborts on Android low-memory/severe-thermal signals, and persists a conservative concurrency ceiling. It is a static-route smoke benchmark only; full workload classes, repeated statistical confidence, throughput/resource graphs and benchmark invalidation remain open.
+
 1. Loopback benchmark workloads: static cached/uncached, response sizes, concurrency and optional trusted runtimes.
 2. Record throughput, p50/p95/p99 latency, errors, CPU, memory, temperature, battery and queue behavior.
 3. Abort on thermal, memory, battery, timeout or cancellation thresholds.
@@ -59,6 +63,8 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 ## Stage 3 — Resource Governor and capacity customization
 
 **Priority: P0**
+
+**Implementation update:** a first admission limiter applies the calibrated connection ceiling and 1–100% profile in Rust; excess accepted sockets receive HTTP 503 with Retry-After. The Android app and TypeScript console support manual profiles and the 30%-for-180-minutes schedule with automatic expiry/restore. This is not yet the complete multi-state thermal/memory/battery Governor, rate limiter, per-site fairness scheduler or graceful in-flight drain.
 
 1. Rust Resource Governor with NORMAL, CONSTRAINED, PROTECTIVE, RECOVERY and EMERGENCY states.
 2. Global/per-site/per-route concurrency and rate budgets.

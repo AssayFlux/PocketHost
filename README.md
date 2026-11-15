@@ -12,7 +12,7 @@
 
 **AssayFlux PocketHost** turns a compatible Android phone into a compact website origin. The phone hosts the website; Rust owns HTTP serving and routing; Kotlin manages Android lifecycle and native controls; TypeScript powers the management console. Optional Python and Node.js runtimes execute trusted application code. Cloudflare Tunnel provides outbound connectivity. An optional remote control plane manages devices but never replaces the phone as the website origin.
 
-> **Status: integrated development build — not production approved.** Existing source is substantially integrated, but physical-device, public-domain, overload, runtime-isolation and security acceptance gates remain. The adaptive capacity, payments and operations workstream is specified in [PR #14](https://github.com/AssayFlux/PocketHost/pull/14); specification is not implementation. See [current status](docs/PHASE_0_STATUS.md).
+> **Status: integrated development build — not production approved.** The Android dashboard and TypeScript console now include a device-specific static-workload Capacity Lab, calibrated connection-admission budget, temporary capacity schedules, explicit HTTP 503 overload rejection and daily aggregate operations reports. These are bounded first implementations, not a complete adaptive governor or a universal capacity guarantee. Physical-device, public-domain, runtime-isolation and independent security gates remain. See [current status](docs/PHASE_0_STATUS.md).
 
 ## North Star
 
@@ -28,6 +28,16 @@ Make reliable, transparent and affordable self-hosting accessible to people with
 - Remote control plane is optional and separately deployed.
 
 Read [North Star](docs/NORTH_STAR.md), [Roadmap](docs/ROADMAP.md), and [Development Context](docs/DEVELOPMENT_CONTEXT.md) before making architectural changes.
+
+## Capacity and operations
+
+- Run a bounded loopback static GET benchmark while hosting is active.
+- Store a device/workload-specific safe concurrency ceiling and apply a 1–100% admission profile.
+- Schedule a temporary 30% profile for three hours; expiry restores the previous profile.
+- Reject excess connections with an explicit HTTP 503 and Retry-After response instead of silently dropping them.
+- Archive daily aggregate traffic and redacted operational-event summaries with bounded 90-report retention.
+
+The current benchmark covers the local static GET route only. It does not certify Python/Node workloads, external network/tunnel capacity, long-duration thermal sustainability, requests per second for arbitrary sites, or a visitor-count SLA. The full thermal/memory Resource Governor and sandbox/payment/audit workstreams remain open.
 
 ## Architecture
 
@@ -45,7 +55,7 @@ flowchart TB
   M <--> A
   A <--> O[Optional outbound remote-management agent]
   O <--> CP[Optional Rust / PostgreSQL control plane]
-  G[Resource Governor · planned] --> R
+  G[Capacity admission control · partial] --> R
   G --> P
   G --> N
 ```

@@ -11,6 +11,7 @@ import android.os.PowerManager
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
+import com.assayflux.pockethost.diagnostics.CapacityController
 import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.management.ManagementApiServer
@@ -77,6 +78,7 @@ class HostingService : Service() {
             )
         if (result == "OK") {
             if (!engineAlreadyRunning) MetricsStore.beginSession(this)
+            CapacityController.apply(this)
             startMetricsMonitor()
             val pythonEnabled = statePreferences.getBoolean("python_enabled", false)
             val host = if (statePreferences.getBoolean("allow_lan", false)) "LAN" else "loopback"
@@ -255,6 +257,7 @@ class HostingService : Service() {
             try {
                 while (!stopping && NativeEngine.status() == "RUNNING") {
                     MetricsStore.recordSample(this, NativeEngine.requestCount(), NativeEngine.bytesServed())
+                    CapacityController.tick(this)
                     Thread.sleep(2_000)
                 }
             } catch (_: InterruptedException) {

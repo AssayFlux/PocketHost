@@ -67,7 +67,7 @@ Read runtime-specific docs before changing these components.
 
 ## 5. Required next product work
 
-Follow [ROADMAP.md](ROADMAP.md):
+Current main includes a first static-GET Capacity Lab, dynamic Rust concurrency admission cap, scheduled capacity profile and daily aggregate rollover report. These are deliberately partial implementations; see [PHASE_0_STATUS.md](PHASE_0_STATUS.md) for exact boundaries. Continue with broader device telemetry and report completeness, then the full multi-state governor, runtime isolation, payments and audit. Follow [ROADMAP.md](ROADMAP.md):
 1. Reconcile source state and complete baseline CI/device/Cloudflare validation.
 2. Implement device telemetry and bounded structured logs/daily reports.
 3. Build Capacity Lab and benchmark-specific safe capacity graphs.
