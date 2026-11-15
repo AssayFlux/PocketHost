@@ -74,7 +74,7 @@ The source now includes Rust static hosting and host-based multi-site routing, e
 | MODE | INTENDED EXPERIENCE |
 |---|---|
 | **SIMPLE MODE** | Choose a site, review its settings and start or stop hosting with minimal configuration. |
-| **ADVANCED MODE** | Configure the HTTP port and optional LAN exposure; inspect engine limits and live session traffic. Domains, routing and runtime controls remain future work. |
+| **ADVANCED MODE** | Configure ports and LAN exposure, manage registered hostnames, Python/Node runtimes, resource ceilings, tunnel lifecycle, backups and diagnostics. |
 
 ## ANDROID COMPATIBILITY TARGET
 
@@ -84,7 +84,7 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 
 ## IMPLEMENTATION STATUS
 
-**Latest source additions:** portable passphrase-encrypted static-site backup/restore (AES-256-GCM), authenticated-before-activation restore validation, a user-exported diagnostics ZIP and a bounded renewable CPU wake-lock lease. No APK was built for these changes. The last recorded CI snapshot predates this batch, so source-compilation results for the latest commits are still pending. See [implementation status](docs/PHASE_0_STATUS.md) for the exact validation boundary.
+**Latest implementation batch:** multi-site Rust host routing and reverse proxy, embedded Node.js 24 LTS with a dedicated `:node` process, authenticated paired management API, connected TypeScript console, Python/Node runtime metrics, configurable Python worker and Node V8 heap ceilings, and file-backed Node process IPC. The latest quality workflow is running against the current source; no APK has been built. See [implementation status](docs/PHASE_0_STATUS.md) for the exact validation boundary.
 
 <sub>Status is reported conservatively. A planned feature is not an implemented feature, and a successful source build is not proof of reliable operation on a physical device.</sub>
 
@@ -92,9 +92,9 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 |---|---|:---:|
 | Android application shell | Kotlin + Jetpack Compose foundation | IN REPOSITORY |
 | Foreground hosting service | User-started Android service; Android 13+ notification permission onboarding | CI PENDING · DEVICE PENDING |
-| Rust HTTP engine | Static server; loopback by default, explicit LAN opt-in, streaming responses, single-range media seeking, bounded concurrency, file-size limits and live session counters | CI VERIFIED · DEVICE PENDING |
+| Rust HTTP engine | Static serving, host-based multi-site routing, Python/Node loopback reverse proxy, streaming/range support and bounded connections | CI VERIFIED · DEVICE PENDING |
 | Sample website | Bundled static sample | IN REPOSITORY |
-| TypeScript console | React + TypeScript + Vite visual scaffold; no authenticated management API connection yet | FOUNDATION |
+| TypeScript console | Paired browser session, live device status/metrics, site actions, tunnel controls, logs and resource settings | SOURCE IMPLEMENTED · CI PENDING |
 | Site folder import | SAF import with staging, sensitive-file checks and bounded size/count/depth | CI VERIFIED · DEVICE PENDING |
 | ZIP import | Compressed and uncompressed size caps, path validation and staged activation | CI VERIFIED · DEVICE PENDING |
 | Deployment history / rollback | Retains up to five prior releases; rollback available while hosting is stopped | SOURCE IMPLEMENTED · DEVICE PENDING |
@@ -103,13 +103,13 @@ The quality workflow runs native-engine instrumentation smoke tests on Android A
 | LAN access | Explicit opt-in binds to local interfaces; dashboard shows the phone's IPv4 address when available; no visitor authentication | CI VERIFIED · DEVICE PENDING |
 | Cloudflare Tunnel | Android-targeted cloudflared, encrypted token storage and reconnect supervisor in source; external hostname and physical-device tests remain | INTEGRATED · VALIDATION PENDING |
 | Public domain hosting | Not implemented | NOT AVAILABLE |
-| Python WSGI backend | Embedded CPython 3.11 via Chaquopy; root `wsgi.py`, bounded threaded server, loopback default, optional LAN binding | IMPLEMENTED · HOST TESTS PASS · DEVICE PENDING |
-| Node.js backend | Android Node 24 embedding candidate identified; no runtime integrated yet | NOT IMPLEMENTED |
+| Python WSGI backend | Embedded CPython 3.11; multiple hostname routes, bounded configurable workers, request metrics and lifecycle supervisor | SOURCE IMPLEMENTED · HOST TESTS PASS · DEVICE PENDING |
+| Node.js backend | SHA-pinned Node 24 full SDK, JNI bridge, isolated foreground `:node` service, project importer, supervisor, loopback ingress, metrics and V8 heap cap | SOURCE IMPLEMENTED · NATIVE / DEVICE VALIDATION PENDING |
 | Android 8+ / 4 GB compatibility | API 26 minimum, ARMv7 + ARM64 phone builds; API 26 smoke passed, API 33 pending and API 35 runner failed before tests | PARTIAL CI · DEVICE PENDING |
 
 **Python execution boundary:** Python projects must provide a root `wsgi.py` exposing a callable named `application`. Imported code executes inside the PocketHost Android app process with the app's privileges. Only import projects you trust. The Python backend listens on loopback by default; enabling LAN hosting exposes it to devices on the local network without visitor authentication. Keep LAN exposure off on untrusted networks.
 
-**Current safety boundary:** the Rust server binds to 127.0.0.1 by default. An explicit LAN switch exposes the static site to devices on the current local network without visitor authentication; use it only on trusted Wi-Fi. Folder/ZIP import, release retention/rollback, persistent traffic aggregates, encrypted static-site backup/restore and diagnostics export are implemented in source. These features still require representative physical-device acceptance testing across Android 8+ and 4 GB+ phones. Cloudflare Tunnel integration is under development and not yet validated on Android hardware; public hosting is not approved.
+**Current safety boundary:** the Rust front door binds to 127.0.0.1 by default. LAN exposure is an explicit opt-in. Python and Node origins are loopback-only by default and are reached through Rust host routing. User code is not sandboxed: imported Python and Node projects execute with PocketHost's app UID. Node child-process workflows, on-device npm installs and native-addon compilation are not supported. Cloudflare Tunnel source integration is present, but external hostname, visitor access policy and physical-device behavior still require acceptance testing. Public deployment is not approved until those tests pass.
 
 ## ENGINEERING ARCHITECTURE
 
@@ -123,15 +123,17 @@ flowchart TB
     JNI <--> CORE["RUST HOSTING ENGINE"]
     CORE --> STATIC["STATIC FILE SERVER"]
     STATIC --> LOOP["LOCAL HTTP · LOOPBACK / OPT-IN LAN"]
-    CONSOLE["OPTIONAL WEB CONSOLE · TYPESCRIPT / REACT"] -. future control API .-> APP
-    TUNNEL["CLOUDFLARE TUNNEL"] -. planned · compatibility gate .-> CORE
-    PY["OPTIONAL PYTHON RUNTIME"] -. future .-> CORE
-    NODE["OPTIONAL NODE.JS RUNTIME"] -. future .-> CORE
+    CONSOLE["PAIRED WEB CONSOLE · TYPESCRIPT / REACT"] <--> API["LOOPBACK MANAGEMENT API"]
+    API <--> APP
+    CORE --> ROUTER["HOST ROUTER / REVERSE PROXY"]
+    ROUTER --> PY["PYTHON WSGI · LOOPBACK"]
+    ROUTER --> NODE["NODE 24 · :node PROCESS"]
+    TUNNEL["CLOUDFLARE TUNNEL"] --> LOOP
     classDef native fill:#24434A,color:#F6F4EF,stroke:#B18B5E,stroke-width:2px;
     classDef engine fill:#1D292B,color:#F6F4EF,stroke:#B18B5E,stroke-width:2px;
     classDef planned fill:#657174,color:#FFFFFF,stroke:#B18B5E,stroke-dasharray:5 5;
-    class APP,SERVICE,JNI native;
-    class CORE,STATIC,LOOP engine;
+    class APP,SERVICE,JNI,API native;
+    class CORE,STATIC,LOOP,ROUTER engine;
     class CONSOLE,TUNNEL,PY,NODE planned;
 ~~~
 
@@ -140,19 +142,19 @@ flowchart TB
 | LAYER | TECHNOLOGY | RESPONSIBILITY |
 |---|---|---|
 | Android application | Kotlin, Jetpack Compose | Interface, lifecycle, notifications and Android integrations |
-| Hosting engine | Rust, Tokio, Hyper | HTTP serving and future routing / proxy capabilities |
+| Hosting engine | Rust, Tokio, Hyper | Static HTTP serving, hostname routing and loopback reverse proxy |
 | Native bridge | JNI | Communication between Kotlin and Rust |
-| Web console | TypeScript, React, Vite | Companion browser-based management interface |
+| Web console | TypeScript, React, Vite | Paired management console connected to the authenticated device API |
 | Metadata | SQLite / Room | Planned site and configuration persistence |
 | Python runtime | CPython 3.11 via Chaquopy | Embedded WSGI preview backend; trusted code only |
-| Node.js runtime | Android-embedded Node.js | Planned; runtime and process-supervision integration not yet implemented |
-| External connectivity | Cloudflare Tunnel | Android connector source and ABI binaries integrated; device and external-hostname validation pending |
+| Node.js runtime | Node.js 24 LTS mobile embedding | Dedicated Android process, JNI, bounded V8 heap, prebundled projects and loopback ingress |
+| External connectivity | Cloudflare Tunnel | Encrypted token store, connector lifecycle and reconnect supervision; device/public-host validation pending |
 
 ## DESIGN PRINCIPLES
 
 - **Native first:** no Termux dependency and no root requirement.
 - **Small-device aware:** optional runtimes should be lazy-loaded and resource-bounded.
-- **Safe by default:** local-only development until authentication, limits, routing and tunnel security are implemented.
+- **Safe by default:** loopback listeners, paired management sessions, explicit LAN opt-in and Cloudflare Access for private public endpoints.
 - **Explicit deployment:** imported files should be validated and deployed as versioned releases.
 - **Observable operation:** service state, logs, resource use and failures should be understandable.
 - **Honest capability claims:** distinguish code present, tests passed, device verified and production-ready.
@@ -166,8 +168,8 @@ flowchart TB
 | **2** | LAN preview, service state and diagnostics | Verified access from another device on the same network and tested opt-in controls |
 | **3** | Android-compatible tunnel proof | Tunnel connects reliably on the target Android architecture |
 | **4** | Public domain and secure hosting | Authenticated, externally tested hosting with documented limits |
-| **5** | Optional Python / Node.js runtimes | Runtime compatibility, isolation and resource tests pass |
-| **6** | Advanced mode and multi-site management | Stable configuration, routing, rollback and operational controls |
+| **5** | Runtime and management source integration | Implemented in source; current CI and Android runtime validation must pass |
+| **6** | Release acceptance | API 26/33/35 emulator tests, physical ARMv7/ARM64 tests, 4 GB memory/thermal tests and external tunnel verification |
 
 ## BUILD & DEVELOPMENT
 
