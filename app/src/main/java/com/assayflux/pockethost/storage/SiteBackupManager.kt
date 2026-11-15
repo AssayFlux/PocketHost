@@ -2,18 +2,19 @@ package com.assayflux.pockethost.storage
 
 import android.content.Context
 import android.net.Uri
-import android.util.Base64
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.FilterOutputStream
+import java.io.OutputStream
 import java.io.IOException
 import java.security.SecureRandom
-import java.util.zip.CipherInputStream
-import java.util.zip.CipherOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.crypto.Cipher
+import javax.crypto.CipherInputStream
+import javax.crypto.CipherOutputStream
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
@@ -32,7 +33,8 @@ object SiteBackupManager {
     private const val MAX_BYTES = 50L * 1024L * 1024L
     private const val MAX_DEPTH = 32
 
-    fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean = runCatching {
+    fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
+        try {
         require(passphrase.size >= 12) { "Use a backup passphrase with at least 12 characters." }
         val root = File(context.filesDir, "site").canonicalFile
         if (!File(root, "index.html").isFile) throw IOException("There is no deployed website to back up.")
@@ -47,7 +49,7 @@ object SiteBackupManager {
         header.write(salt)
         header.write(nonce)
         header.flush()
-        ZipOutputStream(CipherOutputStream(header, cipher)).use { zip ->
+        ZipOutputStream(BoundedOutputStream(CipherOutputStream(header, cipher), MAX_BYTES)).use { zip ->
             val counter = Counter()
             root.walkTopDown().forEach { file ->
                 if (file == root) return@forEach
@@ -78,13 +80,12 @@ object SiteBackupManager {
                     zip.closeEntry()
                 }
             }
-            val metadata = "format=AssayFlux PocketHost encrypted site backup\nversion=1\n"
-            zip.putNextEntry(ZipEntry("POCKETHOST_BACKUP.txt"))
-            zip.write(metadata.toByteArray(Charsets.UTF_8))
-            zip.closeEntry()
         }
-        true
-    }.getOrElse { throw it }
+        return true
+        } finally {
+            passphrase.fill('\u0000')
+        }
+    }
 
     fun restore(context: Context, source: Uri, passphrase: CharArray): ImportReport {
         require(passphrase.size >= 12) { "Use the passphrase that was set when this backup was created." }
@@ -121,6 +122,7 @@ object SiteBackupManager {
             return SiteImporter.importZipStream(context, FileInputStream(temporary))
         } finally {
             temporary.delete()
+            passphrase.fill('\u0000')
         }
     }
 
@@ -132,6 +134,28 @@ object SiteBackupManager {
             SecretKeySpec(encoded, "AES")
         } finally {
             spec.clearPassword()
+        }
+    }
+
+    private class BoundedOutputStream(output: OutputStream, private val limit: Long) : FilterOutputStream(output) {
+        private var written = 0L
+
+        override fun write(value: Int) {
+            ensureCapacity(1)
+            out.write(value)
+            written++
+        }
+
+        override fun write(buffer: ByteArray, offset: Int, length: Int) {
+            ensureCapacity(length)
+            out.write(buffer, offset, length)
+            written += length
+        }
+
+        private fun ensureCapacity(length: Int) {
+            if (length < 0 || written + length > limit) {
+                throw IOException("Encrypted backup exceeds the 50 MiB archive limit.")
+            }
         }
     }
 
