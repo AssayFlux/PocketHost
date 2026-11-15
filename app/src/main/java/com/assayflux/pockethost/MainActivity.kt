@@ -38,6 +38,7 @@ import com.assayflux.pockethost.runtime.PythonHostRuntime
 import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.sites.SiteRegistry
 import com.assayflux.pockethost.management.ManagementApiServer
+import com.assayflux.pockethost.management.RemoteControlAgent
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -122,6 +123,9 @@ private fun PocketHostDashboard() {
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
     var pendingPairingCode by remember { mutableStateOf<String?>(null) }
+    var controlPlaneEndpoint by remember { mutableStateOf(RemoteControlAgent.endpoint(context)) }
+    var controlPlaneToken by remember { mutableStateOf("") }
+    var remoteControlConfigured by remember { mutableStateOf(RemoteControlAgent.isConfigured(context)) }
 
     val startHosting: (Boolean) -> Unit = { notificationDenied ->
         val intent = Intent(context, HostingService::class.java)
@@ -383,6 +387,50 @@ private fun PocketHostDashboard() {
                                     enabled = !hosting
                                 )
                             }
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("REMOTE CONTROL PLANE", color = Teal, fontWeight = FontWeight.SemiBold)
+                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this phone to your independently hosted PocketHost backend.", color = Slate, fontSize = 11.sp)
+                            OutlinedTextField(
+                                value = controlPlaneEndpoint,
+                                onValueChange = { controlPlaneEndpoint = it },
+                                label = { Text("Control-plane HTTPS URL") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = controlPlaneToken,
+                                onValueChange = { controlPlaneToken = it },
+                                label = { Text("One-time device token") },
+                                visualTransformation = PasswordVisualTransformation(),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    runCatching {
+                                        RemoteControlAgent.configure(context, controlPlaneEndpoint, controlPlaneToken)
+                                        remoteControlConfigured = true
+                                        controlPlaneToken = ""
+                                        RemoteControlAgent.start(context)
+                                        status = "Remote control connected. This phone will poll the backend while hosting is active."
+                                    }.onFailure { status = it.message ?: "Could not configure remote control." }
+                                }, enabled = controlPlaneEndpoint.isNotBlank() && controlPlaneToken.length >= 32) {
+                                    Text("Save remote connection")
+                                }
+                                OutlinedButton(onClick = {
+                                    RemoteControlAgent.clear(context)
+                                    remoteControlConfigured = false
+                                    controlPlaneToken = ""
+                                    status = "Remote control credentials removed from this device."
+                                }, enabled = remoteControlConfigured) { Text("Disconnect") }
+                            }
+                            Text("The device makes outbound HTTPS requests only. The backend cannot open inbound ports or execute arbitrary shell commands on this phone.", color = Slate, fontSize = 10.sp)
                         }
                     }
                 }
