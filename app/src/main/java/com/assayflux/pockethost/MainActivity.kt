@@ -1285,11 +1285,11 @@ private fun PocketHostDashboard() {
                             ) { Text("Remove token") }
                         }
                         Text(
-                            "Reuse your existing named Cloudflare Tunnel and Public Hostname. Do not create another tunnel. Confirm its Public Hostname origin is http://127.0.0.1:${portText.toIntOrNull() ?: 8080}. DNS and hostname setup remain in the Cloudflare dashboard.",
+                            "Reuse your existing tunnel. Public Hostname origin: http://127.0.0.1:${portText.toIntOrNull() ?: 8080}.",
                             color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
                         Text(
-                            "Public exposure is not visitor-authenticated by PocketHost. Add Cloudflare Access before exposing private sites. Tunnel connector and ABI support still require physical-device validation.",
+                            "Use Cloudflare Access for private sites.",
                             color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
                     }
@@ -1305,11 +1305,11 @@ private fun PocketHostDashboard() {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("TRUSTED APPLICATION CODE ONLY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        Text("Python and Node applications execute with PocketHost's Android app privileges. A separate process or V8 heap limit is NOT a security sandbox. Never run code you do not own or trust. Strong OS-backed sandboxing is not implemented yet.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Python and Node run with app privileges, not in an OS sandbox. Run only code you trust.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("I understand and will run trusted code only", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Required before either optional runtime can start.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                                Text("Required to start a runtime.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             }
                             Switch(checked = trustedRuntimeCodeAck, onCheckedChange = { accepted ->
                                 trustedRuntimeCodeAck = accepted
@@ -1397,7 +1397,7 @@ private fun PocketHostDashboard() {
                             if (allowLan && lanAddress != null) "Python preview: http://$lanAddress:$pythonPortText" else "Python preview: http://127.0.0.1:$pythonPortText",
                             color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
                         )
-                        Text("Runs trusted WSGI applications from wsgi.py. Loopback by default; LAN access follows the explicit hosting setting. Python project code runs with app privileges.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Runs trusted WSGI code as the app. Loopback by default; LAN access follows your network setting.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
@@ -1507,7 +1507,7 @@ private fun PocketHostDashboard() {
                             }, enabled = nodeHosting) { Text("Stop Node.js") }
                         }
                         if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Runs one Node.js application in a separate Android process under the same app security identity. This is not a sandbox. Include preinstalled node_modules; subprocess-based npm scripts and native addons are not guaranteed. User code runs with app privileges.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Runs in a separate process, not a sandbox. Prebundle node_modules; subprocess scripts and native add-ons may not work.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
@@ -1521,9 +1521,9 @@ private fun PocketHostDashboard() {
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("CONNECTION & SECURITY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Public HTTPS is provided at the Cloudflare edge for your existing configured hostname; the phone's local origin remains HTTP.", color = palette.onSurfaceVariant)
-                            Text("Pocket Host does not currently provide built-in visitor password protection. Use Cloudflare Access for private sites before sharing the public hostname.", color = palette.onSurfaceVariant)
-                            Text("Automatic start on boot is not available in this build. Android background and OEM power policies still apply.", color = palette.onSurfaceVariant)
+                            Text("Cloudflare provides public HTTPS; the phone origin remains local HTTP.", color = palette.onSurfaceVariant)
+                            Text("No built-in visitor password yet. Use Cloudflare Access for private sites.", color = palette.onSurfaceVariant)
+                            Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
                             OutlinedButton(onClick = { selectedTab = "Files" }, modifier = Modifier.fillMaxWidth()) {
                                 Text("Open backup and restore")
                             }
