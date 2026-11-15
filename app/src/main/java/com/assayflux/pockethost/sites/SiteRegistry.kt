@@ -29,7 +29,11 @@ object SiteRegistry {
         require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
         require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
         require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
-        require(File(site.root).isDirectory) { "Site root must be an existing directory." }
+        val root = File(site.root).canonicalFile
+        val privateRoot = context.filesDir.canonicalFile.toPath()
+        require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
+            "Site root must be an existing directory inside PocketHost private storage."
+        }
         val normalizedHosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
         require(normalizedHosts.all { hostnamePattern.matches(it) }) { "One or more hostnames are invalid." }
         val existing = list(context).filterNot { it.id == site.id }
@@ -37,7 +41,12 @@ object SiteRegistry {
         require(normalizedHosts.distinct().size == normalizedHosts.size && normalizedHosts.none { it in used }) {
             "A hostname can belong to only one site."
         }
-        val updated = existing + site.copy(hostnames = normalizedHosts)
+        if (site.runtime == "node") {
+            require(existing.filter { it.runtime == "node" }.all { File(it.root).canonicalPath == root.path }) {
+                "Only one Node.js project can be active in the embedded Node process; map additional hostnames to the same project."
+            }
+        }
+        val updated = existing + site.copy(root = root.absolutePath, hostnames = normalizedHosts)
         save(context, updated)
     }
 
