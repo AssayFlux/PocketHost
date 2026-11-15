@@ -101,9 +101,11 @@ object CapacityController {
         val baseLimit = ((safe * percent) / 100.0).toInt().coerceAtLeast(1).coerceAtMost(16)
         val (factor, state) = healthFactor(context)
         val limit = (baseLimit * factor).toInt().coerceAtLeast(1).coerceAtMost(16)
+        // Enforce protective policy on every tick, not only on state transitions: a user
+        // must not be able to restart an optional runtime while the device remains critical.
+        if (state == "PROTECTIVE" || state == "EMERGENCY") suspendOptionalRuntimes(context)
         if (state != lastHealthState) {
             lastHealthState = state
-            if (state == "PROTECTIVE" || state == "EMERGENCY") suspendOptionalRuntimes(context)
             OperationalLog.record(context, if (state == "NORMAL" || state == "RECOVERY") "INFO" else "WARN",
                 "CAPACITY_HEALTH_STATE", "Automatic admission protection state changed to $state.")
         }
