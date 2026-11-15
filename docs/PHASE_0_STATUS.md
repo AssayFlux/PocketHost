@@ -90,7 +90,7 @@ PR [#14](https://github.com/AssayFlux/PocketHost/pull/14) merged [ADAPTIVE_CAPAC
 - Device/emulator acceptance of 30%-for-three-hours expiry/restoration and profile persistence.
 - OS-enforced per-project sandbox/UID isolation, filesystem/network confinement and hard quotas.
 - PSP integration, signed webhook processing, encrypted durable payment ledger and reconciliation.
-- Hash-chained signed audit checkpoints and optional blockchain anchoring.
+- Conventional hash-chained signed audit checkpoints and local verification.
 - Complete durable daily operations/financial reports, backups and storage-bounded retention.
 
 Do not describe these as live, secure or production-ready until implemented and accepted.
@@ -110,7 +110,7 @@ Do not describe these as live, secure or production-ready until implemented and 
 11. Implement/test telemetry, capacity benchmark, governor and scheduled profiles before advertising automatic capacity protection.
 12. Resolve runtime isolation before accepting untrusted or third-party code.
 13. Implement PSP integration, durable payment events, reconciliation, encrypted backup and qualified payment-security review before accepting live payments.
-14. Implement tamper-evident audit and daily report retention; optional blockchain only after privacy review.
+14. Implement tamper-evident audit and daily report retention; local verification and signed checkpoint export.
 15. Configure release signing, build signed APKs, verify upgrades and publish checksums only after prior gates pass.
 
 ## Explicit security and product boundaries
@@ -125,7 +125,7 @@ Do not describe these as live, secure or production-ready until implemented and 
 - Static-site backup excludes runtime projects, credentials, settings and deployment history.
 - Remote management API cannot browse phone filesystem or execute arbitrary shell commands.
 - Never store raw card data. PSP integration does not equal PCI compliance.
-- Blockchain must never hold payment/personal data and must not be required for hosting.
+- Blockchain and distributed-ledger technology are excluded from PocketHost.
 
 ## Build prerequisites
 
@@ -165,7 +165,7 @@ The following first implementations were added directly to the Android/Rust/Type
 
 **Important limitations:** telemetry is a low-frequency device snapshot, not a complete profiler or reliable per-process CPU accounting. The CPU percentage is aggregate device utilization and can be unavailable during the first sample. This is a static GET concurrency smoke benchmark, not a complete Capacity Lab. It does not measure Python/Node, external Cloudflare/network throughput, sustained multi-hour thermal behavior, p99, CPU/RPS graphs or arbitrary website workloads. The limiter is a concurrency admission ceiling, not a full rate/fairness/queue governor. Daily reports do not yet contain complete uptime, battery, latency, tunnel or financial metrics. Quality CI [43688959461](https://github.com/AssayFlux/PocketHost/actions/runs/43688959461) passed all six jobs on exact main SHA `c6e07a7248a123aac757a7358dc2df13caec9e86` (Rust, Node runtime, Python runtime, TypeScript console, control plane and Android Kotlin plus Android-test source compilation). This workflow does not package APKs or run emulator instrumentation. Physical-device, emulator instrumentation and external Cloudflare hostname validation remain pending.
 
-**Still not implemented/approved:** OS-enforced per-project runtime UID sandbox and network/filesystem isolation; full Rust-native rate/fairness/queue Resource Governor and long-duration device acceptance; PSP payment integration, webhook inbox, encrypted payment ledger and reconciliation; hash-chained signed audit checkpoints and optional blockchain anchoring; external Cloudflare hostname validation; deployed remote control plane; physical-device acceptance; signed release. Do not run untrusted Python/Node projects or accept live payments under the current architecture.
+**Still not implemented/approved:** OS-enforced per-project runtime UID sandbox and network/filesystem isolation; full Rust-native rate/fairness/queue Resource Governor and long-duration device acceptance; PSP payment integration, webhook inbox, encrypted payment ledger and reconciliation; conventional hash-chained signed audit checkpoints and verification; external Cloudflare hostname validation; deployed remote control plane; physical-device acceptance; signed release. Do not run untrusted Python/Node projects or accept live payments under the current architecture.
 
 
 ## 2026-11-15 follow-up — optional-runtime trust interlock
@@ -179,4 +179,4 @@ The following first implementations were added directly to the Android/Rust/Type
 - Capacity Lab can now be run again after a completed or failed run; concurrent attempts still return the active result.
 - Updated Android runtime smoke tests to explicitly opt into trusted-code execution.
 
-**This is a safety interlock, not sandboxing.** Untrusted Python/Node remains prohibited. OS-enforced UID/process isolation, filesystem and network confinement, and enforceable CPU/memory quotas remain release blockers. PSP payments, signed tamper-evident audit/blockchain anchoring, complete operational reports, full Rust rate/fairness/queue governance, physical-device acceptance and signed release are still not integrated.
+**This is a safety interlock, not sandboxing.** Untrusted Python/Node remains prohibited. OS-enforced UID/process isolation, filesystem and network confinement, and enforceable CPU/memory quotas remain release blockers. PSP payments, signed conventional tamper-evident audit, complete operational reports, full Rust rate/fairness/queue governance, physical-device acceptance and signed release are still not integrated.

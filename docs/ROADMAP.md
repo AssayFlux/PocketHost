@@ -108,7 +108,7 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 
 **Gate:** invalid/stale/duplicate/out-of-order webhook tests, reconciliation, backup restore and independent security assessment. Never store PAN/CVV/PIN. PSP integration does not itself confer PCI compliance.
 
-## Stage 6 — Tamper-evident audit and optional blockchain
+## Stage 6 — Conventional tamper-evident audit
 
 **Priority: P1**
 
@@ -116,9 +116,9 @@ The phone is the website origin. No Termux, root, mandatory VPS or mandatory rem
 2. Cryptographic hash chain and verification tooling.
 3. Signed periodic checkpoints using Android Keystore or remote KMS.
 4. Offline checkpoint queue and recovery.
-5. Optional blockchain anchoring of checkpoint hashes only, with cost/finality indicators.
+5. Provide local verification, signed checkpoint export and controlled retention.
 
-**Gate:** tamper/reordering/deletion detection and privacy review. Never publish personal data, payment data, IPs, secrets or full logs on-chain. Blockchain is not the source of truth and is not required for hosting.
+**Gate:** detect tampering, reordering and deletion; verify signatures and checkpoint continuity; review privacy and recovery. No blockchain or distributed-ledger technology is included.
 
 ## Stage 7 — Website performance and product polish
 

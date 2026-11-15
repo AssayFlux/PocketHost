@@ -63,7 +63,7 @@ Do not infer production readiness:
 - Local management sessions are in-memory and expire; process restart requires pairing again.
 - Connected tunnel does not prove public hostname serves the expected website.
 - Control-plane source does not prove deployed service or paired physical device.
-- Payment processing, encrypted payment ledger, blockchain anchoring and the full Rust-native rate/fairness/queue governor are not implemented merely because PR #14 specifies them.
+- Payment processing, encrypted payment ledger and the full Rust-native rate/fairness/queue governor are not implemented merely because PR #14 specifies them. Blockchain and distributed-ledger technology are excluded from the product.
 
 Read runtime-specific docs before changing these components.
 
@@ -76,10 +76,10 @@ Current main `c6e07a7248a123aac757a7358dc2df13caec9e86` includes versioned low-f
 4. Complete Rust Resource Governor, overload behavior and scheduled profiles (including 30% for three hours).
 5. Resolve runtime isolation and network/filesystem restrictions before accepting untrusted code.
 6. Implement PSP-based payment events, encrypted ledger, reconciliation and audit.
-7. Add optional hash-only blockchain anchoring after privacy/security review.
+7. Implement conventional audit verification, signed checkpoints and recovery.
 8. Complete website performance, advanced controls, physical tests and signed release.
 
-Do not jump to blockchain before tamper-evident audit. Do not enable live payments before payment security. Do not call runtime execution sandboxed before OS-level isolation evidence.
+Do not add blockchain or distributed-ledger components. Do not enable live payments before payment security. Do not call runtime execution sandboxed before OS-level isolation evidence.
 
 ## 6. Capacity semantics
 
@@ -104,7 +104,7 @@ Do not jump to blockchain before tamper-evident audit. Do not enable live paymen
 - Client redirect is not proof of payment; reconcile with provider.
 - Store integer minor-unit amounts, ISO currency, provider IDs and necessary redacted metadata only.
 - Encrypt payment ledger/backups and test restoration.
-- Hash-chain audit events; sign checkpoints. Blockchain anchors checkpoint hashes only.
+- Hash-chain audit events; sign checkpoints. Use local hash-chain audit events and signed checkpoints; no blockchain.
 - No PCI/security certification claims without qualified independent assessment.
 
 ## 8. How every coding session must operate
@@ -177,7 +177,7 @@ Update conflicting documents in the same PR. Do not leave contradictory claims.
 
 PR #14 merged the adaptive capacity/security/payments/operations specification; PR #15 merged the canonical roadmap and development handoff. Latest implementation commit `c6e07a7248a123aac757a7358dc2df13caec9e86` adds versioned low-frequency device telemetry (including sampled CPU load), a four-connection provisional safe ceiling, persisted static-workload Capacity Lab results, dynamic Rust concurrency admission with HTTP 503/Retry-After, timed capacity profiles, a five-state Android health derating policy, repeated protective suspension of optional runtimes, live idle telemetry and daily aggregate rollover reports. The Android dashboard and TypeScript console preserve the AssayFlux teal/bronze/ivory design and expose current device health and benchmark data.
 
-Quality CI run [43688959461](https://github.com/AssayFlux/PocketHost/actions/runs/43688959461) passed all six jobs on this exact main commit, including Rust, control-plane/PostgreSQL, Python, Node, TypeScript production build, Android native/Kotlin source compilation and Android-test source compilation. It did not build an APK or run emulator instrumentation. Continue from [PHASE_0_STATUS.md](PHASE_0_STATUS.md). Remaining release blockers include the full Rust-native rate/fairness/queue governor, OS-enforced runtime sandbox, PSP payment ledger/webhooks, hash-chained signed audit and optional blockchain anchoring, complete uptime/latency/financial reporting, physical-device acceptance and external Cloudflare hostname validation.
+Quality CI run [43688959461](https://github.com/AssayFlux/PocketHost/actions/runs/43688959461) passed all six jobs on this exact main commit, including Rust, control-plane/PostgreSQL, Python, Node, TypeScript production build, Android native/Kotlin source compilation and Android-test source compilation. It did not build an APK or run emulator instrumentation. Continue from [PHASE_0_STATUS.md](PHASE_0_STATUS.md). Remaining release blockers include the full Rust-native rate/fairness/queue governor, OS-enforced runtime sandbox, PSP payment ledger/webhooks and hash-chained signed audit, complete uptime/latency/financial reporting, physical-device acceptance and external Cloudflare hostname validation.
 
 Primary links:
 - [Repository](https://github.com/AssayFlux/PocketHost)
