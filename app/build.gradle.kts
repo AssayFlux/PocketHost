@@ -1,3 +1,7 @@
+import java.security.MessageDigest
+import java.net.URL
+import java.util.zip.ZipFile
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,7 +20,7 @@ val prepareNodeRuntime by tasks.registering {
         val archive = File(downloadDir, "nodejs-mobile-android-24.22.1-0.zip")
         val expectedSha256 = "d6fd9f610fe5d81fede8f0d400c5a62723247725a19831835f15abf4f0604250"
         fun sha256(file: File): String {
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = MessageDigest.getInstance("SHA-256")
             file.inputStream().buffered().use { input ->
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
@@ -30,7 +34,7 @@ val prepareNodeRuntime by tasks.registering {
         val actualBefore = if (archive.isFile) sha256(archive) else ""
         if (actualBefore != expectedSha256) {
             archive.delete()
-            val connection = java.net.URL("https://github.com/fogtape/nodejs-mobile/releases/download/v24.22.1-0/nodejs-mobile-android-24.22.1-0.zip")
+            val connection = URL("https://github.com/fogtape/nodejs-mobile/releases/download/v24.22.1-0/nodejs-mobile-android-24.22.1-0.zip")
                 .openConnection().apply { connectTimeout = 30_000; readTimeout = 180_000 }
             connection.getInputStream().use { input ->
                 archive.outputStream().buffered().use { target -> input.copyTo(target) }
@@ -42,7 +46,7 @@ val prepareNodeRuntime by tasks.registering {
         val jniRoot = File(root, "jniLibs")
         val includeRoot = File(root, "include")
         val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
-        java.util.zip.ZipFile(archive).use { zip ->
+        ZipFile(archive).use { zip ->
             val entries = zip.entries()
             while (entries.hasMoreElements()) {
                 val entry = entries.nextElement()
