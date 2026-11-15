@@ -115,6 +115,22 @@ async fn device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (Statu
     row.map(|r| r.get("id")).ok_or((StatusCode::UNAUTHORIZED, "invalid_device_token".into()))
 }
 
+async fn audit(s: &AppState, action: &str, target: &str, details: Value) -> Result<(), (StatusCode, String)> {
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES('admin',$1,$2,$3)")
+        .bind(action).bind(target).bind(details).execute(&s.db).await.map_err(internal)?;
+    Ok(())
+}
+
+async fn list_audit(State(s): State<AppState>, headers: HeaderMap) -> Result<Json<Vec<Value>>, (StatusCode, String)> {
+    admin(&headers, &s)?;
+    let rows = sqlx::query("SELECT id,actor,action,target,details,created_at FROM audit_events ORDER BY created_at DESC LIMIT 200")
+        .fetch_all(&s.db).await.map_err(internal)?;
+    Ok(Json(rows.into_iter().map(|r| json!({
+        "id": r.get::<i64,_>("id"), "actor": r.get::<String,_>("actor"),
+        "action": r.get::<String,_>("action"), "target": r.get::<String,_>("target"),
+        "details": r.get::<Value,_>("details"), "createdAt": r.get::<DateTime<Utc>,_>("created_at")
+    })).collect()))
+}
 fn internal<E: std::fmt::Display>(error: E) -> (StatusCode, String) {
     tracing::error!(error = %error, "control-plane request failed");
     (StatusCode::INTERNAL_SERVER_ERROR, "internal_error".into())
