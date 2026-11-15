@@ -306,6 +306,7 @@ private fun PocketHostDashboard() {
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("queuedConnections", NativeEngine.queuedConnections())
                 .put("rateLimitedRequests", NativeEngine.rateLimitedRequests())
+                .put("siteLimitRejections", NativeEngine.siteLimitRejections())
                 .put("rejectedConnections", NativeEngine.rejectedConnections()) }
             capacityBenchmark = CapacityLab.snapshot(context)
             val telemetryNow = android.os.SystemClock.elapsedRealtime()
@@ -789,7 +790,7 @@ private fun PocketHostDashboard() {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("CAPACITY & AUTOMATIC PROTECTION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        Text("Safe ceiling: ${capacityInfo.optInt("safeConcurrency", 16)} · Active: ${capacityInfo.optLong("activeConnections")} · Queued: ${capacityInfo.optLong("queuedConnections")} · Health: ${capacityInfo.optString("healthState", "NORMAL")}",
+                        Text("Safe ceiling: ${capacityInfo.optInt("safeConcurrency", 16)} · Active: ${capacityInfo.optLong("activeConnections")} · Queued: ${capacityInfo.optLong("queuedConnections")} · Rate-limited: ${capacityInfo.optLong("rateLimitedRequests")} · Site-cap rejected: ${capacityInfo.optLong("siteLimitRejections")} · Health: ${capacityInfo.optString("healthState", "NORMAL")}",
                             color = palette.onSurfaceVariant, fontSize = 14.sp)
                         TextButton(onClick = { capacityDetailsExpanded = !capacityDetailsExpanded }, modifier = Modifier.fillMaxWidth()) {
                             Text(if (capacityDetailsExpanded) "Hide capacity controls" else "Show capacity controls and benchmark")
@@ -827,7 +828,7 @@ private fun PocketHostDashboard() {
                                 status = "Stopping the capacity benchmark safely…"
                             }, modifier = Modifier.fillMaxWidth()) { Text("Cancel benchmark") }
                         }
-                        Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · queued ${capacityInfo.optLong("queuedConnections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
+                        Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · queued ${capacityInfo.optLong("queuedConnections")} · rate-limited ${capacityInfo.optLong("rateLimitedRequests")} · site-cap rejected ${capacityInfo.optLong("siteLimitRejections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
                             color = palette.onSurfaceVariant, fontSize = 14.sp)
                         val benchmarkLevels = capacityBenchmark.optJSONArray("levels")
                         val chartRows = (0 until (benchmarkLevels?.length() ?: 0)).mapNotNull { index ->

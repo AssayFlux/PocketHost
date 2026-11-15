@@ -12,7 +12,7 @@ use jni::sys::{jboolean, jint, jlong, jstring};
 use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -20,13 +20,14 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use tokio::sync::{oneshot, Semaphore};
+use tokio::sync::{oneshot, OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::io::ReaderStream;
 
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_CONNECTIONS: usize = 16;
 const MAX_QUEUED_CONNECTIONS: usize = 32;
+const MAX_PER_SITE_CONNECTIONS: usize = 12;
 const QUEUE_WAIT: Duration = Duration::from_millis(200);
 const SHUTDOWN_DRAIN: Duration = Duration::from_secs(3);
 const RATE_LIMIT_BURST: f64 = 120.0;
@@ -44,6 +45,7 @@ static CAPACITY_LIMIT: AtomicU64 = AtomicU64::new(MAX_CONNECTIONS as u64);
 static REJECTED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 static QUEUED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 static RATE_LIMITED_REQUESTS: AtomicU64 = AtomicU64::new(0);
+static SITE_LIMIT_REJECTIONS: AtomicU64 = AtomicU64::new(0);
 
 struct RateBucket {
     tokens: f64,
@@ -129,6 +131,19 @@ async fn reject_overloaded(mut stream: tokio::net::TcpStream) {
 struct RunningEngine { stop: oneshot::Sender<()>, thread: JoinHandle<()> }
 static ENGINE: OnceLock<Mutex<Option<RunningEngine>>> = OnceLock::new();
 fn engine() -> &'static Mutex<Option<RunningEngine>> { ENGINE.get_or_init(|| Mutex::new(None)) }
+
+fn site_target_key(target: &SiteTarget) -> String {
+    match target {
+        SiteTarget::Static(path) => format!("static:{}", path.display()),
+        SiteTarget::Proxy { port } => format!("proxy:{port}"),
+    }
+}
+
+fn per_site_connection_limit(site_count: usize) -> usize {
+    if site_count <= 1 { return MAX_CONNECTIONS; }
+    let reserved_for_other_sites = site_count.saturating_sub(1).saturating_mul(2);
+    MAX_CONNECTIONS.saturating_sub(reserved_for_other_sites).clamp(2, MAX_PER_SITE_CONNECTIONS)
+}
 
 fn normalize_hostname(value: &str) -> Result<String, String> {
     let host = value.strip_suffix('.').unwrap_or(value).to_ascii_lowercase();
@@ -295,7 +310,23 @@ async fn resolve_static_file(root: &Path, relative: &Path) -> Result<PathBuf, St
     Ok(candidate)
 }
 
-async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>, peer: SocketAddr) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+fn hold_site_permit(response: Response<ResponseBody>, permit: OwnedSemaphorePermit) -> Response<ResponseBody> {
+    let (parts, body) = response.into_parts();
+    // Keep the permit alive until the response stream is fully consumed or dropped.
+    let body = body.map_frame(move |frame| {
+        let _permit = &permit;
+        frame
+    }).boxed_unsync();
+    Response::from_parts(parts, body)
+}
+
+async fn serve(
+    root: PathBuf,
+    host_roots: Arc<HashMap<String, SiteTarget>>,
+    site_limits: Arc<HashMap<String, Arc<Semaphore>>>,
+    req: Request<Incoming>,
+    peer: SocketAddr,
+) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let client_ip = effective_client_ip(
         peer.ip(),
         req.headers().get("cf-connecting-ip").and_then(|value| value.to_str().ok())
@@ -307,6 +338,36 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
         response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
         return Ok(response);
     }
+
+    let requested_host = req.headers().get(hyper::header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
+        .and_then(|authority| normalize_hostname(authority.host()).ok())
+        .unwrap_or_default();
+    let target = if host_roots.is_empty() {
+        Some(SiteTarget::Static(root.clone()))
+    } else {
+        host_roots.get(&requested_host).cloned()
+    };
+    let Some(target) = target else {
+        return serve_inner(root, host_roots, req).await;
+    };
+    let key = site_target_key(&target);
+    let permit = match site_limits.get(&key).and_then(|limiter| limiter.clone().try_acquire_owned().ok()) {
+        Some(permit) => permit,
+        None => {
+            SITE_LIMIT_REJECTIONS.fetch_add(1, Ordering::Relaxed);
+            let mut response = text_response(StatusCode::SERVICE_UNAVAILABLE, "text/plain; charset=utf-8", "Site concurrency limit reached");
+            response.headers_mut().insert("retry-after", "1".parse().unwrap());
+            response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
+            return Ok(response);
+        }
+    };
+    let response = serve_inner(root, host_roots, req).await?;
+    Ok(hold_site_permit(response, permit))
+}
+
+async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
@@ -393,7 +454,7 @@ async fn serve(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req:
     Ok(response.body(body).expect("file response"))
 }
 
-async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, mut stop: oneshot::Receiver<()>) {
+async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, site_limits: Arc<HashMap<String, Arc<Semaphore>>>, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
     // At most 32 accepted sockets may wait up to 200 ms for an active slot.
     // Queue permits are acquired before spawning, so task creation stays bounded.
@@ -428,6 +489,7 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                 };
                 let site_root = root.clone();
                 let site_roots = host_roots.clone();
+                let site_limiters = site_limits.clone();
                 connections.spawn(async move {
                     // Try the active slot first. If this future is cancelled before
                     // its first poll, no active count has been reserved or leaked.
@@ -460,7 +522,7 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                     let _active = ActiveConnection;
                     drop(queued_guard);
                     drop(queue_permit);
-                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), req, peer));
+                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), site_limiters.clone(), req, peer));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
@@ -495,6 +557,15 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
             return Err(format!("Duplicate hostname: {normalized}"));
         }
     }
+    let site_keys: HashSet<String> = if canonical_hosts.is_empty() {
+        [site_target_key(&SiteTarget::Static(root.clone()))].into_iter().collect()
+    } else {
+        canonical_hosts.values().map(site_target_key).collect()
+    };
+    let per_site_limit = per_site_connection_limit(site_keys.len());
+    let site_limits = Arc::new(site_keys.into_iter()
+        .map(|key| (key, Arc::new(Semaphore::new(per_site_limit))))
+        .collect::<HashMap<_, _>>());
     let canonical_hosts = Arc::new(canonical_hosts);
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
@@ -503,6 +574,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     ACTIVE_CONNECTIONS.store(0, Ordering::Relaxed);
     QUEUED_CONNECTIONS.store(0, Ordering::Relaxed);
     RATE_LIMITED_REQUESTS.store(0, Ordering::Relaxed);
+    SITE_LIMIT_REJECTIONS.store(0, Ordering::Relaxed);
     if let Some(limits) = RATE_LIMITS.get() {
         if let Ok(mut buckets) = limits.lock() { buckets.clear(); }
     }
@@ -536,7 +608,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
             }
         };
         if ready_tx.send(Ok(())).is_err() { return; }
-        runtime.block_on(accept_loop(listener, root, canonical_hosts, stop_rx));
+        runtime.block_on(accept_loop(listener, root, canonical_hosts, site_limits, stop_rx));
     }).map_err(|e| format!("Cannot start engine thread: {e}"))?;
 
     match ready_rx.recv() {
@@ -650,9 +722,39 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_queuedC
 pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_rateLimitedRequests(_env: JNIEnv, _class: JClass) -> jlong {
     RATE_LIMITED_REQUESTS.load(Ordering::Relaxed) as jlong
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_siteLimitRejections(_env: JNIEnv, _class: JClass) -> jlong {
+    SITE_LIMIT_REJECTIONS.load(Ordering::Relaxed) as jlong
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn per_site_semaphore_releases_after_response_slot_is_dropped() {
+        let limiter = Arc::new(Semaphore::new(1));
+        let permit = limiter.clone().try_acquire_owned().unwrap();
+        assert!(limiter.clone().try_acquire_owned().is_err());
+        drop(permit);
+        assert!(limiter.clone().try_acquire_owned().is_ok());
+    }
+
+    #[test]
+    fn per_site_limit_preserves_capacity_for_other_sites() {
+        assert_eq!(per_site_connection_limit(0), MAX_CONNECTIONS);
+        assert_eq!(per_site_connection_limit(1), MAX_CONNECTIONS);
+        assert_eq!(per_site_connection_limit(2), 12);
+        assert_eq!(per_site_connection_limit(4), 10);
+        assert_eq!(per_site_connection_limit(9), 2);
+        assert_eq!(per_site_connection_limit(100), 2);
+    }
+
+    #[test]
+    fn site_target_keys_group_same_runtime_target() {
+        assert_eq!(site_target_key(&SiteTarget::Proxy { port: 9000 }), "proxy:9000");
+        assert_eq!(site_target_key(&SiteTarget::Static(PathBuf::from("/tmp/site"))), "static:/tmp/site");
+    }
+
     #[test]
     fn rate_bucket_enforces_burst_and_refills_over_time() {
         let start = Instant::now();
