@@ -1,13 +1,8 @@
 name: PocketHost Android integration
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - 'rust-engine/**'
-      - 'scripts/build-cloudflared-android.sh'
-      - '.github/workflows/android-integration.yml'
+  # APK packaging and emulator installation are intentionally manual release gates.
+  # The push-triggered quality workflow performs source/native compilation only.
   workflow_dispatch:
     inputs:
       run_emulators:
@@ -121,7 +116,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: github.event_name == 'push' || inputs.run_emulators
+    if: inputs.run_emulators
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
