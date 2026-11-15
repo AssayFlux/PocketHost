@@ -25,6 +25,9 @@ object HostAccountStore {
     private const val KEY_ALIAS = "assayflux.pockethost.host-accounts.v1"
     private const val ITERATIONS = 210_000
     private const val FILE_NAME = "host-accounts.enc"
+    private val USERNAME_PATTERN = Regex("[A-Za-z0-9][A-Za-z0-9._-]{2,31}")
+    private val DUMMY_SALT = ByteArray(16) { (it * 17 + 11).toByte() }
+    private val DUMMY_VERIFIER = ByteArray(32)
     private val random = SecureRandom()
     data class Account(val username: String, val role: String, val createdAt: Long)
 
@@ -38,40 +41,58 @@ object HostAccountStore {
         read(context).let { array -> (0 until array.length()).any { array.getJSONObject(it).optString("role") == "OWNER" } }
 
     @Synchronized fun create(context: Context, usernameInput: String, password: CharArray, roleInput: String): Account {
-        val username = usernameInput.trim()
-        require(username.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{2,31}"))) { "username_must_be_3_to_32_safe_characters" }
-        require(password.size in 12..128) { "password_must_be_12_to_128_characters" }
-        val role = roleInput.uppercase()
-        require(role == "OWNER" || role == "OPERATOR") { "unsupported_account_role" }
-        val accounts = read(context)
-        require((0 until accounts.length()).none { accounts.getJSONObject(it).optString("username").equals(username, true) }) { "username_already_exists" }
-        if (role == "OWNER") require((0 until accounts.length()).none { accounts.getJSONObject(it).optString("role") == "OWNER" }) { "owner_account_already_exists" }
-        val salt = ByteArray(16).also(random::nextBytes)
-        val verifier = derive(password, salt)
-        password.fill('\u0000')
-        accounts.put(JSONObject().put("username", username).put("role", role)
-            .put("createdAt", System.currentTimeMillis())
-            .put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
-            .put("verifier", Base64.encodeToString(verifier, Base64.NO_WRAP))
-            .put("iterations", ITERATIONS))
-        write(context, accounts)
-        verifier.fill(0)
-        return Account(username, role, System.currentTimeMillis())
+        try {
+            val username = usernameInput.trim()
+            require(username.matches(USERNAME_PATTERN)) { "username_must_be_3_to_32_safe_characters" }
+            require(password.size in 12..128) { "password_must_be_12_to_128_characters" }
+            val role = roleInput.uppercase()
+            require(role == "OWNER" || role == "OPERATOR") { "unsupported_account_role" }
+            val accounts = read(context)
+            require((0 until accounts.length()).none { accounts.getJSONObject(it).optString("username").equals(username, true) }) { "username_already_exists" }
+            if (role == "OWNER") require((0 until accounts.length()).none { accounts.getJSONObject(it).optString("role") == "OWNER" }) { "owner_account_already_exists" }
+            val salt = ByteArray(16).also(random::nextBytes)
+            val verifier = derive(password, salt)
+            try {
+                accounts.put(JSONObject().put("username", username).put("role", role)
+                    .put("createdAt", System.currentTimeMillis())
+                    .put("salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+                    .put("verifier", Base64.encodeToString(verifier, Base64.NO_WRAP))
+                    .put("iterations", ITERATIONS))
+                write(context, accounts)
+            } finally {
+                salt.fill(0)
+                verifier.fill(0)
+            }
+            return Account(username, role, System.currentTimeMillis())
+        } finally {
+            password.fill('\\u0000')
+        }
     }
 
     @Synchronized fun verify(context: Context, usernameInput: String, password: CharArray): Account? {
-        val username = usernameInput.trim()
-        val item = read(context).let { array ->
-            (0 until array.length()).map { array.getJSONObject(it) }.firstOrNull { it.optString("username").equals(username, true) }
-        } ?: run { password.fill('\u0000'); return null }
-        val salt = Base64.decode(item.getString("salt"), Base64.NO_WRAP)
-        val expected = Base64.decode(item.getString("verifier"), Base64.NO_WRAP)
-        val actual = derive(password, salt)
-        password.fill('\u0000')
-        val valid = MessageDigest.isEqual(expected, actual)
-        actual.fill(0)
-        expected.fill(0)
-        return if (valid) Account(item.getString("username"), item.getString("role"), item.getLong("createdAt")) else null
+        try {
+            // Reject oversized password input before expensive derivation. Invalid usernames
+            // still perform a dummy PBKDF2 operation to reduce account-enumeration timing leaks.
+            if (password.size !in 1..128) return null
+            val username = usernameInput.trim()
+            val validUsername = username.matches(USERNAME_PATTERN)
+            val item = if (validUsername) read(context).let { array ->
+                (0 until array.length()).map { array.getJSONObject(it) }
+                    .firstOrNull { it.optString("username").equals(username, true) }
+            } else null
+            val salt = item?.let { Base64.decode(it.getString("salt"), Base64.NO_WRAP) }
+                ?: DUMMY_SALT.copyOf()
+            val expected = item?.let { Base64.decode(it.getString("verifier"), Base64.NO_WRAP) }
+                ?: DUMMY_VERIFIER
+            val actual = derive(password, salt)
+            val valid = MessageDigest.isEqual(expected, actual) && item != null
+            salt.fill(0)
+            actual.fill(0)
+            if (item == null) return null
+            return if (valid) Account(item.getString("username"), item.getString("role"), item.getLong("createdAt")) else null
+        } finally {
+            password.fill('\\u0000')
+        }
     }
 
     @Synchronized fun revokeOperator(context: Context, username: String): Boolean {
