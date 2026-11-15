@@ -4,6 +4,7 @@ import android.content.Context
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.sites.SiteRegistry
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -178,6 +179,34 @@ object ManagementApiServer {
             return 204 to JSONObject()
         }
         val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+        if (method == "GET" && path == "/api/v1/sites") {
+            val items = org.json.JSONArray()
+            SiteRegistry.list(context).forEach { site ->
+                val hosts = org.json.JSONArray()
+                site.hostnames.forEach(hosts::put)
+                items.put(JSONObject().put("id", site.id).put("name", site.name)
+                    .put("runtime", site.runtime).put("hostnames", hosts)
+                    .put("state", if (site.enabled) "configured" else "disabled"))
+            }
+            return 200 to JSONObject().put("items", items)
+        }
+        if (method == "POST" && path == "/api/v1/sites") {
+            return runCatching {
+                val hosts = body.optJSONArray("hostnames") ?: org.json.JSONArray()
+                val site = SiteRegistry.Site(body.getString("id"), body.getString("name"),
+                    body.optString("runtime", "static"), body.getString("root"),
+                    (0 until hosts.length()).map { hosts.getString(it) }, body.optBoolean("enabled", true))
+                SiteRegistry.put(context, site)
+                201 to JSONObject().put("status", "configured").put("id", site.id)
+            }.getOrElse { 400 to JSONObject().put("error", it.message ?: "invalid_site") }
+        }
+        if (method == "DELETE" && path.startsWith("/api/v1/sites/")) {
+            val id = path.removePrefix("/api/v1/sites/")
+            if (!id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) return 400 to JSONObject().put("error", "invalid_site_id")
+            if (SiteRegistry.list(context).none { it.id == id }) return 404 to JSONObject().put("error", "site_not_found")
+            SiteRegistry.remove(context, id)
+            return 204 to JSONObject()
+        }
         if (method == "GET" && path == "/api/v1/status") {
             val py = runCatching { PythonHostRuntime.status(context) }.getOrDefault("ERROR")
             return 200 to JSONObject().put("state", if (NativeEngine.status() == "RUNNING") "local" else "stopped")
