@@ -41,7 +41,7 @@ Always fetch current default branch, latest commit, open PRs, relevant source fi
 12. Python and Node are optional trusted application runtimes. A local acknowledgement gate blocks accidental starts and revocation stops them, but this is not a sandbox; OS-backed isolation must be implemented and independently validated before untrusted code is accepted.
 13. Target Android 8.0 / API 26+, 4 GB RAM baseline, ARMv7 and ARM64 phones; x86_64 for emulator.
 14. Product goal is budget-conscious hosting for small sites/development/modest workloads, not cloud-region reliability.
-15. UI direction is fixed: PocketHost teal `#24434A`, bronze `#B18B5E`, ivory `#F6F4EF`, slate `#657174`; modern clear cards and restrained accents. Keep the Android dashboard vertically scrollable on small screens, retain Simple/Advanced modes, and show the 16-connection engine ceiling accurately.
+15. UI direction is fixed: navy `#1F3A5F`, ivory `#F7F7F5`, white `#FFFFFF`, ink `#1C1C1C`, secondary `#6B6B6B`; modern clear cards and restrained accents. Keep the Android dashboard vertically scrollable on small screens, retain Simple/Advanced modes, and show the 16-connection engine ceiling accurately.
 16. The TypeScript console must remain responsive and clearly distinguish disconnected/preview states from live device data. Never fabricate metrics or imply a pairing succeeded before the API confirms it.
 
 ## 3. System architecture
