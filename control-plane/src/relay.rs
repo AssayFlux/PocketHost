@@ -316,20 +316,23 @@ mod tests {
     fn pending_relay_requests_are_bounded_and_revoked_with_device() {
         let hub = RelayHub::default();
         let devices = [Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4()];
+        let overflow_device = Uuid::new_v4();
         let mut first_device_receivers = Vec::new();
+        for device in devices.iter().chain(std::iter::once(&overflow_device)) { hub.connect(*device); }
         for (index, device) in devices.iter().enumerate() {
             for _ in 0..8 {
-                let receiver = hub.register_pending(Uuid::new_v4(), *device).unwrap();
+                let receiver = hub.register_pending(Uuid::new_v4(), *device).unwrap().1;
                 if index == 0 { first_device_receivers.push(receiver); }
             }
         }
         assert_eq!(first_device_receivers.len(), 8);
         assert!(hub.register_pending(Uuid::new_v4(), devices[0]).is_none(),
             "per-device pending request quota must be enforced");
-        assert!(hub.register_pending(Uuid::new_v4(), Uuid::new_v4()).is_none(),
+        assert!(hub.register_pending(Uuid::new_v4(), overflow_device).is_none(),
             "global pending request quota must be enforced");
         hub.revoke_device(devices[0]);
         assert!(first_device_receivers.into_iter().all(|receiver| receiver.blocking_recv().is_err()));
+        hub.connect(devices[0]);
         assert!(hub.register_pending(Uuid::new_v4(), devices[0]).is_some(),
             "device revocation must free its pending request quota");
     }
