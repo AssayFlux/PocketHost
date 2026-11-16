@@ -255,3 +255,5 @@ The Rust engine applies a streaming-response semaphore per distinct site target 
 - Capacity Lab p50/p95/p99 now use nearest-rank percentile selection. This matters for small samples: p95/p99 must select the maximum observation for a two-request sample, not the first observation. An instrumentation regression test covers small-sample tails and invalid percentile inputs.
 - Static deployment startup recovery now rejects symlinked roots, symlinked entry pages and symlink-containing release trees; an invalid active entry is moved to a diagnostic quarantine before restoring a safe release.
 
+- Rust admission regression coverage now also proves that a saturated target's semaphore does not consume a different target's response permit; the shared global connection budget remains independently bounded.
+
