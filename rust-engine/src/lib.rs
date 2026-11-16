@@ -211,6 +211,19 @@ fn per_site_connection_limit(site_count: usize) -> usize {
     MAX_CONNECTIONS.saturating_sub(reserved_for_other_sites).clamp(2, MAX_PER_SITE_CONNECTIONS)
 }
 
+/// Tokio's semaphore is FIFO-fair: requests for a busy site wait in arrival order,
+/// but only for the same bounded interval as global admission. The accept loop
+/// already bounds live connection tasks, so this cannot create an unbounded queue.
+async fn acquire_site_permit(
+    limiter: Arc<Semaphore>,
+    wait: Duration,
+) -> Option<OwnedSemaphorePermit> {
+    tokio::time::timeout(wait, limiter.acquire_owned())
+        .await
+        .ok()?
+        .ok()
+}
+
 fn normalize_hostname(value: &str) -> Result<String, String> {
     let host = value.strip_suffix('.').unwrap_or(value).to_ascii_lowercase();
     if host.is_empty() || host.len() > 253 || !host.is_ascii() {
@@ -548,18 +561,19 @@ async fn serve(
         return serve_inner(root, host_roots, req).await;
     };
     let key = site_target_key(&target);
-    let permit = match site_limits.get(&key).and_then(|limiter| limiter.clone().try_acquire_owned().ok()) {
-        Some(permit) => permit,
-        None => {
-            SITE_LIMIT_REJECTIONS.fetch_add(1, Ordering::Relaxed);
-            let mut response = text_response(StatusCode::SERVICE_UNAVAILABLE, "text/plain; charset=utf-8", "Site concurrency limit reached");
-            response.headers_mut().insert("retry-after", "1".parse().unwrap());
-            response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
-            if close_http1 {
-                response.headers_mut().insert(hyper::header::CONNECTION, "close".parse().unwrap());
-            }
-            return Ok(response);
+    let permit = match site_limits.get(&key).cloned() {
+        Some(limiter) => acquire_site_permit(limiter, QUEUE_WAIT).await,
+        None => None,
+    };
+    let Some(permit) = permit else {
+        SITE_LIMIT_REJECTIONS.fetch_add(1, Ordering::Relaxed);
+        let mut response = text_response(StatusCode::SERVICE_UNAVAILABLE, "text/plain; charset=utf-8", "Site concurrency limit reached");
+        response.headers_mut().insert("retry-after", "1".parse().unwrap());
+        response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
+        if close_http1 {
+            response.headers_mut().insert(hyper::header::CONNECTION, "close".parse().unwrap());
         }
+        return Ok(response);
     };
     let response = serve_inner(root, host_roots, req).await?;
     Ok(hold_site_permit(response, permit))
@@ -1001,6 +1015,14 @@ mod tests {
         assert_eq!(per_site_connection_limit(4), 10);
         assert_eq!(per_site_connection_limit(9), 2);
         assert_eq!(per_site_connection_limit(100), 2);
+    }
+
+    #[tokio::test]
+    async fn site_permit_wait_is_bounded_and_recovers_when_capacity_returns() {
+        let limiter = Arc::new(Semaphore::new(0));
+        assert!(acquire_site_permit(limiter.clone(), Duration::from_millis(5)).await.is_none());
+        limiter.add_permits(1);
+        assert!(acquire_site_permit(limiter, Duration::from_millis(50)).await.is_some());
     }
 
     #[test]
