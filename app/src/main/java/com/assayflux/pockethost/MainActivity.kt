@@ -489,7 +489,7 @@ private fun PocketHostDashboard() {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                 if (selectedTab == "Learn") {
-                    PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenFiles = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
+                    PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
                 if (selectedTab == "Dashboard") {
                 if (pendingPairingCode != null) {
