@@ -204,13 +204,15 @@ object SiteImporter {
     fun recoverInterruptedActivation(context: Context): Boolean {
         val active = File(context.filesDir, "site")
         if (isSafeRecoveryRelease(active)) return false
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
+        val activeExists = java.nio.file.Files.exists(active.toPath(), noFollow)
         val releases = File(context.filesDir, "site-releases")
         val latest = releases.listFiles()
             ?.filter { it.name.startsWith("release-") && isSafeRecoveryRelease(it) }
             ?.maxByOrNull { it.name }
-            ?: return false
-        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
-        val activeExists = java.nio.file.Files.exists(active.toPath(), noFollow)
+            ?: if (activeExists) {
+                throw IOException("The active website is invalid and no safe last-known-good release is available.")
+            } else return false
         val quarantined = if (activeExists) {
             File(releases, "recovery-invalid-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
                 .also { if (!active.renameTo(it)) throw IOException("Could not preserve the interrupted active deployment.") }
