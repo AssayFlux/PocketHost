@@ -27,6 +27,12 @@ class RuntimeCellProbeService : Service() {
                 reply?.writeInt(android.os.Process.myUid())
                 return true
             }
+            if (code == TRANSACTION_READ_PROJECT_FILE) {
+                val content = readProjectFile(data)
+                reply?.writeNoException()
+                reply?.writeByteArray(content)
+                return true
+            }
             if (code != TRANSACTION_INSTALL_POLICY_AND_ACCEPT) return super.onTransact(code, data, reply, flags)
 
             val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
@@ -105,11 +111,51 @@ class RuntimeCellProbeService : Service() {
         }
     }
 
+    private fun readProjectFile(data: Parcel): ByteArray {
+        val hostBroker = requireNotNull(data.readStrongBinder()) { "Host capability broker is missing." }
+        val leaseId = requireNotNull(data.readString()) { "Cell lease ID is missing." }
+        val relativePath = requireNotNull(data.readString()) { "Project path is missing." }
+
+        val issueData = Parcel.obtain()
+        val issueReply = Parcel.obtain()
+        val capability = try {
+            issueData.writeInterfaceToken(RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR)
+            issueData.writeString(leaseId)
+            check(hostBroker.transact(RuntimeCellCapabilityBrokerProtocol.TRANSACTION_ISSUE, issueData, issueReply, 0)) {
+                "Host broker rejected capability issuance transaction."
+            }
+            issueReply.readException()
+            requireNotNull(issueReply.readString()) { "Host broker returned no capability." }
+        } finally {
+            issueData.recycle()
+            issueReply.recycle()
+        }
+
+        val openData = Parcel.obtain()
+        val openReply = Parcel.obtain()
+        return try {
+            openData.writeInterfaceToken(RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR)
+            openData.writeString(leaseId)
+            openData.writeString(capability)
+            openData.writeString(relativePath)
+            check(hostBroker.transact(RuntimeCellCapabilityBrokerProtocol.TRANSACTION_OPEN_READ_ONLY, openData, openReply, 0)) {
+                "Host broker rejected file-open transaction."
+            }
+            openReply.readException()
+            val descriptor = ParcelFileDescriptor.CREATOR.createFromParcel(openReply)
+            ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
+        } finally {
+            openData.recycle()
+            openReply.recycle()
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder = cellBinder
 
     companion object {
         const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_CELL_PROBE"
         const val TRANSACTION_INSTALL_POLICY_AND_ACCEPT = IBinder.FIRST_CALL_TRANSACTION
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION + 1
+        const val TRANSACTION_READ_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 2
     }
 }
