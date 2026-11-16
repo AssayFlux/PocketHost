@@ -26,7 +26,7 @@ This index is the navigation map for the repository's engineering, product and o
 ## Networking, identity and deployment
 
 - `docs/CLOUDFLARE_TUNNEL.md` — reuse and validate the existing Cloudflare Tunnel.
-- `docs/ASSAYFLUX_RELAY.md` — first-party relay architecture and implementation contract (planned).
+- `docs/ASSAYFLUX_RELAY.md` — first-party Relay architecture, bounded HTTP implementation and open production gates.
 - `docs/WEBSITE_DEPLOYMENT.md` — static, Python and Node deployment workflow.
 - `docs/CONTROL_PLANE_DEPLOYMENT.md` — optional remote-management service; not the website origin.
 - `docs/REMOTE_CONTROL_ACCEPTANCE.md` — integration and release acceptance checklist.
