@@ -46,6 +46,18 @@ Structured operational logs, rotation, retention caps and daily reports are core
 ### ADR-014 — Honest status vocabulary
 Distinguish implemented, automated-tested, emulator-verified, device-verified, externally-verified and production-approved. No production claims based on source presence or compile success.
 
+### ADR-015 — Remote control-plane credentials exchange for short-lived sessions
+
+**Date:** 2026-11-16
+
+**Context:** Long-lived bootstrap and team-user bearer credentials were accepted directly by every remote management endpoint. That increased the impact of a credential copied into a browser or leaked from a client.
+
+**Decision:** Accept long-lived control-plane credentials only at `POST /v1/admin/session`. Issue a random 256-bit, server-stored-hash session token with a 12-hour expiry. Require that session for every management operation. Store the originating user token hash with user sessions so token rotation invalidates sessions even across concurrent issuance; revoke user sessions transactionally on account revocation or token rotation. Support explicit session revocation and audit creation/revocation. Keep the browser's long-lived credential out of persistent browser storage and hold the short-lived session in memory.
+
+**Alternatives:** Continue accepting long-lived bearer tokens directly; use stateless self-contained tokens; add refresh tokens immediately. Direct long-lived use was rejected. Stateless tokens complicate immediate revocation. Refresh tokens are deferred until device and visitor identity flows are designed together.
+
+**Consequences:** Management clients must exchange credentials before API use and reconnect after session expiry. Device bearer credentials remain a separate device-authentication plane. Passkey-first Owner identity and site-scoped visitor authentication remain separate Gate 4 requirements.
+
 ## Changing a decision
 
 Submit a PR updating this file, North Star, Master Plan and affected implementation docs. Explain why the old decision no longer serves the product, migration/security impact and acceptance tests. User-confirmed product intent takes precedence over contributor assumptions.
