@@ -250,3 +250,8 @@ The Rust engine applies a streaming-response semaphore per distinct site target 
 - The dashboard's selected concurrency detail displays p95 and p99 separately; older saved benchmark records explicitly show p99 as not recorded rather than inventing a value.
 - The benchmark workload remains the bounded loopback static GET profile. Additional cached/uncached, payload-size, keep-alive, tunnel and trusted-runtime workloads and repeatable sustained thermal/battery runs are still required.
 
+## Capacity and recovery correctness follow-up — 2026-11-16
+
+- Capacity Lab p50/p95/p99 now use nearest-rank percentile selection. This matters for small samples: p95/p99 must select the maximum observation for a two-request sample, not the first observation. An instrumentation regression test covers small-sample tails and invalid percentile inputs.
+- Static deployment startup recovery now rejects symlinked roots, symlinked entry pages and symlink-containing release trees; an invalid active entry is moved to a diagnostic quarantine before restoring a safe release.
+
