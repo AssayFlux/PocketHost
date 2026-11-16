@@ -90,7 +90,7 @@ class NodeRuntimeSmokeTest {
         val staticResponse = java.net.Socket("127.0.0.1", 18080).use { socket ->
             socket.soTimeout = 5_000
             socket.getOutputStream().write(
-                "GET / HTTP/1.1\\r\\nHost: static-smoke.local\\r\\nConnection: close\\r\\n\\r\\n"
+                "GET / HTTP/1.1\r\nHost: static-smoke.local\r\nConnection: close\r\n\r\n"
                     .toByteArray(Charsets.ISO_8859_1)
             )
             socket.getOutputStream().flush()
