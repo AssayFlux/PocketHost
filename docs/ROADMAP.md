@@ -138,3 +138,12 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 - Gate 7 UI instrumentation now exercises the Private visitor-access path end to end: change mode, issue one-time credential, verify registry state, revoke and verify removal. It also asserts the folder/ZIP publishing and encrypted backup actions are present on Sites.
 
+
+
+## 2026-11-16 exact-SHA verification update
+
+- Quality workflow [43900937687](https://github.com/AssayFlux/PocketHost/actions/runs/43900937687) passed all six jobs on `574b9ef3aa8ad226a0886cf4af87ee0dd6c3bdf0`.
+- Android integration workflow [43900937744](https://github.com/AssayFlux/PocketHost/actions/runs/43900937744) on that same SHA passed the cloudflared Android build/ABI verification, separate ABI debug APK builds/APK-content verification, and signature-matched runtime companion build.
+- At 16:12 UTC, API 26 emulator instrumentation was still in progress and API 33/API 35 jobs were queued. The matrix is not accepted until all three complete successfully and their reports/artifacts are reviewed.
+- Intermediate Android build and emulator validation is being run during Gates 2–4. This does not move final signed-release, physical-device, external connectivity or independent-review acceptance out of Gate 8.
+- Gates 2–7 remain open; see `docs/PROJECT_STATUS_2026-11-16.md` and `docs/PROJECT_BASELINE.md` for the exact outstanding blockers. Source presence and APK compilation do not close these gates.
