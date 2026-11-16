@@ -132,3 +132,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 - Gate 5 additional resource bound: HTTP/2 connections now admit at most eight concurrent streams, with explicit pending-reset, local-error-reset and 16 KiB header-list limits. Regression coverage asserts the configured bounds; live multiplexed load and phone measurements remain open.
 
+- Gate 5 ingress hardening also adds a 10-second HTTP/1 header deadline, a 64-header cap and 16 KiB connection buffer; the HTTP/2 eight-stream cap remains separate. Slow-header and mixed HTTP/1/2 load validation is still open.
+
