@@ -5,11 +5,21 @@
 **Priority:** Gate 3 in `docs/NORTH_STAR.md`  
 **Purpose:** first-party outbound tunnel and visitor-access gateway for phone-hosted websites.
 
-## Current repository truth (2026-11-16)
+## Current implementation status (2026-11-16)
 
-The repository currently contains a Relay product specification only. `RemoteControlAgent` polls the separate control-plane over HTTPS; that is remote management, not a persistent website relay. The control-plane registers devices, queues commands and stores deployment artifacts; it is not a public visitor gateway. No production Relay gateway, persistent device stream, visitor stream multiplexer, hostname registry/certificate lifecycle or Android Relay Agent is implemented or deployed.
+The repository now contains an initial first-party HTTP Relay path:
 
-Keep the existing Cloudflare Tunnel integration independent and functional. Do not relabel HTTP polling, a device heartbeat, or a database session row as Relay. Gate 3 requires the complete visitor-to-device stream path described below.
+- Owner-only hostname registration and DNS TXT ownership challenge/verification in the control plane.
+- Verified hostname-to-device/site routing in the visitor gateway.
+- An authenticated outbound Android Server-Sent Events connection from the phone to the control plane.
+- Bounded visitor request delivery over the SSE stream and response return over authenticated device POSTs.
+- The phone checks the incoming hostname against the exact local SiteRegistry site ID before forwarding to its local Rust HTTP listener.
+- The local Rust listener independently enforces site-scoped Public/Private/Restricted Basic visitor credentials, and requires HTTPS at the trusted proxy edge for protected sites.
+- Device token rotation and device deletion close the active Relay stream and pending requests are bounded globally and per device.
+
+This is a request/response HTTP Relay, not yet the full general-purpose streaming Relay originally specified. Request and response bodies are capped at 8 MiB; requests time out after 45 seconds; four local requests run concurrently per device. WebSocket upgrades, streaming downloads/SSE, end-to-end HTTP/2 multiplexing, and long-lived response streaming remain unimplemented. DNS TXT proof is implemented; production DNS/TLS deployment and load/soak validation are not proven.
+
+The existing Cloudflare Tunnel remains independent and functional. It can be used as the TLS ingress to the control-plane gateway; the phone's Relay connection is outbound-only. Do not describe the current bounded HTTP path as arbitrary TCP forwarding or as production-ready general Relay.
 
 ## 1. Product objective
 
