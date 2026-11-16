@@ -20,7 +20,7 @@ The repository now contains an initial first-party HTTP Relay path:
 
 This is a request/response HTTP Relay, not yet the full general-purpose streaming Relay originally specified. Request and response bodies are capped at 8 MiB; requests time out after 45 seconds; four local requests run concurrently per device. WebSocket upgrades, streaming downloads/SSE, end-to-end HTTP/2 multiplexing, and long-lived response streaming remain unimplemented. DNS TXT proof validates the resolver source, transaction ID, question and answer owner; DNSSEC validation is not implemented. Production DNS/TLS deployment and load/soak validation are not proven.
 
-The existing Cloudflare Tunnel remains independent and functional. It can be used as the TLS ingress to the control-plane gateway; the phone's Relay connection is outbound-only. Do not describe the current bounded HTTP path as arbitrary TCP forwarding or as production-ready general Relay.
+The existing Cloudflare Tunnel remains independent and functional. For this Compose topology, route the dedicated management hostname to port 8080 and verified Relay visitor hostnames to port 8081. The phone's outbound device agent connects to the dedicated management hostname; the visitor listener contains only the visitor gateway. The phone's Relay connection is outbound-only. Do not describe the current bounded HTTP path as arbitrary TCP forwarding or as production-ready general Relay.
 
 ## 1. Product objective
 
