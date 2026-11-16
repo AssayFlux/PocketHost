@@ -260,7 +260,7 @@ internal fun PocketHostDashboardScreen(
                         val benchmarkLevels = state.capacityBenchmark.optJSONArray("levels")
                         val chartRows = (0 until (benchmarkLevels?.length() ?: 0)).mapNotNull { index ->
                             benchmarkLevels?.optJSONObject(index)?.let {
-                                Triple(it.optInt("concurrency"), it.optLong("p95LatencyMs"), it.optLong("p99LatencyMs"))
+                                Triple(it.optInt("concurrency"), it.optLong("p95LatencyMs"), if (it.has("p99LatencyMs")) it.optLong("p99LatencyMs") else null)
                             }
                         }
                         if (chartRows.isNotEmpty()) {
@@ -285,7 +285,7 @@ internal fun PocketHostDashboardScreen(
                                 }
                             }
                             val selectedPoint = chartRows.firstOrNull { it.first == state.selectedCapacityConcurrency }
-                            Text(selectedPoint?.let { "Concurrency ${it.first} · p95 ${it.second} ms · p99 ${it.third} ms" }
+                            Text(selectedPoint?.let { point -> "Concurrency ${point.first} · p95 ${point.second} ms · ${point.third?.let { p99 -> "p99 $p99 ms" } ?: "p99 not recorded"}" }
                                 ?: "Select a concurrency point to inspect p95 and p99 latency. Bars show p95 milliseconds; marker = 750 ms benchmark threshold.",
                                 color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
