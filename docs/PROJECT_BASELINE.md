@@ -44,7 +44,7 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 
 - Quality workflow: Rust, control plane/database migrations, Python, Node, console and Gradle wrapper validation. It does not compile Android or package APKs.
 - Android integration and signed-release workflows are manual-only.
-- Owner instruction: no Android APK build, emulator run or device test during Gates 0–7. All Android build/ABI/API 26/33/35 validation is deferred to Gate 8.
+- Revised Owner instruction (2026-11-16): run intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation during Gates 2–4 so security changes are validated as implemented. Gate 8 retains final release packaging, physical-device acceptance and independent review.
 - A legacy Android integration run `43824043298` on SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` started before the manual-only change and is now cancelled. Its cloudflared job succeeded, APK job failed, API 26/33 emulator jobs failed, and API 35 was cancelled. It produced no accepted APK or API-matrix result. The replacement push-triggered run `43828040040` skipped all Android jobs.
 
 ## Verification evidence
