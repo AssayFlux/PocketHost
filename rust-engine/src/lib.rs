@@ -32,6 +32,9 @@ const MAX_HTTP2_STREAMS_PER_CONNECTION: u32 = 8;
 const MAX_HTTP2_PENDING_RESET_STREAMS: usize = 16;
 const MAX_HTTP2_LOCAL_ERROR_RESETS: usize = 64;
 const MAX_HTTP_HEADER_LIST_BYTES: u32 = 16 * 1024;
+const MAX_HTTP1_HEADERS: usize = 64;
+const MAX_HTTP1_BUFFER_BYTES: usize = 16 * 1024;
+const HTTP1_HEADER_READ_TIMEOUT: Duration = Duration::from_secs(10);
 const QUEUE_WAIT: Duration = Duration::from_millis(200);
 const SHUTDOWN_DRAIN: Duration = Duration::from_secs(3);
 const RATE_LIMIT_BURST: f64 = 120.0;
@@ -743,6 +746,11 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                     let mut builder = Builder::new(TokioExecutor::new());
                     // Bound multiplexed request fan-out independently of the
                     // TCP connection cap. Hyper's default is 200 streams/socket.
+                    builder.http1()
+                        .timer(hyper_util::rt::TokioTimer::new())
+                        .header_read_timeout(HTTP1_HEADER_READ_TIMEOUT)
+                        .max_headers(MAX_HTTP1_HEADERS)
+                        .max_buf_size(MAX_HTTP1_BUFFER_BYTES);
                     builder.http2()
                         .max_concurrent_streams(MAX_HTTP2_STREAMS_PER_CONNECTION)
                         .max_pending_accept_reset_streams(MAX_HTTP2_PENDING_RESET_STREAMS)
@@ -1024,6 +1032,9 @@ mod tests {
         assert_eq!(MAX_HTTP2_PENDING_RESET_STREAMS, 16);
         assert_eq!(MAX_HTTP2_LOCAL_ERROR_RESETS, 64);
         assert_eq!(MAX_HTTP_HEADER_LIST_BYTES, 16 * 1024);
+        assert_eq!(MAX_HTTP1_HEADERS, 64);
+        assert_eq!(MAX_HTTP1_BUFFER_BYTES, 16 * 1024);
+        assert_eq!(HTTP1_HEADER_READ_TIMEOUT, Duration::from_secs(10));
     }
 
     #[test]
