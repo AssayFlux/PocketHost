@@ -810,6 +810,30 @@ mod tests {
         sqlx::query("DELETE FROM devices WHERE id=$1").bind(device).execute(&db).await.unwrap();
     }
 
+    #[tokio::test]
+    async fn admin_sessions_expire_and_can_be_revoked() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let state = AppState { db: db.clone(), admin_token: "owner-session-test-token-0123456789abcdef".into() };
+        let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
+        let (_, Json(first_session)) = create_admin_session(State(state.clone()), credential_headers.clone()).await.unwrap();
+        let first_token = first_session["accessToken"].as_str().unwrap();
+        let first_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {first_token}")).unwrap())]);
+        let first_id: Uuid = sqlx::query_scalar("SELECT id FROM control_sessions WHERE token_hash=$1")
+            .bind(token_hash(first_token)).fetch_one(&db).await.unwrap();
+        sqlx::query("UPDATE control_sessions SET expires_at=now()-interval '1 second' WHERE id=$1")
+            .bind(first_id).execute(&db).await.unwrap();
+        assert!(admin(&first_headers, &state).await.is_err(), "Expired sessions must be rejected.");
+
+        let (_, Json(second_session)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let second_token = second_session["accessToken"].as_str().unwrap();
+        let second_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {second_token}")).unwrap())]);
+        assert_eq!(revoke_admin_session(State(state.clone()), second_headers.clone()).await.unwrap(), StatusCode::NO_CONTENT);
+        assert!(admin(&second_headers, &state).await.is_err(), "Explicitly revoked sessions must be rejected.");
+        sqlx::query("DELETE FROM control_sessions WHERE id=$1").bind(first_id).execute(&db).await.unwrap();
+    }
+
     #[test]
     fn generated_tokens_are_unique_and_not_stored_as_plaintext() {
         let a = new_token();
