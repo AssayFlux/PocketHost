@@ -422,24 +422,40 @@ async fn acknowledge(
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "command_result_too_large".into()));
     }
     let state = if input.success { "succeeded" } else { "failed" };
+    let mut tx = s.db.begin().await.map_err(internal)?;
     let result = sqlx::query("UPDATE device_commands SET state=$3,result=$4,acknowledged_at=now() WHERE id=$1 AND device_id=$2 AND state='delivered' AND expires_at > now()")
-        .bind(command).bind(id).bind(state).bind(input.result).execute(&s.db).await.map_err(internal)?;
-    if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "command_not_found_or_already_acknowledged".into())); }
+        .bind(command).bind(id).bind(state).bind(input.result).execute(&mut *tx).await.map_err(internal)?;
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "command_not_found_or_already_acknowledged".into()));
+    }
+
+    // Commit command state and artifact metadata together. Delete the blob only after
+    // the database transaction commits, so a failed transaction never loses a deploy.
+    let mut artifact_to_remove: Option<String> = None;
     if input.success {
         if let Some(row) = sqlx::query("SELECT payload FROM device_commands WHERE id=$1 AND device_id=$2 AND kind='deploy_site'")
-            .bind(command).bind(id).fetch_optional(&s.db).await.map_err(internal)? {
+            .bind(command).bind(id).fetch_optional(&mut *tx).await.map_err(internal)? {
             let payload: Value = row.get("payload");
             if let Some(artifact) = payload.get("artifactId").and_then(Value::as_str).and_then(|value| Uuid::parse_str(value).ok()) {
                 if let Some(file) = sqlx::query("SELECT storage_path FROM device_artifacts WHERE id=$1 AND device_id=$2")
-                    .bind(artifact).bind(id).fetch_optional(&s.db).await.map_err(internal)? {
-                    let path: String = file.get("storage_path");
-                    sqlx::query("DELETE FROM device_artifacts WHERE id=$1").bind(artifact).execute(&s.db).await.map_err(internal)?;
-                    let _ = fs::remove_file(path);
+                    .bind(artifact).bind(id).fetch_optional(&mut *tx).await.map_err(internal)? {
+                    artifact_to_remove = Some(file.get("storage_path"));
+                    sqlx::query("DELETE FROM device_artifacts WHERE id=$1 AND device_id=$2")
+                        .bind(artifact).bind(id).execute(&mut *tx).await.map_err(internal)?;
                 }
             }
         }
     }
-    audit(&s, "device", "command.acknowledge", &command.to_string(), json!({"deviceId":id,"state":state})).await?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind("device").bind("command.acknowledge").bind(command.to_string())
+        .bind(json!({"deviceId":id,"state":state}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    if let Some(path) = artifact_to_remove {
+        if let Err(error) = fs::remove_file(&path) {
+            tracing::warn!(path = %path, error = %error, "acknowledged deployment artifact cleanup failed");
+        }
+    }
     Ok(Json(json!({"acknowledged":true,"state":state})))
 }
 
