@@ -36,7 +36,7 @@ open class RuntimeCellProbeService : Service() {
                 return true
             }
             if (code == TRANSACTION_WRITE_PROJECT_FILE) {
-                check(data.dataSize <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder probe limit." }
+                check(data.dataSize() <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder probe limit." }
                 val written = writeProjectFile(data)
                 reply?.writeNoException()
                 reply?.writeLong(written)
