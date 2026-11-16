@@ -1,13 +1,40 @@
 # Pocket Host — Current Implementation Status
 
-**Baseline:** 2026-11-16 · companion source integration `bd227b0e5564ad25c88064cfc36796469390b773`  
-**Release status:** integrated development software; not production approved.
+**Snapshot:** 2026-11-16  
+**Source baseline:** `9ff8de22ac7afb18821b3a3f201fddbba58eab77`  
+**Release:** 0.1.0 target · **Decision:** not production approved.
+
+## Stage 0 — Repository truth and architecture freeze
+
+**Complete.**
+
+- Audited current repository structure, Android host/companion packages, Rust engine, Python/Node runtime, console, control plane, manifests and workflows.
+- Reconciled the canonical North Star, roadmap, baseline and engineering handoff.
+- Added Cargo lockfiles for both Rust crates, Gradle dependency locks for host and companion, and npm package-lock for the console.
+- Pinned Rust 1.88.0, Gradle 8.9 with distribution checksum, Android SDK 35 / Build Tools 35.0.0 / NDK 27.2.12479018 / CMake 3.22.1, and cargo-ndk 4.1.2.
+- Added a checksum-verified Gradle wrapper; local/CI Gradle entry point is `./gradlew`.
+- CI uses locked Cargo and npm dependency installation. Android APK building is separated from ordinary quality CI.
+
+## Stage 1 — Runtime migration
+
+**Source implementation complete; Android verification deferred to Gate 8.**
+
+- Kotlin host owns lifecycle; Rust/Tokio/Hyper remains the website ingress, hostname router, static server and reverse proxy.
+- Companion Binder client validates protocol version, registers a Binder death recipient, invalidates stale connections and rebinds on the next supervised operation.
+- Stop operations no longer start an absent foreground worker just to stop it.
+- Orderly companion shutdown stops Python and the separate Node service.
+- Project replacement uses staged extraction and a recoverable previous-project rename. Interrupted replacement is reconciled before a new transfer; failed activation restores the previous tree when possible.
+- Python instrumentation now defines a real Host-header request through Rust into the companion WSGI server.
+- Node instrumentation now binds the smoke app to loopback, routes it through Rust, stops the Node runtime, then verifies the independent static origin still serves.
+- Python/Node remain trusted owner-controlled code only. This is not per-project isolation.
+
+**Validation is intentionally deferred:** Android instrumentation source is written but has not been built or run. Per owner instruction, host/companion APK builds, ABI packaging, API 26/33/35 emulator tests and physical-device tests happen only at Gate 8 after Gates 0–7 implementation work.
 
 ## Android application
 
 - Kotlin/Jetpack Compose; minimum SDK API 26; configured ARMv7, ARM64 and x86_64 targets.
 - Foreground hosting service and notification.
-- Dashboard, Sites, Activity and Learn extracted into dedicated screens; Settings and remaining orchestration still need decomposition.
+- Dashboard, Sites, Activity, Learn and Settings destinations.
 - Site folder/ZIP import, staged deployment, retained releases, rollback and file operations.
 - Owner/Operator account and local authenticated management foundations.
 - Device health sampling, operational logs, metrics and diagnostics.
@@ -21,54 +48,26 @@
 - Bounded connection admission/queue, per-client rate controls, per-site concurrency limits, overload responses and graceful drain code are present.
 - Fairness under contention, fault injection and sustained-load evidence remain incomplete.
 
-## Python and Node runtimes
+## Security truth
 
-- Python: Chaquopy CPython 3.11 / WSGI packaged in the separate-UID companion.
-- Node: pinned Node.js mobile 24.22.1, JNI bridge and dedicated `:node` process inside the companion package.
-- Host-to-companion Binder protocol version 1, signature permission/caller checks and bounded ZIP/file-descriptor project transfer are integrated in source.
-- Project data is extracted into companion-owned storage; common credential paths are excluded/rejected.
-- Both runtimes share the companion UID. Per-site filesystem isolation and enforceable network egress remain incomplete; trusted owner-installed code only.
-- Build and migrated API 26/33/35 instrumentation evidence are pending.
-
-## Separate-UID companion
-
-- Separate Android application package/UID with foreground control service and Node `:node` service.
-- Chaquopy Python 3.11, Node 24 native libraries/JNI bridge and metrics preload moved into the companion module.
-- Versioned signature-protected Binder IPC; caller package and signing identity are checked.
-- Bounded file-descriptor project transfer, staging extraction, path traversal checks and worker-owned project storage integrated in source.
-- Host runtime facades and tests now target companion execution; build/API-matrix verification is pending.
-- Companion UID protects host-private files, but projects share the companion UID and network egress is not enforced.
-
-## Isolation and security
-
-Present: runtime trust acknowledgement, canonical project-root checks, symlink escape rejection, authenticated local management API and signature-protected companion service.
-
-Open: per-project filesystem isolation, enforceable egress including raw sockets/DNS rebinding, SSRF/private-network/metadata denial, cross-project and exhaustion tests, independent review.
-
-## Capacity and operations
-
-- Device sampler captures API/ABI/cores, CPU estimate, memory/PSS/heaps, storage, battery/temperature, thermal state and network transport.
-- Bounded operational logs and aggregate metrics; daily/hourly report foundation.
-- Initial loopback static GET Capacity Lab with concurrency sweep, sample/error counts, p95 latency and low-memory/severe-thermal abort.
-- Rust admission governor includes bounded admission/queue/rate/site controls and drain logic.
-- Missing: fairness/stress acceptance, cached/uncached and payload matrix, runtime workload class, p50/p99 and throughput/resource correlation, repeatability and benchmark invalidation.
-
-## Backup and UI
-
-- Passphrase-encrypted backup/restore covers active website, configured project roots, hostname routes and selected non-secret settings; device-bound credentials excluded.
-- Restore interruption/corruption/low-storage/rollback fault matrix remains open.
-- Five destinations: Dashboard, Sites, Activity, Learn and Settings. Settings extraction and responsive/accessibility visual acceptance remain open.
-- Dashboard screenshot instrumentation passed on API 26 in the latest integration run; visual review is distinct from screenshot generation.
+The companion UID differs from the host UID, but Python and Node projects share the companion UID and storage. Outbound egress is not OS-enforced per project. The isolated service/seccomp/Unix-socket work is a feasibility probe, not a production sandbox. Do not run untrusted visitor-submitted code.
 
 ## CI evidence
 
-- Quality [43789396734](https://github.com/AssayFlux/PocketHost/actions/runs/43789396734): six jobs passed.
-- Android [43789396568](https://github.com/AssayFlux/PocketHost/actions/runs/43789396568): API 26 passed 31 tests with zero failures; APK packaging and cloudflared build passed. API 33 was in progress and API 35 queued at last check.
-- Re-run the full matrix after source changes; only exact-SHA results count.
-- Previous artifact retrieval returned a truncated ZIP and is not a valid deliverable.
+- Quality `43826475655`: five jobs passed on `a647483060e08361ebeca401dc4ecb4460386372`.
+- Quality `43826809648`: five jobs passed on `ff0c66a32bf226733afafa5360a2f99cee526661`.
+- Dependency-lock workflow `43826809601`: succeeded; Gradle wrapper and dependency locks generated.
+- No Android build or instrumentation result is claimed for the current baseline.
+- Legacy Android run `43824043298` was queued on an older SHA before the manual-only policy; it is not evidence for the current baseline.
 
-## External acceptance
+## Remaining North Star gates
 
-Existing Cloudflare Tunnel HTTPS, physical device lifecycle/thermal/battery/storage tests, owner-configured signing secrets and independent security review are not yet evidenced.
+2. Per-project OS isolation and adversarial security.  
+3. AssayFlux Relay and device enrollment.  
+4. Owner/Operator and visitor authentication.  
+5. Rust governor and Capacity Lab.  
+6. Backup, operations and lifecycle recovery.  
+7. Product UX and onboarding.  
+8. Final Android build, API 26/33/35 matrix, ABI/signing, external tests and independent review.
 
-**Release decision:** not production-ready, not fully sandboxed, not signed and not externally verified. Companion runtime source integration is present but not yet CI-verified; Python/Node remain trusted-code-only.
+**Release decision:** not production-ready, not fully sandboxed, not signed and not externally verified.

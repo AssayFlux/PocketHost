@@ -65,7 +65,7 @@ The North Star defines each gate's full exit criteria. Do not reorder security-d
 
 ## Build and test discipline
 
-- Use the Gradle wrapper and versions pinned in repository configuration.
+- Use the checksum-verified Gradle 8.9 wrapper (`./gradlew`) and committed dependency lockfiles.
 - Inspect manifests, permissions and ABI filters before changing packaging.
 - Quality CI and Android integration CI are separate evidence sources.
 - Every result is tied to exact SHA, workflow, API level, test counts, failures and skips.
@@ -80,3 +80,13 @@ Never commit keystores, passwords, tokens, private keys or tunnel credentials. U
 ## Handoff rule
 
 Before each task: inspect current `main`, recent commits, relevant source, workflow and docs. Implement on the authorized branch, add regression tests, update docs in the same change set, run relevant checks, then report exactly what changed and what remains. Never ask the owner to perform device tests while source/build/CI work remains incomplete; physical-device acceptance belongs at the appropriate release gate.
+
+
+## Build sequencing — owner instruction
+
+- Do not build host/companion APKs, compile Android source, run Android emulators or perform device tests during Gates 0–7.
+- Continue source implementation, code review, non-Android quality CI and documentation normally.
+- Android integration and signed-release workflows are manual-only. Invoke them only at Gate 8 after the remaining system implementation is complete.
+- At Gate 8, build all declared ABIs, run API 26/33/35 instrumentation, inspect signer/package metadata and then hand the APKs to the owner for physical-device acceptance.
+- Dependency resolution and Gradle wrapper validation are not APK builds and may run during implementation.
+- Build inputs: Rust 1.88.0, Gradle wrapper 8.9 with checksum, Java 17, SDK 35, Build Tools 35.0.0, NDK 27.2.12479018, CMake 3.22.1, cargo-ndk 4.1.2, Python 3.11 and committed Cargo/Gradle/npm lockfiles.

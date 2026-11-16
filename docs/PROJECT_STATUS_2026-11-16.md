@@ -1,9 +1,11 @@
-# ASSAYFLUX POCKET HOST — PROJECT STATUS
+# ASSAYFLUX POCKET HOST — HISTORICAL PROJECT STATUS
 
 **Review timestamp:** 2026-11-16  
 **Reviewed source baseline:** `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade`  
 **Documentation refresh:** in progress on main after this baseline; refresh commit SHAs must not be confused with source verification.  
 **Release:** 0.1.0 target · **Decision:** not production approved.
+
+> Historical snapshot from the earlier source baseline. It is retained for audit history and is superseded by `docs/PHASE_0_STATUS.md` and `docs/PROJECT_BASELINE.md`. Do not use its CI IDs or implementation state as current evidence.
 
 ## 1. What this report means
 

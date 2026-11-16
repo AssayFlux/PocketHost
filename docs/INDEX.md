@@ -1,6 +1,6 @@
 # ASSAYFLUX POCKET HOST — DOCUMENTATION INDEX
 
-This index is the navigation map for the repository's engineering, product and operations documents. Read the North Star first; use the baseline and dated status for evidence.
+This index is the navigation map for the repository's engineering, product and operations documents. Read the North Star first; use the current baseline and phase status for evidence. The dated status file is retained as historical evidence.
 
 ## Start here
 
@@ -10,7 +10,8 @@ This index is the navigation map for the repository's engineering, product and o
 4. `docs/MASTER_PLAN.md` — system architecture, module responsibilities and technical contracts.
 5. `docs/DEVELOPMENT_CONTEXT.md` — mandatory constraints and contributor handoff.
 6. `docs/DECISIONS.md` — accepted architecture decisions and change control.
-7. `docs/PROJECT_STATUS_2026-11-16.md` — dated source/CI evidence snapshot.
+7. `docs/PHASE_0_STATUS.md` — current Stage 0/1 implementation and verification status.
+8. `docs/PROJECT_STATUS_2026-11-16.md` — historical source/CI snapshot.
 
 ## Architecture and runtime
 
