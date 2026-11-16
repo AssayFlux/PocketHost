@@ -417,6 +417,10 @@ async fn acknowledge(
     State(s): State<AppState>, headers: HeaderMap, Path(command): Path<Uuid>, Json(input): Json<CommandAck>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let id = device_id(&headers, &s).await?;
+    let encoded_result = serde_json::to_vec(&input.result).map_err(internal)?;
+    if encoded_result.len() > 64 * 1024 {
+        return Err((StatusCode::PAYLOAD_TOO_LARGE, "command_result_too_large".into()));
+    }
     let state = if input.success { "succeeded" } else { "failed" };
     let result = sqlx::query("UPDATE device_commands SET state=$3,result=$4,acknowledged_at=now() WHERE id=$1 AND device_id=$2 AND state='delivered' AND expires_at > now()")
         .bind(command).bind(id).bind(state).bind(input.result).execute(&s.db).await.map_err(internal)?;
@@ -589,6 +593,14 @@ mod tests {
         assert_eq!(expiry_state, "expired");
 
         sqlx::query("DELETE FROM devices WHERE id=$1").bind(device).execute(&db).await.unwrap();
+    }
+
+    #[test]
+    fn command_result_payload_is_bounded() {
+        let small = json!({"status":200,"message":"ok"});
+        assert!(serde_json::to_vec(&small).unwrap().len() <= 64 * 1024);
+        let oversized = json!({"output":"x".repeat(64 * 1024)});
+        assert!(serde_json::to_vec(&oversized).unwrap().len() > 64 * 1024);
     }
 
     #[test]
