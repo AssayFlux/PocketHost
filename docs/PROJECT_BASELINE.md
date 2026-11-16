@@ -240,3 +240,12 @@ Update this file with exact evidence whenever the baseline changes.
 - Gate 5 still needs executed slow-header/multiplexed-load, representative workload and target-phone thermal/battery evidence. Gate 6 still needs executed API-matrix, low-storage, forced process-death, reboot/Doze/network/service-death evidence. Gate 7 still needs executed UI artifacts and human TalkBack, font-scale, contrast and compact/landscape review.
 - Do not close Gates 5, 6 or 7 on source presence alone.
 
+
+
+## Exact-SHA verification update — 2026-11-16
+
+- Implementation SHA `574b9ef3aa8ad226a0886cf4af87ee0dd6c3bdf0` on `main` passed quality workflow [43900937687](https://github.com/AssayFlux/PocketHost/actions/runs/43900937687): all six jobs (Rust, control-plane/PostgreSQL, Python, Node, console and Gradle wrapper) completed successfully.
+- Android integration workflow [43900937744](https://github.com/AssayFlux/PocketHost/actions/runs/43900937744) on the same SHA: cloudflared Android build/ABI verification passed; separate ABI debug APK builds and APK-content verification passed; signature-matched runtime companion build passed. API 26 emulator instrumentation was still in progress at 16:12 UTC; API 33 and API 35 emulator jobs were queued. The workflow is not yet an accepted API-matrix result.
+- This is the first successful Android APK/ABI build evidence recorded for this current source line. It does not yet prove the isolated runtime probe, Python/Node startup, full visitor path, backup recovery, UI instrumentation or accessibility because the emulator matrix has not completed and its reports/artifacts have not been inspected.
+- Gates 2–7 remain open. Specifically, per-project UID/storage/egress confinement is not in production; Relay is not deployed and lacks streaming/WebSocket/TLS lifecycle and soak acceptance; passkey-first Owner identity is absent; target-device capacity and lifecycle fault evidence is incomplete; and human accessibility/onboarding acceptance remains outstanding.
+- Sequencing correction: intermediate APK/ABI builds and API 26/33/35 instrumentation are being run during Gates 2–4. Gate 8 still owns final signed release artifacts, physical ARMv7/ARM64 acceptance, external connectivity and independent review.
