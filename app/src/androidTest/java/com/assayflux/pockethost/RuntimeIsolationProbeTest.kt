@@ -107,9 +107,20 @@ class RuntimeIsolationProbeTest {
                     reply.recycle()
                 }
                 assertTrue("Isolated process did not consume the brokered visitor stream", brokered)
-                val response = client.getInputStream().bufferedReader().readText()
+                val expectedResponse = "isolated-cell-response"
+                val responseBytes = ByteArray(expectedResponse.length)
+                var responseCount = 0
+                client.soTimeout = 3_000
+                while (responseCount < responseBytes.size) {
+                    val count = client.getInputStream().read(
+                        responseBytes, responseCount, responseBytes.size - responseCount
+                    )
+                    if (count < 0) break
+                    responseCount += count
+                }
+                val response = String(responseBytes, 0, responseCount, Charsets.UTF_8)
                 assertTrue("Isolated process could not answer on the brokered visitor stream",
-                    response == "isolated-cell-response")
+                    responseCount == expectedResponse.length && response == expectedResponse)
             } finally {
                 client.close()
                 accepted.close()
@@ -170,6 +181,8 @@ class RuntimeIsolationProbeTest {
             try {
                 visitorOne.getOutputStream().write("request-one\n".toByteArray(Charsets.UTF_8))
                 visitorOne.getOutputStream().flush()
+                visitorOne.soTimeout = 3_000
+                visitorTwo.soTimeout = 3_000
                 visitorTwo.getOutputStream().write("request-two\n".toByteArray(Charsets.UTF_8))
                 visitorTwo.getOutputStream().flush()
                 val data = Parcel.obtain()
@@ -213,6 +226,7 @@ class RuntimeIsolationProbeTest {
                 RuntimeIsolationProbeService.TRANSACTION_LOOPBACK,
                 intValue = host.localPort
             ) == 1
+            assertFalse("Isolated process unexpectedly opened a loopback connection", loopbackAllowed)
             Log.i(
                 "PocketHostIsolationProbe",
                 "hostUid=" + context.applicationInfo.uid + " workerUid=" + workerUid +
