@@ -49,6 +49,20 @@ The returned device token is displayed once. Enter it in PocketHost → Advanced
 
 Supported configuration keys include `pythonMaxWorkers` (2–16), `nodeHeapMb` (96–512) and `tunnelEnabled` (boolean). The phone validates settings before applying them.
 
+## AssayFlux Relay transport
+
+The control plane now includes a first-party Relay gateway path alongside management:
+
+- Owner registers a hostname with `POST /v1/admin/devices/{id}/relay-sites`.
+- The API returns a one-time DNS TXT proof at `_pockethost-verification.<hostname>`. A route remains inactive until `POST /v1/admin/relay-sites/{id}/verify` resolves and matches that TXT token.
+- The Android device opens an authenticated outbound Server-Sent Events connection at `GET /v1/device/relay/stream`. Visitor requests are queued to that stream; the device forwards them to its local Rust listener and posts bounded responses to `POST /v1/device/relay/responses/{request_id}`.
+- The visitor gateway routes only verified hostnames, requires HTTPS at the trusted edge, and binds each hostname to a device and local `site_id`. The Android agent independently checks that the hostname is registered to that exact local site ID before forwarding.
+- Device deletion and token rotation close the active Relay session. Responses are bound to the device that owns the pending request.
+
+**Current transport limits:** this is bounded HTTP request/response forwarding, not a general TCP tunnel. Request and response bodies are limited to 8 MiB each, each visitor request has a 45-second deadline, and four local requests run concurrently per device. WebSocket upgrades, streaming downloads/SSE, HTTP/2 end-to-end multiplexing, and long-lived response bodies are not yet supported. Use Cloudflare Tunnel or Caddy for public TLS termination and route the verified hostname to this control-plane service. The phone's local SiteRegistry enforces Public/Private/Restricted visitor credentials; Relay does not bypass that check.
+
+Do not advertise this as a complete general-purpose Relay until streaming/WebSocket support, multi-ABI Android validation, load tests, deployed DNS/TLS validation and reconnect/soak tests pass.
+
 ## Security and delivery model
 
 - Admin management routes require a short-lived server-side session bearer. Long-lived bootstrap/team API credentials are accepted only by the session-exchange endpoint. Device APIs continue to use device bearer tokens.
