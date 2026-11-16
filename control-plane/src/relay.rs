@@ -279,7 +279,7 @@ mod tests {
         assert_eq!(response_rx.blocking_recv().unwrap().status, 200);
         let other_device = Uuid::new_v4();
         let request_id = Uuid::new_v4();
-        let response_rx = hub.register_pending(request_id, device).unwrap().1;
+        let response_rx = hub.register_pending(request_id, device, "site-a").unwrap().1;
         assert!(!hub.complete(other_device, RelayResponse {
             id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
@@ -298,7 +298,7 @@ mod tests {
         let (second, _second_stream) = hub.connect(device);
         assert!(first_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_some());
-        let mut second_request = hub.register_pending(Uuid::new_v4(), device).unwrap().1;
+        let mut second_request = hub.register_pending(Uuid::new_v4(), device, "site-a").unwrap().1;
         hub.disconnect(device, first);
         assert!(hub.sender(device).is_some(), "stale disconnect must not remove the replacement stream");
         assert!(matches!(second_request.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)), "stale disconnect must not cancel the replacement stream's work");
