@@ -40,7 +40,25 @@ import java.util.concurrent.Semaphore
  */
 object ManagementApiServer {
     private const val PORT = 17841
-    private const val SESSION_SECONDS = 12 * 60 * 60L
+    internal fun ownerReauthenticationRequired(role: String, recentAuthAt: Long, now: Long): Boolean =
+    role.equals("OWNER", ignoreCase = true) &&
+        (recentAuthAt <= 0L || now < recentAuthAt || now - recentAuthAt > OWNER_REAUTH_WINDOW_SECONDS)
+
+private fun isSensitiveOwnerMutation(method: String, path: String): Boolean {
+    if (method !in setOf("POST", "PUT", "PATCH", "DELETE")) return false
+    return path == "/api/v1/sites" ||
+        path.startsWith("/api/v1/sites/") ||
+        path == "/api/v1/resources" ||
+        path == "/api/v1/capacity" ||
+        path == "/api/v1/capacity/benchmark" ||
+        path == "/api/v1/tunnel/actions" ||
+        path == "/api/v1/auth/accounts" ||
+        path.startsWith("/api/v1/auth/accounts/")
+}
+
+private const val OWNER_REAUTH_WINDOW_SECONDS = 5 * 60L
+
+private const val SESSION_SECONDS = 12 * 60 * 60L
     private const val MAX_HEADER = 16 * 1024
     private val random = SecureRandom()
     private val workers = ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(32), ThreadPoolExecutor.AbortPolicy())
@@ -50,7 +68,7 @@ object ManagementApiServer {
     @Volatile private var acceptThread: Thread? = null
     @Volatile private var appContext: Context? = null
     @Volatile private var pending: Pairing? = null
-    private data class Session(val expiresAt: Long, val username: String, val role: String, val deviceApprovedPairing: Boolean = false)
+    private data class Session(val expiresAt: Long, val username: String, val role: String, val deviceApprovedPairing: Boolean = false, val recentAuthAt: Long = 0L, val trustedAutomation: Boolean = false)
     private val sessions = HashMap<String, Session>()
     private val pairingLock = Any()
     private val loginAttemptsLock = Any()
@@ -242,7 +260,7 @@ object ManagementApiServer {
                 val token = randomToken(32)
                 synchronized(sessions) {
                     sessions[tokenHash(token)] = Session(Instant.now().epochSecond + SESSION_SECONDS,
-                        "owner", "OWNER", deviceApprovedPairing = true)
+                        "owner", "OWNER", deviceApprovedPairing = true, recentAuthAt = Instant.now().epochSecond)
                 }
                 pending = null
                 200 to JSONObject().put("accessToken", token)
@@ -325,7 +343,7 @@ object ManagementApiServer {
             if (account == null) return 401 to JSONObject().put("error", "invalid_credentials")
             val token = randomToken(32)
             val expiry = now + SESSION_SECONDS
-            synchronized(sessions) { sessions[tokenHash(token)] = Session(expiry, account.username, account.role) }
+            synchronized(sessions) { sessions[tokenHash(token)] = Session(expiry, account.username, account.role, recentAuthAt = now) }
             return 200 to JSONObject().put("accessToken", token).put("expiresAt", expiry)
                 .put("username", account.username).put("role", account.role)
         }
@@ -336,6 +354,11 @@ object ManagementApiServer {
             else { sessions.remove(tokenHash(raw)); null }
         } }
         if (session == null) return 401 to JSONObject().put("error", "unauthorized")
+        if (session.role == "OWNER" && !session.trustedAutomation && isSensitiveOwnerMutation(method, path) &&
+            ownerReauthenticationRequired(session.role, session.recentAuthAt, Instant.now().epochSecond)) {
+            return 428 to JSONObject().put("error", "owner_reauthentication_required")
+                .put("message", "Sign in again with the Owner credential before changing site access, visitor credentials, accounts, or hosting controls.")
+        }
         if (session.role == "OPERATOR") {
             val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
             val stillActive = runCatching {
@@ -369,7 +392,7 @@ object ManagementApiServer {
             val replacement = randomToken(32)
             val expiry = Instant.now().epochSecond + SESSION_SECONDS
             synchronized(sessions) {
-                sessions[tokenHash(replacement)] = Session(expiry, ownerUsername, "OWNER")
+                sessions[tokenHash(replacement)] = Session(expiry, ownerUsername, "OWNER", recentAuthAt = Instant.now().epochSecond)
             }
             OperationalLog.record(context, "WARN", "HOST_OWNER_PASSWORD_RECOVERED",
                 "Owner credentials reset through locally approved device pairing; prior Owner sessions revoked.")
@@ -395,7 +418,7 @@ object ManagementApiServer {
             val replacement = randomToken(32)
             val expiry = Instant.now().epochSecond + SESSION_SECONDS
             synchronized(sessions) {
-                sessions[tokenHash(replacement)] = Session(expiry, session.username, session.role)
+                sessions[tokenHash(replacement)] = Session(expiry, session.username, session.role, recentAuthAt = Instant.now().epochSecond)
             }
             OperationalLog.record(context, "INFO", "HOST_ACCOUNT_PASSWORD_CHANGED",
                 "actor=" + session.username + "; prior sessions revoked")
@@ -723,7 +746,7 @@ object ManagementApiServer {
     fun executeRemoteCommand(context: Context, kind: String, payload: JSONObject): JSONObject {
         appContext = context.applicationContext
         val token = randomToken(32)
-        synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + 60, "remote-control", "OWNER") }
+        synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + 60, "remote-control", "OWNER", recentAuthAt = Instant.now().epochSecond, trustedAutomation = true) }
         try {
             val result = when (kind) {
                 "site_action" -> {
