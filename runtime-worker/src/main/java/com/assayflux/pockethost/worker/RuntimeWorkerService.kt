@@ -203,7 +203,7 @@ class RuntimeWorkerService : Service() {
             "Node entry file is outside the transferred project or missing."
         }
         val current = NodeRuntimeStateStore.state(this)
-        require(current !in setOf("RUNNING", "STARTING")) { "Only one Node.js application can run at a time." }
+        require(current !in setOf("RUNNING", "STARTING", "STOPPING")) { "Only one Node.js application can run at a time." }
         NodeRuntimeStateStore.update(this, state = "STARTING", detail = "Node.js startup requested.")
         val intent = Intent(this, NodeHostingService::class.java)
             .putExtra(NodeHostingService.EXTRA_ROOT, siteId)
