@@ -47,11 +47,13 @@ Exit: Python WSGI and Node HTTP end-to-end through Rust on API 26/33/35; host-pr
 
 ## Gate 2 — Isolation and adversarial security (20%)
 
-Present: runtime trust acknowledgement, canonical project-root and symlink checks, authenticated management API, signature-protected companion service.
+Present: runtime trust acknowledgement, canonical project-root and archive-path checks, authenticated management API, signature-protected companion service, host-vs-companion UID separation, and Python loopback-only binding. These controls do **not** isolate projects from one another.
 
-Required: enforce filesystem capabilities and network egress covering raw sockets, DNS rebinding, management loopback, private/link-local/metadata addresses; test archive traversal, decompression bombs, SSRF, cross-project and exhaustion; document Android resource-control limits; obtain independent security review.
+Verified design gaps: Python multi-site projects share a process/interpreter; all Python/Node projects share one companion UID and files directory; the companion has `INTERNET`; ordinary Node TCP listener pinning does not block outbound TCP/UDP/raw sockets, DNS bypasses or loopback management access. The Android isolated-process probe cannot use the existing loopback TCP architecture.
 
-Exit: adversarial tests demonstrate the actual boundary. A process boundary or path validation alone is not sandboxing.
+Required: a per-project OS identity/private storage boundary; brokered inbound sockets from Rust; OS-enforced outbound denial; adversarial tests for cross-project file/process access, IPv4/IPv6 TCP/UDP/raw sockets, DNS, rebinding, loopback management, private/link-local/metadata targets, archive attacks, resource exhaustion and restart/reuse. Test API 26/33/35 and obtain independent security review.
+
+Exit: two projects cannot read or interfere with one another; project code cannot initiate outbound connections or reach management/private targets; brokered inbound hosting still works; the OS boundary is demonstrated by adversarial tests. A process boundary or path validation alone is not sandboxing.
 
 ## Gate 3 — Rust governor and Capacity Lab (15%)
 

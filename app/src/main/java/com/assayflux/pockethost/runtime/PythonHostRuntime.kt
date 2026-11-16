@@ -18,7 +18,7 @@ object PythonHostRuntime {
         RuntimeWorkerClient.configurePython(context, workers)
     }
     @Synchronized
-    fun start(context: Context, projectRoot: String, port: Int, allowLan: Boolean = false): String {
+    fun start(context: Context, projectRoot: String, port: Int): String {
         RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
         val ownedRoot = RuntimeProjectRoot.requireOwnedProjectRoot(context, projectRoot)
@@ -27,7 +27,7 @@ object PythonHostRuntime {
     }
 
     @Synchronized
-    fun startSites(context: Context, hostnameRootsJson: String, port: Int, allowLan: Boolean = false): String {
+    fun startSites(context: Context, hostnameRootsJson: String, port: Int): String {
         RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
         val requestedRoutes = JSONObject(hostnameRootsJson)

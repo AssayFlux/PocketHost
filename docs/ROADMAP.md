@@ -17,9 +17,15 @@ Source integration now moves Chaquopy/CPython and Node/V8 into the separate-UID 
 
 ## Gate 2 — Isolation and adversarial security (P0)
 
-Enforce filesystem capabilities and network egress restrictions that cover raw sockets, DNS rebinding, loopback management, private/link-local/metadata destinations. Add archive traversal, symlink, cross-project, SSRF and exhaustion tests. Obtain independent security review.
+**Current finding:** the companion is one Android UID for every project. Python multi-site routing imports multiple sites into one interpreter; Node/Python can read the companion-owned project tree. The companion has `INTERNET`, and its loopback-only listener policy does not restrict outbound sockets. Gate 2 is therefore **not complete**.
 
-**Exit:** tests prove the actual boundary. A separate process or path validation alone is not sandboxing.
+The Android isolated-process probe demonstrated a different UID but could not use the current loopback TCP path. Do not flip `isolatedProcess=true` on the existing worker as a superficial fix.
+
+**Implementation sequence:** (1) spike a per-project OS identity with private project storage; (2) broker accepted visitor sockets from Rust so project workers need no general network permission; (3) enforce outbound denial at the OS boundary, not in Python/Node wrappers; (4) test IPv4/IPv6 TCP/UDP/raw sockets, DNS, rebinding, private/link-local/metadata targets and management loopback; (5) test cross-project file/process access, archive attacks, resource exhaustion and worker restart; (6) independent adversarial review.
+
+Candidate Android mechanisms and their API 26+ constraints are recorded in [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md). Until that design is implemented and tested, only owner-trusted code may run.
+
+**Exit:** two projects cannot read or interfere with each other; worker processes cannot create outbound network connections or reach management/private targets; Rust can still deliver inbound requests through a brokered socket; tests prove the OS boundary on API 26/33/35. A separate process or path validation alone is not sandboxing.
 
 ## Gate 3 — Rust governor and Capacity Lab (P0)
 

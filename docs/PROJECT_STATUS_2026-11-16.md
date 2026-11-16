@@ -24,11 +24,13 @@ The following changes are now present in `main`:
 
 ## Security boundary and remaining limitations
 
-The separate companion UID prevents ordinary Python/Node runtime code from directly reading files protected by the host app UID. It does not yet provide per-project isolation: all projects in the companion package share the companion UID. Outbound network egress is not yet enforced against raw sockets, DNS rebinding, private/link-local/metadata targets or loopback management services.
+The companion UID prevents ordinary runtime code from directly reading host-app-private files, but all hosted projects still share that UID and its private files directory. Python multi-site applications are imported into one interpreter/process, so cross-project access is possible. The companion has Android `INTERNET` permission; raw sockets, DNS bypasses, private/link-local/metadata destinations and loopback management reachability are not blocked by an OS-enforced per-project policy.
 
-Common credential files are filtered during project transfer, but this is not a complete secret scanner. Host management credentials and Cloudflare tokens must never be copied into runtime project roots.
+Python WSGI is now hard-pinned to `127.0.0.1`; its runtime API no longer accepts a LAN-bind override. This is listener exposure hardening only, not outbound-egress control. Node's preload has the same listener-only limitation.
 
-Python and Node remain trusted-code-only. Do not call this a complete sandbox or expose arbitrary third-party code.
+The isolated-process probe showed that a distinct UID can deny host-private file access, but that process could not use the current loopback TCP route. `isolatedProcess=true` is not a drop-in fix. The target architecture and acceptance matrix are recorded in [SECURITY_ISOLATION_DESIGN.md](SECURITY_ISOLATION_DESIGN.md).
+
+Common credential files are filtered during project transfer, but this is not a complete secret scanner. Host management credentials and Cloudflare tokens must never be copied into runtime project roots. Python and Node remain owner-trusted-code-only. Do not call this a complete sandbox or expose arbitrary third-party code. Gate 2 is incomplete.
 
 ## Existing foundations
 
@@ -47,7 +49,7 @@ Native Kotlin/Compose app; Rust/Tokio/Hyper static website origin; authenticated
 2. Pass Python and Node companion runtime smoke tests on API 26, 33 and 35.
 3. Verify project transfer bounds, failure rollback, service death/rebind and coordinated shutdown.
 4. Verify Rust reverse proxy routing and static-origin continuity when either runtime fails.
-5. Implement per-project filesystem isolation and enforceable outbound network policy; complete adversarial tests.
+5. Implement per-project OS identities/private storage and Rust-brokered inbound sockets, then prove OS-enforced egress denial and cross-project isolation using [SECURITY_ISOLATION_DESIGN.md](SECURITY_ISOLATION_DESIGN.md).
 6. Complete Rust fairness/stress acceptance, Capacity Lab, backup/restore fault matrix, Settings visual acceptance and operations hardening.
 7. Verify signed release pair, existing Cloudflare Tunnel HTTPS, physical-device behaviour and independent security review.
 

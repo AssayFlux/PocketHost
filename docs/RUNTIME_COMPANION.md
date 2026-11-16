@@ -57,11 +57,15 @@ These filters reduce accidental secret transfer; they are not a complete secret 
 
 ## Network and filesystem boundaries
 
-The companion UID is a meaningful boundary between user code and the host app's private storage. Rust remains the only public/LAN-facing listener; Python and Node bind to loopback and Rust routes requests to them.
+The companion UID prevents ordinary runtime code from directly reading host-app-private files. It does not create a security boundary between hosted projects: Python multi-site applications are imported into one interpreter/process, and every Python/Node project resides under the same companion UID and private directory.
 
-**This is not yet a complete sandbox.** All projects in the companion package share the companion UID. A Python or Node project may be able to read other companion-owned project files. Outbound network access is not yet constrained by an enforceable egress firewall. Loopback services are reachable from the companion, although management endpoints still require their own authentication.
+Python WSGI now always binds to `127.0.0.1`; the Python API no longer accepts a LAN-bind override. Node's preload rewrites ordinary `net.Server.listen` calls to loopback. These are ingress/listener controls only. They do not block outbound TCP/UDP/raw sockets, DNS-based bypasses, native networking, private/link-local/metadata destinations or connections to loopback management services. The companion manifest currently grants Android `INTERNET` permission.
 
-Until per-project filesystem isolation and enforceable network-egress policy are implemented and adversarially tested, only owner-controlled trusted code may run. Do not expose arbitrary third-party code.
+The isolated-process experiment produced a distinct UID and denied host-private file reads, but it could not use the existing loopback TCP path. Simply marking the current service `isolatedProcess=true` would break runtime routing and does not solve project file delivery.
+
+**Security status: not a complete sandbox; Gate 2 remains open.** Python/Node are owner-trusted-code-only. Never run visitor-submitted, marketplace or other untrusted code. Do not put host credentials, Cloudflare tokens or other secrets in project roots.
+
+The target is a distinct OS identity and private project storage for every project, with outbound networking denied at the OS boundary and inbound visitor sockets brokered by Rust. See [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md).
 
 ## APK installation and updates
 

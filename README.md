@@ -386,7 +386,10 @@ Security boundaries are explicit; a feature is not a security control merely bec
 - Owner and Operator permissions are enforced by the device API; account material is protected with app-private encrypted storage and Android Keystore.
 - Cloudflare tunnel tokens are encrypted at rest and must never appear in logs or source.
 - Imported archives are bounded and path-validated; deployment/restore use staging and rollback protections.
-- Python/Node run under a separate companion UID, but are still trusted-code-only pending per-project isolation and enforceable egress restrictions.
+- The companion UID protects host-private files, not sibling projects. Python multi-site code shares one interpreter; Python and Node projects share the companion UID.
+- Python WSGI always binds to `127.0.0.1`; Node's preload constrains ordinary TCP server listeners to loopback. These are ingress controls, **not** outbound-network restrictions.
+- The companion currently has Android `INTERNET` permission. Raw sockets, DNS-based bypasses, private/link-local destinations and loopback management reachability are not blocked by an OS-enforced per-project policy.
+- Python/Node therefore remain owner-trusted-code-only. Do not execute visitor-submitted, marketplace or otherwise untrusted project code. The Step 2 target architecture and adversarial acceptance plan are in [Security Isolation Design](docs/SECURITY_ISOLATION_DESIGN.md).
 - Android foreground services cannot guarantee uninterrupted 24/7 hosting.
 - No hard CPU quota or cloud-style uptime guarantee is claimed.
 - No live payment processing or PCI approval is claimed.
@@ -494,6 +497,7 @@ PocketHost/
 | [Master Plan](docs/MASTER_PLAN.md) | Architecture, runtime contracts and engineering sequence |
 | [Roadmap](docs/ROADMAP.md) | Ordered implementation work |
 | [Runtime Companion](docs/RUNTIME_COMPANION.md) | Separate UID, Binder protocol, transfer and limitations |
+| [Security Isolation Design](docs/SECURITY_ISOLATION_DESIGN.md) | Threat model, Android constraints, target boundary and adversarial acceptance |
 | [Python Runtime](docs/PYTHON_RUNTIME.md) | WSGI requirements and runtime behavior |
 | [Node Runtime](docs/NODE_RUNTIME.md) | Node mobile SDK, native build and restrictions |
 | [Management API](docs/management-api-v1.yaml) | OpenAPI contract for local device API |

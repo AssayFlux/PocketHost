@@ -29,6 +29,7 @@ class PythonHostRuntimeTest(unittest.TestCase):
 
             try:
                 self.assertEqual("RUNNING", runtime.start(project, port))
+                self.assertEqual("127.0.0.1", runtime._server.server_address[0])
                 self.assertEqual("ALREADY_RUNNING", runtime.start(project, port))
                 self.assertEqual("RUNNING", runtime.status())
                 self.assertTrue(runtime.is_project_active(project))
@@ -54,6 +55,13 @@ class PythonHostRuntimeTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as project:
             with self.assertRaisesRegex(ValueError, "1024"):
                 runtime.start(project, 80)
+
+    def test_python_runtime_does_not_accept_a_lan_bind_override(self):
+        with tempfile.TemporaryDirectory() as project:
+            with self.assertRaises(TypeError):
+                runtime.start(project, 8081, allow_lan=True)
+            with self.assertRaises(TypeError):
+                runtime.start_many(json.dumps({"example.test": project}), 8081, allow_lan=True)
 
     def test_requires_root_wsgi_entrypoint(self):
         with tempfile.TemporaryDirectory() as project:
@@ -108,6 +116,7 @@ class PythonHostRuntimeTest(unittest.TestCase):
             routes = {"alpha.example": first, "beta.example": second}
             try:
                 self.assertEqual("RUNNING", runtime.start_many(json.dumps(routes), port))
+                self.assertEqual("127.0.0.1", runtime._server.server_address[0])
                 for host, expected in (("alpha.example", b"alpha"), ("beta.example", b"beta")):
                     request = urllib.request.Request(
                         f"http://127.0.0.1:{port}/", headers={"Host": host})

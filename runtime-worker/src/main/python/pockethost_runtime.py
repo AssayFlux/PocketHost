@@ -1,8 +1,8 @@
 """PocketHost embedded Python WSGI host.
 
 A project must provide wsgi.py with a callable named application.
-This runtime intentionally binds to loopback unless LAN access is explicitly enabled.
-Imported project code runs with the companion package UID; this is not a per-project sandbox.
+The runtime always binds to 127.0.0.1; public/LAN ingress belongs to the Rust front door.
+Imported project code runs with the shared companion package UID; this is not a per-project sandbox.
 """
 from __future__ import annotations
 
@@ -172,7 +172,7 @@ def _load_application(project_root: str, module_name: str | None = None):
         raise
 
 
-def start(project_root: str, port: int, allow_lan: bool = False) -> str:
+def start(project_root: str, port: int) -> str:
     global _server, _thread, _module_name, _project_root, _module_names, _project_roots
     port = int(port)
     if port < 1024 or port > 65535:
@@ -182,10 +182,9 @@ def start(project_root: str, port: int, allow_lan: bool = False) -> str:
             return "ALREADY_RUNNING"
         application, module_name = _load_application(project_root)
         application = _MetricsMiddleware(application)
-        host = "0.0.0.0" if bool(allow_lan) else "127.0.0.1"
         try:
             server = make_server(
-                host,
+                "127.0.0.1",
                 port,
                 application,
                 server_class=_BoundedThreadingWSGIServer,
@@ -257,7 +256,7 @@ class _HostRouter:
         return application(environ, start_response)
 
 
-def start_many(host_roots_json: str, port: int, allow_lan: bool = False) -> str:
+def start_many(host_roots_json: str, port: int) -> str:
     """Serve multiple trusted WSGI projects on one listener using Host routing."""
     global _server, _thread, _module_name, _project_root, _module_names, _project_roots
     port = int(port)
@@ -292,9 +291,8 @@ def start_many(host_roots_json: str, port: int, allow_lan: bool = False) -> str:
                     loaded_roots.append(root)
                 applications[host] = application
             application = _MetricsMiddleware(_HostRouter(applications))
-            host_address = "0.0.0.0" if bool(allow_lan) else "127.0.0.1"
             server = make_server(
-                host_address, port, application,
+                "127.0.0.1", port, application,
                 server_class=_BoundedThreadingWSGIServer,
                 handler_class=_QuietRequestHandler,
             )

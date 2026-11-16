@@ -127,8 +127,11 @@ Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTI
 - Pairing and session authorization for local management; route-level auth tests required.
 - Protect credentials with Android Keystore or a suitable remote secrets manager.
 - Validate imported archives, paths, sizes, counts and activation boundaries.
-- Python/Node execute in a separate-UID companion; they remain trusted-code only until per-project filesystem isolation, network-egress enforcement and adversarial review are complete.
-- Prevent runtime access to management endpoints, payment secrets, other projects and private network targets.
+- The companion UID isolates runtime code from the host app UID only. Python multi-site projects share one interpreter/process; Python and Node projects share the companion UID and private filesystem.
+- Python WSGI is hard-pinned to loopback; Node's preload only constrains ordinary TCP listener binds. Neither is outbound-egress enforcement.
+- The companion has `INTERNET`; raw sockets, DNS rebinding, private/link-local/metadata destinations and loopback management reachability are not OS-blocked per project.
+- Keep Python/Node restricted to owner-trusted code. Do not execute visitor-submitted or third-party untrusted code.
+- The target architecture must provide a distinct OS identity and private storage per project, with network egress denied by the OS and inbound connections brokered from Rust. See [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md).
 - Do not expose LAN mode without an explicit owner decision and clear visitor-auth limitations.
 - Use a payment provider's hosted/tokenized checkout; never store PAN/CVV/PIN.
 - Verify raw-body webhook signatures, timestamps, idempotency and replay; reconcile provider events.

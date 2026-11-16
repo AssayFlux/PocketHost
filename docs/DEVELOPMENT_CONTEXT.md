@@ -27,9 +27,9 @@ Five destinations: Dashboard, Sites, Activity, Learn and Settings. Card-first la
 
 **Management path:** owner/operator → authenticated local management API → app services and TypeScript/React console. This path is not part of public visitor origin.
 
-**Runtime trust:** Python runs in companion process `:runtime_worker`; Node runs in companion process `:node`. Both share the companion package UID, which differs from the host app UID. Versioned signature-protected Binder IPC and bounded project transfer are integrated in source. This protects host-private files, but does not isolate projects from one another or enforce network egress. The companion is not a complete sandbox.
+**Runtime trust:** Python runs in companion process `:runtime_worker`; Node runs in companion process `:node`. Both share one companion package UID, distinct from the host UID. Binder IPC is signature-protected and project transfer is bounded. Python always binds to loopback; Node's ordinary TCP listeners are pinned to loopback. This protects host-private files and limits listener exposure, but does not isolate projects from each other or enforce outbound egress.
 
-Never describe the companion as a completed sandbox; do not expose arbitrary visitor-submitted code; do not claim egress enforcement before raw-socket/DNS-bypass tests; and never store host credentials in runtime project directories.
+Gate 2 remains open. The current isolated-process probe cannot use the existing loopback TCP route. Follow [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md); never call the companion a sandbox, run untrusted visitor code, claim egress enforcement, or place host credentials in project roots.
 
 ## Engineering sequence
 

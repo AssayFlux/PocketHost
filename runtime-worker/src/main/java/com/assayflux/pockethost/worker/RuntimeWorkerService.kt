@@ -168,7 +168,7 @@ class RuntimeWorkerService : Service() {
             "Transferred Python project was not found."
         }
         synchronized(this) {
-            return ensurePython().callAttr("start", root.absolutePath, port, false).toString()
+            return ensurePython().callAttr("start", root.absolutePath, port).toString()
         }
     }
 
@@ -189,7 +189,7 @@ class RuntimeWorkerService : Service() {
             owned.put(hostname, root.absolutePath)
         }
         synchronized(this) {
-            return ensurePython().callAttr("start_many", owned.toString(), port, false).toString()
+            return ensurePython().callAttr("start_many", owned.toString(), port).toString()
         }
     }
 

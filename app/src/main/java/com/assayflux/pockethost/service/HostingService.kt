@@ -199,8 +199,8 @@ class HostingService : Service() {
                         }
                         val result = runCatching {
                             val pythonHosts = SiteRegistry.pythonHostnameMap(this)
-                            if (pythonHosts.length() > 0) PythonHostRuntime.startSites(this, pythonHosts.toString(), pythonPort, allowLan)
-                            else PythonHostRuntime.start(this, projectRoot, pythonPort, allowLan)
+                            if (pythonHosts.length() > 0) PythonHostRuntime.startSites(this, pythonHosts.toString(), pythonPort)
+                            else PythonHostRuntime.start(this, projectRoot, pythonPort)
                         }.getOrElse { "ERROR: " + (it.message ?: "Python runtime failed") }
                         if (result == "RUNNING" || result == "ALREADY_RUNNING") {
                             failures = 0
