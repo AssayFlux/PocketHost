@@ -12,7 +12,7 @@
 | Quality workflow | Passed all six jobs: Rust, Python, Node, control plane, console and Android source compilation | [Run 43786695783](https://github.com/AssayFlux/PocketHost/actions/runs/43786695783) |
 | Android cloudflared native build | Passed | [Run 43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821) |
 | Android debug APK packaging | Passed; three host ABI APKs and companion APK packaged; host/worker debug signing certificates matched | [Run 43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821) |
-| API 26 emulator | Running; companion capability instrumentation not yet confirmed | [Run 43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821) |
+| API 26 emulator | 31 tests executed; 28 passed and 3 failed. Companion capability test passed. Two management API requests timed out under concurrent PBKDF2 load; Dashboard title selector failed although MainActivity launched. | [Run 43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821) · [API 26 reports](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821/artifacts/14191826422) |
 | API 33 emulator | Queued behind API 26 | [Run 43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821) |
 | API 35 emulator | Queued behind API 26 and API 33 | [Run 43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821) |
 
@@ -27,13 +27,13 @@ The debug APK artifact is [available here](https://github.com/AssayFlux/PocketHo
 - Static website import/deployment, file management, backups/restore and operational telemetry/diagnostics.
 - Runtime project-root canonicalization and symlink escape checks. This is path validation, not a same-UID security boundary.
 - `:runtime-worker` companion APK prototype with separate package/UID, INTERNET permission and signature-protected Binder probe.
-- Dashboard screenshot instrumentation has been added; its result is pending the current emulator run.
+- Dashboard screenshot instrumentation has been added. Its first API 26 run exposed an accessibility-selector mismatch; the test now captures the screenshot and hierarchy before asserting the Dashboard destination.
 
 ## Runtime security: exact boundary
 
 The `android:isolatedProcess` probe confirmed separate UID and host-private-file denial on API 26 and API 33, but loopback TCP was blocked. That approach cannot serve requests from the Rust router.
 
-The new companion package is the alternative capability prototype. Its test checks a distinct UID, inability to read a host-private marker, companion loopback listener reachability from the host, and companion connection to the host loopback listener. The current CI result for that test is not yet available at this snapshot.
+The new companion package is the alternative capability prototype. Its test checks a distinct UID, inability to read a host-private marker, companion loopback listener reachability from the host, and companion connection to the host loopback listener. The API 26 capability test passed. API 33 and API 35 results remain pending.
 
 **Not integrated yet:** Chaquopy/CPython and Node/V8 do not run inside the companion; there is no production worker protocol, project-scoped file-descriptor transfer, runtime lifecycle/recovery integration, egress policy, worker install/update/rollback UX or end-to-end Python/Node routing through the companion. Therefore the companion must not be described as a production sandbox. Keep Python/Node limited to trusted code.
 
@@ -47,6 +47,10 @@ The new companion package is the alternative capability prototype. Its test chec
 6. Finish UI decomposition and acceptance: Settings extraction, responsive/landscape/accessibility checks, screenshot review and complete native account/session edge-case coverage.
 7. Verify public HTTPS through the owner's existing Cloudflare Tunnel and confirm the public hostname points only to the Rust website listener, never the management API.
 8. Complete dependency/security review and update all documentation against the exact tested commit.
+
+### API 26 follow-up change
+
+The API 26 artifact shows that the companion capability test passes, but the run is not green (28/31). The management API timeouts coincide with two simultaneous PBKDF2 password verifications saturating the two-core emulator. The regression test has been adjusted to exercise one in-flight KDF while measuring the independent health endpoint, and its socket timeout has been extended for slow API 26 emulation. The Dashboard test now captures a screenshot and accessibility hierarchy before asserting a Dashboard label/content description, so future failures remain diagnosable. These are test-harness adjustments; they do not reduce production password KDF strength or claim the app UI passed.
 
 ## External/owner acceptance gates
 

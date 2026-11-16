@@ -6,7 +6,8 @@ AssayFlux Pocket Host turns an Android phone into a small website host. It runs 
 
 No Termux. No root. No mandatory VPS. The existing domain and named Cloudflare Tunnel can be reused.
 
-> **Current status — 2026-11-16:** reviewed source commit `6a2a54d76e8ae71c8abc4cc9d5f6f0e20a03b34f`; documentation reconciliation commit `5090a2366f2cdd84940b865125977ae53d677953`. Quality CI passed on the source commit. Android cloudflared build and three-ABI host plus companion debug APK packaging passed. At the latest checked state, API 26 emulator instrumentation was still running and API 33/35 were queued. Python and Node still execute under the host app UID; the companion is a capability probe, not a production runtime sandbox. See [verified project status](docs/PROJECT_STATUS_2026-11-16.md) for exact evidence and remaining work. No production-ready or signed-release claim is made.
+> **Current status — 2026-11-16:** reviewed source commit `6a2a54d76e8ae71c8abc4cc9d5f6f0e20a03b34f`; the quality checks and three-ABI host plus companion debug APK packaging passed. API 26 instrumentation executed 31 tests: 28 passed, including the companion UID/loopback test, and 3 failed (two management API timeouts under concurrent PBKDF2 load and one Dashboard accessibility-selector mismatch). The test harness has been adjusted and requires a fresh run. API 33/35 are not yet validated on this exact source. Python and Node still execute under the host app UID; the companion is a capability prototype, not a production runtime sandbox. No production-ready or signed-release claim is made. See [verified project status](docs/PROJECT_STATUS_2026-11-16.md) for evidence.
+
 ## What is included
 
 - **Static hosting:** folder/ZIP import, staged deployment, safe path checks, retained releases and rollback.

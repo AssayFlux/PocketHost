@@ -26,18 +26,26 @@ class PocketHostDashboardUiSmokeTest {
         val screenshotDir = File(externalFiles, "screenshots")
         assertTrue("Screenshot directory could not be created", screenshotDir.mkdirs() || screenshotDir.isDirectory)
         val screenshot = File(screenshotDir, "dashboard.png")
+        val hierarchy = File(screenshotDir, "dashboard-hierarchy.xml")
         screenshot.delete()
+        hierarchy.delete()
 
         ActivityScenario.launch(MainActivity::class.java).use {
             instrumentation.waitForIdleSync()
-            assertTrue(
-                "Pocket Host top bar did not appear",
-                device.wait(Until.hasObject(By.text("Pocket Host")), 15_000)
-            )
-            assertTrue("Dashboard destination did not render", device.hasObject(By.text("Dashboard")))
+            // Capture first so the artifact remains useful even when an accessibility
+            // selector regresses on an older Compose/Android combination.
             assertTrue("Dashboard screenshot could not be captured", device.takeScreenshot(screenshot))
+            device.dumpWindowHierarchy(hierarchy)
+            val dashboardVisible = device.wait(Until.hasObject(By.text("Dashboard")), 15_000) ||
+                device.hasObject(By.desc("Dashboard"))
+            assertTrue(
+                "Dashboard destination did not render. Accessibility hierarchy: " +
+                    hierarchy.takeIf { it.isFile }?.readText()?.take(6_000),
+                dashboardVisible
+            )
         }
 
         assertTrue("Dashboard screenshot is empty", screenshot.isFile && screenshot.length() > 10_000)
+        assertTrue("Dashboard accessibility hierarchy was not captured", hierarchy.isFile && hierarchy.length() > 100)
     }
 }

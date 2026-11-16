@@ -218,3 +218,7 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 ## Evidence update — 2026-11-16
 
 The exact main-branch review and current CI state are recorded in [PROJECT_STATUS_2026-11-16.md](PROJECT_STATUS_2026-11-16.md). In brief: quality CI passed all six jobs; Android cloudflared build and four-APK debug packaging passed; API 26 emulator validation was running and API 33/35 were queued at the review time. The companion is still a capability probe, not a Python/Node runtime host. The earlier isolated-process option is rejected for hosting because loopback TCP was blocked on API 26/33. No production readiness or signed release is claimed.
+
+## API 26 emulator follow-up — 2026-11-16
+
+The first current-source API 26 matrix attempt executed 31 tests: 28 passed, 3 failed. The companion package capability test passed (UID separation, host-private-file denial and bidirectional loopback). Two management API requests timed out while two PBKDF2 verifications competed for a two-core emulator; the health-responsiveness test now uses one in-flight KDF and test sockets allow longer slow-emulator operations. The Dashboard smoke test's exact `Pocket Host` text selector failed despite MainActivity being displayed; the test now captures a screenshot and accessibility hierarchy first, then checks the Dashboard label or content description. These test-harness fixes are awaiting a fresh Android integration run. See [PROJECT_STATUS_2026-11-16.md](PROJECT_STATUS_2026-11-16.md).
