@@ -923,12 +923,12 @@ async fn relay_visitor(
             if value.len() <= 8_192 { forwarded_headers.insert(name.to_string(), value.to_string()); }
         }
     }
+    // Only CF-Connecting-IP is accepted from an explicitly trusted proxy. Never
+    // fall back to the left-most X-Forwarded-For value: a visitor can pre-seed it
+    // before Cloudflare appends its own hop and evade per-IP authentication limits.
     let client_ip = if is_trusted_relay_proxy(peer.ip()) {
         parts.headers.get("cf-connecting-ip").and_then(|value| value.to_str().ok())
             .and_then(|value| value.trim().parse::<std::net::IpAddr>().ok())
-            .or_else(|| parts.headers.get("x-forwarded-for").and_then(|value| value.to_str().ok())
-                .and_then(|value| value.split(',').next())
-                .and_then(|value| value.trim().parse::<std::net::IpAddr>().ok()))
             .unwrap_or_else(|| peer.ip())
     } else {
         peer.ip()
