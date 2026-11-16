@@ -1054,6 +1054,7 @@ dependencies = [
  "axum",
  "chrono",
  "hex",
+ "futures-util",
  "http-body-util",
  "rand",
  "serde",
