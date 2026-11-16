@@ -33,6 +33,12 @@ class RuntimeCellProbeService : Service() {
                 reply?.writeByteArray(content)
                 return true
             }
+            if (code == TRANSACTION_WRITE_PROJECT_FILE) {
+                val written = writeProjectFile(data)
+                reply?.writeNoException()
+                reply?.writeLong(written)
+                return true
+            }
             if (code != TRANSACTION_INSTALL_POLICY_AND_ACCEPT) return super.onTransact(code, data, reply, flags)
 
             val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
@@ -150,6 +156,43 @@ class RuntimeCellProbeService : Service() {
         }
     }
 
+    private fun writeProjectFile(data: Parcel): Long {
+        val hostBroker = requireNotNull(data.readStrongBinder()) { "Host capability broker is missing." }
+        val leaseId = requireNotNull(data.readString()) { "Cell lease ID is missing." }
+        val relativePath = requireNotNull(data.readString()) { "Project path is missing." }
+        val content = requireNotNull(data.createByteArray()) { "Project content is missing." }
+
+        val issueData = Parcel.obtain()
+        val issueReply = Parcel.obtain()
+        val capability = try {
+            issueData.writeInterfaceToken(RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR)
+            issueData.writeString(leaseId)
+            check(hostBroker.transact(RuntimeCellCapabilityBrokerProtocol.TRANSACTION_ISSUE, issueData, issueReply, 0))
+            issueReply.readException()
+            requireNotNull(issueReply.readString())
+        } finally {
+            issueData.recycle()
+            issueReply.recycle()
+        }
+
+        val writeData = Parcel.obtain()
+        val writeReply = Parcel.obtain()
+        return try {
+            writeData.writeInterfaceToken(RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR)
+            writeData.writeString(leaseId)
+            writeData.writeString(capability)
+            writeData.writeString(relativePath)
+            writeData.writeInt(0) // replace, do not append
+            writeData.writeByteArray(content)
+            check(hostBroker.transact(RuntimeCellCapabilityBrokerProtocol.TRANSACTION_WRITE_BYTES, writeData, writeReply, 0))
+            writeReply.readException()
+            writeReply.readLong()
+        } finally {
+            writeData.recycle()
+            writeReply.recycle()
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder = cellBinder
 
     companion object {
@@ -157,5 +200,6 @@ class RuntimeCellProbeService : Service() {
         const val TRANSACTION_INSTALL_POLICY_AND_ACCEPT = IBinder.FIRST_CALL_TRANSACTION
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_READ_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 2
+        const val TRANSACTION_WRITE_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 3
     }
 }
