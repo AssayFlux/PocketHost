@@ -215,3 +215,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 83bbe93a6a24ccd1958fee9c7dd5ed2ab0c5cf70 makes manual rollback handle a missing active site and quarantine invalid/symlinked active trees; pruning only removes verified safe releases.
 
+- 25f243f9e742b91c3958a8be58e7c87aea8da9a4 enforces importer file/entry/size/depth and blocked-name limits during startup recovery; deb77ae6526aaf97c9caee07b9e64338a9fbf2bc and c50a0e2690d84f95240d1f30db1cf65c36c39952 share that validator with custom-root restore rollback.
+
