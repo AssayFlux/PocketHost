@@ -22,6 +22,7 @@ const initialPayloads: Record<string, string> = {
 export function RemoteControlPlane() {
   const [endpoint, setEndpoint] = useState(() => localStorage.getItem("pockethost_control_endpoint") || "");
   const [adminToken, setAdminToken] = useState("");
+  const [reauthCredential, setReauthCredential] = useState("");
   const [sessionToken, setSessionToken] = useState("");
   const [sessionRole, setSessionRole] = useState<"owner" | "editor" | "viewer" | "">("");
   const [deviceName, setDeviceName] = useState("");
@@ -45,17 +46,49 @@ export function RemoteControlPlane() {
   const [relaySiteId, setRelaySiteId] = useState("static-default");
   const [relayChallenge, setRelayChallenge] = useState<RelayChallenge | null>(null);
 
+  async function exchangeAdminSession(credential: string): Promise<string> {
+    const response = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${credential}` },
+      cache: "no-store",
+    });
+    const body = await response.json() as { accessToken?: string; role?: "owner" | "editor" | "viewer"; error?: string };
+    if (!response.ok || !body.accessToken) {
+      throw new Error(body.error || `Control Plane session exchange failed (HTTP ${response.status}).`);
+    }
+    const previousSession = sessionToken;
+    setSessionToken(body.accessToken);
+    setSessionRole(body.role || "");
+    if (previousSession) {
+      // Retire the old bearer as soon as its replacement exists. A failed best-effort
+      // revoke does not discard the fresh session or block the requested operation.
+      await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${previousSession}` },
+        cache: "no-store",
+      }).catch(() => undefined);
+    }
+    return body.accessToken;
+  }
+
   async function request<T>(path: string, init: RequestInit = {}, bearerToken = sessionToken): Promise<T> {
     if (!bearerToken) throw new Error("Create an administrative session before using the Control Plane.");
-    const response = await fetch(endpoint.replace(/\/$/, "") + path, {
+    const send = (token: string) => fetch(endpoint.replace(/\/$/, "") + path, {
       ...init,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${bearerToken}`,
+        Authorization: `Bearer ${token}`,
         ...init.headers,
       },
       cache: "no-store",
     });
+    let response = await send(bearerToken);
+    if ((response.status === 428 || response.status === 401) && reauthCredential) {
+      // Long-lived credentials stay in component memory only. Re-exchange after the
+      // server's five-minute write step-up window; never persist this value in storage.
+      const refreshed = await exchangeAdminSession(reauthCredential);
+      response = await send(refreshed);
+    }
     const body = await response.text();
     let data: Record<string, unknown> = {};
     if (body) {
@@ -70,24 +103,15 @@ export function RemoteControlPlane() {
     setBusy(true);
     try {
       if (!endpoint.startsWith("https://")) throw new Error("Use an HTTPS Control Plane URL.");
-      const sessionResponse = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${adminToken}` },
-        cache: "no-store",
-      });
-      const sessionBody = await sessionResponse.json() as { accessToken?: string; role?: "owner" | "editor" | "viewer"; error?: string };
-      if (!sessionResponse.ok || !sessionBody.accessToken) {
-        throw new Error(sessionBody.error || `Control Plane session exchange failed (HTTP ${sessionResponse.status}).`);
-      }
-      const nextSession = sessionBody.accessToken;
-      setSessionToken(nextSession);
-      setSessionRole(sessionBody.role || "");
+      if (!adminToken) throw new Error("Enter the long-lived administrative credential to connect.");
+      const nextSession = await exchangeAdminSession(adminToken);
+      setReauthCredential(adminToken);
       setAdminToken("");
       localStorage.setItem("pockethost_control_endpoint", endpoint);
       const next = await request<Device[]>("/v1/admin/devices", {}, nextSession);
       setDevices(next);
       setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit", {}, nextSession));
-      setMessage(`Connected with a 12-hour administrative session. ${next.length} registered device(s).`);
+      setMessage(`Connected with a 12-hour session; write actions reauthenticate every five minutes. ${next.length} registered device(s).`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not connect to the Control Plane.");
     } finally { setBusy(false); }
@@ -98,6 +122,7 @@ export function RemoteControlPlane() {
     try {
       await request<void>("/v1/admin/session", { method: "DELETE" });
       setSessionToken("");
+      setReauthCredential("");
       setSessionRole("");
       setDevices([]);
       setUsers([]);

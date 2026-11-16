@@ -173,7 +173,7 @@ fn new_token() -> String {
 }
 
 #[derive(Clone, Debug)]
-struct AdminActor { session_id: Uuid, name: String, role: String }
+struct AdminActor { session_id: Uuid, name: String, role: String, authenticated_at: DateTime<Utc> }
 
 #[derive(Clone, Debug)]
 struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, bootstrap_hash: Option<String>, user_token_hash: Option<String> }
@@ -278,7 +278,7 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
     ensure_control_plane_host(headers)?;
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_session_required".into()))?;
     let row = sqlx::query(
-        "SELECT s.id,s.name,s.role FROM control_sessions s \
+        "SELECT s.id,s.name,s.role,s.created_at FROM control_sessions s \
          LEFT JOIN control_users u ON u.id=s.user_id \
          WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() \
          AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL) OR \
@@ -290,6 +290,7 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
         session_id: row.get("id"),
         name: row.get("name"),
         role: row.get("role"),
+        authenticated_at: row.get("created_at"),
     }).ok_or((StatusCode::UNAUTHORIZED, "invalid_or_expired_admin_session".into()))
 }
 
@@ -312,6 +313,10 @@ async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<AdminActor
     if !role_can_write(&actor.role) {
         return Err((StatusCode::FORBIDDEN, "insufficient_role".into()));
     }
+    let age = Utc::now().signed_duration_since(actor.authenticated_at);
+    if age < chrono::Duration::seconds(0) || age > chrono::Duration::minutes(5) {
+        return Err((StatusCode::PRECONDITION_REQUIRED, "admin_reauthentication_required".into()));
+    }
     Ok(actor)
 }
 
@@ -324,7 +329,7 @@ struct UserCreated { id: Uuid, name: String, role: String, token: String }
 async fn create_user(
     State(s): State<AppState>, headers: HeaderMap, Json(input): Json<CreateUser>,
 ) -> Result<(StatusCode, Json<UserCreated>), (StatusCode, String)> {
-    let actor = admin(&headers, &s).await?;
+    let actor = admin_write(&headers, &s).await?;
     if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let name = input.name.trim();
     if name.is_empty() || name.len() > 120 || !["editor","viewer"].contains(&input.role.as_str()) {
@@ -361,7 +366,7 @@ async fn list_users(
 async fn revoke_user(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let actor = admin(&headers, &s).await?;
+    let actor = admin_write(&headers, &s).await?;
     if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let mut tx = s.db.begin().await.map_err(internal)?;
     let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1 AND active=TRUE")
@@ -379,7 +384,7 @@ async fn revoke_user(
 async fn rotate_user_token(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
-    let actor = admin(&headers, &s).await?;
+    let actor = admin_write(&headers, &s).await?;
     if actor.role != "owner" {
         return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
     }
@@ -510,7 +515,7 @@ async fn delete_device(
 async fn rotate_device_token(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
-    let actor = admin(&headers, &s).await?;
+    let actor = admin_write(&headers, &s).await?;
     if !role_can_rotate_device_credential(&actor.role) {
         return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
     }
@@ -1277,6 +1282,48 @@ mod tests {
         ).bind(device.to_string()).fetch_one(&db).await.unwrap();
         assert_eq!(audit_count, 1);
         sqlx::query("DELETE FROM devices WHERE id=$1").bind(device).execute(&db).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn remote_write_requires_recent_credential_exchange() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let state = AppState {
+            db: db.clone(),
+            admin_token: format!("step-up-owner-{}", new_token()),
+            relay: relay::RelayHub::default(),
+        };
+        let credentials = HeaderMap::from_iter([(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap(),
+        )]);
+        let (_, Json(session_body)) = create_admin_session(
+            State(state.clone()), credentials.clone(),
+            ConnectInfo("198.51.100.222:40002".parse().unwrap()),
+        ).await.unwrap();
+        let old_session = session_body["accessToken"].as_str().unwrap();
+        let old_headers = HeaderMap::from_iter([(
+            AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_session}")).unwrap(),
+        )]);
+        sqlx::query("UPDATE control_sessions SET created_at=now()-interval '6 minutes' WHERE token_hash=$1")
+            .bind(token_hash(old_session)).execute(&db).await.unwrap();
+        let error = admin_write(&old_headers, &state).await.unwrap_err();
+        assert_eq!(error.0, StatusCode::PRECONDITION_REQUIRED);
+        assert_eq!(error.1, "admin_reauthentication_required");
+
+        let (_, Json(fresh_body)) = create_admin_session(
+            State(state.clone()), credentials,
+            ConnectInfo("198.51.100.222:40002".parse().unwrap()),
+        ).await.unwrap();
+        let fresh_session = fresh_body["accessToken"].as_str().unwrap();
+        let fresh_headers = HeaderMap::from_iter([(
+            AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {fresh_session}")).unwrap(),
+        )]);
+        assert_eq!(admin_write(&fresh_headers, &state).await.unwrap().role, "owner");
+        sqlx::query("DELETE FROM control_sessions WHERE token_hash IN ($1,$2)")
+            .bind(token_hash(old_session)).bind(token_hash(fresh_session))
+            .execute(&db).await.unwrap();
     }
 
     #[tokio::test]

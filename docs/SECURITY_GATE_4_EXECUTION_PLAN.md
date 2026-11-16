@@ -10,7 +10,8 @@
 - Sessions can be explicitly revoked and are invalidated on user revocation or team-user token rotation.
 - Sensitive team-user/device lifecycle changes and audit records commit transactionally.
 - The web console keeps the long-lived credential out of persistent browser storage and holds the session in memory.
-- PostgreSQL CI covers viewer authorization, session expiry/revocation, account revocation and token-rotation invalidation.
+- Remote write operations require a session issued within the previous five minutes; stale sessions receive HTTP 428. The console retains the bootstrap/team credential only in component memory, exchanges it for a fresh session after the server challenge, and revokes the superseded session. Read-only access remains available for the 12-hour session lifetime.
+- PostgreSQL CI covers viewer authorization, session expiry/revocation, account revocation, token-rotation invalidation and the five-minute remote write reauthentication window.
 - Device credential rotation is Owner-only; the role predicate rejects Editor and Viewer.
 
 ### Site visitor access

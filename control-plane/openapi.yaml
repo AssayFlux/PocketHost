@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: AssayFlux PocketHost Remote Control Plane
   version: 1.0.0
-  description: Independent backend for device registration, desired configuration and typed remote commands. Long-lived administrator credentials exchange for 12-hour revocable sessions; Android devices use device tokens.
+  description: Independent backend for device registration, desired configuration and typed remote commands. Long-lived administrator credentials exchange for 12-hour revocable sessions; write operations require a session issued within the previous five minutes and return HTTP 428 (admin_reauthentication_required) when step-up authentication is due. The web console re-exchanges its in-memory credential and revokes the superseded session; Android devices use device tokens.
 servers:
   - url: https://control.example.com
 security:
