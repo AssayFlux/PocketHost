@@ -1018,6 +1018,19 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn saturated_site_does_not_consume_another_sites_response_permit() {
+        let busy_site = Arc::new(Semaphore::new(1));
+        let other_site = Arc::new(Semaphore::new(1));
+        let held = busy_site.clone().try_acquire_owned().unwrap();
+
+        assert!(acquire_site_permit(other_site, Duration::from_millis(20)).await.is_some());
+        assert!(acquire_site_permit(busy_site.clone(), Duration::from_millis(5)).await.is_none());
+
+        drop(held);
+        assert!(acquire_site_permit(busy_site, Duration::from_millis(20)).await.is_some());
+    }
+
+    #[tokio::test]
     async fn site_permit_wait_is_bounded_and_recovers_when_capacity_returns() {
         let limiter = Arc::new(Semaphore::new(0));
         assert!(acquire_site_permit(limiter.clone(), Duration::from_millis(5)).await.is_none());
