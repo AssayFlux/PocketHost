@@ -178,39 +178,38 @@ class RuntimeWorkerService : Service() {
             verifyHostCaller()
             data.enforceInterface(DESCRIPTOR)
             try {
-                reply?.writeNoException()
-                when (code) {
-                    TRANSACTION_UID -> reply?.writeInt(Process.myUid())
+                val result: Any? = when (code) {
+                    TRANSACTION_UID -> Process.myUid()
                     TRANSACTION_CAN_READ -> {
                         val path = data.readString().orEmpty()
-                        reply?.writeInt(if (runCatching { File(path).canRead() }.getOrDefault(false)) 1 else 0)
+                        if (runCatching { File(path).canRead() }.getOrDefault(false)) 1 else 0
                     }
-                    TRANSACTION_LOOPBACK_BIND -> reply?.writeInt(startLoopbackProbeServer())
+                    TRANSACTION_LOOPBACK_BIND -> startLoopbackProbeServer()
                     TRANSACTION_LOOPBACK_CONNECT -> {
                         val port = data.readInt()
-                        val connected = runCatching {
+                        if (runCatching {
                             java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", port), 1_000) }
                             true
-                        }.getOrDefault(false)
-                        reply?.writeInt(if (connected) 1 else 0)
+                        }.getOrDefault(false)) 1 else 0
                     }
                     TRANSACTION_INSTALL_PROJECT -> {
                         val siteId = data.readString().orEmpty()
                         val fd = ParcelFileDescriptor.CREATOR.createFromParcel(data)
-                        reply?.writeString(installProject(siteId, fd))
+                        installProject(siteId, fd)
                     }
-                    TRANSACTION_PYTHON_START -> reply?.writeString(startPython(data.readString().orEmpty(), data.readInt()))
-                    TRANSACTION_PYTHON_START_SITES -> reply?.writeString(startPythonSites(data.readString().orEmpty(), data.readInt()))
-                    TRANSACTION_PYTHON_STOP -> reply?.writeString(synchronized(runtimeLock) {
+                    TRANSACTION_PYTHON_START -> startPython(data.readString().orEmpty(), data.readInt())
+                    TRANSACTION_PYTHON_START_SITES -> startPythonSites(data.readString().orEmpty(), data.readInt())
+                    TRANSACTION_PYTHON_STOP -> synchronized(runtimeLock) {
                         pythonModule()?.callAttr("stop")?.toString() ?: "STOPPED"
-                    })
-                    TRANSACTION_PYTHON_STATUS -> reply?.writeString(
-                        pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
-                    )
-                    TRANSACTION_PYTHON_METRICS -> reply?.writeString(
-                        pythonModule()?.callAttr("metrics_json")?.toString() ?: "{}"
-                    )
+                    }
+                    TRANSACTION_PYTHON_STATUS -> pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
+                    TRANSACTION_PYTHON_METRICS -> pythonModule()?.callAttr("metrics_json")?.toString() ?: "{}"
                     else -> return super.onTransact(code, data, reply, flags)
+                }
+                reply?.writeNoException()
+                when (result) {
+                    is Int -> reply?.writeInt(result)
+                    is String -> reply?.writeString(result)
                 }
                 return true
             } catch (error: Throwable) {
