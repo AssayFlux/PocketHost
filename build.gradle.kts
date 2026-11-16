@@ -4,3 +4,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
     id("com.chaquo.python") version "17.2.0" apply false
 }
+
+// Lock every resolved configuration so CI and release builds consume the same graph.
+allprojects {
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+}
