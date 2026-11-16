@@ -15,6 +15,7 @@ pub struct RelayRequest {
     pub method: String,
     pub path: String,
     pub hostname: String,
+    pub site_id: String,
     pub headers: HashMap<String, String>,
     pub body_base64: String,
 }
