@@ -13,12 +13,17 @@ import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.assayflux.pockethost.runtime.RuntimeCellCapabilityBroker
+import com.assayflux.pockethost.runtime.RuntimeCellCapabilityBrokerBinder
+import com.assayflux.pockethost.runtime.RuntimeCellLeaseRegistry
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -127,6 +132,92 @@ class RuntimeWorkerSeccompTest {
             runCatching { outboundPeer.close() }
             runCatching { outboundServer.close() }
             Os.close(outbound)
+        }
+    }
+
+    @Test(timeout = 30_000)
+    fun isolatedCellUsesBinderCallingUidForProjectFileCapabilities() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val projectId = "binder-probe-" + System.nanoTime().toString(16)
+        val projectRoot = File(context.filesDir, projectId)
+        check(projectRoot.mkdirs()) { "Could not create the host-side probe project root." }
+        File(projectRoot, "index.html").writeText("isolated-project-only")
+        val leases = RuntimeCellLeaseRegistry(context.applicationInfo.uid, capacity = 1)
+        val lease = leases.reserve(projectId)
+        val broker = RuntimeCellCapabilityBroker(leases) { id -> if (id == projectId) projectRoot else null }
+        val hostBroker = RuntimeCellCapabilityBrokerBinder(broker)
+        val connected = CountDownLatch(1)
+        val binderRef = AtomicReference<IBinder?>()
+        val serviceConnection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                binderRef.set(service)
+                connected.countDown()
+            }
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        val service = Intent().setComponent(ComponentName(
+            "com.assayflux.pockethost.worker",
+            "com.assayflux.pockethost.worker.RuntimeCellProbeService"
+        ))
+        try {
+            assertTrue("Runtime cell probe service must bind",
+                context.bindService(service, serviceConnection, Context.BIND_AUTO_CREATE))
+            assertTrue("Runtime cell probe service bind timed out", connected.await(10, TimeUnit.SECONDS))
+            val cellBinder = checkNotNull(binderRef.get())
+            val uidData = Parcel.obtain()
+            val uidReply = Parcel.obtain()
+            val isolatedUid = try {
+                uidData.writeInterfaceToken(DESCRIPTOR)
+                check(cellBinder.transact(TRANSACTION_UID, uidData, uidReply, 0))
+                uidReply.readException()
+                uidReply.readInt()
+            } finally {
+                uidData.recycle()
+                uidReply.recycle()
+            }
+            assertNotEquals("Cell must run under a distinct isolated UID", context.applicationInfo.uid, isolatedUid)
+            leases.activate(lease.id, isolatedUid)
+
+            // A direct host-process call is rejected: the host UID is not the cell UID.
+            val directData = Parcel.obtain()
+            val directReply = Parcel.obtain()
+            try {
+                directData.writeInterfaceToken(RuntimeCellCapabilityBrokerBinder.DESCRIPTOR)
+                directData.writeString(lease.id)
+                check(hostBroker.transact(RuntimeCellCapabilityBrokerBinder.TRANSACTION_ISSUE, directData, directReply, 0))
+                try {
+                    directReply.readException()
+                    fail("The host process must not impersonate the isolated cell.")
+                } catch (_: SecurityException) {
+                    // Expected: Binder.getCallingUid() reports the host UID.
+                }
+            } finally {
+                directData.recycle()
+                directReply.recycle()
+            }
+
+            val request = Parcel.obtain()
+            val response = Parcel.obtain()
+            try {
+                request.writeInterfaceToken(DESCRIPTOR)
+                request.writeStrongBinder(hostBroker)
+                request.writeString(lease.id)
+                request.writeString("index.html")
+                check(cellBinder.transact(TRANSACTION_READ_PROJECT_FILE, request, response, 0))
+                response.readException()
+                assertEquals(
+                    "isolated-project-only",
+                    String(requireNotNull(response.createByteArray()), Charsets.UTF_8)
+                )
+            } finally {
+                request.recycle()
+                response.recycle()
+            }
+            assertEquals("Only the cell-issued file capability should be active.", 1, broker.activeGrantCount())
+        } finally {
+            runCatching { context.unbindService(serviceConnection) }
+            broker.revokeLease(lease.id)
+            projectRoot.deleteRecursively()
         }
     }
 
