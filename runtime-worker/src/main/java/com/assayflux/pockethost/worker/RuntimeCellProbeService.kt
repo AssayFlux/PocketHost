@@ -51,6 +51,10 @@ open class RuntimeCellProbeService : Service() {
                 // Detach ownership before native cleanup so a later FD reuse cannot be
                 // accidentally closed by ParcelFileDescriptor.close().
                 val inheritedSocketFd = outbound.detachFd()
+                // Deliberately duplicate an inherited network socket onto stdin.
+                // Descriptor hygiene must inspect standard descriptors too.
+                val duplicateResult = NetworkSandbox.duplicateToStandardInput(inheritedSocketFd)
+                check(duplicateResult == 0) { "Could not place inherited socket on stdin (errno=$duplicateResult)." }
                 val cleanupResult = NetworkSandbox.closeInheritedSocketsExcept(listener.fd)
                 check(cleanupResult == 0) {
                     "Could not close inherited socket descriptors (errno=$cleanupResult); refusing to continue."
@@ -62,6 +66,14 @@ open class RuntimeCellProbeService : Service() {
                 } ?: false
                 check(inheritedSocketClosed) {
                     "An inherited socket descriptor remained open; refusing to install the policy."
+                }
+                val standardSocketClosed = runCatching {
+                    Os.fstat(0)
+                }.exceptionOrNull()?.let {
+                    it is android.system.ErrnoException && it.errno == OsConstants.EBADF
+                } ?: false
+                check(standardSocketClosed) {
+                    "An inherited socket on standard input remained open; refusing to install the policy."
                 }
 
                 val policyResult = NetworkSandbox.installNetworkPolicy(listener.fd)
@@ -84,6 +96,15 @@ open class RuntimeCellProbeService : Service() {
                 }.exceptionOrNull()?.let {
                     it is android.system.ErrnoException && it.errno == OsConstants.EPERM
                 } ?: false
+
+                val resourceLimits = NetworkSandbox.getResourceLimits()
+                check(resourceLimits.size == 4 &&
+                    resourceLimits[0] <= 128L &&
+                    resourceLimits[1] <= 32L &&
+                    resourceLimits[2] <= 64L * 1024L * 1024L &&
+                    resourceLimits[3] == 0L) {
+                    "Cell resource limits were not applied: ${resourceLimits.contentToString()}"
+                }
 
                 val accepted = Os.accept(listener.fileDescriptor, null)
                 try {
@@ -113,8 +134,10 @@ open class RuntimeCellProbeService : Service() {
                     reply?.writeInt(if (connectDenied) 1 else 0)
                     reply?.writeInt(if (bindDenied) 1 else 0)
                     reply?.writeInt(if (inheritedSocketClosed) 1 else 0)
+                    reply?.writeInt(if (standardSocketClosed) 1 else 0)
                     reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
                     reply?.writeInt(if (peerUid == hostUid) 1 else 0)
+                    reply?.writeLongArray(resourceLimits)
                     return true
                 } finally {
                     runCatching { Os.close(accepted) }

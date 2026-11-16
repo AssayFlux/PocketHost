@@ -145,7 +145,7 @@ class RuntimeWorkerSeccompTest {
                 val data = Parcel.obtain()
                 val reply = Parcel.obtain()
                 var transactionSucceeded = false
-                val results = try {
+                val probe = try {
                     data.writeInterfaceToken(DESCRIPTOR)
                     listenerPfd.writeToParcel(data, 0)
                     outboundPfd.writeToParcel(data, 0)
@@ -154,7 +154,8 @@ class RuntimeWorkerSeccompTest {
                     }
                     reply.readException()
                     transactionSucceeded = true
-                    listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
+                    val values = listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
+                    values to (reply.createLongArray() ?: error("Cell resource limits were not returned."))
                 } finally {
                     if (!transactionSucceeded) runCatching { client.close() }
                     writer.join(5_000)
@@ -163,12 +164,19 @@ class RuntimeWorkerSeccompTest {
                     data.recycle()
                     reply.recycle()
                 }
+                val results = probe.first
+                val resourceLimits = probe.second
                 assertEquals("socket() must be denied with EPERM", 1, results[0])
                 assertEquals("connect() must be denied with EPERM", 1, results[1])
                 assertEquals("bind() must be denied with EPERM", 1, results[2])
                 assertEquals("The inherited connected-socket capability must be closed before policy install", 1, results[3])
-                assertEquals("The brokered Unix listener must accept visitor traffic", 1, results[4])
-                assertEquals("SO_PEERCRED must identify the host app UID", 1, results[5])
+                assertEquals("An inherited socket on standard input must also be closed", 1, results[4])
+                assertEquals("The brokered Unix listener must accept visitor traffic", 1, results[5])
+                assertEquals("SO_PEERCRED must identify the host app UID", 1, results[6])
+                assertTrue("NOFILE limit must be no greater than 128", resourceLimits[0] in 1L..128L)
+                assertTrue("NPROC limit must be no greater than 32", resourceLimits[1] in 1L..32L)
+                assertTrue("FSIZE limit must be no greater than 64 MiB", resourceLimits[2] in 1L..(64L * 1024L * 1024L))
+                assertEquals("Core dumps must be disabled", 0L, resourceLimits[3])
                 assertEquals("Cell response must return on the accepted visitor stream",
                     "cell-accepted", client.getInputStream().bufferedReader().readText())
             } finally {

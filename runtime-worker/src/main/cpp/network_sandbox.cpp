@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <linux/audit.h>
@@ -91,7 +92,7 @@ static int close_inherited_sockets_except(int listener_fd) {
         }
         char* end = nullptr;
         long parsed = strtol(entry->d_name, &end, 10);
-        if (end == entry->d_name || *end != '\0' || parsed < 3 ||
+        if (end == entry->d_name || *end != '\0' || parsed < 0 ||
             parsed == listener_fd || parsed == directory_fd) continue;
         const int fd = static_cast<int>(parsed);
         struct stat metadata {};
@@ -107,8 +108,36 @@ static int close_inherited_sockets_except(int listener_fd) {
     return failure;
 }
 
+static int lower_resource_limit(int resource, rlim_t target) {
+    struct rlimit current {};
+    if (getrlimit(resource, &current) != 0) return errno;
+    const rlim_t hard = current.rlim_max < target ? current.rlim_max : target;
+    const rlim_t soft = current.rlim_cur < hard ? current.rlim_cur : hard;
+    struct rlimit restricted { soft, hard };
+    if (setrlimit(resource, &restricted) != 0) return errno;
+    return 0;
+}
+
+static int apply_resource_limits() {
+    int result = lower_resource_limit(RLIMIT_CORE, 0);
+    if (result != 0) return result;
+    result = lower_resource_limit(RLIMIT_NOFILE, 128);
+    if (result != 0) return result;
+#ifdef RLIMIT_NPROC
+    result = lower_resource_limit(RLIMIT_NPROC, 32);
+    if (result != 0) return result;
+#endif
+#ifdef RLIMIT_FSIZE
+    result = lower_resource_limit(RLIMIT_FSIZE, 64 * 1024 * 1024);
+    if (result != 0) return result;
+#endif
+    return 0;
+}
+
 static int install_policy(int listener_fd) {
     if (listener_fd < 0) return EINVAL;
+    const int limits_result = apply_resource_limits();
+    if (limits_result != 0) return limits_result;
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) return errno;
 
     struct sock_filter filter[] = {
@@ -242,6 +271,30 @@ Java_com_assayflux_pockethost_worker_NetworkSandbox_installNetworkPolicy(
     return install_policy(listener_fd);
 }
 
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_duplicateToStandardInput(
+    JNIEnv*, jclass, jint socket_fd) {
+    return dup2(socket_fd, STDIN_FILENO) < 0 ? (errno == 0 ? EIO : errno) : 0;
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_getResourceLimits(
+    JNIEnv* env, jclass) {
+    const int resources[] = { RLIMIT_NOFILE, RLIMIT_NPROC, RLIMIT_FSIZE, RLIMIT_CORE };
+    jlong values[4] = {};
+    for (int i = 0; i < 4; ++i) {
+        struct rlimit limit {};
+        if (getrlimit(resources[i], &limit) != 0) {
+            values[i] = -static_cast<jlong>(errno == 0 ? EIO : errno);
+        } else {
+            values[i] = static_cast<jlong>(limit.rlim_cur);
+        }
+    }
+    jlongArray result = env->NewLongArray(4);
+    if (result != nullptr) env->SetLongArrayRegion(result, 0, 4, values);
+    return result;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_assayflux_pockethost_worker_NetworkSandbox_getPeerUid(
