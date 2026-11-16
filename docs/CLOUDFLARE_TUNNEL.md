@@ -1,63 +1,79 @@
-# Cloudflare Tunnel on Android
+# CLOUDFLARE TUNNEL — EXISTING CONNECTOR GUIDE
 
-## Purpose and current project configuration
+**Status:** Android cloudflared integration exists in source; external hostname verification is not recorded as complete.  
+**Owner context:** the domain and named Cloudflare Tunnel are already configured. Reuse them; never create a duplicate.
 
-PocketHost uses an Android-targeted Cloudflare Tunnel connector to provide outbound connectivity from the phone-hosted Rust website origin. The project owner has confirmed that the domain and Cloudflare Tunnel are already connected. **Reuse the existing named tunnel and Public Hostname; do not create a duplicate tunnel.**
+## 1. Purpose
 
-This guide is for checking and connecting the existing configuration to PocketHost, not for assuming that DNS or tunnel configuration is automatically managed by the app.
+Cloudflare Tunnel is one optional public-connectivity path. The Android phone remains the website origin and Rust remains the website listener. The tunnel creates outbound connectivity from the phone; it does not provide Pocket Host capacity control, visitor identity by itself or an uptime guarantee.
 
-## Connector implementation
+AssayFlux Relay is a separate planned first-party alternative. It is not implemented. Local Network mode remains independent of both.
 
-- Upstream source: `cloudflare/cloudflared`
-- Pinned source tag: `2026.11.0`
-- Android ABIs: `arm64-v8a`, `armeabi-v7a`, `x86_64`
-- NDK minimum API: 26
-- Build script: `scripts/build-cloudflared-android.sh`
-- Runtime: `cloudflared tunnel --no-autoupdate --loglevel info --metrics 127.0.0.1:20241 run`
-- Credential channel: `TUNNEL_TOKEN` environment variable, not a command-line argument
-- Token storage: AES-256-GCM with an Android Keystore key
+## 2. Current connector integration
 
-The connector is built from upstream source for Android; it is not a Cloudflare-published Android binary. Validate each supported ABI and Android version.
+- Upstream: cloudflare/cloudflared.
+- Pinned source tag: `2026.11.0`.
+- Build helper: `scripts/build-cloudflared-android.sh`.
+- Declared ABIs: arm64-v8a, armeabi-v7a, x86_64.
+- NDK minimum API: 26.
+- Runtime uses `--no-autoupdate`; connector metrics bind to loopback.
+- Tunnel token is passed through the intended environment channel, not command-line arguments.
+- Token is encrypted at rest with AES-256-GCM and an Android Keystore key.
 
-## Connect the existing tunnel
+The Android binary is built from upstream source for this project; do not describe it as an official Cloudflare Android release.
 
-1. In Cloudflare Zero Trust, open the existing named tunnel.
-2. Confirm the connector token belongs to that tunnel. Treat it as a password.
-3. In PocketHost Tunnel settings, provide the token through the app's intended secure input. Do not paste it into chat, source files, screenshots or logs.
-4. In the tunnel's Public Hostname configuration, confirm the hostname routes to the phone's Rust website listener and correct local port. Do not point it at the management API.
-5. Start PocketHost hosting, then start/enable the tunnel from the app.
-6. Verify the hostname from mobile data or another independent network and confirm the expected website content is returned over valid HTTPS.
+## 3. Connect the existing named tunnel
 
-If the existing tunnel already has a working hostname, preserve its Cloudflare configuration and only adjust its origin when needed to match the PocketHost listener.
+1. Open the existing named tunnel in Cloudflare Zero Trust.
+2. Identify the token for that exact tunnel. Treat it as a password.
+3. In Pocket Host tunnel settings, enter it through the secure token field. Never paste it into chat, source, screenshots or logs.
+4. Inspect the existing Public Hostname route.
+5. Ensure its service points to the Pocket Host Rust website listener and correct local port.
+6. Never point the public hostname at the management API, console dev server or control-plane administration route.
+7. Start Pocket Host hosting, then enable the connector.
+8. From mobile data or another independent network, request the hostname and verify TLS plus the expected website response.
+9. Preserve the existing tunnel and DNS configuration when it already works; change only the origin if required.
 
-## Separate connection states
+## 4. Distinguish connection states
 
-Do not conflate:
-- **Token configured:** the app has encrypted credentials.
-- **Connector running/ready:** the local cloudflared process is alive and its local readiness check succeeds.
-- **Hostname externally verified:** a request from outside the phone's network resolves, completes TLS and returns the intended site.
+| State | Meaning | Does not prove |
+|---|---|---|
+| Token configured | Encrypted credential is stored | Connector is running |
+| Connector ready | Local cloudflared process and health probe are ready | Public hostname works |
+| External HTTPS verified | Independent client reaches expected site over valid TLS | Long-term uptime |
+| Visitor access secured | Cloudflare Access or site policy blocks unauthorized visitors | Management API is safe unless separately tested |
 
-Only the third state proves public website reachability.
+## 5. Networking choice in Pocket Host
 
-## Security and limitations
+- **Cloudflare Tunnel:** use existing named tunnel and account.
+- **AssayFlux Relay:** planned first-party option for users who do not want Cloudflare. Phone will establish outbound authenticated tunnel to AssayFlux gateway. Visitors see relay IP, not phone IP; relay operator can observe source IP and, in standard TLS-termination mode, HTTP content.
+- **Local Network:** LAN-only hosting without public edge.
+- **Direct hosting:** advanced owner-managed networking; not recommended as default.
 
-- A tunnel token grants access to the named tunnel. Rotate it in Cloudflare if exposed.
-- At-rest encryption does not protect a rooted/compromised device or token memory while cloudflared runs.
-- Do not log the token or put it in process arguments.
-- A public hostname exposes its configured origin. PocketHost static hosting has no built-in visitor authentication; use Cloudflare Access for private content.
-- Do not expose the Android management API or its port through a Public Hostname.
-- Tunnel uptime depends on Cloudflare, the phone network and Android process/background policy.
-- Tunnel connectivity is not an uptime guarantee and does not make the phone a high-availability server.
+The four choices must be independent. A relay outage must not stop local hosting or Cloudflare mode.
 
-## Validation checklist
+## 6. Security and operations
 
-- [ ] Existing named tunnel and hostname identified; no duplicate created.
-- [ ] Correct tunnel token saved through PocketHost settings.
-- [ ] Token is encrypted at rest and absent from logs/diagnostics.
-- [ ] cloudflared process reaches local ready state.
-- [ ] Public Hostname targets the Rust website listener only.
-- [ ] External HTTPS request returns the expected site.
-- [ ] Unknown hostname and management API exposure checks pass.
-- [ ] Wi-Fi/mobile transition and connector reconnect pass.
-- [ ] Stop/restart, screen-off, battery saver and process-death behavior pass on physical devices.
-- [ ] Cloudflare Access is verified for any private content.
+- Tunnel token is a device secret; rotate in Cloudflare if exposed.
+- Do not log tokens or place them in process arguments.
+- Keystore encryption protects stored credentials but not a rooted/compromised device or secrets in process memory.
+- Public website traffic must terminate at Rust. Management API stays loopback-only and authenticated.
+- Use Cloudflare Access for private websites where required; tunnel connectivity alone is not visitor authentication.
+- Monitor connector restart count, reconnect delay, network transitions and device battery/thermal state.
+- Explain Android background restrictions; do not promise 24/7 availability.
+
+## 7. Acceptance checklist
+
+- [ ] Existing named tunnel reused; no duplicate created.
+- [ ] Token entered through secure UI and encrypted at rest.
+- [ ] Token absent from logs, process arguments, backups and diagnostics.
+- [ ] Connector reaches local ready state.
+- [ ] Public Hostname targets Rust listener only.
+- [ ] External HTTPS returns intended site from another network.
+- [ ] Unknown host rejected.
+- [ ] Management API cannot be reached through public hostname.
+- [ ] Access policy verified for private sites.
+- [ ] Wi-Fi/mobile transition, screen-off, battery saver and process restart tested on physical device.
+- [ ] Token rotation invalidates old connector session.
+
+A successful local readiness probe is not external verification.
