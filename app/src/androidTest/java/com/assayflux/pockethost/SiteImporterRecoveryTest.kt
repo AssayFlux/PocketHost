@@ -1,5 +1,7 @@
 package com.assayflux.pockethost
 
+import android.content.ContextWrapper
+import android.system.Os
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.storage.SiteImporter
@@ -7,6 +9,7 @@ import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -44,6 +47,38 @@ class SiteImporterRecoveryTest {
             release.deleteRecursively()
             quarantine?.deleteRecursively()
             original.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun symlinkedActiveRootIsQuarantinedWithoutFollowingItsTarget() {
+        val base = context
+        val root = File(base.cacheDir, "site-recovery-symlink-${System.nanoTime()}")
+        val outside = File(base.cacheDir, "site-recovery-outside-${System.nanoTime()}")
+        val releases = File(root, "site-releases")
+        val active = File(root, "site")
+        val release = File(releases, "release-${System.currentTimeMillis() + 180_000_000L}-safe")
+        val isolated = object : ContextWrapper(base) {
+            override fun getFilesDir(): File = root
+        }
+        try {
+            assertTrue(root.mkdirs())
+            assertTrue(outside.mkdirs())
+            assertTrue(releases.mkdirs())
+            assertTrue(release.mkdirs())
+            File(outside, "index.html").writeText("must-not-become-active")
+            File(release, "index.html").writeText("safe-release")
+            Os.symlink(outside.absolutePath, active.absolutePath)
+
+            assertTrue(SiteImporter.recoverInterruptedActivation(isolated))
+            assertEquals("safe-release", File(active, "index.html").readText())
+            assertEquals("must-not-become-active", File(outside, "index.html").readText())
+            assertTrue(releases.listFiles().orEmpty().any { it.name.startsWith("recovery-invalid-") })
+        } finally {
+            active.delete()
+            releases.deleteRecursively()
+            outside.deleteRecursively()
+            root.deleteRecursively()
         }
     }
 
