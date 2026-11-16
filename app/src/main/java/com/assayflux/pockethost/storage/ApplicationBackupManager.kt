@@ -177,6 +177,7 @@ object ApplicationBackupManager {
         try {
             require(passphrase.size in 12..128) { "Use the backup passphrase (12–128 characters)." }
             requireAllRuntimesStopped(context)
+            recoverInterruptedRestore(context)
 
             val prefix = ByteArray(MAGIC.size)
             context.contentResolver.openInputStream(source)?.use { input ->
@@ -219,14 +220,32 @@ object ApplicationBackupManager {
             val activePython = File(context.filesDir, "python-project")
             val activeNode = File(context.filesDir, "node-project-default")
             val hadActiveSite = activeSite.isDirectory
-            val previousRoutes = SiteRegistry.list(context)
+            val hadPython = activePython.exists()
+            val hadNode = activeNode.exists()
             val previousSettings = captureCurrentSafeSettings(context)
+            val previousRegistry = context.getSharedPreferences("pockethost_site_registry", Context.MODE_PRIVATE)
+                .getString("sites", "[]") ?: "[]"
+            val previousLatestRelease = SiteImporter.listReleases(context).firstOrNull()
             if (!backupDir.mkdirs()) throw IOException("Could not create a rollback directory.")
+            val customRootJournal = JSONArray().also { entries ->
+                parsedRoutes.customStaticRoots.values.forEach { activeRoot ->
+                    val previous = File(backupDir, "custom-static/" + activeRoot.name)
+                    entries.put(JSONObject()
+                        .put("activePath", activeRoot.absolutePath)
+                        .put("backupPath", previous.absolutePath)
+                        .put("hadPrevious", activeRoot.exists()))
+                }
+            }
+            writeRestoreJournal(backupDir, JSONObject()
+                .put("version", 1)
+                .put("hadActiveSite", hadActiveSite)
+                .put("hadPython", hadPython)
+                .put("hadNode", hadNode)
+                .put("previousLatestRelease", previousLatestRelease ?: JSONObject.NULL)
+                .put("previousSiteRegistry", previousRegistry)
+                .put("previousSettings", previousSettings)
+                .put("customRoots", customRootJournal))
 
-            var staticImported = false
-            var pythonTouched = false
-            var nodeTouched = false
-            val customRootChanges = mutableListOf<CustomRootChange>()
             try {
                 val previousPython = File(backupDir, "python-project")
                 if (activePython.exists()) {
@@ -234,7 +253,6 @@ object ApplicationBackupManager {
                     pythonTouched = true
                 }
                 if (hasPython) {
-                    pythonTouched = true
                     if (!pythonStage.renameTo(activePython)) throw IOException("Could not activate the restored Python project.")
                 }
 
@@ -244,7 +262,6 @@ object ApplicationBackupManager {
                     nodeTouched = true
                 }
                 if (hasNode) {
-                    nodeTouched = true
                     if (!nodeStage.renameTo(activeNode)) throw IOException("Could not activate the restored Node.js project.")
                 }
 
@@ -276,19 +293,17 @@ object ApplicationBackupManager {
                         }
                         hadPrevious = true
                     }
-                    customRootChanges.add(CustomRootChange(activeRoot, previous, hadPrevious))
                     if (!stagedRoot.renameTo(activeRoot)) {
                         throw IOException("Could not activate the restored custom site root.")
                     }
                 }
 
                 SiteImporter.activatePreparedDirectory(context, siteRoot)
-                staticImported = true
                 SiteRegistry.replaceAll(context, routes)
                 applySafeSettings(context, settings)
 
-                backupDir.deleteRecursively()
-                preserveBackup = false
+                markRestoreCommitted(backupDir)
+                preserveBackup = !cleanupCommittedRestore(backupDir)
                 return RestoreReport(
                     fileCount = counters.files,
                     totalBytes = counters.bytes,
@@ -297,42 +312,15 @@ object ApplicationBackupManager {
                     hostnameRoutes = routes.size
                 )
             } catch (error: Throwable) {
-                var rollbackSucceeded = true
-                if (nodeTouched) rollbackRuntimeDirectory(activeNode, File(backupDir, "node-project-default"))
-                    .also { rollbackSucceeded = rollbackSucceeded && it }
-                if (pythonTouched) rollbackRuntimeDirectory(activePython, File(backupDir, "python-project"))
-                    .also { rollbackSucceeded = rollbackSucceeded && it }
-                customRootChanges.asReversed().forEach { change ->
-                    val restored = runCatching {
-                        if (change.active.exists() && !change.active.deleteRecursively()) {
-                            throw IOException("Could not remove partially restored custom site root.")
-                        }
-                        if (change.hadPrevious && change.backup.exists() && !change.backup.renameTo(change.active)) {
-                            throw IOException("Could not roll back custom site root ${change.active.name}.")
-                        }
-                    }.isSuccess
-                    rollbackSucceeded = rollbackSucceeded && restored
-                }
-                if (staticImported) {
-                    val staticRollback = runCatching {
-                        if (hadActiveSite) SiteImporter.rollbackLatest(context)
-                        else activeSite.deleteRecursively()
-                    }.isSuccess
-                    rollbackSucceeded = rollbackSucceeded && staticRollback
-                }
-                val routesRollback = runCatching { SiteRegistry.replaceAll(context, previousRoutes) }.isSuccess
-                rollbackSucceeded = rollbackSucceeded && routesRollback
-                val settingsRollback = runCatching { restoreCurrentSafeSettings(context, previousSettings) }.isSuccess
-                rollbackSucceeded = rollbackSucceeded && settingsRollback
-                if (rollbackSucceeded) {
-                    backupDir.deleteRecursively()
-                    preserveBackup = false
-                } else {
+                val rollback = runCatching { recoverInterruptedRestore(context) }
+                if (rollback.isFailure) {
+                    preserveBackup = true
                     throw IOException(
-                        "Restore failed and automatic rollback was incomplete. Recovery files were preserved in ${backupDir.name}.",
-                        error
+                        "Restore failed and automatic rollback was incomplete. Recovery files were preserved in " + backupDir.name + ".",
+                        rollback.exceptionOrNull() ?: error
                     )
                 }
+                preserveBackup = false
                 throw error
             }
         } finally {
