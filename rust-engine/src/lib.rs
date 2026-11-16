@@ -1009,6 +1009,21 @@ mod tests {
     }
 
     #[test]
+    fn visitor_authentication_lockout_is_scoped_to_site_and_client_ip() {
+        let ip: IpAddr = "203.0.113.42".parse().unwrap();
+        let site = format!("auth-throttle-{}", std::process::id());
+        assert!(auth_attempt_allowed(ip, &site));
+        for _ in 0..AUTH_FAILURE_THRESHOLD {
+            record_auth_failure(ip, &site);
+        }
+        assert!(!auth_attempt_allowed(ip, &site));
+        assert!(auth_attempt_allowed("203.0.113.43".parse().unwrap(), &site));
+        assert!(auth_attempt_allowed(ip, "another-site.example"));
+        clear_auth_failures(ip, &site);
+        assert!(auth_attempt_allowed(ip, &site));
+    }
+
+    #[test]
     fn rate_bucket_enforces_burst_and_refills_over_time() {
         let start = Instant::now();
         let mut bucket = RateBucket::new(start);
