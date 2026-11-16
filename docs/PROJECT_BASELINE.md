@@ -89,3 +89,12 @@ Update this file with exact evidence whenever the baseline changes.
 - Gate 2 remains open: no production per-project isolated runtime migration or accepted Android API matrix.
 - Gate 4 remains open: remote control-plane device and team-user token rotation, role checks and atomic audit writes are implemented; passkeys and site-scoped visitor authorization are not complete.
 - Latest incremental commits add an Owner-only team-user token rotation endpoint, PostgreSQL-backed revocation/audit regression test, OpenAPI contract and console action. Source: `11b30b3`, `0aa1f1f`, `59bf1e7`, `7ea7c22`, `c4fcb48`. CI for these changes is pending.
+
+
+## 2026-11-16 Stage 2 incremental source work
+
+- Native feasibility probe now enumerates `/proc/self/fd` and closes inherited socket descriptors except the broker-created Unix visitor listener before seccomp installation. Descriptor cleanup fails closed; the probe detaches ownership of the deliberately supplied descriptor before native closure to avoid closing a subsequently reused FD.
+- Instrumentation source now supplies a connected loopback TCP socket and checks that the isolated service closes it, denies new socket creation, and still accepts the brokered Unix visitor stream with the expected peer UID.
+- Source commits: `e1a1e1d`, `8d9b87a`, `be0b1fb`, `1b2e7b0`, `bd6af74`, `e8b4616`, `3986990`; documentation commits `7815887`, `fd0eef3`.
+- This is feasibility-probe hardening only. It does not migrate Python/Node into isolated services, provide project directory capabilities, establish a strict syscall allowlist, or pass the API 26/33/35 adversarial matrix. Gate 2 remains open. No Android build or instrumentation execution was performed, per the Gate 8 build policy.
+- The latest six-job quality workflow before these changes passed on `1497f8b` (run `43837524062`). The native Android C++ and instrumentation changes have not been compiled or executed by that workflow; a new workflow run must be checked for the non-Android jobs only.
