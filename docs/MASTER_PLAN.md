@@ -67,7 +67,7 @@ Android agent → outbound authenticated channel → Axum control plane
              → PostgreSQL device state / leased commands / audit
 ```
 
-Website traffic and management traffic are distinct. No public connector may route to the management API.
+Website traffic and management traffic are distinct. Relay visitor hostnames are routed through the visitor gateway only; admin and device API routes are host-guarded to the dedicated POCKETHOST_CONTROL_API_HOST. The separately authenticated remote-control hostname is an explicit management endpoint, not a website visitor hostname.
 
 ## 5. Runtime contracts and current limitations
 
