@@ -38,6 +38,7 @@ object RuntimeWorkerClient {
     private const val TRANSACTION_NODE_STATUS = IBinder.FIRST_CALL_TRANSACTION + 12
     private const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
     private const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
+    private const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
     private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRIES = 10_000
 
@@ -116,7 +117,7 @@ object RuntimeWorkerClient {
                 in setOf(TRANSACTION_INSTALL_PROJECT, TRANSACTION_PYTHON_START,
                     TRANSACTION_PYTHON_START_SITES, TRANSACTION_PYTHON_STOP,
                     TRANSACTION_PYTHON_STATUS, TRANSACTION_PYTHON_METRICS, TRANSACTION_NODE_START,
-                    TRANSACTION_NODE_STOP, TRANSACTION_NODE_STATUS, TRANSACTION_NODE_METRICS, TRANSACTION_SHUTDOWN) -> reply.readString()
+                    TRANSACTION_NODE_STOP, TRANSACTION_NODE_STATUS, TRANSACTION_NODE_METRICS, TRANSACTION_SHUTDOWN, TRANSACTION_PYTHON_CONFIGURE) -> reply.readString()
                 else -> reply.readInt()
             }
         } finally {
@@ -210,6 +211,9 @@ object RuntimeWorkerClient {
             reply.recycle()
         }
     }
+
+    fun configurePython(context: Context, workers: Int): String =
+        withWorker(context) { transact(it, TRANSACTION_PYTHON_CONFIGURE) { parcel -> parcel.writeInt(workers) } as String }
 
     fun startPython(context: Context, projectRoot: File, port: Int): String =
         withWorker(context) { binder ->
