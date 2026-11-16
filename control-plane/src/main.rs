@@ -407,8 +407,11 @@ async fn upload_site_archive(
         .bind(Uuid::new_v4()).bind(id)
         .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
         .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&role.name).bind("site.deploy.queue").bind(id.to_string())
+        .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
+        .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, &role.name, "site.deploy.queue", &id.to_string(), json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()})).await?;
     Ok((StatusCode::ACCEPTED, Json(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len(),"state":"queued"}))))
 }
 
