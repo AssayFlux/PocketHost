@@ -11,12 +11,44 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.nio.charset.StandardCharsets
 
 /**
  * Companion-package capability probe. It executes no customer code and accepts only
  * bounded diagnostic Binder transactions. The package UID is distinct from PocketHost.
  */
 class RuntimeWorkerService : Service() {
+    @Volatile private var probeServer: ServerSocket? = null
+
+    override fun onDestroy() {
+        runCatching { probeServer?.close() }
+        probeServer = null
+        super.onDestroy()
+    }
+
+    private fun startLoopbackProbeServer(): Int = runCatching {
+        runCatching { probeServer?.close() }
+        val server = ServerSocket().apply {
+            reuseAddress = true
+            bind(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0))
+        }
+        probeServer = server
+        Thread({
+            runCatching {
+                server.accept().use { client ->
+                    val response = "PocketHost companion loopback OK" + "\n"
+                    client.getOutputStream().apply {
+                        write(response.toByteArray(StandardCharsets.UTF_8))
+                        flush()
+                    }
+                }
+            }
+            if (probeServer === server) probeServer = null
+            runCatching { server.close() }
+        }, "PocketHost-Worker-Probe").apply { isDaemon = true; start() }
+        server.localPort
+    }.getOrDefault(-1)
+
     private val probeBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code == IBinder.INTERFACE_TRANSACTION) {
@@ -32,11 +64,7 @@ class RuntimeWorkerService : Service() {
                     reply?.writeInt(if (runCatching { File(path).canRead() }.getOrDefault(false)) 1 else 0)
                 }
                 TRANSACTION_LOOPBACK_BIND -> {
-                    val canBind = runCatching {
-                        ServerSocket().use { it.bind(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0)) }
-                        true
-                    }.getOrDefault(false)
-                    reply?.writeInt(if (canBind) 1 else 0)
+                    reply?.writeInt(startLoopbackProbeServer())
                 }
                 TRANSACTION_LOOPBACK_CONNECT -> {
                     val port = data.readInt()

@@ -15,6 +15,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.net.ServerSocket
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -60,10 +62,13 @@ class RuntimeCompanionCapabilityTest {
                 "Companion unexpectedly read host-private data",
                 transactInt(binder, transactionCanRead, stringValue = marker.absolutePath) == 1
             )
-            assertTrue(
-                "Companion UID cannot bind a loopback listener",
-                transactInt(binder, transactionLoopbackBind) == 1
-            )
+            val workerPort = transactInt(binder, transactionLoopbackBind)
+            assertTrue("Companion UID cannot bind a loopback listener", workerPort in 1..65535)
+            val workerResponse = Socket().use { socket ->
+                socket.connect(InetSocketAddress("127.0.0.1", workerPort), 1_000)
+                socket.getInputStream().bufferedReader().readLine()
+            }
+            assertTrue("Host could not reach companion's loopback listener", workerResponse == "PocketHost companion loopback OK")
             assertTrue(
                 "Companion UID cannot connect to the host loopback listener",
                 transactInt(binder, transactionLoopbackConnect, intValue = host.localPort) == 1
