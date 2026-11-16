@@ -299,6 +299,50 @@ class RuntimeWorkerSeccompTest {
         }
     }
 
+
+    @Test(timeout = 10_000)
+    fun projectFileBrokerRejectsSymlinksAndFifosWithoutBlocking() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(context.cacheDir, "broker-path-probe-" + System.nanoTime())
+        val outside = File(context.cacheDir, "broker-outside-" + System.nanoTime())
+        check(root.mkdirs()) { "Could not create broker test root." }
+        outside.writeText("outside-secret")
+        val fifo = File(root, "pipe")
+        val fileLink = File(root, "linked-file")
+        val directoryLink = File(root, "linked-directory")
+        try {
+            Os.mkfifo(fifo.absolutePath, OsConstants.S_IRUSR or OsConstants.S_IWUSR)
+            Os.symlink(outside.absolutePath, fileLink.absolutePath)
+            Os.symlink(context.cacheDir.absolutePath, directoryLink.absolutePath)
+
+            fun assertRejected(description: String, operation: () -> Unit) {
+                try {
+                    operation()
+                    fail("$description must be rejected.")
+                } catch (_: Exception) {
+                    // Expected: no symlink or non-regular file may cross the broker.
+                }
+            }
+
+            assertRejected("Opening a FIFO for reading") {
+                com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(root, "pipe").close()
+            }
+            assertRejected("Opening a symlinked file") {
+                com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(root, "linked-file").close()
+            }
+            assertRejected("Traversing a symlinked directory") {
+                com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(root, "linked-directory/secret").close()
+            }
+            assertRejected("Capturing a FIFO as a project root") {
+                com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.captureRootIdentity(fifo)
+            }
+            assertEquals("The outside target must remain unchanged.", "outside-secret", outside.readText())
+        } finally {
+            root.deleteRecursively()
+            outside.delete()
+        }
+    }
+
     companion object {
         private const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_CELL_PROBE"
         private const val TRANSACTION_INSTALL_POLICY_AND_ACCEPT = IBinder.FIRST_CALL_TRANSACTION
