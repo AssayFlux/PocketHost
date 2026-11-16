@@ -1050,6 +1050,7 @@ name = "pockethost-control-plane"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "axum",
  "chrono",
  "hex",
@@ -1061,6 +1062,7 @@ dependencies = [
  "sqlx",
  "subtle",
  "tokio",
+ "tokio-stream",
  "tower-http",
  "tracing",
  "tracing-subscriber",
