@@ -1,6 +1,6 @@
 use axum::{
     body::{to_bytes, Body, Bytes},
-    extract::{DefaultBodyLimit, Path, Request, State},
+    extract::{DefaultBodyLimit, Path, Query, Request, State},
     http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode, Response},
     response::sse::{Event, KeepAlive, Sse},
     routing::{any, get, post},
@@ -668,6 +668,23 @@ async fn acknowledge(
 #[tokio::main]
 
 #[derive(Deserialize)]
+struct RelayTlsQuery {
+    domain: String,
+}
+
+async fn relay_tls_check(
+    State(s): State<AppState>, Query(query): Query<RelayTlsQuery>,
+) -> StatusCode {
+    let Ok(hostname) = normalize_relay_hostname(&query.domain) else {
+        return StatusCode::FORBIDDEN;
+    };
+    let verified = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM relay_sites WHERE hostname=$1 AND verified_at IS NOT NULL AND enabled=TRUE)"
+    ).bind(hostname).fetch_one(&s.db).await.unwrap_or(false);
+    if verified { StatusCode::OK } else { StatusCode::FORBIDDEN }
+}
+
+#[derive(Deserialize)]
 struct CreateRelaySite {
     hostname: String,
     site_id: String,
@@ -935,6 +952,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/devices/:id/relay-sites", get(list_relay_sites).post(create_relay_site))
         .route("/v1/admin/relay-sites/:id/verify", post(verify_relay_site))
         .route("/v1/admin/relay-sites/:id", axum::routing::delete(delete_relay_site))
+        .route("/v1/relay/tls-check", get(relay_tls_check))
         .route("/v1/device/relay/stream", get(relay_device_stream))
         .route("/v1/device/relay/responses/:id", post(relay_device_response))
         .route("/v1/device/commands", get(poll_commands))
