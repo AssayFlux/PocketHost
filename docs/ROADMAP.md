@@ -136,3 +136,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 - Gate 6 recovery is now invoked before HostingService starts the management API or Rust website ingress, covering boot auto-start and sticky service restart as well as Activity launch.
 
+- Gate 7 UI instrumentation now exercises the Private visitor-access path end to end: change mode, issue one-time credential, verify registry state, revoke and verify removal. It also asserts the folder/ZIP publishing and encrypted backup actions are present on Sites.
+
