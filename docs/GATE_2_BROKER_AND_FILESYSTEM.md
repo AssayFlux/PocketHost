@@ -1,6 +1,6 @@
 # Gate 2 — trusted broker and project filesystem implementation
 
-**Scope of this increment:** broker primitives and filesystem capability handling (implementation source added; Android integration remains unverified until Gate 8).
+**Scope of this increment:** broker primitives and filesystem capability handling. Android APK/ABI builds and API 26/33/35 emulator instrumentation are required during Gates 2–4 under the Owner's 2026-11-16 sequencing correction; final physical-device and release acceptance remain Gate 8.
 
 ## Trusted broker responsibilities
 
