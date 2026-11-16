@@ -116,6 +116,17 @@ export function RemoteControlPlane() {
     finally { setBusy(false); }
   }
 
+  async function rotateUserToken(user: ControlUser) {
+    if (!window.confirm("Rotate " + user.name + "'s token? Their current token will stop working immediately.")) return;
+    setBusy(true); setNewUserToken("");
+    try {
+      const result = await request<{ token: string }>(`/v1/admin/users/${encodeURIComponent(user.id)}/rotate-token`, { method: "POST" });
+      setNewUserToken(result.token);
+      setMessage("User token rotated. Copy the replacement now; the previous token is already revoked.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not rotate user token."); }
+    finally { setBusy(false); }
+  }
+
   async function revokeUser(user: ControlUser) {
     if (!window.confirm("Revoke " + user.name + "? Their API token will stop working immediately.")) return;
     setBusy(true);
@@ -240,7 +251,7 @@ export function RemoteControlPlane() {
       <label>Permission role<select value={newUserRole} onChange={event => setNewUserRole(event.target.value as "editor" | "viewer")}><option value="viewer">Viewer · read only</option><option value="editor">Editor · manage devices</option></select></label>
       <div className="site-actions"><button disabled={busy || !newUserName.trim()} onClick={createUser}>Create account</button><button disabled={busy} onClick={loadUsers}>Load team</button></div>
       {newUserToken && <div className="notice"><strong>One-time team token</strong><code>{newUserToken}</code><button onClick={() => void navigator.clipboard.writeText(newUserToken)}>Copy token</button></div>}
-      {users.map(user => <div className="status-line" key={user.id}><span><strong>{user.name}</strong><small>{user.role} · {user.active ? "Active" : "Revoked"}</small></span><button className="danger-button" disabled={busy || !user.active} onClick={() => void revokeUser(user)}>Revoke</button></div>)}
+      {users.map(user => <div className="status-line" key={user.id}><span><strong>{user.name}</strong><small>{user.role} · {user.active ? "Active" : "Revoked"}</small></span><span className="site-actions"><button disabled={busy || !user.active} onClick={() => void rotateUserToken(user)}>Rotate token</button><button className="danger-button" disabled={busy || !user.active} onClick={() => void revokeUser(user)}>Revoke</button></span></div>)}
     </div>
     <div className="section-heading"><div><span className="eyebrow">SECURITY & GOVERNANCE</span><h2>Audit history</h2></div><span className="muted-tag">LATEST 200 EVENTS</span></div>
     <div className="resource-panel">
