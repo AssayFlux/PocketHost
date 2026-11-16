@@ -133,6 +133,11 @@ object TelemetryStore {
                 val previous = File(directory, "$FILE_NAME.1")
                 previous.delete()
                 current.renameTo(previous)
+                // If rotation failed, drop the old sample file rather than allowing
+                // telemetry to grow without a hard bound on a low-storage device.
+                if (current.exists() && current.length() >= MAX_BYTES && !current.delete()) {
+                    return@runCatching
+                }
             }
             current.appendText(sample.toString() + "\n", Charsets.UTF_8)
         }.onFailure {
