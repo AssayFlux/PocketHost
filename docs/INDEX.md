@@ -13,6 +13,7 @@ Start here, in this order:
 ## Feature and operations references
 
 - [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
+- [Runtime Companion](RUNTIME_COMPANION.md)
 - [Python Runtime](PYTHON_RUNTIME.md)
 - [Node Runtime](NODE_RUNTIME.md)
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
@@ -27,7 +28,7 @@ Start here, in this order:
 GitHub's current source code and main commit are authoritative. This documentation explains intent and acceptance. If documentation and code differ, record the discrepancy, inspect the implementation, and update the docs in the same PR as the fix. A planned feature must never be described as implemented.
 
 
-## Latest repository evidence — 2026-11-15
+## Historical repository evidence — 2026-11-15
 
 Main commit: `34f8d5329223d59e984e98b977e92d86e6efd555`.
 
@@ -36,4 +37,4 @@ Merged implementation PRs: [#18 credential hardening](https://github.com/AssayFl
 - [Quality CI 43703703022](https://github.com/AssayFlux/PocketHost/actions/runs/43703703022): passed all six jobs on main.
 - [Android integration 43703702835](https://github.com/AssayFlux/PocketHost/actions/runs/43703702835): pending at reconciliation time.
 
-See [Implementation Status](PHASE_0_STATUS.md) and [Website Deployment Guide](WEBSITE_DEPLOYMENT.md) for capabilities and limitations. This is not a production approval.
+The current runtime migration and security limitations are documented in [Runtime Companion](RUNTIME_COMPANION.md), [Implementation Status](PHASE_0_STATUS.md) and [Project Baseline](PROJECT_BASELINE.md). This historical CI snapshot is not a production approval.
