@@ -54,6 +54,16 @@ class RuntimeCellCapabilityBrokerTest {
                 stillA.close()
             }
 
+            // Replacing the directory at the same path must not retarget an issued grant.
+            val displaced = File(projectA.parentFile, projectA.name + "-displaced")
+            assertTrue(projectA.renameTo(displaced))
+            assertTrue(projectA.mkdirs())
+            File(projectA, "index.html").writeText("replacement")
+            assertThrows(SecurityException::class.java) {
+                broker.openReadOnly(lease.id, token, uid, "index.html")
+            }
+            displaced.deleteRecursively()
+
             leases.markProcessDied(lease.id)
             assertThrows(SecurityException::class.java) {
                 broker.openReadOnly(lease.id, token, uid, "index.html")
