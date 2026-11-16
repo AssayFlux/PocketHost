@@ -19,6 +19,9 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -31,7 +34,10 @@ class RuntimeWorkerSeccompTest {
         val socketName = "pockethost-seccomp-" + System.nanoTime()
         val address = LocalSocketAddress(socketName)
         val listener = LocalServerSocket(socketName)
+        val outboundServer = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
         val outbound = Os.socket(OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP)
+        Os.connect(outbound, InetSocketAddress("127.0.0.1", outboundServer.localPort))
+        val outboundPeer = outboundServer.accept()
         val listenerPfd = ParcelFileDescriptor.dup(listener.getFileDescriptor())
         val outboundPfd = ParcelFileDescriptor.dup(outbound)
         val connected = CountDownLatch(1)
@@ -116,6 +122,8 @@ class RuntimeWorkerSeccompTest {
             listenerPfd.close()
             outboundPfd.close()
             listener.close()
+            runCatching { outboundPeer.close() }
+            runCatching { outboundServer.close() }
             Os.close(outbound)
         }
     }
