@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Check Python syntax
-        run: python -m py_compile app/src/main/python/pockethost_runtime.py examples/python-wsgi/wsgi.py
+        run: python -m py_compile runtime-worker/src/main/python/pockethost_runtime.py examples/python-wsgi/wsgi.py
       - name: Test WSGI lifecycle
         run: python -m unittest discover -s tests/python -v
 
@@ -113,4 +113,4 @@ jobs:
         with:
           gradle-version: "8.9"
       - name: Compile Kotlin Android source without packaging an APK
-        run: gradle :app:externalNativeBuildDebug :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin
+        run: gradle :runtime-worker:externalNativeBuildDebug :runtime-worker:compileDebugKotlin :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin
