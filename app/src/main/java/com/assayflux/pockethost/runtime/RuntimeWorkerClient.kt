@@ -42,45 +42,63 @@ object RuntimeWorkerClient {
 
     private fun workerIntent() = Intent().setComponent(ComponentName(WORKER_PACKAGE, WORKER_SERVICE))
 
+    @Volatile private var cachedBinder: IBinder? = null
+    @Volatile private var cachedConnection: ServiceConnection? = null
+    private val connectionLock = Any()
+
     private fun <T> withWorker(context: Context, operation: (IBinder) -> T): T {
-        check(Looper.myLooper() != Looper.getMainLooper()) {
-            "Runtime companion IPC must run on a background thread."
-        }
         val app = context.applicationContext
-        val intent = workerIntent()
-        ContextCompat.startForegroundService(app, intent)
-        val latch = CountDownLatch(1)
-        var connectedBinder: IBinder? = null
-        var connectionError: Throwable? = null
-        val connection = object : ServiceConnection {
-            override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                connectedBinder = service
-                latch.countDown()
+        var binder = cachedBinder
+        if (binder == null || !binder.isBinderAlive) {
+            check(Looper.myLooper() != Looper.getMainLooper()) {
+                "Starting the runtime companion must happen on a background thread."
             }
-            override fun onServiceDisconnected(name: ComponentName) {
-                connectionError = IllegalStateException("Runtime companion disconnected.")
-                latch.countDown()
-            }
-            override fun onBindingDied(name: ComponentName) {
-                connectionError = IllegalStateException("Runtime companion binding died.")
-                latch.countDown()
-            }
-            override fun onNullBinding(name: ComponentName) {
-                connectionError = IllegalStateException("Runtime companion returned an empty binding.")
-                latch.countDown()
+            synchronized(connectionLock) {
+                binder = cachedBinder
+                if (binder == null || !binder!!.isBinderAlive) {
+                    val intent = workerIntent()
+                    ContextCompat.startForegroundService(app, intent)
+                    val latch = CountDownLatch(1)
+                    var failure: Throwable? = null
+                    val connection = object : ServiceConnection {
+                        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                            cachedBinder = service
+                            latch.countDown()
+                        }
+                        override fun onServiceDisconnected(name: ComponentName) {
+                            cachedBinder = null
+                            failure = IllegalStateException("Runtime companion disconnected.")
+                            latch.countDown()
+                        }
+                        override fun onBindingDied(name: ComponentName) {
+                            cachedBinder = null
+                            failure = IllegalStateException("Runtime companion binding died.")
+                            latch.countDown()
+                        }
+                        override fun onNullBinding(name: ComponentName) {
+                            failure = IllegalStateException("Runtime companion returned an empty binding.")
+                            latch.countDown()
+                        }
+                    }
+                    check(app.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
+                        "Could not bind to the installed runtime companion. Install the matching companion APK."
+                    }
+                    cachedConnection = connection
+                    check(latch.await(20, TimeUnit.SECONDS)) {
+                        runCatching { app.unbindService(connection) }
+                        cachedConnection = null
+                        "Timed out waiting for the runtime companion."
+                    }
+                    failure?.let { throw it }
+                    binder = checkNotNull(cachedBinder) { "Runtime companion did not provide a Binder." }
+                }
             }
         }
-        check(app.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
-            "Could not bind to the installed runtime companion. Install the matching companion APK."
-        }
-        try {
-            check(latch.await(20, TimeUnit.SECONDS)) { "Timed out waiting for the runtime companion." }
-            connectionError?.let { throw it }
-            return operation(checkNotNull(connectedBinder) { "Runtime companion did not provide a Binder." })
-        } finally {
-            runCatching { app.unbindService(connection) }
-        }
+        return operation(checkNotNull(binder))
     }
+
+    /** Status queries must not start a foreground service or block the UI on first launch. */
+    private fun cachedWorkerAvailable(): IBinder? = cachedBinder?.takeIf { it.isBinderAlive }
 
     private fun transact(binder: IBinder, code: Int, write: (Parcel) -> Unit = {}): Any? {
         val data = Parcel.obtain()
@@ -238,25 +256,33 @@ object RuntimeWorkerClient {
     fun stopNode(context: Context): String =
         withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
 
-    fun nodeStatus(context: Context): String =
-        withWorker(context) { transact(it, TRANSACTION_NODE_STATUS) as String }
+    fun nodeStatus(context: Context): String {
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) return "STOPPED"
+        return withWorker(context) { transact(it, TRANSACTION_NODE_STATUS) as String }
+    }
 
-    fun nodeMetrics(context: Context): JSONObject? =
-        withWorker(context) {
+    fun nodeMetrics(context: Context): JSONObject? {
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) return null
+        return withWorker(context) {
             if ((transact(it, TRANSACTION_NODE_STATUS) as String) != "RUNNING") null
             else JSONObject(transact(it, TRANSACTION_NODE_METRICS) as String).put("source", "node-companion")
         }
+    }
 
     fun stopPython(context: Context): String =
         withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
 
-    fun pythonStatus(context: Context): String =
-        withWorker(context) { transact(it, TRANSACTION_PYTHON_STATUS) as String }
+    fun pythonStatus(context: Context): String {
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) return "STOPPED"
+        return withWorker(context) { transact(it, TRANSACTION_PYTHON_STATUS) as String }
+    }
 
-    fun pythonMetrics(context: Context): JSONObject? =
-        withWorker(context) {
+    fun pythonMetrics(context: Context): JSONObject? {
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) return null
+        return withWorker(context) {
             if ((transact(it, TRANSACTION_PYTHON_STATUS) as String) != "RUNNING") null
             else JSONObject(transact(it, TRANSACTION_PYTHON_METRICS) as String)
                 .put("source", "python-companion")
         }
+    }
 }
