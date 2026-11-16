@@ -200,3 +200,6 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 64607e8a3d159e1d0ff5b23db1f97a8fa5b2bf1b adds instrumentation coverage that a committed full restore is cleaned without rolling back the newly deployed site. This and the simulated interrupted-restore test remain unexecuted.
 
+- 91007e7d1c1266cba5a9653fd3a6bcb421dc8fe0, 25b5e0f5db84917b22712de9783f0fdcfc821c1f, 503153f63a1c5589dc50d1a57f4c63352418ded8 and 86212c0b2b21996551d057b1b982d5e74476b209 harden restore recovery against symlinked journal/commit metadata, unsafe rollback roots, and runtime activity during recovery.
+- 64607e8a3d159e1d0ff5b23db1f97a8fa5b2bf1b verifies committed transaction cleanup without reverting the new site. All these instrumentation cases still require execution.
+
