@@ -19,17 +19,13 @@ object RuntimeProjectFileBroker {
     fun openReadOnly(projectRoot: File, relativePath: String): ParcelFileDescriptor =
         openRegularFile(projectRoot, relativePath, OsConstants.O_RDONLY)
 
-    /** Truncates an existing regular file; it never creates missing files. */
+    /**
+     * Legacy probe-only writable descriptor. Never pass this to project code: descriptor
+     * writes cannot be byte-quota enforced after transfer. Production writes use writeBytes.
+     */
+    @Deprecated("Probe-only. Use RuntimeProjectCapabilityBroker.writeBytes for bounded writes.")
     fun openWriteOnly(projectRoot: File, relativePath: String): ParcelFileDescriptor =
         openRegularFile(projectRoot, relativePath, OsConstants.O_WRONLY, truncate = true)
-
-    /** Creates a new file if absent, or truncates an existing regular file. */
-    fun openCreateOrTruncate(projectRoot: File, relativePath: String): ParcelFileDescriptor =
-        openRegularFile(projectRoot, relativePath, OsConstants.O_WRONLY, create = true, truncate = true)
-
-    /** Creates a file if absent and positions writes at its end without truncating it. */
-    fun openAppendOnly(projectRoot: File, relativePath: String): ParcelFileDescriptor =
-        openRegularFile(projectRoot, relativePath, OsConstants.O_WRONLY, create = true, append = true)
 
 
     /**
@@ -68,7 +64,7 @@ object RuntimeProjectFileBroker {
                 segments.last(),
                 OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_NOFOLLOW or
                     OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK or
-                    if (append) OsConstants.O_APPEND else 0,
+                    (if (append) OsConstants.O_APPEND else 0),
                 OsConstants.S_IRUSR or OsConstants.S_IWUSR
             )
             try {
@@ -101,9 +97,7 @@ object RuntimeProjectFileBroker {
         projectRoot: File,
         relativePath: String,
         accessMode: Int,
-        create: Boolean = false,
-        truncate: Boolean = false,
-        append: Boolean = false
+        truncate: Boolean = false
     ): ParcelFileDescriptor {
         val normalized = relativePath.replace(92.toChar(), '/')
         require(normalized.isNotBlank() && !normalized.startsWith('/') && !File(normalized).isAbsolute) {
@@ -130,9 +124,7 @@ object RuntimeProjectFileBroker {
                 directoryFd = nextFd
             }
 
-            var flags = accessMode or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
-            if (create) flags = flags or OsConstants.O_CREAT
-            if (append) flags = flags or OsConstants.O_APPEND
+            val flags = accessMode or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
             val fileFd = Os.openat(
                 directoryFd,
                 segments.last(),
