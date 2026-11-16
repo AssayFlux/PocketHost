@@ -1,6 +1,10 @@
 <!-- ASSAYFLUX POCKET HOST · REPOSITORY README -->
 
 <p align="center">
+  <img src="Assets/Logo.png" alt="AssayFlux Pocket Host logo" width="176">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/ASSAYFLUX-POCKET%20HOST-172A3A?style=for-the-badge&labelColor=101B27&color=B18B5E" alt="AssayFlux Pocket Host">
 </p>
 <h1 align="center">ASSAYFLUX POCKET HOST</h1>
