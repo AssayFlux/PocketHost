@@ -22,4 +22,7 @@
         </service>
         <service android:name=".runtime.RuntimeIsolationProbeService" android:exported="false" android:isolatedProcess="true" android:process=":runtime_probe" />
     </application>
+    <queries>
+        <package android:name="com.assayflux.pockethost.worker" />
+    </queries>
 </manifest>
