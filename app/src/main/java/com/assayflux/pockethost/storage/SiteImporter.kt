@@ -191,11 +191,28 @@ object SiteImporter {
         if (!java.nio.file.Files.isDirectory(root.toPath(), noFollow) ||
             !java.nio.file.Files.isRegularFile(File(root, "index.html").toPath(), noFollow)) return false
         return runCatching {
+            var files = 0
+            var entries = 0
+            var bytes = 0L
             java.nio.file.Files.walk(root.toPath()).use { paths ->
                 paths.allMatch { path ->
-                    !java.nio.file.Files.isSymbolicLink(path) &&
-                        (java.nio.file.Files.isDirectory(path, noFollow) ||
-                            java.nio.file.Files.isRegularFile(path, noFollow))
+                    entries++
+                    if (entries > MAX_ENTRIES ||
+                        root.toPath().relativize(path).nameCount > MAX_DEPTH ||
+                        java.nio.file.Files.isSymbolicLink(path)) {
+                        false
+                    } else if (java.nio.file.Files.isDirectory(path, noFollow)) {
+                        true
+                    } else if (java.nio.file.Files.isRegularFile(path, noFollow)) {
+                        val name = path.fileName?.toString()?.lowercase()
+                        if (name in blockedNames) {
+                            false
+                        } else {
+                            files++
+                            bytes += java.nio.file.Files.size(path)
+                            files <= MAX_FILES && bytes <= MAX_BYTES
+                        }
+                    } else false
                 }
             }
         }.getOrDefault(false)
