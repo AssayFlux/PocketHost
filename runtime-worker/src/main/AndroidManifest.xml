@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <permission
         android:name="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
         android:protectionLevel="signature" />
@@ -12,6 +15,11 @@
             android:name=".RuntimeWorkerService"
             android:exported="true"
             android:permission="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
-            android:process=":runtime_worker" />
+            android:process=":runtime_worker"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started website runtime companion for Python and Node.js" />
+        </service>
     </application>
 </manifest>
