@@ -951,6 +951,36 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn relay_hostname_is_inactive_until_dns_verification_and_cascades_on_device_delete() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let device = Uuid::new_v4();
+        let site = Uuid::new_v4();
+        sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'Relay CI device',$2)")
+            .bind(device).bind(token_hash(&new_token())).execute(&db).await.unwrap();
+        sqlx::query("INSERT INTO relay_sites(id,device_id,hostname,site_id,verification_token_hash) VALUES($1,$2,$3,$4,$5)")
+            .bind(site).bind(device).bind(format!("{}.relay.example.test", site.simple()))
+            .bind("static-default").bind(token_hash("dns-proof-token"))
+            .execute(&db).await.unwrap();
+
+        let before: i64 = sqlx::query_scalar("SELECT count(*) FROM relay_sites WHERE id=$1 AND verified_at IS NOT NULL AND enabled=TRUE")
+            .bind(site).fetch_one(&db).await.unwrap();
+        assert_eq!(before, 0, "Unverified hostnames must never receive visitor traffic.");
+
+        sqlx::query("UPDATE relay_sites SET verified_at=now() WHERE id=$1")
+            .bind(site).execute(&db).await.unwrap();
+        let after: i64 = sqlx::query_scalar("SELECT count(*) FROM relay_sites WHERE id=$1 AND verified_at IS NOT NULL AND enabled=TRUE")
+            .bind(site).fetch_one(&db).await.unwrap();
+        assert_eq!(after, 1);
+
+        sqlx::query("DELETE FROM devices WHERE id=$1").bind(device).execute(&db).await.unwrap();
+        let cascaded: i64 = sqlx::query_scalar("SELECT count(*) FROM relay_sites WHERE id=$1")
+            .bind(site).fetch_one(&db).await.unwrap();
+        assert_eq!(cascaded, 0, "Deleting a device must remove its hostname routes.");
+    }
+
+    #[tokio::test]
     async fn postgres_migrations_support_revocable_viewer_accounts_and_audit() {
         let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
         let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
