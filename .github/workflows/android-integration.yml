@@ -12,7 +12,7 @@ on:
       - "settings.gradle.kts"
       - "gradle/**"
       - ".github/workflows/android-integration.yml"
-  # Run device-level regression on every Android/native/runtime change, not only PRs with selected title keywords.
+  # Run device-level regression on every Android/native/runtime push and pull request.
   pull_request:
     branches: [main]
     paths:
@@ -139,7 +139,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[emulators]'))
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || github.event_name == 'pull_request' || github.event_name == 'push'
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
