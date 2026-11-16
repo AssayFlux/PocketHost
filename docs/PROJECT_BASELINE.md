@@ -1,10 +1,10 @@
 # ASSAYFLUX POCKET HOST — CANONICAL PROJECT BASELINE
 
 **Baseline review:** 2026-11-16  
-**Source reviewed:** `9ff8de22ac7afb18821b3a3f201fddbba58eab77`  
+**Source reviewed:** `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`  
 **Release:** 0.1.0 target · **Status:** pre-release · **Production approval:** no.
 
-This is the current evidence baseline. The wrapper-only commit after the source/quality run adds the checksum-pinned Gradle wrapper; the exact-head quality run is being refreshed by this documentation change.
+This is the current evidence baseline. Source implementation is unchanged since the wrapper/dependency freeze; this commit records the six-job exact-SHA quality result.
 
 ## Product contract
 
@@ -49,9 +49,8 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 
 ## Verification evidence
 
-- Quality run `43826475655`: all five jobs passed on `a647483060e08361ebeca401dc4ecb4460386372`.
-- Quality run `43826809648`: all five jobs passed on `ff0c66a32bf226733afafa5360a2f99cee526661`, including Rust 1.88 locked tests, control-plane database migrations/Compose validation and `npm ci`.
-- Dependency-lock workflow `43826809601`: completed successfully; generated and checksum-verified Gradle wrapper and resolved Cargo/npm/Gradle dependency graphs.
+- Quality run `43827396536`: all six jobs passed on `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca` (Rust 1.88 locked tests, control-plane migrations and Compose profiles, Python, Node, `npm ci`, Gradle wrapper validation).
+- Dependency-lock workflow `43826809601`: completed successfully; generated Cargo/npm/Gradle locks and the checksum-verified Gradle wrapper.
 - No Android source compile, APK packaging, emulator instrumentation or physical-device test is claimed on this baseline.
 
 ## Gate status

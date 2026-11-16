@@ -185,7 +185,7 @@ The primary version is complete only when the gates below have objective exit ev
 - Pin Rust 1.88, checksum-verified Gradle 8.9 wrapper, Android SDK/NDK/CMake inputs and native runtime artifacts.
 - Acceptance: one canonical baseline; active docs distinguish planned/source-present/verified work; locked dependency resolution succeeds on exact SHA.
 
-**Status:** complete at source baseline `9ff8de22ac7afb18821b3a3f201fddbba58eab77`.
+**Status:** complete at source baseline `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`.
 
 ### Gate 1 — Runtime migration
 - Complete companion lifecycle, Binder death/rebind, version negotiation, bounded transfer, crash-recoverable replacement and coordinated shutdown.

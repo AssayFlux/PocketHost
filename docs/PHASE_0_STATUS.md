@@ -1,7 +1,7 @@
 # Pocket Host — Current Implementation Status
 
 **Snapshot:** 2026-11-16  
-**Source baseline:** `9ff8de22ac7afb18821b3a3f201fddbba58eab77`  
+**Source baseline:** `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`  
 **Release:** 0.1.0 target · **Decision:** not production approved.
 
 ## Stage 0 — Repository truth and architecture freeze
@@ -54,8 +54,7 @@ The companion UID differs from the host UID, but Python and Node projects share 
 
 ## CI evidence
 
-- Quality `43826475655`: five jobs passed on `a647483060e08361ebeca401dc4ecb4460386372`.
-- Quality `43826809648`: five jobs passed on `ff0c66a32bf226733afafa5360a2f99cee526661`.
+- Quality `43827396536`: all six jobs passed on `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`, including Gradle wrapper validation.
 - Dependency-lock workflow `43826809601`: succeeded; Gradle wrapper and dependency locks generated.
 - No Android build or instrumentation result is claimed for the current baseline.
 - Legacy Android run `43824043298` was queued on an older SHA before the manual-only policy; it is not evidence for the current baseline.

@@ -11,7 +11,7 @@ Native Kotlin/Jetpack Compose Android application; Android 8/API 26+; ARMv7/ARM6
 
 Audit manifests, permissions, source modules, native ABIs, dependency pins, workflows, docs and actual runtime behavior. Reconcile historical CI snapshots and conflicting status language. Commit Cargo, Gradle and npm lockfiles; pin Rust 1.88, checksum-verified Gradle 8.9 wrapper, Android SDK/NDK/CMake and native runtime inputs.
 
-**Exit:** canonical evidence ledger is current; active documents distinguish source-present from verified; locked dependency resolution succeeds. **Implementation status: complete** at source baseline `9ff8de22ac7afb18821b3a3f201fddbba58eab77`.
+**Exit:** canonical evidence ledger is current; active documents distinguish source-present from verified; locked dependency resolution succeeds. **Implementation status: complete** at source baseline `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`.
 
 ## Gate 1 — Companion runtime migration (P0)
 
