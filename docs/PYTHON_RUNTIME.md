@@ -1,10 +1,11 @@
-# Python WSGI runtime
+# PYTHON RUNTIME — CPYTHON 3.11 / WSGI
 
-**Source integration:** CPython 3.11 / Chaquopy now runs in the separate-UID runtime companion package. Build and Android instrumentation for the migration are pending; do not treat source integration as a verified release.
+**Source position:** CPython 3.11 / Chaquopy is integrated in the companion package.  
+**Release position:** runtime end-to-end, API 26/33/35 and per-project isolation are not accepted. Trusted owner code only.
 
-## What it runs
+## 1. Application contract
 
-A Python project must contain a root-level `wsgi.py` with a callable named `application`:
+A Python project must include a root `wsgi.py` exporting callable `application(environ, start_response)`.
 
 ```python
 def application(environ, start_response):
@@ -16,38 +17,40 @@ def application(environ, start_response):
     return [body]
 ```
 
-A starter project is available in [examples/python-wsgi](../examples/python-wsgi/).
+A minimal example is in `examples/python-wsgi/`.
 
-## Runtime architecture
+## 2. Current source architecture
 
-- CPython 3.11 is packaged in `:runtime-worker`, not in the host APK.
-- Host `PythonHostRuntime` validates the imported host-side project path, creates a bounded archive and transfers it through a read-only file descriptor over the authenticated Binder protocol.
-- The companion extracts the project into its own private `files/projects` directory.
-- WSGI code runs under the companion app UID, not the main Pocket Host UID.
-- Python binds to `127.0.0.1`; Rust is the public/LAN listener and reverse-proxies registered hostnames to the Python port.
-- Multi-site routing supports up to 100 hostnames in one WSGI worker.
-- Worker concurrency is configurable from 2 to 16 threads.
+- CPython 3.11 and Chaquopy are packaged in `:runtime-worker`, not the host APK.
+- Host validates a project root, creates a bounded archive and transfers a read-only FD over signature-protected Binder IPC.
+- Companion extracts to companion-owned project storage.
+- WSGI currently runs under companion application UID.
+- Python listener is pinned to `127.0.0.1`; Rust is the intended ingress and reverse-proxy front door.
+- Current WSGI worker supports configured thread bounds and multiple hostname routes.
+- Dependencies are prepared/bundled; automatic pip install is not supported.
 
-## Current transfer bounds
+## 3. Import limits and operations
 
-- 10,000 archive entries.
-- 64 MiB maximum extracted file size.
-- 256 MiB maximum total extracted project size.
-- Symlinked source files, traversal paths and common credential files/directories are rejected or excluded.
-- Active project roots cannot be overwritten while WSGI is serving them.
+Archive entry, expanded file and total project size are bounded in source. Traversal and common credential paths are rejected/excluded. These controls are not a complete secret scanner. Never put credentials in project archives. Active roots must not be replaced while serving. Failed imports must preserve the previous active version.
 
-Common secret files are excluded from transfer. This is not a complete secret scanner; do not put credentials in runtime projects. Dependency installation from `requirements.txt` is not performed automatically.
+## 4. Security limitations
 
-## Security model and limitations
+The companion UID protects host-app-private files from ordinary project code, but Python and Node projects share the companion UID. Python multi-site projects may share one interpreter. Outbound network egress is not OS-enforced and loopback services may be reachable.
 
-The companion's separate Android UID prevents ordinary Python code from directly reading host-app-private files. It does **not** isolate one Python project from another project stored under the same companion UID. Outbound network access is not yet restricted by an enforceable firewall, and loopback services are reachable from the companion.
+This is not a sandbox or multi-tenant runtime. Execute only code the owner controls and trusts. Do not host arbitrary visitor-submitted code.
 
-Therefore this remains a trusted-code runtime, not a multi-tenant sandbox. Execute only owner-controlled code. Do not host arbitrary third-party Python projects publicly.
+## 5. Target isolated-cell contract
 
-The WSGI worker cap is an application-level concurrency bound, not a hard CPU or total-memory quota. Android may terminate the worker under memory pressure.
+The target architecture is one Android isolated service/UID per project. The trusted broker transfers only project/scratch capabilities and a host-created visitor listener. Native policy must install before importing project code and fail closed. Python migration must use one interpreter per cell, with no project imports in the broker.
 
-## Validation
+See `docs/SECURITY_GATE_2_EXECUTION_PLAN.md` and `docs/RUNTIME_COMPANION.md`.
 
-The source test suite covers WSGI lifecycle, host routing, request body limits, metrics and worker bounds. Android instrumentation is being extended to assert that the actual Python process UID differs from the host app UID. CI for the companion migration must pass on API 26, 33 and 35 before this migration is considered verified.
+## 6. Acceptance
 
-Physical-device checks for process death, battery restrictions, memory pressure, thermal behaviour and network changes remain separate acceptance work.
+- CPython starts and reports expected version on API 26/33/35.
+- Real WSGI request routes visitor → Rust → Python → Rust → visitor.
+- Multiple projects have distinct isolated UIDs and cannot read each other's files.
+- Outbound socket/DNS/native networking bypasses fail.
+- Worker stop, crash, rebind and restart work; static origin remains available.
+- Memory/thread/request limits and error handling are measured.
+- Independent security review accepts the cell boundary before untrusted code support.
