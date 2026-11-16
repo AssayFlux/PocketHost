@@ -49,13 +49,26 @@ impl RelayHub {
         let (sender, receiver) = mpsc::channel(64);
         self.sessions.lock().unwrap_or_else(|e| e.into_inner())
             .insert(device_id, (session_id, sender));
+        // A replacement stream cannot inherit requests queued for its predecessor.
+        self.pending.lock().unwrap_or_else(|e| e.into_inner())
+            .retain(|_, pending| pending.device_id != device_id);
         (session_id, receiver)
     }
 
     pub fn disconnect(&self, device_id: Uuid, session_id: Uuid) {
-        let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-        if sessions.get(&device_id).map(|entry| entry.0) == Some(session_id) {
-            sessions.remove(&device_id);
+        let removed = {
+            let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            if sessions.get(&device_id).map(|entry| entry.0) == Some(session_id) {
+                sessions.remove(&device_id);
+                true
+            } else {
+                false
+            }
+        };
+        if removed {
+            // Dropping pending senders releases every visitor waiting on this stream.
+            self.pending.lock().unwrap_or_else(|e| e.into_inner())
+                .retain(|_, pending| pending.device_id != device_id);
         }
     }
 
@@ -266,6 +279,24 @@ mod tests {
         hub.cancel_pending(request_id);
         assert!(response_rx.blocking_recv().is_err());
         hub.disconnect(device, second);
+        assert!(hub.sender(device).is_none());
+    }
+
+    #[test]
+    fn replacing_or_dropping_a_device_stream_cancels_its_pending_visitors() {
+        let hub = RelayHub::default();
+        let device = Uuid::new_v4();
+        let (first, _first_stream) = hub.connect(device);
+        let first_request = hub.register_pending(Uuid::new_v4(), device).unwrap();
+        let (second, _second_stream) = hub.connect(device);
+        assert!(first_request.blocking_recv().is_err());
+        assert!(hub.sender(device).is_some());
+        let second_request = hub.register_pending(Uuid::new_v4(), device).unwrap();
+        hub.disconnect(device, first);
+        assert!(hub.sender(device).is_some(), "stale disconnect must not remove the replacement stream");
+        assert!(second_request.try_recv().is_err(), "stale disconnect must not cancel the replacement stream's work");
+        hub.disconnect(device, second);
+        assert!(second_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_none());
     }
 
