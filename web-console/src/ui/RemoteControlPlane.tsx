@@ -56,8 +56,18 @@ export function RemoteControlPlane() {
     if (!response.ok || !body.accessToken) {
       throw new Error(body.error || `Control Plane session exchange failed (HTTP ${response.status}).`);
     }
+    const previousSession = sessionToken;
     setSessionToken(body.accessToken);
     setSessionRole(body.role || "");
+    if (previousSession) {
+      // Retire the old bearer as soon as its replacement exists. A failed best-effort
+      // revoke does not discard the fresh session or block the requested operation.
+      await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${previousSession}` },
+        cache: "no-store",
+      }).catch(() => undefined);
+    }
     return body.accessToken;
   }
 
