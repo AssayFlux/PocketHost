@@ -315,8 +315,8 @@ mod tests {
         let (_session, _stream) = hub.connect(device);
         let (_other_session, _other_stream) = hub.connect(other_device);
         let removed_site = hub.register_pending(Uuid::new_v4(), device, "site-a").unwrap().1;
-        let kept_site = hub.register_pending(Uuid::new_v4(), device, "site-b").unwrap().1;
-        let kept_device = hub.register_pending(Uuid::new_v4(), other_device, "site-a").unwrap().1;
+        let mut kept_site = hub.register_pending(Uuid::new_v4(), device, "site-b").unwrap().1;
+        let mut kept_device = hub.register_pending(Uuid::new_v4(), other_device, "site-a").unwrap().1;
         assert_eq!(hub.cancel_site(device, "site-a"), 1);
         assert!(removed_site.blocking_recv().is_err());
         assert!(matches!(kept_site.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)));
