@@ -878,8 +878,8 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
 
     private fun respond(output: BufferedOutputStream, status: Int, body: JSONObject, origin: String? = null) {
         val bytes = body.toString().toByteArray(Charsets.UTF_8)
-        val reason = when (status) { 200 -> "OK"; 201 -> "Created"; 204 -> "No Content"; 400 -> "Bad Request"; 401 -> "Unauthorized"; 403 -> "Forbidden"; 404 -> "Not Found"; 409 -> "Conflict"; 413 -> "Payload Too Large"; 429 -> "Too Many Requests"; 501 -> "Not Implemented"; 503 -> "Service Unavailable"; else -> "Internal Server Error" }
-        val cors = if (allowedOrigin(origin)) "Access-Control-Allow-Origin: $origin\r\nVary: Origin\r\nAccess-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\nAccess-Control-Max-Age: 300\r\nAccess-Control-Allow-Private-Network: true\r\n" else ""
+        val reason = when (status) { 200 -> "OK"; 201 -> "Created"; 204 -> "No Content"; 400 -> "Bad Request"; 401 -> "Unauthorized"; 403 -> "Forbidden"; 404 -> "Not Found"; 409 -> "Conflict"; 413 -> "Payload Too Large"; 428 -> "Precondition Required"; 429 -> "Too Many Requests"; 501 -> "Not Implemented"; 503 -> "Service Unavailable"; else -> "Internal Server Error" }
+        val cors = if (allowedOrigin(origin)) "Access-Control-Allow-Origin: $origin\r\nVary: Origin\r\nAccess-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\nAccess-Control-Max-Age: 300\r\nAccess-Control-Allow-Private-Network: true\r\n" else ""
         val header = "HTTP/1.1 $status $reason\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: ${if (status == 204) 0 else bytes.size}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n$cors" + "Connection: close\r\n\r\n"
         output.write(header.toByteArray(Charsets.US_ASCII))
         if (status != 204) output.write(bytes)
