@@ -1,60 +1,37 @@
-# PocketHost Android release signing
+# Production Release Signing
 
-Release credentials stay outside the repository. Never commit a keystore, passwords, signing properties or production APKs containing embedded credentials.
+**Baseline:** 2026-11-16  
+**Current status:** debug APK packaging only; no verified signed production release.
 
-## 1. Create and back up the signing key
+## Security rules
 
-Run on a trusted computer with JDK 17 or newer:
+- Never commit keystores, passwords, private keys or Cloudflare tokens.
+- Never paste signing secrets into chat, issues or logs.
+- Use a dedicated release keystore backed up securely by the owner.
+- Restrict GitHub Actions environment access and require approval where available.
+- Do not reuse debug signing credentials for production.
 
-```bash
-keytool -genkeypair -v \
-  -keystore pockethost-release.jks \
-  -alias pockethost \
-  -keyalg RSA -keysize 4096 -validity 10000
-```
+## Required GitHub Actions secrets
 
-Choose strong unique passwords and keep at least two encrypted offline backups. Losing the key can prevent upgrades under the same package IDs.
-
-## 2. Configure GitHub Actions secrets
-
-Open **Settings → Secrets and variables → Actions** and add:
-
-| Secret | Value |
+| SECRET | PURPOSE |
 |---|---|
-| `POCKETHOST_KEYSTORE_BASE64` | Base64-encoded keystore bytes |
+| `POCKETHOST_KEYSTORE_BASE64` | Base64-encoded release keystore |
 | `POCKETHOST_KEYSTORE_PASSWORD` | Keystore password |
-| `POCKETHOST_KEY_ALIAS` | Key alias (for example `pockethost`) |
+| `POCKETHOST_KEY_ALIAS` | Signing key alias |
 | `POCKETHOST_KEY_PASSWORD` | Key password |
 
-Linux: `base64 -w 0 pockethost-release.jks`
+The release workflow must decode the keystore to a temporary runner path, use it for host and companion release APKs, and remove it even on failure. Host and companion must use the same signing certificate because the companion Binder service uses a signature-level permission.
 
-macOS: `base64 < pockethost-release.jks | tr -d '\\n'`
+## Acceptance
 
-Never paste signing material into chat, issues, commits or workflow logs.
+1. Build host and companion release variants in a protected workflow.
+2. Verify both with `apksigner verify --verbose --print-certs`.
+3. Confirm the expected matching signer certificate.
+4. Inspect package IDs, version, minSdk and ABI contents.
+5. Generate SHA-256 checksums and attach them to release.
+6. Verify install/upgrade on supported API levels.
+7. Download and validate the actual artifacts.
 
-## 3. Build and verify the release
+## Current boundary
 
-After all four secrets are configured:
-
-1. Open **Actions → PocketHost signed release** and run it on `main`.
-2. The workflow builds the `:runtime-worker` companion release APK, then the host app for `arm64-v8a`, `armeabi-v7a` and `x86_64`.
-3. The workflow verifies all four APK signatures and requires the same signing certificate across host and companion packages.
-4. Download the `pockethost-signed-release-apks` artifact. It contains four APKs plus `SHA256SUMS`.
-5. Run `sha256sum -c SHA256SUMS` in the downloaded directory.
-
-### APK inventory
-
-| APK | Package | ABI |
-|---|---|---|
-| `app-arm64-v8a-release.apk` | `com.assayflux.pockethost` | ARM64 |
-| `app-armeabi-v7a-release.apk` | `com.assayflux.pockethost` | ARMv7 |
-| `app-x86_64-release.apk` | `com.assayflux.pockethost` | x86_64 emulator |
-| `pockethost-runtime-worker-release.apk` | `com.assayflux.pockethost.worker` | Companion package |
-
-The companion APK is currently a capability prototype only; it does not yet execute Python or Node. Its inclusion in the release workflow is not evidence of completed runtime isolation. The host and companion must be signed by the same certificate for signature-protected Binder access.
-
-The ordinary quality workflow and debug build do not require release secrets. If any required secret is missing, the signed-release workflow must fail rather than produce an unsigned artifact.
-
-## Release limitations
-
-A signed artifact is not a production-approved release. Before distribution, finish companion runtime integration, API 26/33/35 emulator acceptance, physical-device upgrade/lifecycle tests, external Cloudflare HTTPS verification, capacity and backup acceptance, dependency/security review and independent security review. Restrict who can edit Actions secrets or trigger release workflows.
+Debug APK packaging passed, but a previous artifact retrieval returned a truncated ZIP. It is not distributable. Production signing remains blocked until owner-controlled secrets are configured and release workflow passes. Debug signing is not production signing.
