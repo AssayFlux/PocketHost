@@ -14,16 +14,16 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 
 | Subsystem | Source-level position | Verification / limitation |
 |---|---|---|
-| Android host | Kotlin/Compose app, five destinations, foreground hosting service | Android compilation and visual/device acceptance deferred to Gate 8 |
+| Android host | Kotlin/Compose app, five destinations, foreground hosting service | Intermediate APK/ABI and API 26/33/35 emulator validation authorized during Gates 2–4; final physical-device/release acceptance remains Gate 8 |
 | Rust engine | Tokio/Hyper, static files, hostname routing, reverse proxy, bounded admission | Non-Android Rust tests pass; fairness and sustained-load evidence remain |
 | Python | CPython 3.11/Chaquopy moved into companion package | Python-through-Rust instrumentation test is written; not run yet |
 | Node | Node mobile 24.22.1 native runtime in companion, dedicated process | Node-through-Rust and static-origin continuity tests are written; not run yet |
-| Companion | Separate package/UID, signature Binder, caller checks, protocol negotiation, Binder death handling, rebind and orderly shutdown | Instrumentation tests written; API 26/33/35 execution deferred |
+| Companion | Separate package/UID, signature Binder, caller checks, protocol negotiation, Binder death handling, rebind and orderly shutdown | Instrumentation source exists; API 26/33/35 execution is now part of Gates 2–4 and remains unverified |
 | Project transfer | Bounded archive, staged extraction and recoverable previous-project rename | Source hardening present; Android transfer/rollback tests await Gate 8 |
 | Isolation | Isolated-service, Unix-domain and native seccomp proof source exists | Not a production per-project sandbox; Python/Node remain trusted-only |
 | Management | Authenticated loopback API and TypeScript/React console | External deployment and full security acceptance remain |
 | Cloudflare | Android cloudflared build integration; existing named tunnel is reused | External hostname/TLS verification remains |
-| AssayFlux Relay | Defined in North Star and `docs/ASSAYFLUX_RELAY.md` | Specification only; no gateway, persistent stream, visitor forwarding or Android Relay Agent |
+| AssayFlux Relay | Bounded HTTP gateway, Android outbound SSE agent, verified hostname/device/site routing and request/response forwarding in source | Public TLS/DNS deployment, certificate lifecycle, streaming/WebSocket, load/soak and external visitor acceptance remain open |
 | Capacity | Device telemetry, first Capacity Lab and admission derating | Fair governor, workload coverage and safe-envelope evidence remain |
 | Backup | Encrypted .afbackup and staged restore foundations | Full fault matrix remains |
 | Control plane | Axum/PostgreSQL source, device/user token rotation, 12-hour revocable admin sessions and audit | Deployment and device E2E not proven |
@@ -43,7 +43,7 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 ## CI and Android build policy
 
 - Quality workflow: Rust, control plane/database migrations, Python, Node, console and Gradle wrapper validation. It does not compile Android or package APKs.
-- Android integration and signed-release workflows are manual-only.
+- Android integration now runs on relevant `main` pushes and can be manually dispatched; signed-release remains a separate release workflow.
 - Revised Owner instruction (2026-11-16): run intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation during Gates 2–4 so security changes are validated as implemented. Gate 8 retains final release packaging, physical-device acceptance and independent review.
 - A legacy Android integration run `43824043298` on SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` started before the manual-only change and is now cancelled. Its cloudflared job succeeded, APK job failed, API 26/33 emulator jobs failed, and API 35 was cancelled. It produced no accepted APK or API-matrix result. The replacement push-triggered run `43828040040` skipped all Android jobs.
 
@@ -58,7 +58,7 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 | Gate | Status |
 |---|---|
 | 0 — Repository truth and architecture freeze | Complete |
-| 1 — Runtime migration | Source implementation complete; Android verification deferred to Gate 8 |
+| 1 — Runtime migration | Source implementation complete; intermediate Android validation pulled into Gates 2–4; final release acceptance remains Gate 8 |
 | 2 — Per-project isolation and adversarial security | Open; shared companion UID is not a sandbox |
 | 3 — AssayFlux Relay | Partial source implementation; external deployment and end-to-end validation open |
 | 4 — Owner/visitor authentication | Open |
@@ -114,7 +114,7 @@ Update this file with exact evidence whenever the baseline changes.
 
 - Gate 2 remains open. The Binder capability adapter and isolated probe remain feasibility work; the production Python/Node runtime still shares the companion UID and app-private project/runtime storage. No production cell supervisor, runtime migration or Android API 26/33/35 test result is claimed.
 - Gate 3 source now routes an authenticated visitor request to the selected enabled local site ID, uses its configured local hostname for Rust routing, and preserves the verified public hostname for runtime X-Forwarded-Host. The Android agent uses bounded raw loopback HTTP to preserve Host; response cookies and browser Basic-auth challenges are retained. DNS TXT parsing checks response source, transaction ID, question and answer owner. DNSSEC is not validated. Streaming/WebSocket, TLS/certificate lifecycle, deployment, external visitor tests and soak evidence remain open.
-- Gate 4 now has per-site/effective-client-IP visitor-authentication throttling in Rust (8 failed attempts per 60-second window, then a 60-second cooldown, with a bounded bucket map). Remote 12-hour sessions, role enforcement, user/device token rotation, audit and site-scoped visitor credential revocation remain implemented in source. Passkeys and fresh reauthentication remain open.
+- Gate 4 now has per-site/effective-client-IP visitor-authentication throttling in Rust (8 failed attempts per 60-second window, then a 60-second cooldown, with a bounded bucket map). Remote 12-hour sessions, role enforcement, user/device token rotation, audit and site-scoped visitor credential revocation remain implemented in source. Five-minute credential reauthentication is implemented in source; passkey-first identity and biometric-bound step-up remain open.
 - Latest six-job quality workflow `43853226788` completed success on exact SHA `5a2eb78c624e122dbf38a91fcf49b1750c8599b1`: Rust, control-plane/PostgreSQL migrations and Compose profiles, Python runtime, Node runtime, console and Gradle wrapper all passed. This workflow does not compile Android Kotlin/C++ or execute Android instrumentation. No Android build/device test was run, per the owner-directed Gate 8 sequencing.
 
 
@@ -124,7 +124,7 @@ Update this file with exact evidence whenever the baseline changes.
 - Workflow: https://github.com/AssayFlux/PocketHost/actions/runs/43853226788 — completed success, all six jobs successful.
 - Control-plane tests ran against PostgreSQL 16, including migrations, remote session expiry/revocation, team-user token rotation, device token rotation, Relay hostname state, bounded pending-request quotas, DNS TXT parser validation, dedicated control-host matching and artifact transaction tests. Caddy strict SNI validation and both Compose ingress profiles passed.
 - Rust engine tests passed, including per-site/client visitor-auth throttling tests. Python, Node, TypeScript console and Gradle-wrapper jobs passed.
-- The workflow does not compile Android app Kotlin, companion Kotlin, C++/JNI, nor execute Android instrumentation. Those remain intentionally deferred to Gate 8.
+- The six-job quality workflow does not compile Android app Kotlin, companion Kotlin, C++/JNI, nor execute Android instrumentation. A separate push-triggered Android integration workflow is configured for relevant `main` changes, but no successful run/result is verified in this baseline.
 
 
 ## Relay ingress separation — 2026-11-16
@@ -133,3 +133,12 @@ Update this file with exact evidence whenever the baseline changes.
 - The visitor listener has only the verified-host fallback; it does not register /v1/admin, /v1/device, health or management routes. The control listener carries admin/device routes and is guarded by POCKETHOST_CONTROL_API_HOST.
 - Caddy routes the dedicated control hostname to 8080 and other verified Relay visitor hostnames to 8081. strict_sni_host on is enabled to reject SNI/Host domain-fronting mismatches. The Cloudflare Tunnel profile must route the management hostname to 8080 and visitor hostnames to 8081.
 - This is source and CI-validated ingress separation; no live Caddy/Cloudflare deployment or external visitor acceptance is claimed.
+
+
+## Owner-approved intermediate Android validation — 2026-11-16
+
+- The Owner explicitly changed the sequencing: Android APK/ABI builds and API 26/33/35 emulator instrumentation are required during Gates 2–4, not deferred wholesale to Gate 8.
+- `.github/workflows/android-integration.yml` now runs on relevant pushes to `main`; it builds cloudflared Android ABIs, the host and companion debug APKs, and runs the API 26/33/35 emulator instrumentation matrix. The workflow definition is source evidence only; a successful run and its artifacts have not yet been verified here.
+- Gate 2 source hardening after the earlier snapshot: root and intermediate directory opens now use `O_NONBLOCK`; Android instrumentation source rejects FIFO roots, FIFO path components, symlinked files and symlinked directories. The duplicate `O_NONBLOCK` flag in root identity capture was removed. The production Python/Node launcher still does not use per-project isolated UIDs or the Binder capability broker, so Gate 2 remains open.
+- Gate 4 instrumentation source now qualifies the Owner step-up policy helper through `ManagementApiServer`, fixing unresolved test references found during review. This is a source correction, not a test result.
+- Source changes are on `main` through `2357ed5301617ae0b63b35915779d4f4b44b44ad`. No Android compile, emulator result, external Relay deployment, physical-device test or independent security review is claimed. Gates 2, 3 and 4 remain open.
