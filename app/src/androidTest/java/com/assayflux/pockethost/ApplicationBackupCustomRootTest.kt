@@ -92,6 +92,48 @@ class ApplicationBackupCustomRootTest {
         }
     }
 
+    @Test
+    fun wrongPassphraseAndCiphertextTamperingFailBeforeChangingActiveSite() {
+        val suffix = System.nanoTime().toString()
+        val siteRoot = File(context.filesDir, "site")
+        val before = File(context.cacheDir, "backup-before-$suffix")
+        val backup = File(context.cacheDir, "backup-auth-$suffix.afbackup")
+        val tampered = File(context.cacheDir, "backup-tampered-$suffix.afbackup")
+        val hadSite = siteRoot.isDirectory
+        if (hadSite) siteRoot.copyRecursively(before, overwrite = true)
+        try {
+            siteRoot.deleteRecursively()
+            check(siteRoot.mkdirs())
+            File(siteRoot, "index.html").writeText("<h1>active-before-restore</h1>")
+            assertTrue(ApplicationBackupManager.export(context, Uri.fromFile(backup),
+                "correct-backup-passphrase".toCharArray()))
+
+            val wrongPassphraseFailure = runCatching {
+                ApplicationBackupManager.restore(context, Uri.fromFile(backup),
+                    "incorrect-backup-passphrase".toCharArray())
+            }.exceptionOrNull()
+            assertNotNull("A wrong passphrase must fail authenticated decryption.", wrongPassphraseFailure)
+            assertEquals("<h1>active-before-restore</h1>", File(siteRoot, "index.html").readText())
+
+            val damaged = backup.readBytes()
+            check(damaged.size > 40)
+            damaged[damaged.lastIndex] = (damaged.last().toInt() xor 0x01).toByte()
+            tampered.writeBytes(damaged)
+            val tamperFailure = runCatching {
+                ApplicationBackupManager.restore(context, Uri.fromFile(tampered),
+                    "correct-backup-passphrase".toCharArray())
+            }.exceptionOrNull()
+            assertNotNull("Modified ciphertext must fail AES-GCM authentication.", tamperFailure)
+            assertEquals("<h1>active-before-restore</h1>", File(siteRoot, "index.html").readText())
+        } finally {
+            siteRoot.deleteRecursively()
+            if (hadSite && before.isDirectory) before.copyRecursively(siteRoot, overwrite = true)
+            backup.delete()
+            tampered.delete()
+            before.deleteRecursively()
+        }
+    }
+
     private fun rewriteWithDuplicateHostnameRoute(
         source: File,
         destination: File,
