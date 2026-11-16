@@ -2,7 +2,7 @@
 
 **Purpose:** single actionable definition of completion. Source presence, documentation or a green compile is not production approval. Every gate must be marked PASS, FAIL or NOT TESTED with commit-specific evidence.
 
-> **Implementation snapshot — 2026-11-16:** work continues directly on `main`. The current engineering pass adds an isolated-process probe (UID/file/loopback capability measurement only), extracts shared Compose app chrome and the Activity destination, and makes the API 26/33/35 emulator matrix run on every Android/native push and pull request. The first instrumentation compile caught stale `Process.myUid()` references; these were corrected and the current HEAD must pass fresh CI before validation is recorded. Python and Node still run under the app UID and remain trusted-code-only. No production sandbox, deployed remote control plane, signed production release or physical-device acceptance is claimed.
+> **Implementation snapshot — 2026-11-16:** work continues directly on `main`. The current engineering pass adds an isolated-process probe (UID/file/loopback capability measurement only), extracts shared Compose app chrome plus the Activity and Sites destinations, and makes the API 26/33/35 emulator matrix run on every Android/native push and pull request. The first instrumentation compile caught stale `Process.myUid()` references; these were corrected and the current HEAD must pass fresh CI before validation is recorded. Python and Node still run under the app UID and remain trusted-code-only. No production sandbox, deployed remote control plane, signed production release or physical-device acceptance is claimed.
 
 ## Product baseline
 

@@ -180,7 +180,7 @@ internal fun PocketHostSitesScreen(
                                         actions.onImportedSummaryChange("Restored previous deployment")
                                         actions.onStatusChange("Rollback completed. Restart hosting to load the restored site.")
                                         context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                            .putString("site_summary", state.importedSummary).apply()
+                                            .putString("site_summary", "Restored previous deployment").apply()
                                     }.onFailure { actions.onStatusChange(it.message ?: "Rollback failed.") }
                                 },
                                 enabled = !state.hosting && !state.importing,

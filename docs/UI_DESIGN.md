@@ -1,6 +1,6 @@
 # AssayFlux Pocket Host — UI Design
 
-**Status:** Five-destination Compose UI is implemented; top app chrome and Activity are extracted into dedicated files. Dashboard, Sites and Settings remain in the main composition and are being decomposed incrementally. Device/responsive screenshot acceptance remains pending.
+**Status:** Five-destination Compose UI is implemented; top app chrome, Activity and Sites are extracted into dedicated Compose files. Dashboard and Settings remain in the main composition and are being decomposed incrementally. Device/responsive screenshot acceptance remains pending.
 **Product identity:** AssayFlux Pocket Host (repository: `AssayFlux/PocketHost`). “Phone Web Host” describes the use case and does not rename the application.
 **Authority:** This document is the single source of truth for PocketHost UI implementation. Read it before implementing each screen. If a design decision changes, update this document in the same commit as the corresponding UI code.
 
