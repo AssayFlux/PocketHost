@@ -123,3 +123,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 - Gate 5 additional regression: adb58da6fbdbc5b1bbb19f04ed5b6820879cada1 proves a saturated site's response semaphore does not block admission through a separate site's semaphore. This is unit-level isolation evidence only, not a live multi-tenant load/latency result.
 
+- Gate 6 recovery hardening: invalid active websites without any safe fallback now emit a recovery error; instrumentation adds a symlinked-active-root case proving the link target is not activated.
+
