@@ -285,6 +285,7 @@ paths:
                 id: { type: string, format: uuid }
                 status: { type: integer, minimum: 200, maximum: 599 }
                 headers: { type: object, maxProperties: 64 }
+                set_cookies: { type: array, maxItems: 16, items: { type: string, maxLength: 8192 } }
                 body_base64: { type: string, maxLength: 12582912 }
       responses:
         "204": { description: Visitor response delivered }
