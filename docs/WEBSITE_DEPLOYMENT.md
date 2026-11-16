@@ -43,7 +43,7 @@ The current Node runtime needs a self-contained project with `package.json` and 
 
 ## Important security and reliability boundaries
 
-- Keep Python and Node limited to code you own or explicitly trust. The current runtimes share the Pocket Host app UID and are **not OS sandboxes**.
+- Keep Python and Node limited to code you own or explicitly trust. They now execute under the separate-UID companion package, not the host app UID, but share the companion UID with one another and are **not complete OS sandboxes**. Outbound network egress is not yet restricted.
 - Static hosting works without enabling either optional runtime.
 - Cloudflare Tunnel provides connectivity, not visitor authentication. For private sites, configure an appropriate Cloudflare Access policy.
 - Android may stop background processes or restrict networking; Pocket Host cannot guarantee cloud-server-style 24/7 uptime.
