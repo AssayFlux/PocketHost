@@ -154,7 +154,7 @@ object RuntimeWorkerClient {
 
     private fun stableProjectId(root: File): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(root.canonicalPath.toByteArray(Charsets.UTF_8))
-        return "site_" + digest.take(12).joinToString("") { "%02x".format(it) }
+        return "site_" + digest.take(12).joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
 
     private fun isSensitiveProjectPath(relativePath: String): Boolean {
