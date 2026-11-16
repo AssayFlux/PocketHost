@@ -33,6 +33,10 @@ object RuntimeWorkerClient {
     private const val TRANSACTION_PYTHON_STOP = IBinder.FIRST_CALL_TRANSACTION + 7
     private const val TRANSACTION_PYTHON_STATUS = IBinder.FIRST_CALL_TRANSACTION + 8
     private const val TRANSACTION_PYTHON_METRICS = IBinder.FIRST_CALL_TRANSACTION + 9
+    private const val TRANSACTION_NODE_START = IBinder.FIRST_CALL_TRANSACTION + 10
+    private const val TRANSACTION_NODE_STOP = IBinder.FIRST_CALL_TRANSACTION + 11
+    private const val TRANSACTION_NODE_STATUS = IBinder.FIRST_CALL_TRANSACTION + 12
+    private const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
     private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRIES = 10_000
 
@@ -89,7 +93,8 @@ object RuntimeWorkerClient {
             return when (code) {
                 in setOf(TRANSACTION_INSTALL_PROJECT, TRANSACTION_PYTHON_START,
                     TRANSACTION_PYTHON_START_SITES, TRANSACTION_PYTHON_STOP,
-                    TRANSACTION_PYTHON_STATUS, TRANSACTION_PYTHON_METRICS) -> reply.readString()
+                    TRANSACTION_PYTHON_STATUS, TRANSACTION_PYTHON_METRICS, TRANSACTION_NODE_START,
+                    TRANSACTION_NODE_STOP, TRANSACTION_NODE_STATUS, TRANSACTION_NODE_METRICS) -> reply.readString()
                 else -> reply.readInt()
             }
         } finally {
@@ -210,6 +215,36 @@ object RuntimeWorkerClient {
                 it.writeString(siteIds.toString())
                 it.writeInt(port)
             } as String
+        }
+
+    fun startNode(context: Context, projectRoot: File, entryFile: File, port: Int, heapLimitMb: Int): String =
+        withWorker(context) { binder ->
+            val root = projectRoot.canonicalFile
+            val entry = entryFile.canonicalFile
+            require(entry.toPath().startsWith(root.toPath()) && entry.isFile) {
+                "Node entry file must be inside its project."
+            }
+            val relativeEntry = root.toPath().relativize(entry.toPath()).toString()
+            val id = stableProjectId(root)
+            installProject(binder, context, root)
+            transact(binder, TRANSACTION_NODE_START) {
+                it.writeString(id)
+                it.writeString(relativeEntry)
+                it.writeInt(port)
+                it.writeInt(heapLimitMb)
+            } as String
+        }
+
+    fun stopNode(context: Context): String =
+        withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
+
+    fun nodeStatus(context: Context): String =
+        withWorker(context) { transact(it, TRANSACTION_NODE_STATUS) as String }
+
+    fun nodeMetrics(context: Context): JSONObject? =
+        withWorker(context) {
+            if ((transact(it, TRANSACTION_NODE_STATUS) as String) != "RUNNING") null
+            else JSONObject(transact(it, TRANSACTION_NODE_METRICS) as String).put("source", "node-companion")
         }
 
     fun stopPython(context: Context): String =
