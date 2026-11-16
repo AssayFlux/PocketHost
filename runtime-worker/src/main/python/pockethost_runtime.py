@@ -348,3 +348,11 @@ def configure(max_workers: int = 8) -> None:
             raise RuntimeError("Stop Python hosting before changing worker limits.")
         _BoundedThreadingWSGIServer.max_workers = workers
         _metrics["worker_limit"] = workers
+
+
+
+def is_project_active(project_root: str) -> bool:
+    """Return whether this exact project root is currently loaded by this WSGI worker."""
+    root = os.path.realpath(project_root)
+    with _lock:
+        return root in _project_roots
