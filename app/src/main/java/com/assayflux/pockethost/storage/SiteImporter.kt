@@ -186,15 +186,32 @@ object SiteImporter {
      * between moving the active site aside and activating its replacement.
      * Invalid active data is preserved in the release directory for diagnosis.
      */
+    private fun isSafeRecoveryRelease(root: File): Boolean {
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
+        if (!java.nio.file.Files.isDirectory(root.toPath(), noFollow) ||
+            !java.nio.file.Files.isRegularFile(File(root, "index.html").toPath(), noFollow)) return false
+        return runCatching {
+            java.nio.file.Files.walk(root.toPath()).use { paths ->
+                paths.allMatch { path ->
+                    !java.nio.file.Files.isSymbolicLink(path) &&
+                        (java.nio.file.Files.isDirectory(path, noFollow) ||
+                            java.nio.file.Files.isRegularFile(path, noFollow))
+                }
+            }
+        }.getOrDefault(false)
+    }
+
     fun recoverInterruptedActivation(context: Context): Boolean {
         val active = File(context.filesDir, "site")
-        if (active.isDirectory && File(active, "index.html").isFile) return false
+        if (isSafeRecoveryRelease(active)) return false
         val releases = File(context.filesDir, "site-releases")
         val latest = releases.listFiles()
-            ?.filter { it.isDirectory && it.name.startsWith("release-") && File(it, "index.html").isFile }
+            ?.filter { it.name.startsWith("release-") && isSafeRecoveryRelease(it) }
             ?.maxByOrNull { it.name }
             ?: return false
-        val quarantined = if (active.exists()) {
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
+        val activeExists = java.nio.file.Files.exists(active.toPath(), noFollow)
+        val quarantined = if (activeExists) {
             File(releases, "recovery-invalid-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
                 .also { if (!active.renameTo(it)) throw IOException("Could not preserve the interrupted active deployment.") }
         } else null
