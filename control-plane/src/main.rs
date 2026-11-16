@@ -939,7 +939,7 @@ async fn relay_visitor(
         id: request_id,
         method: parts.method.to_string(),
         path: path.to_string(),
-        hostname,
+        hostname: hostname.clone(),
         site_id: site_id.clone(),
         headers: forwarded_headers,
         body_base64: relay::encode_body(&bytes),
