@@ -1175,7 +1175,7 @@ mod tests {
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap())]);
         assert_eq!(admin_credential(&credential_headers, &state).await.unwrap().role, "viewer");
         assert!(admin(&credential_headers, &state).await.is_err(), "Long-lived credentials must not authorize management routes directly.");
-        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers, ConnectInfo("198.51.100.201:40000".parse().unwrap())).await.unwrap();
         let session_token = session_body["accessToken"].as_str().unwrap();
         let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
         assert_eq!(admin(&headers, &state).await.unwrap().role, "viewer");
