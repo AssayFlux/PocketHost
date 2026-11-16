@@ -190,3 +190,11 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 2601e4448a1d535af730a41c4ea36f090e1324b0 makes an invalid active website with no safe fallback an explicit startup recovery error; 0472357a848d57a4daf35a7eb1a1e0af826602f7 adds instrumentation coverage for symlinked active-root quarantine without following the target.
 
+## 2026-11-16 full backup restore journal source
+
+- 16b4951bb6bfeab4f18cdf6e091dbcfa0cfa8aa0 adds startup recovery for interrupted full backup restores.
+- 5d13466caf545e97f602ede4e1bfc70c913f89b0 journals the old runtime/site/settings/registry state before destructive restore changes; 3987096b48782d946153322940f34d8a68044ea9 removes obsolete in-memory rollback tracking.
+- 621905689f4e196c0eae04e03f062dd6359360aa invokes backup transaction recovery before ordinary site activation recovery. 623505cd3bb7169a753928bcae5dd7cbf80211e makes journal persistence atomic; ce3da1a886a2c180379ac970e989e3fbddbcc284 restricts release listing/rollback to safe non-symlink deployments; 462f99450cd3240771306557d33bbfd630bf05cc adds the required operational logging import.
+- 41105536c41fc5502381b6ed98731eedc2c0e759 and 57ad1eaf9ab58ce0595108def1fbfc90ec879ecc add instrumentation source for restoring previous Python, static, custom-root, registry and settings state after simulated process interruption. a087882170f5b1ae10ce3fcb8af58a5c80d90dcc serializes backup export/restore operations.
+- The tests have not been executed. API 26/33/35, low-storage, forced process death and physical-device acceptance remain open.
+
