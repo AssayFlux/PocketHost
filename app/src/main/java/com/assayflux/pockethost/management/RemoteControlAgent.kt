@@ -37,6 +37,11 @@ object RemoteControlAgent {
 
     fun endpoint(context: Context): String = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("endpoint", "") ?: ""
 
+    internal fun relayDeviceToken(context: Context): String? = runCatching {
+        val encoded = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("token", null) ?: return null
+        decryptToken(encoded)
+    }.getOrNull()
+
     fun isConfigured(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return !prefs.getString("endpoint", null).isNullOrBlank() &&
@@ -74,6 +79,7 @@ object RemoteControlAgent {
         if (running || !isConfigured(context)) return
         running = true
         val app = context.applicationContext
+        RelayAgent.start(app)
         worker = Thread({
             var retryDelay = POLL_INTERVAL_MS
             while (running && !Thread.currentThread().isInterrupted) {
@@ -99,6 +105,7 @@ object RemoteControlAgent {
 
     @Synchronized
     fun stop() {
+        RelayAgent.stop()
         running = false
         worker?.interrupt()
         worker = null
