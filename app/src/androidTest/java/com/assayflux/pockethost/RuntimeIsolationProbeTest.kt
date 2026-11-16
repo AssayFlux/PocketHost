@@ -32,7 +32,7 @@ class RuntimeIsolationProbeTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
 
-    @Test
+    @Test(timeout = 60_000)
     fun isolatedUidCannotReadHostPrivateFilesAndLoopbackCapabilityIsMeasured() {
         val marker = File(context.filesDir, "isolation-probe-" + System.nanoTime() + ".txt")
             .apply { writeText("host-private-marker") }
@@ -174,6 +174,8 @@ class RuntimeIsolationProbeTest {
             )
             Os.bind(listenerFd, InetAddress.getByName("127.0.0.1"), 0)
             Os.listen(listenerFd, 8)
+            val listenerFlags = Os.fcntlInt(listenerFd, OsConstants.F_GETFL, 0)
+            Os.fcntlInt(listenerFd, OsConstants.F_SETFL, listenerFlags or OsConstants.O_NONBLOCK)
             val listenerPort = (Os.getsockname(listenerFd) as InetSocketAddress).port
             val listenerPfd = ParcelFileDescriptor.dup(listenerFd)
             val visitorOne = Socket("127.0.0.1", listenerPort)
