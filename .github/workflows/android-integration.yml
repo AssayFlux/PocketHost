@@ -1,31 +1,8 @@
 name: PocketHost Android integration
 
 on:
-  # Build and exercise the APK automatically when Android/native hosting code changes.
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "runtime-worker/**"
-      - "rust-engine/**"
-      - "scripts/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - "gradle/**"
-      - ".github/workflows/android-integration.yml"
-  # Run device-level regression on every Android/native/runtime push and pull request.
-  pull_request:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "runtime-worker/**"
-      - "rust-engine/**"
-      - "scripts/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - "gradle/**"
-      - ".github/workflows/android-integration.yml"
-  # Full ABI APK build can also be requested manually.
+  # Android compilation, APK packaging and emulator/device tests are deliberately
+  # deferred until the final integration gate. Trigger this workflow manually then.
   workflow_dispatch:
     inputs:
       run_emulators:
