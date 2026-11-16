@@ -47,6 +47,9 @@ static QUEUED_CONNECTIONS: AtomicU64 = AtomicU64::new(0);
 static RATE_LIMITED_REQUESTS: AtomicU64 = AtomicU64::new(0);
 static SITE_LIMIT_REJECTIONS: AtomicU64 = AtomicU64::new(0);
 
+#[derive(Clone, Debug, Default)]
+struct SiteAccess { mode: String, credentials: HashMap<String, String> }
+
 struct RateBucket {
     tokens: f64,
     last_refill: Instant,
@@ -323,6 +326,7 @@ fn hold_site_permit(response: Response<ResponseBody>, permit: OwnedSemaphorePerm
 async fn serve(
     root: PathBuf,
     host_roots: Arc<HashMap<String, SiteTarget>>,
+    host_access: Arc<HashMap<String, SiteAccess>>,
     site_limits: Arc<HashMap<String, Arc<Semaphore>>>,
     req: Request<Incoming>,
     peer: SocketAddr,
@@ -370,11 +374,11 @@ async fn serve(
             return Ok(response);
         }
     };
-    let response = serve_inner(root, host_roots, req).await?;
+    let response = serve_inner(root, host_roots, host_access, req).await?;
     Ok(hold_site_permit(response, permit))
 }
 
-async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, host_access: Arc<HashMap<String, SiteAccess>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
@@ -461,7 +465,7 @@ async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>
     Ok(response.body(body).expect("file response"))
 }
 
-async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, site_limits: Arc<HashMap<String, Arc<Semaphore>>>, mut stop: oneshot::Receiver<()>) {
+async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, host_access: Arc<HashMap<String, SiteAccess>>, site_limits: Arc<HashMap<String, Arc<Semaphore>>>, mut stop: oneshot::Receiver<()>) {
     let mut connections = JoinSet::new();
     // At most 32 accepted sockets may wait up to 200 ms for an active slot.
     // Queue permits are acquired before spawning, so task creation stays bounded.
@@ -496,6 +500,7 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                 };
                 let site_root = root.clone();
                 let site_roots = host_roots.clone();
+                let site_access = host_access.clone();
                 let site_limiters = site_limits.clone();
                 connections.spawn(async move {
                     // Try the active slot first. If this future is cancelled before
@@ -529,7 +534,7 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                     let _active = ActiveConnection;
                     drop(queued_guard);
                     drop(queue_permit);
-                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), site_limiters.clone(), req, peer));
+                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), site_access.clone(), site_limiters.clone(), req, peer));
                     let builder = Builder::new(TokioExecutor::new());
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
@@ -540,10 +545,10 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
 }
 
 fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
-    start_engine_with_hosts(root, port, allow_lan, HashMap::new())
+    start_engine_with_hosts(root, port, allow_lan, HashMap::new(), HashMap::new())
 }
 
-fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: HashMap<String, SiteTarget>) -> Result<(), String> {
+fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: HashMap<String, SiteTarget>, host_access: HashMap<String, SiteAccess>) -> Result<(), String> {
     let root = std::fs::canonicalize(root).map_err(|e| format!("Invalid site directory: {e}"))?;
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut canonical_hosts = HashMap::new();
