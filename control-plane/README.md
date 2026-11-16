@@ -18,7 +18,7 @@ docker compose --env-file .env -f compose.yaml up -d --build
 
 Only Caddy publishes ports in the default topology. PostgreSQL and the Axum service remain on the private Docker network. Persist and back up the PostgreSQL and artifact volumes. Never commit `.env`.
 
-For Relay visitor traffic, the control plane trusts forwarded HTTPS/client-IP headers only from loopback or exact peer IPs listed in `POCKETHOST_TRUSTED_PROXY_IPS` (comma-separated IP addresses). Do not configure an entire private subnet; use the exact Cloudflare Tunnel connector or reverse-proxy address observed by the control-plane process. When the connector is colocated, loopback is trusted by default.
+For Relay visitor traffic, the control plane trusts forwarded HTTPS/client-IP headers only from loopback or the exact static Caddy/cloudflared peer IPs listed in `POCKETHOST_TRUSTED_PROXY_IPS`. Compose pins those proxy containers to `.10` and `.11` in the configured `POCKETHOST_DOCKER_SUBNET`; choose a subnet which does not overlap your LAN/VPN and update both settings together if you change it. Do not configure an entire private subnet. Caddy overwrites `CF-Connecting-IP` with its observed client IP; the Cloudflare Tunnel path receives Cloudflare's edge-generated header directly.
 
 ## Register and pair a phone
 
