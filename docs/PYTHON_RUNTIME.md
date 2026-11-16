@@ -1,69 +1,53 @@
-# Embedded Python WSGI runtime
+# Python WSGI runtime
 
-**Status:** implemented preview feature; emulator and physical-device validation are still in progress.
+**Source integration:** CPython 3.11 / Chaquopy now runs in the separate-UID runtime companion package. Build and Android instrumentation for the migration are pending; do not treat source integration as a verified release.
 
 ## What it runs
 
-PocketHost embeds CPython 3.11 using Chaquopy. A selected project must contain a root-level `wsgi.py` with a callable named `application`:
+A Python project must contain a root-level `wsgi.py` with a callable named `application`:
 
 ```python
 def application(environ, start_response):
-    body = b"Hello from PocketHost"
-    start_response(
-        "200 OK",
-        [
-            ("Content-Type", "text/plain; charset=utf-8"),
-            ("Content-Length", str(len(body))),
-        ],
-    )
+    body = b"Hello from Pocket Host"
+    start_response("200 OK", [
+        ("Content-Type", "text/plain; charset=utf-8"),
+        ("Content-Length", str(len(body))),
+    ])
     return [body]
 ```
 
-A minimal starter is available in [examples/python-wsgi](../examples/python-wsgi/).
+A starter project is available in [examples/python-wsgi](../examples/python-wsgi/).
 
-## Import and start
+## Runtime architecture
 
-1. Select **Import Python WSGI project** in the Android app.
-2. Choose the project directory through Android's Storage Access Framework.
-3. Set a Python port different from the static HTTP port (default Python port: 8081).
-4. Start the Python backend.
-5. Open the displayed local preview URL.
+- CPython 3.11 is packaged in `:runtime-worker`, not in the host APK.
+- Host `PythonHostRuntime` validates the imported host-side project path, creates a bounded archive and transfers it through a read-only file descriptor over the authenticated Binder protocol.
+- The companion extracts the project into its own private `files/projects` directory.
+- WSGI code runs under the companion app UID, not the main Pocket Host UID.
+- Python binds to `127.0.0.1`; Rust is the public/LAN listener and reverse-proxies registered hostnames to the Python port.
+- Multi-site routing supports up to 100 hostnames in one WSGI worker.
+- Worker concurrency is configurable from 2 to 16 threads.
 
-The runtime is managed by the same user-started foreground hosting service as the static server. It is not started automatically at device boot.
+## Current transfer bounds
 
-## Current limits
+- 10,000 archive entries.
+- 64 MiB maximum extracted file size.
+- 256 MiB maximum total extracted project size.
+- Symlinked source files, traversal paths and common credential files/directories are rejected or excluded.
+- Active project roots cannot be overwritten while WSGI is serving them.
 
-- CPython 3.11 only.
-- One WSGI application at a time.
-- Root entrypoint must be named `wsgi.py` and export `application`.
-- Maximum imported project size: 50 MiB.
-- Maximum file count: 5,000.
-- Maximum directory nesting: 32.
-- Maximum concurrent WSGI worker threads: 16.
-- Port range: 1024–65535.
-- No automatic installation of `requirements.txt`.
-- Third-party native extensions must be built for the matching Android ABI and are not guaranteed to work.
-- No ASGI, WebSocket, background task supervisor or Node.js compatibility.
-- No per-project CPU or memory sandbox/quotas.
-- This is a preview backend, not a production multi-tenant execution environment.
+Common secret files are excluded from transfer. This is not a complete secret scanner; do not put credentials in runtime projects. Dependency installation from `requirements.txt` is not performed automatically.
 
-## Security model
+## Security model and limitations
 
-Python code executes inside the PocketHost application process with the app's Android UID and filesystem/network privileges. The runtime does **not** sandbox user code. Import only projects you own or trust.
+The companion's separate Android UID prevents ordinary Python code from directly reading host-app-private files. It does **not** isolate one Python project from another project stored under the same companion UID. Outbound network access is not yet restricted by an enforceable firewall, and loopback services are reachable from the companion.
 
-The server binds to `127.0.0.1` by default. If the user explicitly enables LAN access, it binds to all local interfaces and is reachable by other devices on the same network. There is no visitor authentication, TLS termination or per-route access control in this backend. Do not enable LAN mode on untrusted networks and do not expose this backend to the public internet.
+Therefore this remains a trusted-code runtime, not a multi-tenant sandbox. Execute only owner-controlled code. Do not host arbitrary third-party Python projects publicly.
 
-The project importer rejects common secret-bearing names such as `.env*`, `.ssh`, `.git`, private-key extensions and path escapes, but filename filtering is not a security sandbox. Do not store secrets in imported project folders.
+The WSGI worker cap is an application-level concurrency bound, not a hard CPU or total-memory quota. Android may terminate the worker under memory pressure.
 
 ## Validation
 
-The CI pipeline runs Python syntax checks and host-side WSGI lifecycle tests. Android instrumentation smoke tests exercise the app on API 26, 33 and 35 emulators. Passing those tests does not replace physical-device tests for memory pressure, thermal behaviour, Wi-Fi changes, process lifecycle or OEM battery restrictions.
+The source test suite covers WSGI lifecycle, host routing, request body limits, metrics and worker bounds. Android instrumentation is being extended to assert that the actual Python process UID differs from the host app UID. CI for the companion migration must pass on API 26, 33 and 35 before this migration is considered verified.
 
-## Future work
-
-Before calling Python production-ready, add explicit resource quotas, reliable request timeouts, safe dependency management, per-project isolation, structured access/error logs, device-level acceptance tests and a reviewed public-access security model.
-
-
-## Trusted-code start gate
-
-PocketHost requires an explicit local acknowledgement before starting Python. The acknowledgement is stored on-device and can be revoked; revocation stops optional runtimes. This is a guard against accidental execution, **not a sandbox**. Python still runs with the Android app UID and privileges. Never import or execute untrusted projects. Do not expose public Python hosting for arbitrary third-party code until OS-backed isolation and network/filesystem restrictions are implemented and independently reviewed.
+Physical-device checks for process death, battery restrictions, memory pressure, thermal behaviour and network changes remain separate acceptance work.
