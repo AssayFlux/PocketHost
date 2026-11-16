@@ -121,3 +121,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - Gate 7: extracted device preferences and section navigation into dedicated Compose Settings components; UI instrumentation now visits all four Settings sections and captures per-section screenshots/accessibility hierarchies.
 - These are code and test-definition improvements. Android API 26/33/35 and Rust CI execution, artifact inspection, device lifecycle testing, capacity profiles and human accessibility review remain open. Gates 5–7 are not yet complete.
 
+- Gate 5 additional regression: adb58da6fbdbc5b1bbb19f04ed5b6820879cada1 proves a saturated site's response semaphore does not block admission through a separate site's semaphore. This is unit-level isolation evidence only, not a live multi-tenant load/latency result.
+
