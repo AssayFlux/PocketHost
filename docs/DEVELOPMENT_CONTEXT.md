@@ -102,11 +102,11 @@ Never commit keystores, passwords, tokens, private keys or tunnel credentials. U
 Before each task: inspect current `main`, recent commits, relevant source, workflow and docs. Implement on the authorized branch, add regression tests, update docs in the same change set, run relevant checks, then report exactly what changed and what remains. Never ask the owner to perform device tests while source/build/CI work remains incomplete; physical-device acceptance belongs at the appropriate release gate.
 
 
-## Build sequencing — owner instruction
+## Build sequencing — current Owner instruction (2026-11-16)
 
-- Do not build host/companion APKs, compile Android source, run Android emulators or perform device tests during Gates 0–7.
-- Continue source implementation, code review, non-Android quality CI and documentation normally.
-- Android integration and signed-release workflows are manual-only. Invoke them only at Gate 8 after the remaining system implementation is complete.
-- At Gate 8, build all declared ABIs, run API 26/33/35 instrumentation, inspect signer/package metadata and then hand the APKs to the owner for physical-device acceptance.
-- Dependency resolution and Gradle wrapper validation are not APK builds and may run during implementation.
+- `docs/NORTH_STAR.md` is authoritative for product scope, gate order and acceptance criteria.
+- The Owner explicitly pulled intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation forward into Gates 2–4 so security changes are compiled and exercised as they land. This supersedes the earlier manual-only / Gate 8-only sequencing statements in historical notes.
+- Keep running the relevant Android integration workflow on source changes to `app/**`, `runtime-worker/**`, `rust-engine/**` and its build inputs. Run the quality workflow for the non-Android Rust, control-plane, Python, Node, console and dependency checks.
+- Gate 8 still owns final signed release artifacts, physical ARMv7/ARM64 acceptance, external Cloudflare/Relay connectivity, full release provenance and independent security review. Intermediate debug APK or emulator success does not close Gate 8.
+- Do not claim Android compilation, emulator or physical-device acceptance until the corresponding exact-SHA workflow evidence is complete and inspected.
 - Build inputs: Rust 1.88.0, Gradle wrapper 8.9 with checksum, Java 17, SDK 35, Build Tools 35.0.0, NDK 27.2.12479018, CMake 3.22.1, cargo-ndk 4.1.2, Python 3.11 and committed Cargo/Gradle/npm lockfiles.
