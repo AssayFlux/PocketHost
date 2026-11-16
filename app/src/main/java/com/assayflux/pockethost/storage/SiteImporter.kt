@@ -245,6 +245,28 @@ object SiteImporter {
         return latest.name
     }
 
+    /**
+     * Rolls back only a release created after the caller's durable transaction
+     * snapshot. If activation stopped after moving the old site but before the
+     * replacement was renamed into place, the active path may be absent.
+     */
+    fun restoreLatestReleaseIfChanged(context: Context, previousLatest: String?): Boolean {
+        val releases = File(context.filesDir, "site-releases")
+        val latestName = listReleases(context).firstOrNull() ?: return false
+        if (latestName == previousLatest) return false
+        val latest = File(releases, latestName)
+        val active = File(context.filesDir, "site")
+        val displaced = if (java.nio.file.Files.exists(active.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
+                .also { if (!active.renameTo(it)) throw IOException("Could not preserve the interrupted restored website.") }
+        } else null
+        if (!latest.renameTo(active)) {
+            if (displaced != null) displaced.renameTo(active)
+            throw IOException("Could not restore the previous website after an interrupted full backup restore.")
+        }
+        return true
+    }
+
     private fun pruneReleases(directory: File) {
         directory.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
             ?.sortedByDescending { it.name }
