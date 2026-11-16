@@ -918,7 +918,7 @@ async fn relay_visitor(
     if response_body.len() > 8 * 1024 * 1024 { return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into())); }
     let allowed_response_headers = [
         "cache-control","content-disposition","content-encoding","content-language","content-range",
-        "content-type","etag","expires","last-modified","location","set-cookie","vary",
+        "content-type","etag","expires","last-modified","location","vary","www-authenticate",
     ];
     let mut builder = Response::builder().status(status);
     for (name, value) in response.headers {
@@ -928,6 +928,9 @@ async fn relay_visitor(
                 HeaderValue::from_str(&value),
             ) { builder = builder.header(name, value); }
         }
+    }
+    for cookie in response.set_cookies {
+        if let Ok(value) = HeaderValue::from_str(&cookie) { builder = builder.header("set-cookie", value); }
     }
     builder = builder.header("x-content-type-options", "nosniff");
     builder.body(Body::from(response_body))
