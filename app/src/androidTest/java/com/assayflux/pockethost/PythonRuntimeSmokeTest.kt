@@ -89,12 +89,13 @@ class PythonRuntimeSmokeTest {
         } finally {
             assertEquals("STOPPED", PythonHostRuntime.stop(context))
             RuntimeWorkerClient.shutdownWorker(context)
-            // A later explicit command must establish a fresh companion connection.
-            assertEquals("CONFIGURED", RuntimeWorkerClient.configurePython(context, 2))
-            assertEquals("STOPPED", PythonHostRuntime.status(context))
-            RuntimeWorkerClient.shutdownWorker(context)
             prefs.edit().putBoolean("trusted_runtime_code_ack", false).commit()
+            root.deleteRecursively()
         }
+        // A later explicit command must establish a fresh companion connection.
+        assertEquals("CONFIGURED", RuntimeWorkerClient.configurePython(context, 2))
+        assertEquals("STOPPED", PythonHostRuntime.status(context))
+        RuntimeWorkerClient.shutdownWorker(context)
         assertEquals("STOPPED", PythonHostRuntime.status(context))
     }
 }

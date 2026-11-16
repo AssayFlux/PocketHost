@@ -66,3 +66,20 @@ Full sequence and adversarial tests: `docs/SECURITY_GATE_2_EXECUTION_PLAN.md`. R
 - Python and Node real HTTP requests route through Rust.
 - Companion death/rebind and static-origin continuity pass.
 - Gate 2 per-project isolation passes API 26/33/35 and independent review before untrusted code is considered.
+
+
+## Host/companion lifecycle integration
+
+The host Binder client registers an `IBinder.DeathRecipient`, invalidates dead connections and releases the old binding after a remote transaction failure. A later supervisor command establishes a fresh connection and verifies protocol version 1 before issuing runtime commands. Stop operations are observational when no companion is already connected; they do not start a foreground worker merely to stop an absent runtime.
+
+Project transfer uses a staged directory and a recoverable previous-project rename. On the next transfer, an interrupted commit is reconciled: a previous tree is restored if activation never happened, or a stale previous tree is removed if the new destination is already active. A failed activation restores the previous tree when possible and preserves its backup if restoration itself fails.
+
+Orderly companion shutdown explicitly stops the Node service in its separate process and stops Python before the broker exits. Process death remains recoverable through the host supervisor; Android may not invoke service teardown callbacks after a hard process kill.
+
+The Android instrumentation suite includes:
+- Python WSGI execution under the companion UID and rejection of a transferred `.env` file.
+- A Python request routed through the Rust hostname router and reverse proxy.
+- Node HTTP service routed through the Rust reverse proxy.
+- Companion clean shutdown followed by a fresh Binder connection and protocol negotiation.
+
+These are source-level test definitions until the final Android build and API 26/33/35 instrumentation gate is run. Per-project isolation is not provided by this shared-UID companion; Python and Node remain trusted-code-only.

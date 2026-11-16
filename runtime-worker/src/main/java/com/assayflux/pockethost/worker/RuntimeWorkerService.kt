@@ -47,8 +47,6 @@ class RuntimeWorkerService : Service() {
     }
 
     override fun onDestroy() {
-        // Node runs in its own process; stop it explicitly on orderly broker teardown.
-        runCatching { stopService(Intent(this, NodeHostingService::class.java)) }
         runCatching { pythonModule()?.callAttr("stop") }
         runCatching { probeServer?.close() }
         probeServer = null
@@ -101,20 +99,10 @@ class RuntimeWorkerService : Service() {
         check(nodeState !in setOf("RUNNING", "STARTING", "STOPPING") || nodeProject != destination.absolutePath) {
             "Stop the Node.js site before replacing its transferred project."
         }
-        val backup = File(projectsRoot, ".$siteId-previous")
-        // Recover an interrupted replacement before accepting a new transfer.
-        if (!destination.exists() && backup.exists()) {
-            check(backup.renameTo(destination)) {
-                "Could not recover the previous project; its backup remains at ${backup.name}."
-            }
-        } else if (destination.exists() && backup.exists()) {
-            check(backup.deleteRecursively()) {
-                "Could not clean the previous project backup before replacement."
-            }
+        val staging = File(projectsRoot, ".$siteId-staging").apply {
+            deleteRecursively()
+            mkdirs()
         }
-        val staging = File(projectsRoot, ".$siteId-staging")
-        staging.deleteRecursively()
-        check(staging.mkdirs() || staging.isDirectory) { "Could not create project staging directory." }
         var entries = 0
         var totalBytes = 0L
         try {
@@ -155,18 +143,14 @@ class RuntimeWorkerService : Service() {
                     zip.closeEntry()
                 }
             }
-            val movedPrevious = if (destination.exists()) {
-                check(destination.renameTo(backup)) { "Could not stage existing project for replacement." }
-                true
-            } else false
+            val backup = File(projectsRoot, ".$siteId-previous")
+            backup.deleteRecursively()
+            if (destination.exists()) check(destination.renameTo(backup)) { "Could not stage existing project for replacement." }
             if (!staging.renameTo(destination)) {
-                if (movedPrevious && backup.exists() && !backup.renameTo(destination)) {
-                    error("Could not activate the new project or restore the previous project; backup remains at ${backup.name}.")
-                }
-                error("Could not activate transferred project; the previous project was restored.")
+                if (backup.exists()) backup.renameTo(destination)
+                error("Could not activate transferred project.")
             }
-            // A leftover backup is recoverable and must not invalidate the activated tree.
-            if (movedPrevious) runCatching { backup.deleteRecursively() }
+            backup.deleteRecursively()
             return destination.absolutePath
         } catch (error: Throwable) {
             staging.deleteRecursively()
@@ -302,8 +286,8 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_NODE_STOP -> stopNode()
                     TRANSACTION_NODE_STATUS -> nodeStatus()
                     TRANSACTION_NODE_METRICS -> NodeRuntimeStateStore.metrics(this@RuntimeWorkerService)?.toString() ?: "{}"
-                    TRANSACTION_SHUTDOWN -> synchronized(this@RuntimeWorkerService) {
-                        runCatching { pythonModule()?.callAttr("stop") }
+                    TRANSACTION_SHUTDOWN -> {
+                        synchronized(this@RuntimeWorkerService) { runCatching { pythonModule()?.callAttr("stop") } }
                         runCatching { stopService(Intent(this@RuntimeWorkerService, NodeHostingService::class.java)) }
                         stopSelf()
                         "STOPPING"
