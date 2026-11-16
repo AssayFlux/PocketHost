@@ -249,9 +249,14 @@ object RelayAgent {
                 require(split > 0) { "Malformed local HTTP response header." }
                 val name = line.substring(0, split).trim().lowercase()
                 val value = line.substring(split + 1).trim()
-                if (name in setOf("cache-control", "content-disposition", "content-encoding",
-                        "content-language", "content-range", "content-type", "etag", "expires",
-                        "last-modified", "location", "vary", "www-authenticate") && value.length <= 8_192) {
+                if (name in setOf("access-control-allow-credentials", "access-control-allow-headers",
+                        "access-control-allow-methods", "access-control-allow-origin", "access-control-expose-headers",
+                        "access-control-max-age", "cache-control", "content-disposition", "content-encoding",
+                        "content-language", "content-range", "content-security-policy",
+                        "content-security-policy-report-only", "content-type", "cross-origin-embedder-policy",
+                        "cross-origin-opener-policy", "cross-origin-resource-policy", "etag", "expires",
+                        "last-modified", "location", "permissions-policy", "referrer-policy",
+                        "strict-transport-security", "vary", "www-authenticate", "x-frame-options") && value.length <= 8_192) {
                     headers[name] = if (headers.containsKey(name)) "${headers[name]}, $value" else value
                 }
                 if (name == "set-cookie" && value.length <= 8_192) setCookies.add(value)
@@ -306,9 +311,14 @@ object RelayAgent {
                 }
             }
             val jsonHeaders = JSONObject()
-            headers.filterKeys { it in setOf("cache-control", "content-disposition", "content-encoding",
-                "content-language", "content-range", "content-type", "etag", "expires",
-                "last-modified", "location", "vary", "www-authenticate") }.forEach { (name, value) -> jsonHeaders.put(name, value) }
+            headers.filterKeys { it in setOf("access-control-allow-credentials", "access-control-allow-headers",
+                "access-control-allow-methods", "access-control-allow-origin", "access-control-expose-headers",
+                "access-control-max-age", "cache-control", "content-disposition", "content-encoding",
+                "content-language", "content-range", "content-security-policy",
+                "content-security-policy-report-only", "content-type", "cross-origin-embedder-policy",
+                "cross-origin-opener-policy", "cross-origin-resource-policy", "etag", "expires",
+                "last-modified", "location", "permissions-policy", "referrer-policy",
+                "strict-transport-security", "vary", "www-authenticate", "x-frame-options") }.forEach { (name, value) -> jsonHeaders.put(name, value) }
             return LocalResponse(status, jsonHeaders, response.toByteArray(), setCookies)
         }
     }
