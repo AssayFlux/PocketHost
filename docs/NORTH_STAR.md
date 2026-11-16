@@ -88,7 +88,7 @@ Five destinations: Dashboard, Sites, Activity, Learn and Settings. Use a clean c
 
 Pocket Host must not force every user into one provider. Provide these distinct paths:
 
-### A. AssayFlux Relay — first-party private tunnel (planned P0)
+### A. AssayFlux Relay — first-party private tunnel (P0; bounded HTTP source partially implemented, production acceptance open)
 A first-party outbound tunnel for owners who do not want to use Cloudflare and do not want visitors to learn the phone's public IP.
 
 **Target traffic path**
