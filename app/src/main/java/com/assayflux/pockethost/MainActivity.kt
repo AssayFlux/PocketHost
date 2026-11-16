@@ -1005,9 +1005,8 @@ private fun PocketHostDashboard() {
                                     val pythonRoot = preferences.getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
                                         ?: File(context.filesDir, "python-project").absolutePath
                                     if (pythonHosts.length() > 0) PythonHostRuntime.startSites(context, pythonHosts.toString(),
-                                        preferences.getInt("python_port", 8081), preferences.getBoolean("allow_lan", false))
-                                    else PythonHostRuntime.start(context, pythonRoot, preferences.getInt("python_port", 8081),
-                                        preferences.getBoolean("allow_lan", false))
+                                        preferences.getInt("python_port", 8081))
+                                    else PythonHostRuntime.start(context, pythonRoot, preferences.getInt("python_port", 8081))
                                 }
                                 if (hosting) {
                                     MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed())

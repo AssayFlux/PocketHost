@@ -783,11 +783,11 @@ object ManagementApiServer {
             val pythonHosts = SiteRegistry.pythonHostnameMap(context)
             val pythonResult = runCatching {
                 if (pythonHosts.length() > 0) PythonHostRuntime.startSites(context, pythonHosts.toString(),
-                    prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false))
+                    prefs.getInt("python_port", 8081))
                 else PythonHostRuntime.start(context,
                     prefs.getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
                         ?: File(context.filesDir, "python-project").absolutePath,
-                    prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false))
+                    prefs.getInt("python_port", 8081))
             }.getOrElse { "ERROR: " + (it.message ?: "Python route reload failed") }
             if (pythonResult != "RUNNING" && pythonResult != "ALREADY_RUNNING")
                 OperationalLog.record(context, "ERROR", "PYTHON_ROUTE_RELOAD_FAILED", pythonResult)

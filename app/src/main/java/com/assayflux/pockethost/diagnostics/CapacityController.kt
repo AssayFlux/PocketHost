@@ -159,9 +159,8 @@ object CapacityController {
                     .getOrElse { allRecovered = false; org.json.JSONObject() }
                 val started = runCatching {
                     if (routes.length() > 0) PythonHostRuntime.startSites(context, routes.toString(),
-                        prefs.getInt("python_port", 8081), prefs.getBoolean("allow_lan", false))
-                    else PythonHostRuntime.start(context, root, prefs.getInt("python_port", 8081),
-                        prefs.getBoolean("allow_lan", false))
+                        prefs.getInt("python_port", 8081))
+                    else PythonHostRuntime.start(context, root, prefs.getInt("python_port", 8081))
                 }
                 if (started.isFailure) {
                     allRecovered = false
