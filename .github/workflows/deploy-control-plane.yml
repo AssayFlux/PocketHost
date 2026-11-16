@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh "$USER@$HOST" "mkdir -p '$PATH_ON_HOST' && if [ -d '$PATH_ON_HOST/.git' ]; then git -C '$PATH_ON_HOST' fetch origin main && git -C '$PATH_ON_HOST' reset --hard origin/main; else git clone --branch main https://github.com/AssayFlux/PocketHost.git '$PATH_ON_HOST'; fi"
-          printf 'CONTROL_PLANE_DOMAIN=%s\nPOCKETHOST_CONTROL_ORIGIN=%s\nPOCKETHOST_CONTROL_ADMIN_TOKEN=%s\nPOSTGRES_DB=pockethost\nPOSTGRES_USER=pockethost\nPOSTGRES_PASSWORD=%s\nPOCKETHOST_CONTROL_TUNNEL_TOKEN=%s\n' "$DOMAIN" "$ORIGIN" "$ADMIN_TOKEN" "$DB_PASSWORD" "$TUNNEL_TOKEN" |
+          printf 'CONTROL_PLANE_DOMAIN=%s\nPOCKETHOST_CONTROL_API_HOST=%s\nPOCKETHOST_CONTROL_ORIGIN=%s\nPOCKETHOST_CONTROL_ADMIN_TOKEN=%s\nPOSTGRES_DB=pockethost\nPOSTGRES_USER=pockethost\nPOSTGRES_PASSWORD=%s\nPOCKETHOST_CONTROL_TUNNEL_TOKEN=%s\n' "$DOMAIN" "$DOMAIN" "$ORIGIN" "$ADMIN_TOKEN" "$DB_PASSWORD" "$TUNNEL_TOKEN" |
             ssh "$USER@$HOST" "umask 077; cat > '$PATH_ON_HOST/control-plane/.env'"
           if [ -n "$TUNNEL_TOKEN" ]; then
             ssh "$USER@$HOST" "cd '$PATH_ON_HOST/control-plane' && docker compose --env-file .env --profile public stop caddy >/dev/null 2>&1 || true"
