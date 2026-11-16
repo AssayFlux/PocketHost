@@ -5,6 +5,12 @@
 **Priority:** Gate 3 in `docs/NORTH_STAR.md`  
 **Purpose:** first-party outbound tunnel and visitor-access gateway for phone-hosted websites.
 
+## Current repository truth (2026-11-16)
+
+The repository currently contains a Relay product specification only. `RemoteControlAgent` polls the separate control-plane over HTTPS; that is remote management, not a persistent website relay. The control-plane registers devices, queues commands and stores deployment artifacts; it is not a public visitor gateway. No production Relay gateway, persistent device stream, visitor stream multiplexer, hostname registry/certificate lifecycle or Android Relay Agent is implemented or deployed.
+
+Keep the existing Cloudflare Tunnel integration independent and functional. Do not relabel HTTP polling, a device heartbeat, or a database session row as Relay. Gate 3 requires the complete visitor-to-device stream path described below.
+
 ## 1. Product objective
 
 Let a Pocket Host owner publish a website without Cloudflare and without exposing the phone's public IP address to ordinary visitors. The phone initiates an authenticated outbound connection to AssayFlux Relay. Visitors connect to a public relay hostname; the relay forwards authorized streams to the phone.
