@@ -58,6 +58,12 @@ Native policy must install before runtime code and fail closed. Validate descrip
 
 Full sequence and adversarial tests: `docs/SECURITY_GATE_2_EXECUTION_PLAN.md`. Relay connectivity is separately specified in `docs/ASSAYFLUX_RELAY.md`.
 
+## Native network-probe hardening (2026-11-16)
+
+The isolated-UID feasibility probe now closes inherited socket descriptors other than the broker-created visitor listener before installing seccomp. Cleanup failure is fail-closed, and the instrumentation source supplies an already-connected TCP socket to verify that the descriptor is closed before the policy is applied. This addresses the generic `read`/`write` egress path for inherited sockets in the probe.
+
+This is **not** production per-project confinement: the probe is not the runtime launcher, the denylist still has an allow fallback, and Python/Node have not been migrated into isolated services. No Android instrumentation run is claimed; the test source is reserved for Gate 8.
+
 ## 7. Acceptance
 
 - Host and companion APKs install/upgrade together with matching signer.
