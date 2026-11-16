@@ -70,8 +70,16 @@ class RuntimeWorkerSeccompTest {
             try {
                 client.connect(address)
                 client.soTimeout = 3_000
-                client.getOutputStream().write("probe".toByteArray(Charsets.UTF_8))
-                client.getOutputStream().flush()
+                // The isolated service must call accept() to make progress on this
+                // abstract Unix stream. Write concurrently with the synchronous Binder
+                // transaction; writing on this thread first can deadlock on API 26.
+                val writerFailure = AtomicReference<Throwable?>()
+                val writer = Thread({
+                    runCatching {
+                        client.getOutputStream().write("probe".toByteArray(Charsets.UTF_8))
+                        client.getOutputStream().flush()
+                    }.onFailure(writerFailure::set)
+                }, "PocketHost-Seccomp-Probe-Writer").apply { start() }
 
                 val data = Parcel.obtain()
                 val reply = Parcel.obtain()
@@ -84,6 +92,9 @@ class RuntimeWorkerSeccompTest {
                     reply.readException()
                     listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
                 } finally {
+                    writer.join(5_000)
+                    check(!writer.isAlive) { "Visitor stream writer did not complete." }
+                    writerFailure.get()?.let { throw it }
                     data.recycle()
                     reply.recycle()
                 }
