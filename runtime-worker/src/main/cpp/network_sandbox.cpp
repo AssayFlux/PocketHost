@@ -66,11 +66,17 @@ static int close_inherited_sockets_except(int listener_fd) {
     if (directory == nullptr) return errno == 0 ? EIO : errno;
     const int directory_fd = dirfd(directory);
     int failure = 0;
-    errno = 0;
-    while (struct dirent* entry = readdir(directory)) {
+    int failure = 0;
+    while (true) {
+        errno = 0;
+        struct dirent* entry = readdir(directory);
+        if (entry == nullptr) {
+            if (errno != 0 && failure == 0) failure = errno;
+            break;
+        }
         char* end = nullptr;
         long parsed = strtol(entry->d_name, &end, 10);
-        if (end == entry->d_name || *end != '\\0' || parsed < 3 ||
+        if (end == entry->d_name || *end != '\0' || parsed < 3 ||
             parsed == listener_fd || parsed == directory_fd) continue;
         const int fd = static_cast<int>(parsed);
         struct stat metadata {};
@@ -81,9 +87,7 @@ static int close_inherited_sockets_except(int listener_fd) {
         if (S_ISSOCK(metadata.st_mode) && close(fd) != 0 && errno != EINTR && failure == 0) {
             failure = errno;
         }
-        errno = 0;
     }
-    if (errno != 0 && failure == 0) failure = errno;
     closedir(directory);
     return failure;
 }
