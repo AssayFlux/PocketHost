@@ -143,7 +143,7 @@ class ManagementApiSecurityTest {
         val root = File(context.filesDir, siteId)
         assertEquals(true, root.mkdirs())
         File(root, "index.html").writeText("private-site")
-        val hostname = "$siteId.example.test"
+        val hostname = "${siteId.replace("_", "-")}.example.test"
         try {
             val create = request("POST", "/api/v1/sites",
                 JSONObject().put("id", siteId).put("name", "Visitor policy test")
@@ -160,11 +160,10 @@ class ManagementApiSecurityTest {
             val visitorToken = JSONObject(invite.second).getString("token")
             assertEquals(true, visitorToken.length >= 32)
 
-            val site = (0 until JSONObject(request("GET", "/api/v1/sites", authorization = ownerToken).second)
-                .getJSONArray("items").length()).map {
-                JSONObject(request("GET", "/api/v1/sites", authorization = ownerToken).second)
-                    .getJSONArray("items").getJSONObject(it)
-            }.first { it.getString("id") == siteId }
+            val siteList = JSONObject(request("GET", "/api/v1/sites", authorization = ownerToken).second)
+                .getJSONArray("items")
+            val site = (0 until siteList.length()).map { siteList.getJSONObject(it) }
+                .first { it.getString("id") == siteId }
             assertEquals("restricted", site.getString("accessMode"))
             assertEquals("alice", site.getJSONArray("visitors").getString(0))
 
