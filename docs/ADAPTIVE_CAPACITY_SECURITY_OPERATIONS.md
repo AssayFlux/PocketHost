@@ -244,3 +244,9 @@ The Rust engine applies a streaming-response semaphore per distinct site target 
 - A Rust regression test covers timeout and subsequent permit recovery.
 - This improves fairness under short bursts; it is not yet a weighted scheduler across sites and does not establish safe operating envelopes. Capacity Lab remains a bounded static-origin microbenchmark; cached/uncached, payload-size, keep-alive, tunnel and trusted-runtime profiles plus sustained thermal/battery measurements remain open.
 
+## Tail-latency reporting — 2026-11-16
+
+- Capacity Lab result levels now include p99 latency alongside average, p50, p95 and maximum latency.
+- The dashboard's selected concurrency detail displays p95 and p99 separately; older saved benchmark records explicitly show p99 as not recorded rather than inventing a value.
+- The benchmark workload remains the bounded loopback static GET profile. Additional cached/uncached, payload-size, keep-alive, tunnel and trusted-runtime workloads and repeatable sustained thermal/battery runs are still required.
+
