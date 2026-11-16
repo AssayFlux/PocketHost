@@ -7,13 +7,12 @@ use axum::{
     Json, Router,
 };
 use chrono::{DateTime, Utc};
-use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures_util::StreamExt;
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, convert::Infallible, fs, io::Write, path::PathBuf, sync::Arc, time::Duration};
+use std::{convert::Infallible, fs, io::Write, path::PathBuf, sync::Arc, time::Duration};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -665,8 +664,6 @@ async fn acknowledge(
     Ok(Json(json!({"acknowledged":true,"state":state})))
 }
 
-#[tokio::main]
-
 #[derive(Deserialize)]
 struct RelayTlsQuery {
     domain: String,
@@ -919,6 +916,7 @@ async fn relay_visitor(
         .map_err(|_| (StatusCode::BAD_GATEWAY, "relay_response_build_failed".into()))
 }
 
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_env_filter(
         tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into())
