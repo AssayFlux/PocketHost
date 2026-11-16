@@ -207,3 +207,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - d3e398965d1dbb1f0adbd9efe303a7fbea104a54 configures a 10-second HTTP/1 header read timeout, 64-header cap and 16 KiB buffer using TokioTimer. This source setting has not yet been exercised by a slowloris test or device load run.
 
+- c820d05809b0c79ead9d12171a97c54e2c326197 adds the same recovery guard to HostingService before Management API or Rust ingress startup, preventing boot/sticky service paths from bypassing interrupted restore recovery.
+
