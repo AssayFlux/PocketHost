@@ -33,14 +33,9 @@ object SiteRegistry {
         require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
         require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
         require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
-            require(site.accessMode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
-            require(site.visitorCredentials.size <= 100 && site.visitorCredentials.all { (name, hash) -> name.matches(Regex("[A-Za-z0-9_.@-]{1,64}")) && hash.matches(Regex("[0-9a-f]{64}")) }) { "Invalid visitor credential registry." }
-            require(site.accessMode != "private" || site.visitorCredentials.size <= 1) { "Private mode supports one shared visitor credential." }
-            require(site.accessMode != "restricted" || site.visitorCredentials.isNotEmpty()) { "Restricted mode requires at least one invited visitor." }
         require(site.accessMode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
         require(site.visitorCredentials.size <= 100 && site.visitorCredentials.all { (name, hash) -> name.matches(Regex("[A-Za-z0-9_.@-]{1,64}")) && hash.matches(Regex("[0-9a-f]{64}")) }) { "Invalid visitor credential registry." }
         require(site.accessMode != "private" || site.visitorCredentials.size <= 1) { "Private mode supports one shared visitor credential." }
-        require(site.accessMode != "restricted" || site.visitorCredentials.isNotEmpty()) { "Restricted mode requires at least one invited visitor." }
         val root = File(site.root).canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
         require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
@@ -118,7 +113,6 @@ object SiteRegistry {
         val current = sites[index]
         val credentials = if (mode == "public") emptyMap() else current.visitorCredentials
         require(mode != "private" || credentials.size <= 1) { "Private mode supports one shared visitor credential." }
-        require(mode != "restricted" || credentials.isNotEmpty()) { "Restricted mode requires at least one invited visitor." }
         sites[index] = current.copy(accessMode = mode, visitorCredentials = credentials)
         save(context, sites)
     }
