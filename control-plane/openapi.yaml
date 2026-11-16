@@ -159,6 +159,18 @@ paths:
                 role: { type: string, enum: [editor, viewer] }
       responses:
         "201": { description: User created; token returned once }
+  /v1/admin/users/{id}/rotate-token:
+    post:
+      summary: Immediately revoke the current team-user token and issue a replacement (Owner only, shown once)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: New user token issued; previous token is invalid immediately }
+        "403": { description: Owner role required }
+        "404": { description: Active user not found }
   /v1/admin/users/{id}:
     delete:
       summary: Revoke a team user (Owner only)
