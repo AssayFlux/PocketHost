@@ -424,21 +424,37 @@ object ApplicationBackupManager {
         val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
         val directories = context.filesDir.listFiles()
             ?.filter { directory ->
-                java.nio.file.Files.isDirectory(directory.toPath(), noFollow) &&
-                    directory.name.startsWith("pockethost-restore-previous-") &&
-                    (java.nio.file.Files.isRegularFile(File(directory, RESTORE_JOURNAL).toPath(), noFollow) ||
-                        java.nio.file.Files.isRegularFile(File(directory, RESTORE_COMMITTED).toPath(), noFollow))
+                directory.name.startsWith("pockethost-restore-previous-") &&
+                    java.nio.file.Files.exists(directory.toPath(), noFollow)
             }
             ?.sortedBy { it.name } ?: emptyList()
         var recovered = false
         for (directory in directories) {
-            if (java.nio.file.Files.isRegularFile(File(directory, RESTORE_COMMITTED).toPath(), noFollow)) {
+            if (java.nio.file.Files.isSymbolicLink(directory.toPath()) ||
+                !java.nio.file.Files.isDirectory(directory.toPath(), noFollow)) {
+                throw IOException("Interrupted backup restore directory is not a safe app-private directory.")
+            }
+            val committedFile = File(directory, RESTORE_COMMITTED)
+            val committedExists = java.nio.file.Files.exists(committedFile.toPath(), noFollow)
+            if (committedExists) {
+                if (!java.nio.file.Files.isRegularFile(committedFile.toPath(), noFollow)) {
+                    throw IOException("Restore commit marker is not a regular file.")
+                }
                 if (!cleanupCommittedRestore(directory)) {
                     throw IOException("Could not clean up a committed backup restore transaction.")
                 }
                 continue
             }
             val journalFile = File(directory, RESTORE_JOURNAL)
+            val journalExists = java.nio.file.Files.exists(journalFile.toPath(), noFollow)
+            if (!journalExists) {
+                val leftovers = directory.listFiles().orEmpty()
+                if (leftovers.all { it.name == RESTORE_JOURNAL + ".tmp" }) {
+                    directory.deleteRecursively()
+                    continue
+                }
+                throw IOException("A restore transaction has rollback files but no durable journal.")
+            }
             if (!java.nio.file.Files.isRegularFile(journalFile.toPath(), noFollow)) {
                 throw IOException("Interrupted backup restore journal is not a regular file.")
             }
