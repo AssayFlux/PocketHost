@@ -725,10 +725,11 @@ async fn create_relay_site(
     let challenge = new_token();
     let mut tx = s.db.begin().await.map_err(internal)?;
     let verification_expires_at: DateTime<Utc> = sqlx::query_scalar(
-        "INSERT INTO relay_sites(id,device_id,hostname,site_id,verification_token_hash) VALUES($1,$2,$3,$4,$5) RETURNING verification_expires_at"
+        "INSERT INTO relay_sites(id,device_id,hostname,site_id,verification_token_hash) VALUES($1,$2,$3,$4,$5) ON CONFLICT(hostname) DO NOTHING RETURNING verification_expires_at"
     )
         .bind(id).bind(device).bind(&hostname).bind(&input.site_id).bind(token_hash(&challenge))
-        .fetch_one(&mut *tx).await.map_err(internal)?;
+        .fetch_optional(&mut *tx).await.map_err(internal)?
+        .ok_or((StatusCode::CONFLICT, "relay_hostname_already_claimed".into()))?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.create',$2,$3)")
         .bind(&actor.name).bind(id.to_string())
         .bind(json!({"deviceId":device,"hostname":hostname.clone(),"siteId":input.site_id.clone()}))
