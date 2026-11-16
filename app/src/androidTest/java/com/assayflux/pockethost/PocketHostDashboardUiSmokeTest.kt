@@ -36,8 +36,12 @@ class PocketHostDashboardUiSmokeTest {
             // selector regresses on an older Compose/Android combination.
             assertTrue("Dashboard screenshot could not be captured", device.takeScreenshot(screenshot))
             device.dumpWindowHierarchy(hierarchy)
-            val dashboardVisible = device.wait(Until.hasObject(By.text("Dashboard")), 15_000) ||
-                device.hasObject(By.desc("Dashboard"))
+            // Compose startup can be unusually slow on the serialized API 26/33
+            // emulators. Wait for the app window and its destination semantics rather
+            // than treating a delayed first frame as a missing screen.
+            device.waitForWindowUpdate(context.packageName, 30_000)
+            val dashboardVisible = device.wait(Until.hasObject(By.text("Dashboard")), 60_000) ||
+                device.wait(Until.hasObject(By.desc("Dashboard")), 5_000)
             assertTrue(
                 "Dashboard destination did not render. Accessibility hierarchy: " +
                     hierarchy.takeIf { it.isFile }?.readText()?.take(6_000),
