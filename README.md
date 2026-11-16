@@ -1,7 +1,7 @@
 <!-- ASSAYFLUX POCKET HOST · REPOSITORY README -->
 
 <p align="center">
-  <img src="Assets/Logo.png" alt="AssayFlux Pocket Host logo" width="500">
+  <img src="Assets/Pocket Host Logo.png" alt="AssayFlux Pocket Host logo" width="500">
 </p>
 <p align="center"><strong>Your Website - Your Device - Your Control</strong></p>
 <p align="center">Turn An Ordinary Android Phone Into The Origin Server For Your Website Without Root - Without Termux - Without Mandatory VPS</p>
