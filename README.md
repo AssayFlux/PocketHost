@@ -63,8 +63,9 @@ flowchart TD
   CF --> T[Existing outbound Tunnel]
   T --> R[Rust HTTP origin on Android]
   R --> S[Static site roots]
-  R --> P[Python WSGI upstream]
-  R --> N[Node.js upstream]
+  R --> W[Companion loopback upstreams]
+  W --> P[Python WSGI]
+  W --> N[Node.js]
   A[Native Android app] --> R
   A --> M[Authenticated local management API]
   M --> C[TypeScript / React console]
