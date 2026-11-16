@@ -86,6 +86,7 @@ class RuntimeWorkerService : Service() {
             .any { name.endsWith(it) }
     }
 
+    @Synchronized
     private fun installProject(siteId: String, descriptor: ParcelFileDescriptor): String {
         require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid project identifier." }
         val destination = File(projectsRoot, siteId).canonicalFile
@@ -191,6 +192,7 @@ class RuntimeWorkerService : Service() {
         }
     }
 
+    @Synchronized
     private fun startNode(siteId: String, entryRelative: String, port: Int, heapLimitMb: Int): String {
         require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid Node project identifier." }
         require(port in 1024..65535 && heapLimitMb in 96..512) { "Invalid Node runtime limits." }
@@ -214,6 +216,7 @@ class RuntimeWorkerService : Service() {
         return "STARTING"
     }
 
+    @Synchronized
     private fun stopNode(): String {
         NodeRuntimeStateStore.update(this, state = "STOPPING", detail = "Node.js shutdown requested.")
         stopService(Intent(this, NodeHostingService::class.java))
@@ -265,7 +268,7 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_PYTHON_CONFIGURE -> {
                         val workers = data.readInt()
                         require(workers in 2..16) { "Python worker limit must be between 2 and 16." }
-                        ensurePython().callAttr("configure", workers)
+                        synchronized(runtimeLock) { ensurePython().callAttr("configure", workers) }
                         "CONFIGURED"
                     }
                     TRANSACTION_PYTHON_START -> startPython(data.readString().orEmpty(), data.readInt())
