@@ -34,6 +34,7 @@ pub struct RelayResponse {
 
 struct PendingResponse {
     device_id: Uuid,
+    site_id: String,
     sender: oneshot::Sender<RelayResponse>,
 }
 
@@ -72,7 +73,7 @@ impl RelayHub {
     }
 
     pub fn register_pending(
-        &self, request_id: Uuid, device_id: Uuid
+        &self, request_id: Uuid, device_id: Uuid, site_id: &str
     ) -> Option<(mpsc::Sender<RelayRequest>, oneshot::Receiver<RelayResponse>)> {
         let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         let request_sender = sessions.get(&device_id)?.1.clone();
@@ -81,7 +82,7 @@ impl RelayHub {
         let device_count = pending.values().filter(|entry| entry.device_id == device_id).count();
         if global_count >= 32 || device_count >= 8 || pending.contains_key(&request_id) { return None; }
         let (sender, receiver) = oneshot::channel();
-        pending.insert(request_id, PendingResponse { device_id, sender });
+        pending.insert(request_id, PendingResponse { device_id, site_id: site_id.to_string(), sender });
         Some((request_sender, receiver))
     }
 
@@ -105,6 +106,13 @@ impl RelayHub {
 
     pub fn cancel_pending(&self, request_id: Uuid) {
         self.pending.lock().unwrap_or_else(|e| e.into_inner()).remove(&request_id);
+    }
+
+    pub fn cancel_site(&self, device_id: Uuid, site_id: &str) -> usize {
+        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        let before = pending.len();
+        pending.retain(|_, entry| entry.device_id != device_id || entry.site_id != site_id);
+        before - pending.len()
     }
 }
 
@@ -264,7 +272,7 @@ mod tests {
         hub.disconnect(device, first);
         assert!(hub.sender(device).is_some(), "stale session teardown must not remove a newer connection");
         let request_id = Uuid::new_v4();
-        let response_rx = hub.register_pending(request_id, device).unwrap().1;
+        let response_rx = hub.register_pending(request_id, device, "site-a").unwrap().1;
         assert!(hub.complete(device, RelayResponse {
             id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
@@ -286,7 +294,7 @@ mod tests {
         let hub = RelayHub::default();
         let device = Uuid::new_v4();
         let (first, _first_stream) = hub.connect(device);
-        let first_request = hub.register_pending(Uuid::new_v4(), device).unwrap().1;
+        let first_request = hub.register_pending(Uuid::new_v4(), device, "site-a").unwrap().1;
         let (second, _second_stream) = hub.connect(device);
         assert!(first_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_some());
@@ -297,6 +305,22 @@ mod tests {
         hub.disconnect(device, second);
         assert!(second_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_none());
+    }
+
+    #[test]
+    fn deleting_a_relay_site_cancels_only_its_pending_visitors() {
+        let hub = RelayHub::default();
+        let device = Uuid::new_v4();
+        let other_device = Uuid::new_v4();
+        let (_session, _stream) = hub.connect(device);
+        let (_other_session, _other_stream) = hub.connect(other_device);
+        let removed_site = hub.register_pending(Uuid::new_v4(), device, "site-a").unwrap().1;
+        let kept_site = hub.register_pending(Uuid::new_v4(), device, "site-b").unwrap().1;
+        let kept_device = hub.register_pending(Uuid::new_v4(), other_device, "site-a").unwrap().1;
+        assert_eq!(hub.cancel_site(device, "site-a"), 1);
+        assert!(removed_site.blocking_recv().is_err());
+        assert!(matches!(kept_site.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)));
+        assert!(matches!(kept_device.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)));
     }
 
     #[test]
@@ -321,19 +345,19 @@ mod tests {
         for device in devices.iter().chain(std::iter::once(&overflow_device)) { hub.connect(*device); }
         for (index, device) in devices.iter().enumerate() {
             for _ in 0..8 {
-                let receiver = hub.register_pending(Uuid::new_v4(), *device).unwrap().1;
+                let receiver = hub.register_pending(Uuid::new_v4(), *device, "site-a").unwrap().1;
                 if index == 0 { first_device_receivers.push(receiver); }
             }
         }
         assert_eq!(first_device_receivers.len(), 8);
-        assert!(hub.register_pending(Uuid::new_v4(), devices[0]).is_none(),
+        assert!(hub.register_pending(Uuid::new_v4(), devices[0], "site-a").is_none(),
             "per-device pending request quota must be enforced");
-        assert!(hub.register_pending(Uuid::new_v4(), overflow_device).is_none(),
+        assert!(hub.register_pending(Uuid::new_v4(), overflow_device, "site-a").is_none(),
             "global pending request quota must be enforced");
         hub.revoke_device(devices[0]);
         assert!(first_device_receivers.into_iter().all(|receiver| receiver.blocking_recv().is_err()));
         hub.connect(devices[0]);
-        assert!(hub.register_pending(Uuid::new_v4(), devices[0]).is_some(),
+        assert!(hub.register_pending(Uuid::new_v4(), devices[0], "site-a").is_some(),
             "device revocation must free its pending request quota");
     }
     #[test]
