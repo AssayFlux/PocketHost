@@ -9,11 +9,20 @@ import org.json.JSONObject
  * main Pocket Host application UID.
  */
 object PythonHostRuntime {
+    private fun configure(context: Context) {
+        val memory = android.app.ActivityManager.MemoryInfo()
+        context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
+        val automaticWorkers = (memory.totalMem / (512L * 1024L * 1024L)).toInt().coerceIn(4, 16)
+        val workers = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            .getInt("python_max_workers", automaticWorkers).coerceIn(2, 16)
+        RuntimeWorkerClient.configurePython(context, workers)
+    }
     @Synchronized
     fun start(context: Context, projectRoot: String, port: Int, allowLan: Boolean = false): String {
         RuntimeTrustGate.requireAcknowledged(context)
         require(port in 1024..65535) { "Python port must be between 1024 and 65535." }
         val ownedRoot = RuntimeProjectRoot.requireOwnedProjectRoot(context, projectRoot)
+        configure(context)
         return RuntimeWorkerClient.startPython(context, ownedRoot, port)
     }
 
@@ -31,6 +40,7 @@ object PythonHostRuntime {
             ownedRoutes.put(hostname, ownedRoot.absolutePath)
         }
         require(ownedRoutes.length() in 1..100) { "Python hostname registry must contain between 1 and 100 routes." }
+        configure(context)
         return RuntimeWorkerClient.startPythonSites(context, ownedRoutes, port)
     }
 
