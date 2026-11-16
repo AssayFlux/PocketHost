@@ -90,3 +90,8 @@ Run all required jobs on one exact SHA. Build host and companion APKs for declar
 ## Readiness reporting
 
 Do not copy stale estimates forward. The canonical weighted score and evidence are in `docs/PROJECT_BASELINE.md`. A gate can increase only when its exit criteria have source, automated test, emulator/device or external evidence appropriate to the claim. Documentation work alone does not raise implementation readiness.
+
+### 2026-11-16 implementation evidence addendum
+
+- Gate 2: source primitives and probes are present, but production Python/Node per-project isolated execution and adversarial API 26/33/35 acceptance remain open. Trusted-code-only policy remains mandatory.
+- Gate 4: remote control-plane device/user token rotation, role enforcement and mutation-plus-audit transactions are implemented in source. Passkey-first identity and site-scoped visitor Public/Private/Restricted authorization remain unimplemented; the gate is therefore open.
