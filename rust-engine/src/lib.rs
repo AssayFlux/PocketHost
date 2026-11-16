@@ -687,6 +687,7 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMu
         if !(1024..=65535).contains(&port) { return Err("Port must be 1024–65535".to_string()); }
         let raw: HashMap<String, serde_json::Value> = serde_json::from_str(&json).map_err(|e| format!("Invalid hostname registry: {e}"))?;
         let mut sites = HashMap::new();
+        let mut access = HashMap::new();
         for (host, value) in raw {
             let target = if let Some(path) = value.as_str() {
                 SiteTarget::Static(PathBuf::from(path))
@@ -703,9 +704,16 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMu
                     runtime => return Err(format!("Unsupported runtime route: {runtime}")),
                 }
             };
+            if let Some(policy) = value.get("access") {
+                let mode = policy.get("mode").and_then(|v| v.as_str()).unwrap_or("public").to_string();
+                let credentials = policy.get("credentials").and_then(|v| v.as_object()).map(|values| {
+                    values.iter().filter_map(|(name, value)| value.as_str().map(|hash| (name.clone(), hash.to_string()))).collect::<HashMap<_,_>>()
+                }).unwrap_or_default();
+                access.insert(host.clone(), SiteAccess { mode, credentials });
+            }
             sites.insert(host, target);
         }
-        start_engine_with_hosts(&root, port as u16, allow_lan == 1, sites)?;
+        start_engine_with_hosts(&root, port as u16, allow_lan == 1, sites, access)?;
         Ok("OK".to_string())
     })();
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
