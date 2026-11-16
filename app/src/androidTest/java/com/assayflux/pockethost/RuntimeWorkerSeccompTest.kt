@@ -99,7 +99,7 @@ class RuntimeWorkerSeccompTest {
                     }
                     reply.readException()
                     transactionSucceeded = true
-                    listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
+                    listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
                 } finally {
                     if (!transactionSucceeded) runCatching { client.close() }
                     writer.join(5_000)
@@ -109,9 +109,11 @@ class RuntimeWorkerSeccompTest {
                     reply.recycle()
                 }
                 assertEquals("socket() must be denied with EPERM", 1, results[0])
-                assertEquals("The inherited connected-socket capability must be closed before policy install", 1, results[1])
-                assertEquals("The brokered Unix listener must accept visitor traffic", 1, results[2])
-                assertEquals("SO_PEERCRED must identify the host app UID", 1, results[3])
+                assertEquals("connect() must be denied with EPERM", 1, results[1])
+                assertEquals("bind() must be denied with EPERM", 1, results[2])
+                assertEquals("The inherited connected-socket capability must be closed before policy install", 1, results[3])
+                assertEquals("The brokered Unix listener must accept visitor traffic", 1, results[4])
+                assertEquals("SO_PEERCRED must identify the host app UID", 1, results[5])
                 assertEquals("Cell response must return on the accepted visitor stream",
                     "cell-accepted", client.getInputStream().bufferedReader().readText())
             } finally {
