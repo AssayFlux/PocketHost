@@ -845,7 +845,7 @@ async fn relay_visitor(
         return Err((StatusCode::METHOD_NOT_ALLOWED, "relay_method_not_allowed".into()));
     }
     let path = parts.uri.path_and_query().map(|value| value.as_str()).unwrap_or("/");
-    if path.len() > 8_192 || !path.starts_with('/') { return Err((StatusCode::URI_TOO_LONG, "relay_path_too_long".into())); }
+    if path.len() > 8_192 || !path.starts_with('/') || path.starts_with("//") { return Err((StatusCode::URI_TOO_LONG, "relay_path_too_long".into())); }
     let bytes = to_bytes(body, 8 * 1024 * 1024).await
         .map_err(|_| (StatusCode::PAYLOAD_TOO_LARGE, "relay_request_too_large".into()))?;
     let allowed_request_headers = [
