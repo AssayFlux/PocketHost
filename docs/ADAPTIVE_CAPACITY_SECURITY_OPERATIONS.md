@@ -259,3 +259,8 @@ The Rust engine applies a streaming-response semaphore per distinct site target 
 
 - Startup recovery now reports an explicit recovery failure when an invalid active deployment exists but no safe release is available; the app records this condition instead of silently treating it as no-op. Symlink-root recovery is covered by instrumentation source.
 
+## HTTP/2 multiplexing bounds — 2026-11-16
+
+- Rust ingress now explicitly caps each HTTP/2 socket at eight concurrent streams instead of Hyper's 200-stream default, limits pending reset streams to 16 and local error resets to 64, and caps the HTTP/2 header list at 16 KiB.
+- With the existing 16 global TCP connection ceiling, multiplexed visitor request fan-out is now bounded independently of the per-target FIFO semaphore and 32-connection socket queue. This is a resource bound, not a measured safe visitor capacity.
+
