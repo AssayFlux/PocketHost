@@ -988,7 +988,7 @@ async fn main() -> anyhow::Result<()> {
             .allow_headers([AUTHORIZATION, CONTENT_TYPE]),
         Err(_) => CorsLayer::new(),
     };
-    let app = Router::new()
+    let control_app = Router::new()
         .route("/health", get(health))
         .route("/v1/admin/session", post(create_admin_session).delete(revoke_admin_session))
         .route("/v1/admin/audit", get(list_audit))
@@ -1011,15 +1011,33 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/device/artifacts/:artifact", get(download_artifact))
         .route("/v1/device/heartbeat", post(heartbeat))
         .route("/v1/device/commands/:command/ack", post(acknowledge))
-        .fallback(any(relay_visitor))
-        .with_state(state)
+        .with_state(state.clone())
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .layer(cors)
         .layer(TraceLayer::new_for_http());
-    let address = std::env::var("POCKETHOST_CONTROL_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
-    let listener = tokio::net::TcpListener::bind(&address).await?;
-    tracing::info!(%address, "PocketHost control plane listening");
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; }).await?;
+
+    // Visitor ingress has no admin or device-management routes at all.
+    let visitor_app = Router::new()
+        .fallback(any(relay_visitor))
+        .with_state(state)
+        .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
+        .layer(TraceLayer::new_for_http());
+
+    let control_address = std::env::var("POCKETHOST_CONTROL_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
+    let visitor_address = std::env::var("POCKETHOST_RELAY_BIND").unwrap_or_else(|_| "127.0.0.1:8081".into());
+    let control_listener = tokio::net::TcpListener::bind(&control_address).await?;
+    let visitor_listener = tokio::net::TcpListener::bind(&visitor_address).await?;
+    tracing::info!(%control_address, %visitor_address, "PocketHost control plane and Relay visitor gateway listening");
+
+    let control_server = axum::serve(
+        control_listener,
+        control_app.into_make_service_with_connect_info::<SocketAddr>(),
+    ).with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; });
+    let visitor_server = axum::serve(
+        visitor_listener,
+        visitor_app.into_make_service_with_connect_info::<SocketAddr>(),
+    ).with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; });
+    tokio::try_join!(control_server, visitor_server)?;
     Ok(())
 }
 
