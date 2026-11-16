@@ -9,7 +9,6 @@ import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
 import java.net.InetSocketAddress
-import java.io.FileDescriptor
 import java.io.ByteArrayOutputStream
 
 /**
@@ -60,19 +59,11 @@ open class RuntimeCellProbeService : Service() {
                 check(cleanupResult == 0) {
                     "Could not close inherited socket descriptors (errno=$cleanupResult); refusing to continue."
                 }
-                val inheritedSocketClosed = runCatching {
-                    ParcelFileDescriptor.adoptFd(inheritedSocketFd).use { Os.fstat(it.fileDescriptor) }
-                }.exceptionOrNull()?.let {
-                    it is android.system.ErrnoException && it.errno == OsConstants.EBADF
-                } ?: false
+                val inheritedSocketClosed = NetworkSandbox.isDescriptorClosed(inheritedSocketFd) == 1
                 check(inheritedSocketClosed) {
                     "An inherited socket descriptor remained open; refusing to install the policy."
                 }
-                val standardSocketClosed = runCatching {
-                    ParcelFileDescriptor.adoptFd(0).use { Os.fstat(it.fileDescriptor) }
-                }.exceptionOrNull()?.let {
-                    it is android.system.ErrnoException && it.errno == OsConstants.EBADF
-                } ?: false
+                val standardSocketClosed = NetworkSandbox.isDescriptorClosed(0) == 1
                 check(standardSocketClosed) {
                     "An inherited socket on standard input remained open; refusing to install the policy."
                 }
