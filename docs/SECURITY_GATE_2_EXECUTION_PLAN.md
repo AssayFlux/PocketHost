@@ -40,7 +40,7 @@ If SELinux rejects the directory-FD path, do not weaken SELinux or expose the wh
 
 ### 2.3 Network capability boundary
 
-The trusted broker creates a loopback listener and transfers its descriptor to the isolated cell. Rust connects to the broker-owned loopback port; the cell accepts only on the passed listener. The cell never creates a socket. Rust remains the only public/LAN ingress and the existing Cloudflare Tunnel continues to terminate at Rust.
+The host app creates and binds a loopback listener socket, retains the port for Rust routing, and passes the listener FD to the trusted companion broker. The broker forwards that FD to the isolated cell; it does not create sockets. Rust connects to the host-owned loopback port; the cell accepts only on the passed listener. The cell never creates a socket. Rust remains the only public/LAN ingress and the existing Cloudflare Tunnel continues to terminate at Rust.
 
 **Mandatory syscall enforcement:** before project code is imported or executed, the cell installs a seccomp-BPF filter with `PR_SET_NO_NEW_PRIVS` and thread synchronization (`SECCOMP_FILTER_FLAG_TSYNC`). The filter denies `socket`, `socketpair`, `connect`, `bind`, socket-call multiplexors, io_uring socket paths, and namespace changes. It permits `listen`, `accept` and `accept4` only when the descriptor argument equals the single listener FD passed by the broker. Any other listener/accept descriptor is denied. The filter is irreversible for the process and inherited by its threads/children. If filter installation or TSYNC fails, the cell must fail closed and must not import project code.
 
@@ -50,7 +50,7 @@ The current proof passes an accepted visitor socket FD and checks request/respon
 
 The isolated cell must fail attempts using IPv4/IPv6 TCP, UDP, raw sockets, DNS resolvers, native/JNI calls, io_uring, loopback management endpoints, private/link-local/metadata targets and child processes. A passed listener FD is a one-way inbound capability, not general network permission.
 
-The runtime worker package's `INTERNET` permission may be removed after the broker/control path is proven not to need it. The host app retains the network permission for Rust, cloudflared and owner-approved network operations.
+The runtime worker package must not declare `INTERNET` after this migration: neither the broker nor isolated cells create network sockets. The host app retains the network permission for Rust, cloudflared and owner-approved network operations.
 
 ### 2.4 Runtime adaptation
 
