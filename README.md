@@ -3,8 +3,8 @@
 <p align="center">
   <img src="Assets/Logo.png" alt="AssayFlux Pocket Host logo" width="250">
 </p>
-<p align="center"><strong>Your website. Your device. Your control.</strong></p>
-<p align="center">Turn An Ordinary Android Phone Into The Origin Server For Your Website Without Roor - Termux - Mandatory VPS</p>
+<p align="center"><strong>Your Website - Your Device - Your Control</strong></p>
+<p align="center">Turn An Ordinary Android Phone Into The Origin Server For Your Website Without Roor - Without Termux - Without Mandatory VPS</p>
 <p align="center">
   <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&weight=600&size=16&pause=1600&color=B18B5E&center=true&vCenter=true&width=900&height=32&lines=PHONE-FIRST+WEBSITE+HOSTING;STATIC+SITES+AND+TRUSTED+APPLICATIONS;RUST+REQUEST+ENGINE;ANDROID-NATIVE+OPERATIONS;IMPORT+%E2%86%92+PUBLISH+%E2%86%92+OBSERVE+%E2%86%92+RECOVER" alt="Pocket Host product principles">
 </p>
