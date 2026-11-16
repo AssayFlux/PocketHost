@@ -691,7 +691,7 @@ async fn create_relay_site(
     let actor = admin_write(&headers, &s).await?;
     if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let hostname = normalize_relay_hostname(&input.hostname)?;
-    if !input.site_id.matches(Regex::new(r"^[A-Za-z0-9_-]{1,64}$").unwrap().as_str()) {
+    if input.site_id.is_empty() || input.site_id.len() > 64 || !input.site_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
         return Err((StatusCode::BAD_REQUEST, "invalid_site_id".into()));
     }
     let exists = sqlx::query("SELECT id FROM devices WHERE id=$1")
@@ -848,6 +848,7 @@ async fn relay_visitor(
         method: parts.method.to_string(),
         path: path.to_string(),
         hostname,
+        site_id,
         headers: forwarded_headers,
         body_base64: relay::encode_body(&bytes),
     };
@@ -915,10 +916,16 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
         .route("/v1/admin/devices/:id/commands", post(queue_command))
         .route("/v1/admin/devices/:id/artifacts", post(upload_site_archive))
+        .route("/v1/admin/devices/:id/relay-sites", get(list_relay_sites).post(create_relay_site))
+        .route("/v1/admin/relay-sites/:id/verify", post(verify_relay_site))
+        .route("/v1/admin/relay-sites/:id", axum::routing::delete(delete_relay_site))
+        .route("/v1/device/relay/stream", get(relay_device_stream))
+        .route("/v1/device/relay/responses/:id", post(relay_device_response))
         .route("/v1/device/commands", get(poll_commands))
         .route("/v1/device/artifacts/:artifact", get(download_artifact))
         .route("/v1/device/heartbeat", post(heartbeat))
         .route("/v1/device/commands/:command/ack", post(acknowledge))
+        .fallback(any(relay_visitor))
         .with_state(state)
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .layer(cors)
