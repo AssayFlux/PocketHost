@@ -834,13 +834,18 @@ async fn delete_relay_site(
     let actor = admin_write(&headers, &s).await?;
     if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
     let mut tx = s.db.begin().await.map_err(internal)?;
-    let result = sqlx::query("DELETE FROM relay_sites WHERE id=$1").bind(id)
+    let route = sqlx::query("SELECT device_id,site_id FROM relay_sites WHERE id=$1 FOR UPDATE")
+        .bind(id).fetch_optional(&mut *tx).await.map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, "relay_site_not_found".into()))?;
+    let device: Uuid = route.get("device_id");
+    let site_id: String = route.get("site_id");
+    sqlx::query("DELETE FROM relay_sites WHERE id=$1").bind(id)
         .execute(&mut *tx).await.map_err(internal)?;
-    if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "relay_site_not_found".into())); }
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.delete',$2,$3)")
-        .bind(&actor.name).bind(id.to_string()).bind(json!({}))
+        .bind(&actor.name).bind(id.to_string()).bind(json!({"deviceId":device,"siteId":site_id}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    s.relay.cancel_site(device, &site_id);
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -935,11 +940,11 @@ async fn relay_visitor(
         method: parts.method.to_string(),
         path: path.to_string(),
         hostname,
-        site_id,
+        site_id: site_id.clone(),
         headers: forwarded_headers,
         body_base64: relay::encode_body(&bytes),
     };
-    let (sender, response_rx) = s.relay.register_pending(request_id, device)
+    let (sender, response_rx) = s.relay.register_pending(request_id, device, &site_id)
         .ok_or((StatusCode::SERVICE_UNAVAILABLE, "relay_device_offline_or_capacity_reached".into()))?;
     if sender.send(message).await.is_err() {
         s.relay.cancel_pending(request_id);
