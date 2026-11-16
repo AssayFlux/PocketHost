@@ -5,6 +5,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
+import java.security.SecureRandom
+import android.util.Base64
 
 /** Persistent hostname-to-project mapping used by the Rust static server. */
 object SiteRegistry {
@@ -127,6 +129,14 @@ object SiteRegistry {
         require(mode != "private" || credentials.size <= 1) { "Private mode supports one shared visitor credential." }
         sites[index] = current.copy(accessMode = mode, visitorCredentials = credentials)
         save(context, sites)
+    }
+
+    @Synchronized fun issueVisitor(context: Context, siteId: String, username: String): String {
+        val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val token = Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+        addVisitor(context, siteId, username, token)
+        bytes.fill(0)
+        return token
     }
 
     @Synchronized fun addVisitor(context: Context, siteId: String, username: String, token: String) {
