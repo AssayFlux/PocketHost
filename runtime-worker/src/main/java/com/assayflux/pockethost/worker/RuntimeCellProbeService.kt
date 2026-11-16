@@ -1,7 +1,6 @@
 package com.assayflux.pockethost.worker
 
 import android.app.Service
-import android.net.LocalSocketAddress
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
@@ -79,15 +78,11 @@ open class RuntimeCellProbeService : Service() {
                 }.exceptionOrNull()?.let {
                     it is android.system.ErrnoException && it.errno == OsConstants.EPERM
                 } ?: false
-                // Exercise the connect syscall with the listener's actual AF_UNIX
-                // address family. Passing an InetSocketAddress to an AF_UNIX
-                // descriptor is rejected by the socket layer as EAFNOSUPPORT and
-                // does not prove that seccomp denied the syscall.
-                val connectDenied = runCatching {
-                    Os.connect(listener.fileDescriptor, LocalSocketAddress("pockethost-seccomp-denied"))
-                }.exceptionOrNull()?.let {
-                    it is android.system.ErrnoException && it.errno == OsConstants.EPERM
-                } ?: false
+                // Use a native sockaddr_un with the existing AF_UNIX listener FD.
+                // Creating another socket is itself denied, and Android's Os.connect
+                // does not accept LocalSocketAddress. The native probe returns errno
+                // directly so only seccomp's EPERM counts as a successful denial.
+                val connectDenied = NetworkSandbox.probeConnectErrno(listener.fd) == OsConstants.EPERM
                 val bindDenied = runCatching {
                     Os.bind(listener.fileDescriptor, InetSocketAddress("127.0.0.1", 0))
                 }.exceptionOrNull()?.let {
