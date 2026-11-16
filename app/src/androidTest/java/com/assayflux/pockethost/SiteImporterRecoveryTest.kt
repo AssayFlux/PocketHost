@@ -84,31 +84,27 @@ class SiteImporterRecoveryTest {
 
     @Test
     fun missingActiveSiteRecoversNewestValidLastKnownGoodRelease() {
-        val active = File(context.filesDir, "site")
-        val releases = File(context.filesDir, "site-releases")
-        val original = File(context.cacheDir, "site-recovery-original-${System.nanoTime()}")
-        val hadActive = active.isDirectory
-        if (hadActive) active.copyRecursively(original, overwrite = true)
-        val release = File(releases, "release-${System.currentTimeMillis() + 60_000_000L}-recovery-test")
+        // Isolate this recovery scenario from the app's real site and other
+        // instrumentation tests. A shared filesDir can contain newer releases,
+        // making the selected "latest" deployment nondeterministic.
+        val root = File(context.cacheDir, "site-recovery-missing-${System.nanoTime()}")
+        val isolated = object : ContextWrapper(context) {
+            override fun getFilesDir(): File = root
+        }
+        val active = File(root, "site")
+        val releases = File(root, "site-releases")
+        val release = File(releases, "release-${System.currentTimeMillis()}-recovery-test")
         try {
-            assertTrue(releases.exists() || releases.mkdirs())
+            assertTrue(root.mkdirs())
+            assertTrue(releases.mkdirs())
             assertTrue(release.mkdirs())
             File(release, "index.html").writeText("<h1>last-known-good</h1>")
-            active.deleteRecursively()
 
-            assertTrue(SiteImporter.recoverInterruptedActivation(context))
+            assertTrue(SiteImporter.recoverInterruptedActivation(isolated))
             assertEquals("<h1>last-known-good</h1>", File(active, "index.html").readText())
-            assertTrue(!SiteImporter.recoverInterruptedActivation(context))
+            assertTrue(!SiteImporter.recoverInterruptedActivation(isolated))
         } finally {
-            active.deleteRecursively()
-            if (hadActive && original.isDirectory) original.copyRecursively(active, overwrite = true)
-            release.deleteRecursively()
-            // The test release is renamed to the active site during recovery.
-            if (active.isDirectory && File(active, "index.html").readText().contains("last-known-good")) {
-                active.deleteRecursively()
-                if (hadActive && original.isDirectory) original.copyRecursively(active, overwrite = true)
-            }
-            original.deleteRecursively()
+            root.deleteRecursively()
         }
     }
 }
