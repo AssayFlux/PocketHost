@@ -664,6 +664,227 @@ async fn acknowledge(
 }
 
 #[tokio::main]
+
+#[derive(Deserialize)]
+struct CreateRelaySite {
+    hostname: String,
+    site_id: String,
+}
+
+fn normalize_relay_hostname(value: &str) -> Result<String, (StatusCode, String)> {
+    let hostname = value.trim().trim_end_matches('.').to_ascii_lowercase();
+    if hostname.len() > 253 || hostname.is_empty() || hostname.parse::<std::net::IpAddr>().is_ok() {
+        return Err((StatusCode::BAD_REQUEST, "invalid_relay_hostname".into()));
+    }
+    for label in hostname.split('.') {
+        if label.is_empty() || label.len() > 63 || label.starts_with('-') || label.ends_with('-') ||
+            !label.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-') {
+            return Err((StatusCode::BAD_REQUEST, "invalid_relay_hostname".into()));
+        }
+    }
+    Ok(hostname)
+}
+
+async fn create_relay_site(
+    State(s): State<AppState>, headers: HeaderMap, Path(device): Path<Uuid>, Json(input): Json<CreateRelaySite>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    let hostname = normalize_relay_hostname(&input.hostname)?;
+    if !input.site_id.matches(Regex::new(r"^[A-Za-z0-9_-]{1,64}$").unwrap().as_str()) {
+        return Err((StatusCode::BAD_REQUEST, "invalid_site_id".into()));
+    }
+    let exists = sqlx::query("SELECT id FROM devices WHERE id=$1")
+        .bind(device).fetch_optional(&s.db).await.map_err(internal)?;
+    if exists.is_none() { return Err((StatusCode::NOT_FOUND, "device_not_found".into())); }
+    let id = Uuid::new_v4();
+    let challenge = new_token();
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    sqlx::query("INSERT INTO relay_sites(id,device_id,hostname,site_id,verification_token_hash) VALUES($1,$2,$3,$4,$5)")
+        .bind(id).bind(device).bind(&hostname).bind(&input.site_id).bind(token_hash(&challenge))
+        .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.create',$2,$3)")
+        .bind(&actor.name).bind(id.to_string())
+        .bind(json!({"deviceId":device,"hostname":hostname,"siteId":input.site_id}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::CREATED, Json(json!({
+        "id":id,"deviceId":device,"hostname":hostname,"siteId":input.site_id,
+        "verification":{"type":"TXT","name":format!("_pockethost-verification.{hostname}"),
+            "value":format!("assayflux-pocket-host={challenge}")},
+        "verified":false,
+        "warning":"The hostname will not receive traffic until its DNS TXT proof is verified."
+    }))))
+}
+
+async fn list_relay_sites(
+    State(s): State<AppState>, headers: HeaderMap, Path(device): Path<Uuid>,
+) -> Result<Json<Vec<Value>>, (StatusCode, String)> {
+    let _actor = admin(&headers, &s).await?;
+    let rows = sqlx::query("SELECT id,hostname,site_id,verified_at,enabled,created_at FROM relay_sites WHERE device_id=$1 ORDER BY created_at DESC")
+        .bind(device).fetch_all(&s.db).await.map_err(internal)?;
+    Ok(Json(rows.into_iter().map(|row| json!({
+        "id":row.get::<Uuid,_>("id"),
+        "hostname":row.get::<String,_>("hostname"),
+        "siteId":row.get::<String,_>("site_id"),
+        "verified":row.get::<Option<DateTime<Utc>>,_>("verified_at").is_some(),
+        "enabled":row.get::<bool,_>("enabled"),
+        "createdAt":row.get::<DateTime<Utc>,_>("created_at")
+    })).collect()))
+}
+
+async fn verify_relay_site(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    let row = sqlx::query("SELECT hostname,verification_token_hash,verified_at FROM relay_sites WHERE id=$1")
+        .bind(id).fetch_optional(&s.db).await.map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, "relay_site_not_found".into()))?;
+    let hostname: String = row.get("hostname");
+    let expected_hash: String = row.get("verification_token_hash");
+    if row.get::<Option<DateTime<Utc>>,_>("verified_at").is_some() {
+        return Ok(Json(json!({"id":id,"hostname":hostname,"verified":true})));
+    }
+    let record_name = format!("_pockethost-verification.{hostname}");
+    let records = relay::dns_txt_records(record_name.clone()).await
+        .map_err(|error| (StatusCode::BAD_GATEWAY, format!("dns_txt_lookup_failed: {error}")))?;
+    let verified = records.iter().any(|record| {
+        record.strip_prefix("assayflux-pocket-host=")
+            .map(|token| secure_equal(&token_hash(token), &expected_hash)).unwrap_or(false)
+    });
+    if !verified { return Err((StatusCode::CONFLICT, "dns_txt_proof_not_found".into())); }
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    sqlx::query("UPDATE relay_sites SET verified_at=now() WHERE id=$1 AND verified_at IS NULL")
+        .bind(id).execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.verify',$2,$3)")
+        .bind(&actor.name).bind(id.to_string()).bind(json!({"hostname":hostname}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok(Json(json!({"id":id,"hostname":hostname,"verified":true})))
+}
+
+async fn delete_relay_site(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let result = sqlx::query("DELETE FROM relay_sites WHERE id=$1").bind(id)
+        .execute(&mut *tx).await.map_err(internal)?;
+    if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "relay_site_not_found".into())); }
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.delete',$2,$3)")
+        .bind(&actor.name).bind(id.to_string()).bind(json!({}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn relay_device_stream(
+    State(s): State<AppState>, headers: HeaderMap,
+) -> Result<Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>>, (StatusCode, String)> {
+    let device = device_id(&headers, &s).await?;
+    let (session_id, receiver) = s.relay.connect(device);
+    let guard = Arc::new(relay::RelaySessionGuard::new(s.relay.clone(), device, session_id));
+    let stream = tokio_stream::wrappers::ReceiverStream::new(receiver).map(move |message| {
+        let _keep_session_alive = &guard;
+        let data = serde_json::to_string(&message).unwrap_or_else(|_| "{}".into());
+        Ok(Event::default().id(message.id.to_string()).data(data))
+    });
+    Ok(Sse::new(stream).keep_alive(
+        KeepAlive::new().interval(Duration::from_secs(15)).text("keep-alive")
+    ))
+}
+
+async fn relay_device_response(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, Json(response): Json<relay::RelayResponse>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let device = device_id(&headers, &s).await?;
+    if response.id != id { return Err((StatusCode::BAD_REQUEST, "relay_response_id_mismatch".into())); }
+    if !(200..=599).contains(&response.status) { return Err((StatusCode::BAD_REQUEST, "invalid_relay_response_status".into())); }
+    if response.headers.len() > 64 || response.body_base64.len() > 12 * 1024 * 1024 {
+        return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into()));
+    }
+    let body = relay::decode_body(&response.body_base64).map_err(|_| (StatusCode::BAD_REQUEST, "invalid_relay_response_body".into()))?;
+    if body.len() > 8 * 1024 * 1024 { return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into())); }
+    if !s.relay.complete(device, response) { return Err((StatusCode::NOT_FOUND, "relay_request_expired_or_not_owned".into())); }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn relay_visitor(
+    State(s): State<AppState>, request: Request<Body>,
+) -> Result<Response<Body>, (StatusCode, String)> {
+    let (parts, body) = request.into_parts();
+    let host_value = parts.headers.get(axum::http::header::HOST)
+        .and_then(|value| value.to_str().ok()).ok_or((StatusCode::BAD_REQUEST, "host_header_required".into()))?;
+    let authority = host_value.parse::<axum::http::uri::Authority>()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "invalid_host_header".into()))?;
+    let hostname = normalize_relay_hostname(authority.host())?;
+    let route = sqlx::query("SELECT device_id,site_id FROM relay_sites WHERE hostname=$1 AND verified_at IS NOT NULL AND enabled=TRUE")
+        .bind(&hostname).fetch_optional(&s.db).await.map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, "relay_hostname_not_found".into()))?;
+    let device: Uuid = route.get("device_id");
+    let site_id: String = route.get("site_id");
+    if !matches!(parts.method, Method::GET | Method::HEAD | Method::POST | Method::PUT | Method::PATCH | Method::DELETE | Method::OPTIONS) {
+        return Err((StatusCode::METHOD_NOT_ALLOWED, "relay_method_not_allowed".into()));
+    }
+    let path = parts.uri.path_and_query().map(|value| value.as_str()).unwrap_or("/");
+    if path.len() > 8_192 || !path.starts_with('/') { return Err((StatusCode::URI_TOO_LONG, "relay_path_too_long".into())); }
+    let bytes = to_bytes(body, 8 * 1024 * 1024).await
+        .map_err(|_| (StatusCode::PAYLOAD_TOO_LARGE, "relay_request_too_large".into()))?;
+    let allowed_request_headers = [
+        "accept","accept-encoding","accept-language","authorization","cache-control","content-type",
+        "cookie","if-match","if-modified-since","if-none-match","origin","range","referer","user-agent",
+    ];
+    let mut forwarded_headers = HashMap::new();
+    for name in allowed_request_headers {
+        if let Some(value) = parts.headers.get(name).and_then(|value| value.to_str().ok()) {
+            if value.len() <= 8_192 { forwarded_headers.insert(name.to_string(), value.to_string()); }
+        }
+    }
+    let request_id = Uuid::new_v4();
+    let message = relay::RelayRequest {
+        id: request_id,
+        method: parts.method.to_string(),
+        path: path.to_string(),
+        hostname,
+        headers: forwarded_headers,
+        body_base64: relay::encode_body(&bytes),
+    };
+    let sender = s.relay.sender(device).ok_or((StatusCode::SERVICE_UNAVAILABLE, "relay_device_offline".into()))?;
+    let response_rx = s.relay.register_pending(request_id, device);
+    if sender.send(message).await.is_err() {
+        s.relay.cancel_pending(request_id);
+        return Err((StatusCode::SERVICE_UNAVAILABLE, "relay_device_disconnected".into()));
+    }
+    let response = match tokio::time::timeout(Duration::from_secs(45), response_rx).await {
+        Ok(Ok(response)) => response,
+        Ok(Err(_)) => { s.relay.cancel_pending(request_id); return Err((StatusCode::BAD_GATEWAY, "relay_device_lost_request".into())); },
+        Err(_) => { s.relay.cancel_pending(request_id); return Err((StatusCode::GATEWAY_TIMEOUT, "relay_device_timeout".into())); },
+    };
+    let status = StatusCode::from_u16(response.status).map_err(|_| (StatusCode::BAD_GATEWAY, "invalid_device_response_status".into()))?;
+    let response_body = relay::decode_body(&response.body_base64)
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "invalid_device_response_body".into()))?;
+    if response_body.len() > 8 * 1024 * 1024 { return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into())); }
+    let allowed_response_headers = [
+        "cache-control","content-disposition","content-encoding","content-language","content-range",
+        "content-type","etag","expires","last-modified","location","set-cookie","vary",
+    ];
+    let mut builder = Response::builder().status(status);
+    for (name, value) in response.headers {
+        if allowed_response_headers.contains(&name.to_ascii_lowercase().as_str()) {
+            if let (Ok(name), Ok(value)) = (
+                axum::http::header::HeaderName::from_bytes(name.as_bytes()),
+                HeaderValue::from_str(&value),
+            ) { builder = builder.header(name, value); }
+        }
+    }
+    builder = builder.header("x-content-type-options", "nosniff")
+        .header("cache-control", "no-store");
+    builder.body(Body::from(response_body))
+        .map_err(|_| (StatusCode::BAD_GATEWAY, "relay_response_build_failed".into()))
+}
+
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_env_filter(
         tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into())
