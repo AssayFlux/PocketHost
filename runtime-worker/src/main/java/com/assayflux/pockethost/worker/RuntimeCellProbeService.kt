@@ -8,6 +8,7 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
+import java.net.InetSocketAddress
 
 /**
  * CI-only isolated-UID proof service. It installs the exact native syscall
@@ -59,6 +60,16 @@ class RuntimeCellProbeService : Service() {
                 }.exceptionOrNull()?.let {
                     it is android.system.ErrnoException && it.errno == OsConstants.EPERM
                 } ?: false
+                val connectDenied = runCatching {
+                    Os.connect(listener.fileDescriptor, InetSocketAddress("127.0.0.1", 9))
+                }.exceptionOrNull()?.let {
+                    it is android.system.ErrnoException && it.errno == OsConstants.EPERM
+                } ?: false
+                val bindDenied = runCatching {
+                    Os.bind(listener.fileDescriptor, InetSocketAddress("127.0.0.1", 0))
+                }.exceptionOrNull()?.let {
+                    it is android.system.ErrnoException && it.errno == OsConstants.EPERM
+                } ?: false
 
                 val accepted = Os.accept(listener.fileDescriptor, null)
                 val acceptedPfd = ParcelFileDescriptor.dup(accepted)
@@ -81,6 +92,8 @@ class RuntimeCellProbeService : Service() {
 
                 reply?.writeNoException()
                 reply?.writeInt(if (socketCreationDenied) 1 else 0)
+                reply?.writeInt(if (connectDenied) 1 else 0)
+                reply?.writeInt(if (bindDenied) 1 else 0)
                 reply?.writeInt(if (inheritedSocketClosed) 1 else 0)
                 reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
                 reply?.writeInt(if (peerUid == expectedHostUid) 1 else 0)
