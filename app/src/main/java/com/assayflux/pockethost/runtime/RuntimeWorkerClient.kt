@@ -272,7 +272,12 @@ object RuntimeWorkerClient {
 
     fun shutdownWorker(context: Context): String? {
         if (cachedWorkerAvailable() == null) return null
-        return withWorker(context) { transact(it, TRANSACTION_SHUTDOWN) as String }
+        val app = context.applicationContext
+        val result = withWorker(context) { transact(it, TRANSACTION_SHUTDOWN) as String }
+        cachedBinder = null
+        cachedConnection?.let { connection -> runCatching { app.unbindService(connection) } }
+        cachedConnection = null
+        return result
     }
 
     fun stopPython(context: Context): String =
