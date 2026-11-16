@@ -69,12 +69,14 @@ impl RelayHub {
     }
 
     pub fn complete(&self, device_id: Uuid, response: RelayResponse) -> bool {
-        let pending = self.pending.lock().unwrap_or_else(|e| e.into_inner())
-            .remove(&response.id);
-        match pending {
-            Some(pending) if pending.device_id == device_id => pending.sender.send(response).is_ok(),
-            _ => false,
-        }
+        let pending = {
+            let mut requests = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+            if requests.get(&response.id).map(|pending| pending.device_id) != Some(device_id) {
+                return false;
+            }
+            requests.remove(&response.id)
+        };
+        pending.map(|pending| pending.sender.send(response).is_ok()).unwrap_or(false)
     }
 
     pub fn revoke_device(&self, device_id: Uuid) {
