@@ -22,10 +22,11 @@ class OperationalStorageBoundsTest {
         val telemetryFile = File(directory, "telemetry.jsonl")
         val telemetryArchive = File(directory, "telemetry.jsonl.1")
         try {
-            eventArchives.forEach(File::delete)
+            eventArchives.forEach { it.delete() }
             eventFile.writeBytes(ByteArray(1024 * 1024) { 'x'.code.toByte() })
             OperationalLog.record(context, "INFO", "ROTATION_TEST", "password=never-store-this")
             assertTrue(eventFile.length() < 10_000L)
+            assertTrue(File(directory, "events.jsonl.1").isFile)
             assertTrue(File(directory, "events.jsonl.1").length() <= 1024L * 1024L)
             val latest = OperationalLog.read(context, 5).firstOrNull { it.event == "ROTATION_TEST" }
             assertTrue(latest != null)
@@ -40,7 +41,7 @@ class OperationalStorageBoundsTest {
             assertTrue(telemetryArchive.length() <= 512L * 1024L)
         } finally {
             eventFile.delete()
-            eventArchives.forEach(File::delete)
+            eventArchives.forEach { it.delete() }
             telemetryFile.delete()
             telemetryArchive.delete()
         }
