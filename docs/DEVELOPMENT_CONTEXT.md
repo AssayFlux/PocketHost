@@ -1,6 +1,6 @@
 # Pocket Host — Development Context
 
-**Baseline:** 2026-11-16 · `main` reviewed at `a8988f5068f4a65206b89451e8204b51b86abc55`  
+**Baseline:** 2026-11-16 · companion source integration `bd227b0e5564ad25c88064cfc36796469390b773`  
 **Canonical status:** [PROJECT_BASELINE.md](PROJECT_BASELINE.md)
 
 ## Product contract
@@ -11,7 +11,7 @@
 - Companion application ID: `com.assayflux.pockethost.worker`.
 - Rust/Tokio/Hyper is the public website HTTP origin.
 - TypeScript/React management console.
-- Chaquopy CPython 3.11 and Node.js mobile 24.22.1 are trusted owner-installed runtimes at this baseline.
+- Chaquopy CPython 3.11 and Node.js mobile 24.22.1 are packaged in the separate-UID runtime companion; migration build/CI verification is pending.
 - Android 8/API 26+, ARMv7/ARM64 device target; x86_64 for emulator.
 - No Termux, root, mandatory VPS or mandatory remote management.
 - Reuse existing Cloudflare Tunnel; never expose management API through public ingress.
@@ -27,9 +27,9 @@ Five destinations: Dashboard, Sites, Activity, Learn and Settings. Card-first la
 
 **Management path:** owner/operator → authenticated local management API → app services and TypeScript/React console. This path is not part of public visitor origin.
 
-**Runtime trust:** Python and Node currently execute under host app UID. Node's dedicated process is process isolation only. Canonical path validation does not prevent same-UID code from accessing other app-private files. Companion proves separate UID and selected IPC/network capabilities but does not host the runtimes.
+**Runtime trust:** Python runs in companion process `:runtime_worker`; Node runs in companion process `:node`. Both share the companion package UID, which differs from the host app UID. Versioned signature-protected Binder IPC and bounded project transfer are integrated in source. This protects host-private files, but does not isolate projects from one another or enforce network egress. The companion is not a complete sandbox.
 
-Never describe the companion as a completed sandbox, expose arbitrary visitor-submitted code execution, claim egress enforcement before raw-socket/DNS-bypass tests, or store host credentials in worker-readable project directories.
+Never describe the companion as a completed sandbox; do not expose arbitrary visitor-submitted code; do not claim egress enforcement before raw-socket/DNS-bypass tests; and never store host credentials in runtime project directories.
 
 ## Engineering sequence
 
