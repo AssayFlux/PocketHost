@@ -74,3 +74,5 @@ On the next app launch, Pocket Host checks for unfinished restore transactions b
 
 Instrumentation source simulates process interruption after partial Python, static-site, custom-root, route and settings mutation. API 26/33/35 execution, low-storage and real process-kill/device-reboot fault injection remain unverified.
 
+Recovery also verifies all hosting runtimes are stopped before touching transaction files, treats journal/commit markers as no-follow regular files, rejects symlinked transaction directories and rollback roots, and validates custom static rollback trees without following symbolic links.
+
