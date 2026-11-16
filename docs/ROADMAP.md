@@ -94,4 +94,4 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 ### 2026-11-16 implementation evidence addendum
 
 - Gate 2: source primitives and probes are present, but production Python/Node per-project isolated execution and adversarial API 26/33/35 acceptance remain open. Trusted-code-only policy remains mandatory.
-- Gate 4: remote control-plane device/user token rotation, role enforcement and mutation-plus-audit transactions are implemented in source. Passkey-first identity and site-scoped visitor Public/Private/Restricted authorization remain unimplemented; the gate is therefore open.
+- Gate 4: remote control-plane device and team-user token rotation (including an Owner-only console action), role enforcement and mutation-plus-audit transactions are implemented in source. Passkey-first identity and site-scoped visitor Public/Private/Restricted authorization remain unimplemented; the gate is therefore open.
