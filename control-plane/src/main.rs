@@ -12,7 +12,7 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{convert::Infallible, fs, io::Write, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::Infallible, fs, io::Write, path::PathBuf, sync::Arc, time::Duration};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
