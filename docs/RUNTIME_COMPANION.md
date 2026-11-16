@@ -65,7 +65,7 @@ The isolated-process probe previously showed a distinct UID and denied host-priv
 
 **Security status: not a complete sandbox; Gate 2 remains open.** Python/Node are owner-trusted-code-only. Never run visitor-submitted, marketplace or other untrusted code. Do not put host credentials, Cloudflare tokens or other secrets in project roots.
 
-The chosen target is one `android:isolatedProcess=true` execution cell per project, with no permissions, a project-only directory/runtime descriptor and a host-created inbound listener descriptor. A TSYNC seccomp-BPF filter denies new sockets/connect/bind and allows accept only on that listener FD; filter failure prevents project startup. The normal companion becomes a trusted broker and must never execute project code. See [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md) and [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md).
+The chosen target is one `android:isolatedProcess=true` execution cell per project, with no permissions, a project-only directory/runtime descriptor and a host-created Unix-domain listener descriptor. The host app's Rust engine connects through the private socket path; the cell verifies `SO_PEERCRED` is the host UID. A TSYNC seccomp-BPF filter denies new sockets/connect/bind and allows accept only on that listener FD; filter failure prevents project startup. The normal companion becomes a trusted broker and must never execute project code. See [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md) and [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md).
 
 ## APK installation and updates
 
