@@ -102,10 +102,10 @@ UI completion is not production acceptance without screenshot and accessibility 
 
 ## Current implementation snapshot — 2026-11-16
 
-- Dashboard, Sites, Activity and Learn have dedicated Compose screen files; the five-destination navigation is wired in the main activity.
-- Settings currently remains embedded in the main activity with General, Network, Runtimes and About sections; it has not yet been extracted into a dedicated screen/state contract.
-- Existing screens provide static import/preview/publish controls, backup/restore, operational logs and Learn topics. Visual regression screenshots, TalkBack traversal, scalable-font/contrast checks, compact-screen and landscape acceptance remain unverified.
-- Gate 7 remains open until Settings is completed/refactored, first-run publishing is validated end to end without a terminal, and accessibility/visual acceptance evidence is recorded.
+- Dashboard, Sites, Activity, Learn and Settings have dedicated Compose screen components; five-destination navigation and Settings subsection navigation are wired through the root activity/state contract.
+- Sites provides folder/ZIP import, validation, preview/publish controls and encrypted backup/restore entry points. Its empty state now gives a terminal-free first-publish walkthrough, including the root `index.html` requirement and how to start hosting and preview the result.
+- UIAutomator source traverses all five destinations and four Settings sections, exercises visitor credential creation/revocation, and captures screenshots plus accessibility hierarchy XML. This is automated acceptance source, not proof of human TalkBack, contrast, scalable-font, compact-screen or landscape acceptance.
+- Gate 7 remains open until the first-publish path is executed end to end, API 26/33/35 artifacts are reviewed, and human accessibility/responsive visual acceptance is recorded.
 
 ## Navigation accessibility artifact coverage — 2026-11-16
 
