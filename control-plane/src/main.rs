@@ -1005,6 +1005,7 @@ async fn relay_visitor(
     }
     let (sender, response_rx) = s.relay.register_pending(request_id, device, &site_id)
         .ok_or((StatusCode::SERVICE_UNAVAILABLE, "relay_device_offline_or_capacity_reached".into()))?;
+    let _pending_guard = relay::PendingRequestGuard::new(&s.relay, request_id);
     route_tx.commit().await.map_err(internal)?;
     if sender.send(message).await.is_err() {
         s.relay.cancel_pending(request_id);
