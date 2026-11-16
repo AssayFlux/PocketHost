@@ -11,6 +11,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -77,7 +78,7 @@ class NodeRuntimeSmokeTest {
         )
         File(project, "server.js").writeText(
             "const http=require('node:http');\n" +
-                "http.createServer((req,res)=>{const body='node-smoke:'+process.version;" +
+                "http.createServer((req,res)=>{const body='node-smoke:'+process.version+':uid='+process.getuid();" +
                 "res.writeHead(200,{'Content-Length':Buffer.byteLength(body)});res.end(body);})" +
                 ".listen(Number(process.env.PORT),'0.0.0.0');\n"
         )
@@ -106,6 +107,9 @@ class NodeRuntimeSmokeTest {
             socket.getInputStream().bufferedReader().readText()
         }
         assertTrue("Unexpected Node response: $body", body.contains("node-smoke:v24."))
+        val runtimeUid = Regex("uid=(\\d+)").find(body)?.groupValues?.get(1)?.toInt()
+            ?: error("Node response did not include its process UID: $body")
+        assertNotEquals("Node must execute under companion UID, not host UID", context.applicationInfo.uid, runtimeUid)
 
         assertEquals("OK", NativeEngine.stop())
         NodeHostRuntime.stop(context)
