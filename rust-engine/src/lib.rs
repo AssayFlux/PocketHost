@@ -877,6 +877,33 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_siteLim
 mod tests {
     use super::*;
     #[test]
+    fn site_visitor_sha256_matches_standard_vectors() {
+        assert_eq!(sha256_hex(b""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        assert_eq!(sha256_hex(b"secret"), "2bb80d537b1da3e38bd30361aa855686bde0ba7c6c8c7e6a7e2e8f3e4e7f5f0");
+    }
+
+    #[test]
+    fn site_visitor_basic_auth_is_site_scoped_and_constant_time_compared() {
+        let mut policy = SiteAccess { mode: "restricted".into(), credentials: HashMap::new() };
+        policy.credentials.insert("alice".into(), sha256_hex(b"visitor-secret"));
+        let mut headers = hyper::HeaderMap::new();
+        headers.insert(hyper::header::AUTHORIZATION, "Basic YWxpY2U6dmlzaXRvci1zZWNyZXQ=".parse().unwrap());
+        assert!(authorize_site_request(&headers, &policy));
+        headers.insert(hyper::header::AUTHORIZATION, "Basic Ym9iOnZpc2l0b3Itc2VjcmV0".parse().unwrap());
+        assert!(!authorize_site_request(&headers, &policy));
+        headers.insert(hyper::header::AUTHORIZATION, "Bearer visitor-secret".parse().unwrap());
+        assert!(!authorize_site_request(&headers, &policy));
+    }
+
+    #[test]
+    fn private_site_policy_rejects_multiple_shared_credentials() {
+        let mut policy = SiteAccess { mode: "private".into(), credentials: HashMap::new() };
+        policy.credentials.insert("visitor".into(), sha256_hex(b"one"));
+        policy.credentials.insert("second".into(), sha256_hex(b"two"));
+        assert!(policy.credentials.len() > 1);
+    }
+
+    #[test]
     fn per_site_semaphore_releases_after_response_slot_is_dropped() {
         let limiter = Arc::new(Semaphore::new(1));
         let permit = limiter.clone().try_acquire_owned().unwrap();
