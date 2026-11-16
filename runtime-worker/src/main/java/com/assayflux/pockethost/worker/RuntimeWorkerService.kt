@@ -89,9 +89,9 @@ class RuntimeWorkerService : Service() {
                     val entry = zip.nextEntry ?: break
                     entries++
                     require(entries <= MAX_ARCHIVE_ENTRIES) { "Project archive contains too many entries." }
-                    val name = entry.name.replace('\\', '/')
+                    val name = entry.name.replace('\\', '/').trimEnd('/')
                     require(name.isNotBlank() && !name.startsWith("/") &&
-                        name.split('/').none { it == ".." || it == "." || it.isEmpty() }) {
+                        name.split('/').none { it.isBlank() || it == ".." || it == "." }) {
                         "Project archive contains an unsafe path."
                     }
                     val target = File(staging, name).canonicalFile
