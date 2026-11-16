@@ -313,6 +313,7 @@ object CapacityLab {
                     }
                     val p50 = percentile(50)
                     val p95 = percentile(95)
+                    val p99 = percentile(99)
                     val maxLatency = ordered.lastOrNull() ?: 0L
                     val elapsed = ((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(1L)
                     val throughputBytesPerSecond = bytesServed.get() * 1_000L / elapsed
@@ -331,7 +332,8 @@ object CapacityLab {
                         .put("bytesServed", bytesServed.get()).put("requestsPerSecond", requestsPerSecond)
                         .put("throughputBytesPerSecond", throughputBytesPerSecond)
                         .put("averageLatencyMs", averageLatency).put("p50LatencyMs", p50)
-                        .put("p95LatencyMs", p95).put("maxLatencyMs", maxLatency)
+                        .put("p95LatencyMs", p95).put("p99LatencyMs", p99)
+                        .put("maxLatencyMs", maxLatency)
                         .put("elapsedMs", elapsed).put("withinSafeThreshold", ok)
                         .put("environmentSafe", environmentSafe)
                         .put("deviceBefore", deviceBefore).put("deviceAfter", deviceAfter))
