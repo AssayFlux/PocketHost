@@ -650,11 +650,14 @@ mod tests {
 
     #[tokio::test]
     async fn rotating_user_token_revokes_old_credential_immediately() {
-        let Some(state) = test_state().await else { return };
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
         let user_id = Uuid::new_v4();
         let old_token = new_token();
         sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'rotation-test','editor',$2)")
-            .bind(user_id).bind(token_hash(&old_token)).execute(&state.db).await.unwrap();
+            .bind(user_id).bind(token_hash(&old_token)).execute(&db).await.unwrap();
+        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap());
         let (status, Json(body)) = rotate_user_token(
