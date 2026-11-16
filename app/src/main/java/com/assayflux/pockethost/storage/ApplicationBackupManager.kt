@@ -393,21 +393,6 @@ object ApplicationBackupManager {
         }
     }
 
-    private fun isSafeRestoreTree(root: File): Boolean {
-        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
-        if (!java.nio.file.Files.isDirectory(root.toPath(), noFollow) ||
-            !java.nio.file.Files.isRegularFile(File(root, "index.html").toPath(), noFollow)) return false
-        return runCatching {
-            java.nio.file.Files.walk(root.toPath()).use { paths ->
-                paths.allMatch { path ->
-                    !java.nio.file.Files.isSymbolicLink(path) &&
-                        (java.nio.file.Files.isDirectory(path, noFollow) ||
-                            java.nio.file.Files.isRegularFile(path, noFollow))
-                }
-            }
-        }.getOrDefault(false)
-    }
-
     private fun restoreJournalDirectory(
         context: Context,
         backupDir: File,
@@ -510,7 +495,7 @@ object ApplicationBackupManager {
                 }
                 val hadPrevious = item.optBoolean("hadPrevious")
                 if (java.nio.file.Files.exists(backup.toPath(), noFollow)) {
-                    if (!isSafeRestoreTree(backup)) {
+                    if (!SiteImporter.isSafeRecoveryRelease(backup)) {
                         throw IOException("Interrupted custom site backup is invalid.")
                     }
                     deleteRestoreEntry(active)
