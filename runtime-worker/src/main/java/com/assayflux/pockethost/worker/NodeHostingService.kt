@@ -58,6 +58,17 @@ class NodeHostingService : Service() {
         val entryFile = File(rootFile, entry).canonicalFile
         activeProjectRoot = rootFile.absolutePath
         NodeRuntimeStateStore.update(this, state = "STARTING", detail = "Launching Node.js.", projectRoot = rootFile.absolutePath)
+        val runtimeCache = File(noBackupFilesDir, "node-runtime")
+        require(runtimeCache.exists() || runtimeCache.mkdirs()) { "Cannot create private Node runtime cache." }
+        val preload = File(runtimeCache, "metrics-preload.cjs")
+        if (!preload.isFile) {
+            assets.open("pockethost-node-metrics.cjs").use { input ->
+                preload.outputStream().use { output -> input.copyTo(output) }
+            }
+            preload.setReadable(true, true)
+            preload.setWritable(true, true)
+        }
+        File(runtimeCache, "metrics.json").delete()
         if (!entryFile.toPath().startsWith(rootFile.toPath()) || !entryFile.isFile) {
             setState("ERROR", "Node entry file is outside the project or missing.")
             stopSelf(startId)
