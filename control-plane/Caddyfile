@@ -10,7 +10,7 @@
 {$CONTROL_PLANE_DOMAIN} {
     encode zstd gzip
     reverse_proxy control-plane:8080 {
-        header_up CF-Connecting-IP {http.request.client_ip}
+        header_up CF-Connecting-IP {client_ip}
     }
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
