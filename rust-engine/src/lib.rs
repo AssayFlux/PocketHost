@@ -217,7 +217,7 @@ fn per_site_connection_limit(site_count: usize) -> usize {
 
 /// Tokio's semaphore is FIFO-fair: requests for a busy site wait in arrival order,
 /// but only for the same bounded interval as global admission. The global socket
-/// queue is separately capped; HTTP/2 request concurrency remains protocol-bounded.
+/// queue is capped, and each HTTP/2 socket admits at most eight concurrent streams.
 async fn acquire_site_permit(
     limiter: Arc<Semaphore>,
     wait: Duration,
