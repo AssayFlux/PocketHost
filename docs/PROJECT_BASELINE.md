@@ -84,7 +84,7 @@ Update this file with exact evidence whenever the baseline changes.
 ## 2026-11-16 incremental source and CI evidence
 
 - Latest previously completed quality run: `43836090906` on `5de2ff28b880119de379a52885b17abecec23e06`; all six jobs completed successfully (Rust, control-plane, Python, Node, console and Gradle wrapper).
-- Subsequent control-plane source increment: `f3ecb2be1bd80d0eac9adb9d68790608e581617e` adds create-new, fsynced deployment artifact writes with automatic cleanup if the database transaction fails, plus a regression test for cleanup, committed-file retention and overwrite rejection. The control-plane README documents the transactional audit and artifact lifecycle.
+- Subsequent control-plane source increment: `dc18daa9855debdeb8fe7b5ed291b9ee8365bdcb` adds exclusive create-new deployment artifact writes, file and parent-directory fsync, and cleanup of partial files or database-transaction failures, plus a regression test for cleanup, committed-file retention and overwrite rejection. The control-plane README documents the transactional audit and artifact lifecycle.
 - CI for that source increment was queued at review time; do not treat the earlier successful run as verification of the new code.
 - Gate 2 remains open: no production per-project isolated runtime migration or accepted Android API matrix.
 - Gate 4 remains open: remote control-plane token rotation, role checks and atomic audit writes are implemented, but passkeys and site-scoped visitor authorization are not complete.
