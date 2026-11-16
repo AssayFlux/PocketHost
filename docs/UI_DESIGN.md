@@ -107,3 +107,9 @@ UI completion is not production acceptance without screenshot and accessibility 
 - Existing screens provide static import/preview/publish controls, backup/restore, operational logs and Learn topics. Visual regression screenshots, TalkBack traversal, scalable-font/contrast checks, compact-screen and landscape acceptance remain unverified.
 - Gate 7 remains open until Settings is completed/refactored, first-run publishing is validated end to end without a terminal, and accessibility/visual acceptance evidence is recorded.
 
+## Navigation accessibility artifact coverage — 2026-11-16
+
+- Android instrumentation source now traverses all five bottom-navigation destinations using their icon content descriptions, checks that the top bar reflects the selected destination, and asserts destination-specific content.
+- The test saves a screenshot and accessibility hierarchy XML for each destination. The Android API 26/33/35 workflow collects the full screenshots directory as an artifact.
+- These are automated acceptance definitions; actual screenshots, TalkBack traversal, scalable-font/contrast and compact-screen review are not accepted until the workflow succeeds and artifacts are inspected.
+
