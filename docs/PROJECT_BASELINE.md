@@ -115,4 +115,13 @@ Update this file with exact evidence whenever the baseline changes.
 - Gate 2 remains open. The Binder capability adapter and isolated probe remain feasibility work; the production Python/Node runtime still shares the companion UID and app-private project/runtime storage. No production cell supervisor, runtime migration or Android API 26/33/35 test result is claimed.
 - Gate 3 source now routes an authenticated visitor request to the selected enabled local site ID, uses its configured local hostname for Rust routing, and preserves the verified public hostname for runtime X-Forwarded-Host. The Android agent uses bounded raw loopback HTTP to preserve Host; response cookies and browser Basic-auth challenges are retained. DNS TXT parsing checks response source, transaction ID, question and answer owner. DNSSEC is not validated. Streaming/WebSocket, TLS/certificate lifecycle, deployment, external visitor tests and soak evidence remain open.
 - Gate 4 now has per-site/effective-client-IP visitor-authentication throttling in Rust (8 failed attempts per 60-second window, then a 60-second cooldown, with a bounded bucket map). Remote 12-hour sessions, role enforcement, user/device token rotation, audit and site-scoped visitor credential revocation remain implemented in source. Passkeys and fresh reauthentication remain open.
-- Latest source commit and quality workflow evidence are recorded after the current run completes. The six-job workflow does not compile Android Kotlin/C++ or execute Android instrumentation. No Android build/device test was run, per the owner-directed Gate 8 sequencing.
+- Latest six-job quality workflow `43851733175` completed success on exact SHA `06fa7dea1ed2481b30c680fd1a22ff083d48d203`: Rust, control-plane/PostgreSQL migrations and Compose profiles, Python runtime, Node runtime, console and Gradle wrapper all passed. This workflow does not compile Android Kotlin/C++ or execute Android instrumentation. No Android build/device test was run, per the owner-directed Gate 8 sequencing.
+
+
+## Latest verified quality evidence — 2026-11-16
+
+- Repository HEAD at verification: 06fa7dea1ed2481b30c680fd1a22ff083d48d203.
+- Workflow: https://github.com/AssayFlux/PocketHost/actions/runs/43851733175 — completed success, all six jobs successful.
+- Control-plane tests ran against PostgreSQL 16, including migrations, remote session expiry/revocation, team-user token rotation, device token rotation, Relay hostname state, bounded pending-request quotas, DNS TXT parser validation and artifact transaction tests.
+- Rust engine tests passed, including per-site/client visitor-auth throttling tests. Python, Node, TypeScript console and Gradle-wrapper jobs passed.
+- The workflow does not compile Android app Kotlin, companion Kotlin, C++/JNI, nor execute Android instrumentation. Those remain intentionally deferred to Gate 8.
