@@ -192,9 +192,9 @@ The primary version is complete only when the gates below have objective exit ev
 - Route Python WSGI and Node HTTP through Rust hostname routing and reverse proxy.
 - Prove static-origin continuity when an application runtime stops.
 - Keep Python/Node trusted-code-only; this gate does not claim per-project isolation.
-- Acceptance during implementation: production source path and regression-test definitions are present. Per owner instruction, do not build APKs or run Android emulator/device tests during Gates 0–7. Execute APK/ABI builds and API 26/33/35 instrumentation at Gate 8.
+- Acceptance during implementation: production source path and regression-test definitions are present. The Owner subsequently authorized intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation during Gates 2–4; these are now required to validate security changes as they land. Gate 8 remains the final release, physical-device and independent-review acceptance stage.
 
-**Status:** source implementation complete; Android compilation and runtime acceptance deliberately deferred to Gate 8.
+**Status:** source implementation complete; Android compilation and runtime acceptance are being pulled forward into Gates 2–4 under the revised Owner-approved sequence. Final release acceptance remains Gate 8.
 
 ### Gate 2 — Per-project security isolation
 - Prove isolated UID, project-only file descriptors, listener capability and seccomp policy on API 26/33/35.
