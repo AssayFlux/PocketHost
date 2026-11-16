@@ -211,3 +211,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - f528bdd9e1b6c40e6dc3e8038a70219ea289372b serializes startup site recovery, release rollback and interrupted full-restore release rollback to avoid Activity/foreground-service startup races.
 
+- 0ef2a01392d5f1c7f20b8cef7b7800db97f52409 caps the fsynced recovery journal at 1 MB, prior route-registry snapshot at 256 KB and custom-root records at 100.
+
