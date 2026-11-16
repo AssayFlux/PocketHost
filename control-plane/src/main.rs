@@ -709,10 +709,15 @@ struct CreateRelaySite {
 }
 
 fn is_trusted_relay_proxy(ip: std::net::IpAddr) -> bool {
-    match ip {
-        std::net::IpAddr::V4(value) => value.is_loopback() || value.is_private() || value.is_link_local(),
-        std::net::IpAddr::V6(value) => value.is_loopback() || value.is_unique_local() || value.is_unicast_link_local(),
-    }
+    // Cloudflare Tunnel normally connects from loopback when colocated. Container
+    // deployments must explicitly list the exact proxy peer IPs; trusting every
+    // RFC1918/ULA address lets an unrelated LAN/container forge visitor IP and TLS.
+    if ip.is_loopback() { return true; }
+    std::env::var("POCKETHOST_TRUSTED_PROXY_IPS")
+        .ok()
+        .map(|value| value.split(',').filter_map(|entry| entry.trim().parse::<std::net::IpAddr>().ok())
+            .any(|trusted| trusted == ip))
+        .unwrap_or(false)
 }
 
 fn normalize_relay_hostname(value: &str) -> Result<String, (StatusCode, String)> {
@@ -1222,6 +1227,15 @@ mod tests {
         assert_eq!(revoke_admin_session(State(state.clone()), second_headers.clone()).await.unwrap(), StatusCode::NO_CONTENT);
         assert!(admin(&second_headers, &state).await.is_err(), "Explicitly revoked sessions must be rejected.");
         sqlx::query("DELETE FROM control_sessions WHERE id=$1").bind(first_id).execute(&db).await.unwrap();
+    }
+
+    #[test]
+    fn relay_proxy_trust_does_not_implicitly_include_private_networks() {
+        assert!(is_trusted_relay_proxy("127.0.0.1".parse().unwrap()));
+        assert!(is_trusted_relay_proxy("::1".parse().unwrap()));
+        assert!(!is_trusted_relay_proxy("192.168.1.10".parse().unwrap()));
+        assert!(!is_trusted_relay_proxy("10.0.0.8".parse().unwrap()));
+        assert!(!is_trusted_relay_proxy("fd00::8".parse().unwrap()));
     }
 
     #[test]
