@@ -83,18 +83,23 @@ class RuntimeWorkerSeccompTest {
 
                 val data = Parcel.obtain()
                 val reply = Parcel.obtain()
+                var transactionSucceeded = false
                 val results = try {
                     data.writeInterfaceToken(DESCRIPTOR)
                     listenerPfd.writeToParcel(data, 0)
                     outboundPfd.writeToParcel(data, 0)
                     data.writeInt(context.applicationInfo.uid)
-                    check(binder.transact(TRANSACTION_INSTALL_POLICY_AND_ACCEPT, data, reply, 0))
+                    check(binder.transact(TRANSACTION_INSTALL_POLICY_AND_ACCEPT, data, reply, 0)) {
+                        "Isolated cell Binder transaction failed before returning a policy result."
+                    }
                     reply.readException()
+                    transactionSucceeded = true
                     listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
                 } finally {
+                    if (!transactionSucceeded) runCatching { client.close() }
                     writer.join(5_000)
                     check(!writer.isAlive) { "Visitor stream writer did not complete." }
-                    writerFailure.get()?.let { throw it }
+                    if (transactionSucceeded) writerFailure.get()?.let { throw it }
                     data.recycle()
                     reply.recycle()
                 }
