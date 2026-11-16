@@ -10,6 +10,8 @@ type Device = {
 type Config = { version: number; config: Record<string, unknown>; updated_at: string };
 type AuditEntry = { id: number; actor: string; action: string; target: string; details: Record<string, unknown>; createdAt: string };
 type ControlUser = { id: string; name: string; role: "editor" | "viewer"; active: boolean };
+type RelaySite = { id: string; hostname: string; siteId: string; verified: boolean; enabled: boolean };
+type RelayChallenge = { hostname: string; name: string; value: string };
 
 const initialPayloads: Record<string, string> = {
   site_action: JSON.stringify({ siteId: "my-site", action: "stop" }, null, 2),
@@ -37,6 +39,10 @@ export function RemoteControlPlane() {
   const [message, setMessage] = useState("Connect to your independently deployed PocketHost Control Plane.");
   const [busy, setBusy] = useState(false);
   const [archive, setArchive] = useState<File | null>(null);
+  const [relaySites, setRelaySites] = useState<RelaySite[]>([]);
+  const [relayHostname, setRelayHostname] = useState("");
+  const [relaySiteId, setRelaySiteId] = useState("static-default");
+  const [relayChallenge, setRelayChallenge] = useState<RelayChallenge | null>(null);
 
   async function request<T>(path: string, init: RequestInit = {}, bearerToken = sessionToken): Promise<T> {
     if (!bearerToken) throw new Error("Create an administrative session before using the Control Plane.");
@@ -123,6 +129,57 @@ export function RemoteControlPlane() {
       setMessage("Device registered. Copy its token now; it is only returned once.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Device registration failed."); }
     finally { setBusy(false); }
+  }
+
+  async function loadRelaySites() {
+    if (!selected) throw new Error("Select a device first.");
+    const next = await request<RelaySite[]>(`/v1/admin/devices/${selected}/relay-sites`);
+    setRelaySites(next);
+    setMessage(`Relay hostname inventory loaded · ${next.length} route(s).`);
+  }
+
+  async function createRelaySite() {
+    if (!selected) throw new Error("Select a device first.");
+    setBusy(true);
+    setRelayChallenge(null);
+    try {
+      const result = await request<{
+        id: string; hostname: string; verification: { name: string; value: string };
+      }>(`/v1/admin/devices/${selected}/relay-sites`, {
+        method: "POST",
+        body: JSON.stringify({ hostname: relayHostname.trim().toLowerCase(), site_id: relaySiteId.trim() }),
+      });
+      setRelayChallenge({ hostname: result.hostname, name: result.verification.name, value: result.verification.value });
+      setRelayHostname("");
+      await loadRelaySites();
+      setMessage("Relay hostname created. Publish the DNS TXT proof, then verify it.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not create Relay hostname.");
+    } finally { setBusy(false); }
+  }
+
+  async function verifyRelaySite(site: RelaySite) {
+    setBusy(true);
+    try {
+      await request(`/v1/admin/relay-sites/${site.id}/verify`, { method: "POST", body: "{}" });
+      await loadRelaySites();
+      setMessage(`DNS ownership verified for ${site.hostname}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Relay hostname verification failed.");
+    } finally { setBusy(false); }
+  }
+
+  async function deleteRelaySite(site: RelaySite) {
+    if (!window.confirm(`Remove Relay route for ${site.hostname}?`)) return;
+    setBusy(true);
+    try {
+      await request(`/v1/admin/relay-sites/${site.id}`, { method: "DELETE" });
+      setRelaySites(current => current.filter(item => item.id !== site.id));
+      if (relayChallenge?.hostname === site.hostname) setRelayChallenge(null);
+      setMessage(`Relay route removed for ${site.hostname}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not remove Relay route.");
+    } finally { setBusy(false); }
   }
 
   async function loadUsers() {
@@ -247,6 +304,30 @@ export function RemoteControlPlane() {
       <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy || !sessionToken} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy || !sessionToken} onClick={() => void revokeDevice(device)}>Revoke</button></span>
     </div>)}
     {selected && <div className="lower-grid">
+      <article className="panel">
+        <div className="panel-heading"><h3>AssayFlux Relay hostnames</h3><span className="muted-tag">OUTBOUND DEVICE STREAM</span></div>
+        <p>Bind a verified hostname to this device and an existing Pocket Host site ID. The phone must also have this hostname mapped locally. Visitor Private or Restricted access is enforced by the phone's site policy.</p>
+        <label>Hostname<input value={relayHostname} onChange={event => setRelayHostname(event.target.value)} placeholder="www.example.com" /></label>
+        <label>Local site ID<input value={relaySiteId} onChange={event => setRelaySiteId(event.target.value)} placeholder="static-default" /></label>
+        <div className="site-actions">
+          <button disabled={busy || !sessionToken || !relayHostname.trim() || !relaySiteId.trim()} onClick={createRelaySite}>Create DNS challenge</button>
+          <button disabled={busy || !sessionToken} onClick={() => void loadRelaySites()}>Refresh Relay routes</button>
+        </div>
+        {relayChallenge && <div className="notice">
+          <strong>DNS TXT ownership proof · {relayChallenge.hostname}</strong>
+          <p>Name: <code>{relayChallenge.name}</code></p>
+          <p>Value: <code>{relayChallenge.value}</code></p>
+          <button onClick={() => void navigator.clipboard.writeText(`${relayChallenge.name} TXT ${relayChallenge.value}`)}>Copy DNS record</button>
+          <p>Add this TXT record at your DNS provider. The route stays inactive until verification succeeds.</p>
+        </div>}
+        {relaySites.map(site => <div className="status-line" key={site.id}>
+          <span><strong>{site.hostname}</strong><small>Site: {site.siteId} · {site.verified ? "DNS verified" : "DNS verification pending"}</small></span>
+          <span className="site-actions">
+            {!site.verified && <button disabled={busy || !sessionToken} onClick={() => void verifyRelaySite(site)}>Verify DNS</button>}
+            <button className="danger-button" disabled={busy || !sessionToken} onClick={() => void deleteRelaySite(site)}>Remove</button>
+          </span>
+        </div>)}
+      </article>
       <article className="panel">
         <div className="panel-heading"><h3>Desired device configuration</h3><span className="muted-tag">VERSION {configVersion ?? "—"}</span></div>
         <p>Supported keys currently include pythonMaxWorkers, nodeHeapMb and tunnelEnabled. The phone validates settings before applying them.</p>
