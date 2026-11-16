@@ -250,6 +250,7 @@ class RuntimeWorkerService : Service() {
                 val result: Any? = when (code) {
                     TRANSACTION_PROTOCOL_VERSION -> PROTOCOL_VERSION
                     TRANSACTION_UID -> Process.myUid()
+                    TRANSACTION_PID -> Process.myPid()
                     TRANSACTION_CAN_READ -> {
                         val path = data.readString().orEmpty()
                         if (runCatching { File(path).canRead() }.getOrDefault(false)) 1 else 0
@@ -351,6 +352,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
         const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
         const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
+        const val TRANSACTION_PID = IBinder.FIRST_CALL_TRANSACTION + 17
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
