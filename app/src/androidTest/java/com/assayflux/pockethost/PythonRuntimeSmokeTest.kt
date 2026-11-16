@@ -20,7 +20,7 @@ class PythonRuntimeSmokeTest {
         assertTrue(root.mkdirs())
         File(root, "wsgi.py").writeText(
             "def application(environ, start_response):\n" +
-                "    body = b'PocketHost embedded Python is ready'\n" +
+                "    import os\n    body = str(os.getuid()).encode('ascii')\n" +
                 "    start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', str(len(body)))])\n" +
                 "    return [body]\n"
         )
@@ -41,7 +41,10 @@ class PythonRuntimeSmokeTest {
                 socket.getInputStream().bufferedReader().readText()
             }
             assertTrue(response.startsWith("HTTP/1.0 200"))
-            assertTrue(response.contains("PocketHost embedded Python is ready"))
+            assertTrue(response.contains("200 OK"))
+            val runtimeUid = response.substringAfter("\r\n\r\n").trim().toInt()
+            org.junit.Assert.assertNotEquals("Python must execute under companion UID, not host UID",
+                context.applicationInfo.uid, runtimeUid)
         } finally {
             assertEquals("STOPPED", PythonHostRuntime.stop(context))
             prefs.edit().putBoolean("trusted_runtime_code_ack", false).commit()
