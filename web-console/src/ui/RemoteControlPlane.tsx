@@ -225,7 +225,7 @@ export function RemoteControlPlane() {
 
   return <section className="panel" id="remote-control">
     <div className="panel-heading"><h3>Remote Control Plane</h3><span className="muted-tag">INDEPENDENT BACKEND</span></div>
-    <p>Manage registered PocketHost phones while their hosting services remain active. The backend queues typed commands; the phone initiates outbound HTTPS polling.</p>
+    <p>Manage registered PocketHost phones while their hosting services remain active. Administrative credentials exchange for revocable 12-hour sessions; device commands currently use outbound HTTPS polling.</p>
     <div className="resource-panel">
       <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => { setEndpoint(event.target.value); setSessionToken(""); }} placeholder="https://control.example.com" /></label>
       <label>API credential<input type="password" value={adminToken} onChange={event => { setAdminToken(event.target.value); setSessionToken(""); }} placeholder="Owner, Editor or Viewer credential" /><small>Used only to create a short-lived administrative session; it is not accepted by management endpoints.</small></label>
@@ -244,20 +244,20 @@ export function RemoteControlPlane() {
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
       <span><strong>{device.name}</strong><small>{device.id} · Last seen: {device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</small></span>
-      <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy} onClick={() => void revokeDevice(device)}>Revoke</button></span>
+      <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy || !sessionToken} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy || !sessionToken} onClick={() => void revokeDevice(device)}>Revoke</button></span>
     </div>)}
     {selected && <div className="lower-grid">
       <article className="panel">
         <div className="panel-heading"><h3>Desired device configuration</h3><span className="muted-tag">VERSION {configVersion ?? "—"}</span></div>
         <p>Supported keys currently include pythonMaxWorkers, nodeHeapMb and tunnelEnabled. The phone validates settings before applying them.</p>
         <textarea rows={9} value={configText} onChange={event => setConfigText(event.target.value)} spellCheck={false}/>
-        <button disabled={busy || configVersion === null} onClick={saveConfig}>Save and queue configuration</button>
+        <button disabled={busy || !sessionToken || configVersion === null} onClick={saveConfig}>Save and queue configuration</button>
       </article>
       <article className="panel">
         <div className="panel-heading"><h3>Deploy website archive</h3><span className="muted-tag">ZIP · 50 MiB MAX</span></div>
         <p>Upload a ZIP containing index.html at its root. The phone verifies SHA-256 and atomically activates the release while hosting stays online.</p>
         <label>Website ZIP<input type="file" accept=".zip,application/zip" onChange={event => setArchive(event.target.files?.[0] || null)} /></label>
-        <button disabled={busy || !archive} onClick={deployArchive}>Upload and deploy</button>
+        <button disabled={busy || !sessionToken || !archive} onClick={deployArchive}>Upload and deploy</button>
       </article>
       <article className="panel">
         <div className="panel-heading"><h3>Remote actions</h3><span className="muted-tag">TYPED COMMANDS</span></div>
@@ -267,7 +267,7 @@ export function RemoteControlPlane() {
           <option value="restart_runtime">Restart runtime</option>
         </select></label>
         <label>JSON payload<textarea rows={6} value={payloadText} onChange={event => setPayloadText(event.target.value)} spellCheck={false}/></label>
-        <button disabled={busy} onClick={queueCommand}>Queue command</button>
+        <button disabled={busy || !sessionToken} onClick={queueCommand}>Queue command</button>
       </article>
     </div>}
     <p className="scope-note">The backend cannot browse the phone filesystem or execute shell commands. Website archives are validated on-device and activated using the native release importer.</p>
@@ -276,9 +276,9 @@ export function RemoteControlPlane() {
       <p>Owner credentials can create revocable Editor and Viewer accounts. Editors can manage devices and deployments; Viewers can inspect device state, configuration and audit history.</p>
       <label>Account name<input value={newUserName} onChange={event => setNewUserName(event.target.value)} placeholder="Team member" /></label>
       <label>Permission role<select value={newUserRole} onChange={event => setNewUserRole(event.target.value as "editor" | "viewer")}><option value="viewer">Viewer · read only</option><option value="editor">Editor · manage devices</option></select></label>
-      <div className="site-actions"><button disabled={busy || !newUserName.trim()} onClick={createUser}>Create account</button><button disabled={busy} onClick={loadUsers}>Load team</button></div>
+      <div className="site-actions"><button disabled={busy || !sessionToken || !newUserName.trim()} onClick={createUser}>Create account</button><button disabled={busy || !sessionToken} onClick={loadUsers}>Load team</button></div>
       {newUserToken && <div className="notice"><strong>One-time team token</strong><code>{newUserToken}</code><button onClick={() => void navigator.clipboard.writeText(newUserToken)}>Copy token</button></div>}
-      {users.map(user => <div className="status-line" key={user.id}><span><strong>{user.name}</strong><small>{user.role} · {user.active ? "Active" : "Revoked"}</small></span><span className="site-actions"><button disabled={busy || !user.active} onClick={() => void rotateUserToken(user)}>Rotate token</button><button className="danger-button" disabled={busy || !user.active} onClick={() => void revokeUser(user)}>Revoke</button></span></div>)}
+      {users.map(user => <div className="status-line" key={user.id}><span><strong>{user.name}</strong><small>{user.role} · {user.active ? "Active" : "Revoked"}</small></span><span className="site-actions"><button disabled={busy || !sessionToken || !user.active} onClick={() => void rotateUserToken(user)}>Rotate token</button><button className="danger-button" disabled={busy || !user.active} onClick={() => void revokeUser(user)}>Revoke</button></span></div>)}
     </div>
     <div className="section-heading"><div><span className="eyebrow">SECURITY & GOVERNANCE</span><h2>Audit history</h2></div><span className="muted-tag">LATEST 200 EVENTS</span></div>
     <div className="resource-panel">
