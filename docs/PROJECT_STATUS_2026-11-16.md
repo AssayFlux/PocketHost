@@ -120,3 +120,18 @@ Still missing:
 See docs/NORTH_STAR.md, docs/PROJECT_BASELINE.md, docs/ROADMAP.md, docs/MASTER_PLAN.md, docs/DEVELOPMENT_CONTEXT.md, docs/DECISIONS.md and the Gate 2/Gate 4 execution plans for detailed contracts and exit criteria.
 
 **Designed by AssayFlux · AssayFlux Scientific Systems**
+
+
+## Verification correction — 2026-11-16, 16:12 UTC
+
+This section supersedes the earlier sequencing and verification statements above where they conflict.
+
+- Current implementation SHA reviewed: `574b9ef3aa8ad226a0886cf4af87ee0dd6c3bdf0` on `main`.
+- Quality workflow [43900937687](https://github.com/AssayFlux/PocketHost/actions/runs/43900937687) completed successfully on that exact SHA. All six jobs passed: Rust, control-plane/PostgreSQL, Python runtime, Node runtime, console and Gradle wrapper.
+- Android integration workflow [43900937744](https://github.com/AssayFlux/PocketHost/actions/runs/43900937744) is still running on the same exact SHA. The cloudflared Android build and ABI verification passed; separate ABI debug APK builds and APK-content verification passed; the signature-matched runtime companion build passed. API 26 emulator instrumentation is in progress; API 33 and API 35 emulator jobs are queued. No API-matrix pass is claimed yet.
+- Intermediate Android build and API-matrix validation is now intentionally being run during Gates 2–4, rather than deferred entirely to Gate 8. Gate 8 still requires final signed release artifacts, physical-device acceptance, external connectivity and independent review.
+- Gate 2 remains open: the production Python/Node workers still share the companion UID and storage; the isolated UID/seccomp/Binder work is a feasibility probe, not production confinement.
+- Gate 3 remains open: bounded HTTP Relay source exists but has no public deployment, managed TLS/DNS lifecycle, streaming/WebSocket completion or external visitor/soak acceptance.
+- Gate 4 remains open: passkeys and complete fresh-reauthentication/security acceptance are not implemented/verified.
+- Gates 5–7 remain open pending successful Android instrumentation, inspection of screenshots/hierarchy artifacts, representative device capacity measurements, lifecycle fault testing and human accessibility/onboarding review.
+- Do not interpret APK compilation or a successful quality workflow as release approval, production security acceptance or closure of Gates 2–7.
