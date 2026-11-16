@@ -219,3 +219,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 86cec992dea727034118152f9e8aff67ad82fc47 prevents overflow in the safe-release byte-budget calculation.
 
+- 8252db29d97a3fae149f4364e78367a1252796bf adds an instrumentation test that keeps the Rust static server running while a committed restore's rollback directory is cleaned, proving cleanup does not unnecessarily stop live hosting. The test is source-only until Android CI executes.
+
