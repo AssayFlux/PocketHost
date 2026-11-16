@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 private data class LearnTopic(val number: String, val title: String, val summary: String, val steps: List<String>, val note: String? = null)
 
 @Composable
-fun PocketHostLearnScreen(onOpenDashboard: () -> Unit, onOpenFiles: () -> Unit, onOpenSettings: () -> Unit) {
+fun PocketHostLearnScreen(onOpenDashboard: () -> Unit, onOpenSites: () -> Unit, onOpenSettings: () -> Unit) {
     val topics = listOf(
         LearnTopic("01", "Start your first website", "Get a static website online from your phone.", listOf("Open Sites and choose Import website.", "Select a website folder or ZIP archive containing index.html.", "Review the imported file list and confirm the entry page.", "Return to Dashboard and tap Start hosting.", "Use Preview site to check the local website.")),
         LearnTopic("02", "Understand your website address", "Know the difference between local, LAN and public access.", listOf("Loopback addresses are only reachable on this phone.", "LAN access lets devices on the same local network reach the phone when enabled.", "A public hostname requires your existing Cloudflare Tunnel to be connected and routed to the Rust website listener.", "Never point a public hostname at the local management API."), "Cloudflare edge HTTPS does not automatically make a website private. Use Cloudflare Access for private sites."),
@@ -45,7 +45,7 @@ fun PocketHostLearnScreen(onOpenDashboard: () -> Unit, onOpenFiles: () -> Unit, 
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("QUICK START", color = palette.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("Import a website → Start hosting → Preview it → Configure your existing public hostname when ready.", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { TextButton(onClick = onOpenFiles) { Text("Open Sites") }; TextButton(onClick = onOpenDashboard) { Text("Open Dashboard") } }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { TextButton(onClick = onOpenSites) { Text("Open Sites") }; TextButton(onClick = onOpenDashboard) { Text("Open Dashboard") } }
             }
         }
         topics.forEach { topic ->
