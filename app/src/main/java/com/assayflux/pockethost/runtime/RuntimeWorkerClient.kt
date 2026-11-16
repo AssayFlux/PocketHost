@@ -1,0 +1,227 @@
+package com.assayflux.pockethost.runtime
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import android.os.Looper
+import android.os.Parcel
+import android.os.ParcelFileDescriptor
+import androidx.core.content.ContextCompat
+import org.json.JSONObject
+import java.io.File
+import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
+/**
+ * Authenticated host-to-companion bridge. The companion owns the extracted project and
+ * executes code under its own Android UID; this process only transfers bounded archives
+ * and sends lifecycle commands.
+ */
+object RuntimeWorkerClient {
+    private const val WORKER_PACKAGE = "com.assayflux.pockethost.worker"
+    private const val WORKER_SERVICE = "$WORKER_PACKAGE.RuntimeWorkerService"
+    private const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_WORKER"
+    private const val TRANSACTION_INSTALL_PROJECT = IBinder.FIRST_CALL_TRANSACTION + 4
+    private const val TRANSACTION_PYTHON_START = IBinder.FIRST_CALL_TRANSACTION + 5
+    private const val TRANSACTION_PYTHON_START_SITES = IBinder.FIRST_CALL_TRANSACTION + 6
+    private const val TRANSACTION_PYTHON_STOP = IBinder.FIRST_CALL_TRANSACTION + 7
+    private const val TRANSACTION_PYTHON_STATUS = IBinder.FIRST_CALL_TRANSACTION + 8
+    private const val TRANSACTION_PYTHON_METRICS = IBinder.FIRST_CALL_TRANSACTION + 9
+    private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
+    private const val MAX_ARCHIVE_ENTRIES = 10_000
+
+    private fun workerIntent() = Intent().setComponent(ComponentName(WORKER_PACKAGE, WORKER_SERVICE))
+
+    private fun <T> withWorker(context: Context, operation: (IBinder) -> T): T {
+        check(Looper.myLooper() != Looper.getMainLooper()) {
+            "Runtime companion IPC must run on a background thread."
+        }
+        val app = context.applicationContext
+        val intent = workerIntent()
+        ContextCompat.startForegroundService(app, intent)
+        val latch = CountDownLatch(1)
+        var connectedBinder: IBinder? = null
+        var connectionError: Throwable? = null
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                connectedBinder = service
+                latch.countDown()
+            }
+            override fun onServiceDisconnected(name: ComponentName) {
+                connectionError = IllegalStateException("Runtime companion disconnected.")
+                latch.countDown()
+            }
+            override fun onBindingDied(name: ComponentName) {
+                connectionError = IllegalStateException("Runtime companion binding died.")
+                latch.countDown()
+            }
+            override fun onNullBinding(name: ComponentName) {
+                connectionError = IllegalStateException("Runtime companion returned an empty binding.")
+                latch.countDown()
+            }
+        }
+        check(app.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
+            "Could not bind to the installed runtime companion. Install the matching companion APK."
+        }
+        try {
+            check(latch.await(20, TimeUnit.SECONDS)) { "Timed out waiting for the runtime companion." }
+            connectionError?.let { throw it }
+            return operation(checkNotNull(connectedBinder) { "Runtime companion did not provide a Binder." })
+        } finally {
+            runCatching { app.unbindService(connection) }
+        }
+    }
+
+    private fun transact(binder: IBinder, code: Int, write: (Parcel) -> Unit = {}): Any? {
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(DESCRIPTOR)
+            write(data)
+            check(binder.transact(code, data, reply, 0)) { "Runtime companion rejected transaction $code." }
+            reply.readException()
+            return when (code) {
+                in setOf(TRANSACTION_INSTALL_PROJECT, TRANSACTION_PYTHON_START,
+                    TRANSACTION_PYTHON_START_SITES, TRANSACTION_PYTHON_STOP,
+                    TRANSACTION_PYTHON_STATUS, TRANSACTION_PYTHON_METRICS) -> reply.readString()
+                else -> reply.readInt()
+            }
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
+    private fun stableProjectId(root: File): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(root.canonicalPath.toByteArray(Charsets.UTF_8))
+        return "site_" + digest.take(12).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun createProjectArchive(context: Context, root: File): File {
+        val canonicalRoot = root.canonicalFile
+        require(canonicalRoot.isDirectory) { "Runtime project directory does not exist." }
+        val archive = File.createTempFile("pockethost-project-", ".zip", context.cacheDir)
+        var totalBytes = 0L
+        var entries = 0
+        try {
+            ZipOutputStream(archive.outputStream().buffered()).use { zip ->
+                Files.walk(canonicalRoot.toPath()).use { paths ->
+                    paths.sorted().forEach { path ->
+                        if (path == canonicalRoot.toPath()) return@forEach
+                        val relative = canonicalRoot.toPath().relativize(path).toString().replace(File.separatorChar, '/')
+                        if (relative == ".git" || relative.startsWith(".git/") ||
+                            relative == "__pycache__" || relative.startsWith("__pycache__/") ||
+                            relative.startsWith(".pockethost/")) return@forEach
+                        require(!Files.isSymbolicLink(path)) { "Runtime project contains a symbolic link; remove it before transfer." }
+                        entries++
+                        require(entries <= MAX_ARCHIVE_ENTRIES) { "Runtime project contains too many files." }
+                        if (Files.isDirectory(path)) {
+                            zip.putNextEntry(ZipEntry("$relative/"))
+                            zip.closeEntry()
+                        } else if (Files.isRegularFile(path)) {
+                            val size = Files.size(path)
+                            totalBytes += size
+                            require(totalBytes <= MAX_PROJECT_BYTES) { "Runtime project exceeds the 256 MiB transfer limit." }
+                            zip.putNextEntry(ZipEntry(relative))
+                            Files.newInputStream(path).use { input ->
+                                val buffer = ByteArray(32 * 1024)
+                                while (true) {
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    zip.write(buffer, 0, count)
+                                }
+                            }
+                            zip.closeEntry()
+                        } else {
+                            throw IllegalArgumentException("Runtime project contains an unsupported filesystem entry.")
+                        }
+                    }
+                }
+            }
+            return archive
+        } catch (error: Throwable) {
+            archive.delete()
+            throw error
+        }
+    }
+
+    private fun installProject(binder: IBinder, context: Context, root: File): String {
+        val id = stableProjectId(root)
+        val archive = createProjectArchive(context, root)
+        try {
+            val descriptor = ParcelFileDescriptor.open(archive, ParcelFileDescriptor.MODE_READ_ONLY)
+            try {
+                return withBinderTransaction(binder, TRANSACTION_INSTALL_PROJECT) { data ->
+                    data.writeString(id)
+                    descriptor.writeToParcel(data, 0)
+                }
+            } finally {
+                runCatching { descriptor.close() }
+            }
+        } finally {
+            archive.delete()
+        }
+    }
+
+    private fun withBinderTransaction(binder: IBinder, code: Int, write: (Parcel) -> Unit): String {
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(DESCRIPTOR)
+            write(data)
+            check(binder.transact(code, data, reply, 0)) { "Runtime companion rejected transaction $code." }
+            reply.readException()
+            return reply.readString().orEmpty()
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
+    fun startPython(context: Context, projectRoot: File, port: Int): String =
+        withWorker(context) { binder ->
+            val root = projectRoot.canonicalFile
+            val id = stableProjectId(root)
+            installProject(binder, context, root)
+            transact(binder, TRANSACTION_PYTHON_START) {
+                it.writeString(id)
+                it.writeInt(port)
+            } as String
+        }
+
+    fun startPythonSites(context: Context, hostnameRoots: JSONObject, port: Int): String =
+        withWorker(context) { binder ->
+            val siteIds = JSONObject()
+            val keys = hostnameRoots.keys()
+            while (keys.hasNext()) {
+                val host = keys.next()
+                val root = File(hostnameRoots.getString(host)).canonicalFile
+                val id = stableProjectId(root)
+                installProject(binder, context, root)
+                siteIds.put(host, id)
+            }
+            transact(binder, TRANSACTION_PYTHON_START_SITES) {
+                it.writeString(siteIds.toString())
+                it.writeInt(port)
+            } as String
+        }
+
+    fun stopPython(context: Context): String =
+        withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
+
+    fun pythonStatus(context: Context): String =
+        withWorker(context) { transact(it, TRANSACTION_PYTHON_STATUS) as String }
+
+    fun pythonMetrics(context: Context): JSONObject? =
+        withWorker(context) {
+            if ((transact(it, TRANSACTION_PYTHON_STATUS) as String) != "RUNNING") null
+            else JSONObject(transact(it, TRANSACTION_PYTHON_METRICS) as String)
+                .put("source", "python-companion")
+        }
+}
