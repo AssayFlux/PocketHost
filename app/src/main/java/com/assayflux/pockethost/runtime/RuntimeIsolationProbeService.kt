@@ -23,6 +23,7 @@ class RuntimeIsolationProbeService : Service() {
                 return true
             }
             data.enforceInterface(DESCRIPTOR)
+            reply?.writeNoException()
             when (code) {
                 TRANSACTION_UID -> reply?.writeInt(Process.myUid())
                 TRANSACTION_CAN_READ -> {
