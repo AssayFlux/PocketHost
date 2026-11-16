@@ -23,8 +23,11 @@ Only Caddy publishes ports in the default topology. PostgreSQL and the Axum serv
 Use the console's Remote Control Plane panel or call. The console exchanges the returned long-lived API credential for a 12-hour revocable administrative session; management endpoints reject raw API credentials.
 
 ```sh
+ADMIN_SESSION=$(curl --fail-with-body -sS -X POST "https://$CONTROL_PLANE_DOMAIN/v1/admin/session" \
+  -H "Authorization: Bearer $POCKETHOST_CONTROL_ADMIN_TOKEN" | jq -r .accessToken)
+
 curl --fail-with-body -X POST "https://$CONTROL_PLANE_DOMAIN/v1/admin/devices" \
-  -H "Authorization: Bearer $POCKETHOST_CONTROL_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $ADMIN_SESSION" \
   -H "Content-Type: application/json" \
   -d '{"name":"PocketHost phone"}'
 ```
