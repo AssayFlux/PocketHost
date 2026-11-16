@@ -14,6 +14,11 @@
 - PostgreSQL CI covers viewer authorization, session expiry/revocation, account revocation, token-rotation invalidation and the five-minute remote write reauthentication window.
 - Device credential rotation is Owner-only; the role predicate rejects Editor and Viewer.
 
+### Local Owner step-up
+- Sensitive Owner mutations are rejected with HTTP 428 when the session's last credential check is older than five minutes.
+- The local console now presents a fresh Owner login prompt on that response, exchanges the Owner password for a new session, and best-effort revokes the superseded session. The user retries the interrupted action after reauthentication.
+- This is fresh password authentication, not passkey-first identity or biometric-bound cryptographic step-up. Full route-by-route instrumentation remains open.
+
 ### Site visitor access
 - Each local site has a separate `accessMode`: `public`, `private` or `restricted`.
 - Private mode has one shared `visitor` identity; Restricted mode has named invitations. An empty credential set fails closed.
@@ -36,7 +41,7 @@ The create response returns the visitor password once. Browser navigation uses H
 
 1. Implement passkey-first Owner identity using a platform credential / WebAuthn-compatible flow with secure recovery; the existing password + device-approved recovery flow is not a passkey.
 2. Implemented source: Rust applies a bounded eight-failure/60-second lockout keyed by site and effective client IP, with bounded bucket storage. Add production telemetry/abuse review and adversarial load validation.
-3. Add explicit fresh Owner reauthentication for sensitive local management actions and test role separation across every mutation route.
+3. Execute route-by-route instrumentation for the implemented five-minute local Owner step-up and role separation across every mutation route; passkey-first identity remains separate and open.
 4. Verify TLS-proxy trust configuration cannot be forged by a non-loopback peer and test direct LAN rejection.
 5. Execute Android instrumentation tests for site mode changes, visitor creation/rotation/revocation, browser 401 challenge, cross-site credential isolation, runtime proxy stripping and backup secret exclusion.
 6. Run adversarial cross-site token reuse and revoked-token tests against the real native server and physical Android device.
