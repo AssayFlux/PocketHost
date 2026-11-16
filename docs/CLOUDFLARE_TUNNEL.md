@@ -7,7 +7,7 @@
 
 Cloudflare Tunnel is one optional public-connectivity path. The Android phone remains the website origin and Rust remains the website listener. The tunnel creates outbound connectivity from the phone; it does not provide Pocket Host capacity control, visitor identity by itself or an uptime guarantee.
 
-AssayFlux Relay is a separate planned first-party alternative. It is not implemented. Local Network mode remains independent of both.
+AssayFlux Relay is a separate first-party alternative. A bounded HTTP request/response path is now implemented in source, but it is not deployed or production-approved. WebSocket/streaming, TLS lifecycle, DNSSEC and external acceptance remain open. Local Network mode remains independent of both.
 
 ## 2. Current connector integration
 
