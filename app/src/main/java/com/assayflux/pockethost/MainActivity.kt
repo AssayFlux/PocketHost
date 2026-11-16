@@ -74,47 +74,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.Inet4Address
-import java.net.NetworkInterface
 
-
-private fun localLanAddress(): String? = runCatching {
-    val interfaces = NetworkInterface.getNetworkInterfaces()
-    val candidates = mutableListOf<String>()
-    while (interfaces.hasMoreElements()) {
-        val network = interfaces.nextElement()
-        if (network.isUp && !network.isLoopback) {
-            val addresses = network.inetAddresses
-            while (addresses.hasMoreElements()) {
-                val address = addresses.nextElement()
-                if (address is Inet4Address && !address.isLoopbackAddress && !address.isLinkLocalAddress) {
-                    candidates.add(address.hostAddress ?: "")
-                }
-            }
-        }
-    }
-    candidates.firstOrNull { it.isNotBlank() }
-}.getOrNull()
-
-private fun formatUptime(totalSeconds: Long): String {
-    val days = totalSeconds / 86_400
-    val hours = (totalSeconds % 86_400) / 3_600
-    val minutes = (totalSeconds % 3_600) / 60
-    val seconds = totalSeconds % 60
-    return when {
-        days > 0 -> "${days}d ${hours}h"
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m ${seconds}s"
-        else -> "${seconds}s"
-    }
-}
-
-private fun formatBytes(value: Long): String = when {
-    value < 1024L -> "$value B"
-    value < 1024L * 1024L -> "${value / 1024L} KB"
-    value < 1024L * 1024L * 1024L -> "${value / (1024L * 1024L)} MB"
-    else -> "${value / (1024L * 1024L * 1024L)} GB"
-}
 
 class MainActivity : ComponentActivity() {
     private var pendingBiometricCallback: ((Boolean) -> Unit)? = null
@@ -181,26 +141,6 @@ class MainActivity : ComponentActivity() {
             val callback = pendingBiometricCallback
             pendingBiometricCallback = null
             callback?.invoke(resultCode == RESULT_OK)
-        }
-    }
-}
-
-@Composable
-private fun BiometricUnlockScreen(onRetry: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(28.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-        ) {
-            Text("ASSAYFLUX", color = Color(0xFF1F3A5F), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Spacer(Modifier.height(12.dp))
-            Text("Pocket Host is locked", color = Color(0xFF1C1C1C), fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
-            Spacer(Modifier.height(8.dp))
-            Text("Authenticate with a strong biometric; Android 11 and later can also use your secure device credential.",
-                color = Color(0xFF6B6B6B), fontSize = 14.sp)
-            Spacer(Modifier.height(20.dp))
-            Button(onClick = onRetry) { Text("Unlock") }
         }
     }
 }
