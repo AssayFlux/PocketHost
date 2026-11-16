@@ -194,6 +194,91 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "204": { description: User revoked }
+  /v1/admin/devices/{id}/relay-sites:
+    get:
+      summary: List verified and pending Relay hostnames for a device (Owner or team session)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Relay hostname inventory }
+    post:
+      summary: Create a pending Relay hostname binding and issue a DNS TXT proof challenge (Owner only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hostname, site_id]
+              properties:
+                hostname: { type: string, maxLength: 253 }
+                site_id: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+      responses:
+        "201": { description: Pending route and one-time DNS TXT challenge }
+        "409": { description: Hostname already claimed }
+  /v1/admin/relay-sites/{id}/verify:
+    post:
+      summary: Verify the hostname DNS TXT challenge and activate Relay routing (Owner only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Hostname verified }
+        "409": { description: DNS TXT proof not found }
+  /v1/admin/relay-sites/{id}:
+    delete:
+      summary: Remove a Relay hostname binding (Owner only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Hostname removed }
+  /v1/device/relay/stream:
+    get:
+      security:
+        - DeviceBearer: []
+      summary: Open the persistent outbound server-to-device Relay event stream (SSE)
+      responses:
+        "200": { description: Authenticated event stream with bounded visitor requests }
+        "401": { description: Invalid or revoked device token }
+  /v1/device/relay/responses/{id}:
+    post:
+      security:
+        - DeviceBearer: []
+      summary: Return a bounded local HTTP response for a pending Relay request
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, status, body_base64]
+              properties:
+                id: { type: string, format: uuid }
+                status: { type: integer, minimum: 200, maximum: 599 }
+                headers: { type: object, maxProperties: 64 }
+                body_base64: { type: string, maxLength: 12582912 }
+      responses:
+        "204": { description: Visitor response delivered }
+        "404": { description: Request expired or belongs to another device }
+
   /v1/admin/audit:
     get:
       summary: Read the latest 200 administrative audit events
