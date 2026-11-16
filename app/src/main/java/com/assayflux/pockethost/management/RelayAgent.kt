@@ -22,6 +22,7 @@ object RelayAgent {
     private const val MAX_BODY_BYTES = 8 * 1024 * 1024
     private const val MAX_EVENT_CHARS = 12 * 1024 * 1024
     @Volatile private var running = false
+    @Volatile private var generation = 0L
     @Volatile private var worker: Thread? = null
     @Volatile private var streamConnection: HttpURLConnection? = null
     private val requests = ThreadPoolExecutor(
@@ -35,11 +36,13 @@ object RelayAgent {
         if (running || !RemoteControlAgent.isConfigured(context)) return
         val endpoint = RemoteControlAgent.endpoint(context).trimEnd('/')
         val token = RemoteControlAgent.relayDeviceToken(context) ?: return
+        generation += 1
+        val runGeneration = generation
         running = true
         val app = context.applicationContext
         worker = Thread({
             var retry = 1_000L
-            while (running && !Thread.currentThread().isInterrupted) {
+            while (running && generation == runGeneration && !Thread.currentThread().isInterrupted) {
                 try {
                     streamOnce(app, endpoint, token)
                     retry = 1_000L
@@ -54,14 +57,17 @@ object RelayAgent {
                     retry = (retry * 2).coerceAtMost(60_000L)
                 }
             }
-            running = false
-            streamConnection = null
-            worker = null
+            if (generation == runGeneration) {
+                running = false
+                streamConnection = null
+                if (worker === Thread.currentThread()) worker = null
+            }
         }, "PocketHost-Relay-Stream").apply { isDaemon = true; start() }
     }
 
     @Synchronized
     fun stop() {
+        generation += 1
         running = false
         streamConnection?.disconnect()
         streamConnection = null
