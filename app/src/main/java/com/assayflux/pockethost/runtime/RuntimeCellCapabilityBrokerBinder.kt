@@ -70,5 +70,8 @@ class RuntimeCellCapabilityBrokerBinder(
 
     companion object {
         const val DESCRIPTOR = RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR
+        const val TRANSACTION_ISSUE = RuntimeCellCapabilityBrokerProtocol.TRANSACTION_ISSUE
+        const val TRANSACTION_OPEN_READ_ONLY = RuntimeCellCapabilityBrokerProtocol.TRANSACTION_OPEN_READ_ONLY
+        const val TRANSACTION_WRITE_BYTES = RuntimeCellCapabilityBrokerProtocol.TRANSACTION_WRITE_BYTES
     }
 }
