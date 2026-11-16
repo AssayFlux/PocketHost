@@ -726,11 +726,20 @@ mod tests {
         assert_eq!(admin(&headers, &state).await.unwrap().role, "viewer");
         assert_eq!(admin_write(&headers, &state).await.unwrap_err().0, StatusCode::FORBIDDEN);
         audit(&state, "viewer", "test.read", &id.to_string(), json!({"test":true})).await.unwrap();
-        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_events WHERE target=$1")
+        let read_count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_events WHERE target=$1 AND action='test.read'")
             .bind(id.to_string()).fetch_one(&db).await.unwrap();
-        assert_eq!(count, 1);
+        assert_eq!(read_count, 1);
+
+        let owner_credential = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
+        let (_, Json(owner_session)) = create_admin_session(State(state.clone()), owner_credential).await.unwrap();
+        let owner_token = owner_session["accessToken"].as_str().unwrap();
+        let owner_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {owner_token}")).unwrap())]);
+        assert_eq!(revoke_user(State(state.clone()), owner_headers, Path(id)).await.unwrap(), StatusCode::NO_CONTENT);
+        assert!(admin(&headers, &state).await.is_err(), "Revoking a team account must immediately revoke its active sessions.");
+        let revoke_count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_events WHERE target=$1 AND action='user.revoke'")
+            .bind(id.to_string()).fetch_one(&db).await.unwrap();
+        assert_eq!(revoke_count, 1);
         sqlx::query("DELETE FROM control_users WHERE id=$1").bind(id).execute(&db).await.unwrap();
-        assert!(admin(&headers, &state).await.is_err());
     }
 
     #[tokio::test]
