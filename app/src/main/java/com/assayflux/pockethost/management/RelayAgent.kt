@@ -195,7 +195,7 @@ object RelayAgent {
                 connection.headerFields.forEach { (name, values) ->
                     if (name != null && values != null && name.lowercase() in setOf(
                             "cache-control", "content-disposition", "content-encoding", "content-language",
-                            "content-range", "content-type", "etag", "expires", "last-modified", "location", "vary"
+                            "content-range", "content-type", "etag", "expires", "last-modified", "location", "set-cookie", "vary"
                         )) {
                         responseHeaders.put(name.lowercase(), values.firstOrNull().orEmpty())
                     }
