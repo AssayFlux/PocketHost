@@ -161,6 +161,7 @@ class RuntimeWorkerService : Service() {
     }
 
     private fun startPython(siteId: String, port: Int): String {
+        require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid Python project identifier." }
         require(port in 1024..65535) { "Invalid Python listener port." }
         val root = File(projectsRoot, siteId).canonicalFile
         require(root.isDirectory && root.toPath().startsWith(projectsRoot.canonicalFile.toPath())) {
