@@ -15,20 +15,21 @@ import java.io.FileInputStream
 @RunWith(AndroidJUnit4::class)
 class RuntimeCellCapabilityBrokerTest {
     @Test
-    fun capabilityIsBoundToLeaseAndObservedUidAndRevokedOnCellDeath() {
-        val hostUid = InstrumentationRegistry.getInstrumentation().targetContext.applicationInfo.uid
+    fun capabilityIsBoundToLeaseObservedUidAndRegisteredProjectRoot() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val hostUid = context.applicationInfo.uid
         val leases = RuntimeCellLeaseRegistry(hostUid, capacity = 2)
         val lease = leases.reserve("site-a")
         val uid = hostUid + 10_001
         leases.activate(lease.id, uid)
 
-        val root = File(
-            InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
-            "cell-capability-${System.nanoTime()}"
-        ).apply { mkdirs() }
-        File(root, "index.html").writeText("site-a")
-        val broker = RuntimeCellCapabilityBroker(leases)
-        val token = broker.issue(lease.id, root)
+        val projectA = File(context.cacheDir, "cell-capability-a-${System.nanoTime()}").apply { mkdirs() }
+        val projectB = File(context.cacheDir, "cell-capability-b-${System.nanoTime()}").apply { mkdirs() }
+        File(projectA, "index.html").writeText("site-a")
+        File(projectB, "index.html").writeText("site-b")
+        val roots = mapOf("site-a" to projectA, "site-b" to projectB)
+        val broker = RuntimeCellCapabilityBroker(leases) { projectId -> roots[projectId] }
+        val token = broker.issue(lease.id)
         try {
             val descriptor = broker.openReadOnly(lease.id, token, uid, "index.html")
             try {
@@ -44,6 +45,16 @@ class RuntimeCellCapabilityBrokerTest {
                 broker.openReadOnly("another-lease", token, uid, "index.html")
             }
 
+            // Changing the external registry mapping cannot retarget an already issued grant.
+            roots as MutableMap<String, File>
+            roots["site-a"] = projectB
+            val stillA = broker.openReadOnly(lease.id, token, uid, "index.html")
+            try {
+                assertEquals("site-a", FileInputStream(stillA.fileDescriptor).bufferedReader().readText())
+            } finally {
+                stillA.close()
+            }
+
             leases.markProcessDied(lease.id)
             assertThrows(SecurityException::class.java) {
                 broker.openReadOnly(lease.id, token, uid, "index.html")
@@ -52,7 +63,26 @@ class RuntimeCellCapabilityBrokerTest {
             assertTrue(leases.release(lease.id))
         } finally {
             broker.revokeLease(lease.id)
-            root.deleteRecursively()
+            projectA.deleteRecursively()
+            projectB.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun capabilityCannotBeIssuedWithoutRegisteredProjectRoot() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val hostUid = context.applicationInfo.uid
+        val leases = RuntimeCellLeaseRegistry(hostUid, capacity = 1)
+        val lease = leases.reserve("unmapped")
+        leases.activate(lease.id, hostUid + 10_002)
+        val broker = RuntimeCellCapabilityBroker(leases) { null }
+        try {
+            assertThrows(IllegalArgumentException::class.java) {
+                broker.issue(lease.id)
+            }
+        } finally {
+            leases.markProcessDied(lease.id)
+            leases.release(lease.id)
         }
     }
 }
