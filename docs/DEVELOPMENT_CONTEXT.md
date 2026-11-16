@@ -63,6 +63,10 @@ The runtime companion has a UID separate from the host app. Python and Node proj
 
 The North Star defines each gate's full exit criteria. Do not reorder security-dependent work or represent proposals as complete.
 
+## 2026-11-16 active Gate 2 implementation note
+
+The isolated-UID probe now closes inherited socket descriptors other than the explicitly brokered visitor listener before applying seccomp. The source-level regression test passes an already-connected loopback TCP socket and expects the isolated process to close it. This closes one identified egress path in the probe only; it does not make the probe a production runtime cell. The seccomp policy is still a denylist with an allow fallback, and Python/Node remain in the shared companion UID until their runtimes and storage are migrated.
+
 ## Build and test discipline
 
 - Use the checksum-verified Gradle 8.9 wrapper (`./gradlew`) and committed dependency lockfiles.
