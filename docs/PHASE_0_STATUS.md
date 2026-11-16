@@ -1,6 +1,6 @@
 # Pocket Host — Current Implementation Status
 
-**Baseline:** 2026-11-16 · `main` reviewed at `a8988f5068f4a65206b89451e8204b51b86abc55`  
+**Baseline:** 2026-11-16 · companion source integration `bd227b0e5564ad25c88064cfc36796469390b773`  
 **Release status:** integrated development software; not production approved.
 
 ## Android application
@@ -23,25 +23,27 @@
 
 ## Python and Node runtimes
 
-- Python: Chaquopy CPython 3.11 with WSGI integration.
-- Node: pinned Node.js mobile 24.22.1 integration and dedicated Android process/service.
-- Both remain under the host application UID. Canonical path checks and a dedicated process are not a sandbox.
-- No proven worker egress restrictions or hard CPU/memory quotas.
-- Trusted owner-installed code only.
+- Python: Chaquopy CPython 3.11 / WSGI packaged in the separate-UID companion.
+- Node: pinned Node.js mobile 24.22.1, JNI bridge and dedicated `:node` process inside the companion package.
+- Host-to-companion Binder protocol version 1, signature permission/caller checks and bounded ZIP/file-descriptor project transfer are integrated in source.
+- Project data is extracted into companion-owned storage; common credential paths are excluded/rejected.
+- Both runtimes share the companion UID. Per-site filesystem isolation and enforceable network egress remain incomplete; trusted owner-installed code only.
+- Build and migrated API 26/33/35 instrumentation evidence are pending.
 
 ## Separate-UID companion
 
-- Separate Android application package/UID.
-- Signature-level permission protecting exported Binder service.
-- INTERNET permission and capability probe for host-private-file denial and bidirectional loopback.
-- API 26 capability test passed.
-- Does not load Chaquopy, Node/V8 or project code; no production project-transfer protocol, supervisor, recovery contract or Rust integration.
+- Separate Android application package/UID with foreground control service and Node `:node` service.
+- Chaquopy Python 3.11, Node 24 native libraries/JNI bridge and metrics preload moved into the companion module.
+- Versioned signature-protected Binder IPC; caller package and signing identity are checked.
+- Bounded file-descriptor project transfer, staging extraction, path traversal checks and worker-owned project storage integrated in source.
+- Host runtime facades and tests now target companion execution; build/API-matrix verification is pending.
+- Companion UID protects host-private files, but projects share the companion UID and network egress is not enforced.
 
 ## Isolation and security
 
 Present: runtime trust acknowledgement, canonical project-root checks, symlink escape rejection, authenticated local management API and signature-protected companion service.
 
-Open: worker-owned storage, scoped project capabilities, enforceable egress including raw sockets/DNS rebinding, SSRF/private-network/metadata denial, cross-project and exhaustion tests, independent review.
+Open: per-project filesystem isolation, enforceable egress including raw sockets/DNS rebinding, SSRF/private-network/metadata denial, cross-project and exhaustion tests, independent review.
 
 ## Capacity and operations
 
@@ -69,4 +71,4 @@ Open: worker-owned storage, scoped project capabilities, enforceable egress incl
 
 Existing Cloudflare Tunnel HTTPS, physical device lifecycle/thermal/battery/storage tests, owner-configured signing secrets and independent security review are not yet evidenced.
 
-**Release decision:** not production-ready, not sandboxed, not signed and not externally verified. Static hosting is the strongest foundation; Python/Node remain trusted-code-only.
+**Release decision:** not production-ready, not fully sandboxed, not signed and not externally verified. Companion runtime source integration is present but not yet CI-verified; Python/Node remain trusted-code-only.
