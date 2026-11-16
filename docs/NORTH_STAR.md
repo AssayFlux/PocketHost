@@ -180,15 +180,21 @@ The primary version is complete only when the gates below have objective exit ev
 
 ### Gate 0 — Repository truth and architecture freeze
 - Audit source, workflows, manifests, permissions, ABI packaging, API contracts and all active docs.
-- Resolve contradictions and mark historical evidence as historical.
-- Pin dependencies and reproducible build inputs.
-- Acceptance: one canonical baseline, no docs claiming planned work is implemented, CI evidence tied to exact SHA.
+- Reconcile historical snapshots and remove stale implementation claims.
+- Freeze Rust, Gradle, npm and Android dependency graphs with committed lockfiles.
+- Pin Rust 1.88, checksum-verified Gradle 8.9 wrapper, Android SDK/NDK/CMake inputs and native runtime artifacts.
+- Acceptance: one canonical baseline; active docs distinguish planned/source-present/verified work; locked dependency resolution succeeds on exact SHA.
+
+**Status:** complete at source baseline `9ff8de22ac7afb18821b3a3f201fddbba58eab77`.
 
 ### Gate 1 — Runtime migration
-- Finish companion service lifecycle, Binder death/rebind, transfer rollback and shutdown.
-- Prove Python WSGI and Node serve real HTTP through Rust.
-- Preserve static hosting if a runtime fails.
-- Acceptance: host + companion APKs build; end-to-end tests pass on API 26/33/35; ABI and lifecycle evidence retained.
+- Complete companion lifecycle, Binder death/rebind, version negotiation, bounded transfer, crash-recoverable replacement and coordinated shutdown.
+- Route Python WSGI and Node HTTP through Rust hostname routing and reverse proxy.
+- Prove static-origin continuity when an application runtime stops.
+- Keep Python/Node trusted-code-only; this gate does not claim per-project isolation.
+- Acceptance during implementation: production source path and regression-test definitions are present. Per owner instruction, do not build APKs or run Android emulator/device tests during Gates 0–7. Execute APK/ABI builds and API 26/33/35 instrumentation at Gate 8.
+
+**Status:** source implementation complete; Android compilation and runtime acceptance deliberately deferred to Gate 8.
 
 ### Gate 2 — Per-project security isolation
 - Prove isolated UID, project-only file descriptors, listener capability and seccomp policy on API 26/33/35.

@@ -9,15 +9,15 @@ Native Kotlin/Jetpack Compose Android application; Android 8/API 26+; ARMv7/ARM6
 
 ## Gate 0 — Repository truth and architecture freeze (P0)
 
-Audit manifests, permissions, source modules, native ABIs, dependency pins, workflows, docs and actual runtime behavior. Reconcile historical CI snapshots and conflicting status language. Maintain a canonical evidence ledger tied to exact source SHA.
+Audit manifests, permissions, source modules, native ABIs, dependency pins, workflows, docs and actual runtime behavior. Reconcile historical CI snapshots and conflicting status language. Commit Cargo, Gradle and npm lockfiles; pin Rust 1.88, checksum-verified Gradle 8.9 wrapper, Android SDK/NDK/CMake and native runtime inputs.
 
-**Exit:** every active document agrees on implemented/planned/verified state; build inputs and package identities are documented; no planned Relay or sandbox feature is described as shipped.
+**Exit:** canonical evidence ledger is current; active documents distinguish source-present from verified; locked dependency resolution succeeds. **Implementation status: complete** at source baseline `9ff8de22ac7afb18821b3a3f201fddbba58eab77`.
 
 ## Gate 1 — Companion runtime migration (P0)
 
-Complete companion lifecycle, Binder death/rebind, version negotiation, bounded transfer, failed-import rollback, process supervision and coordinated shutdown. Prove real Python WSGI and Node HTTP requests route through Rust. Preserve static-origin service through worker failure.
+Complete companion lifecycle, Binder death/rebind, version negotiation, bounded transfer, crash-recoverable project replacement, process supervision and coordinated shutdown. Route real Python WSGI and Node HTTP requests through Rust. Preserve static-origin service through application-runtime failure. Keep runtime execution trusted-code-only until Gate 2.
 
-**Exit:** host and companion APKs build for declared ABIs; Python and Node end-to-end tests pass API 26/33/35; exact-SHA reports retained; process-death/restart and static continuity pass.
+**Exit during implementation:** source integration and regression-test definitions are complete. By owner instruction, APK builds, ABI packaging tests and API 26/33/35 emulator/device execution are deferred to Gate 8; do not run intermediate Android builds.
 
 ## Gate 2 — Per-project isolation and adversarial security (P0)
 

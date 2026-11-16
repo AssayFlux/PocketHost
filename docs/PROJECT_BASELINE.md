@@ -1,75 +1,83 @@
 # ASSAYFLUX POCKET HOST — CANONICAL PROJECT BASELINE
 
 **Baseline review:** 2026-11-16  
-**Source reviewed:** `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade`  
+**Source reviewed:** `9ff8de22ac7afb18821b3a3f201fddbba58eab77`  
 **Release:** 0.1.0 target · **Status:** pre-release · **Production approval:** no.
 
-This document records what is evidenced at the reviewed source head. A later commit or workflow must not be silently treated as covered by this baseline.
+This is the current evidence baseline. The wrapper-only commit after the source/quality run adds the checksum-pinned Gradle wrapper; the exact-head quality run is being refreshed by this documentation change.
 
 ## Product contract
 
-Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root; Rust/Tokio/Hyper request engine; static hosting independent of optional services; TypeScript/React console; existing Cloudflare Tunnel reused; AssayFlux Relay planned as an alternative; management API never public; Python/Node trusted code only until per-project OS isolation is proven.
+Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root; Rust/Tokio/Hyper request engine; static hosting independent of optional services; TypeScript/React console; existing Cloudflare Tunnel reused; AssayFlux Relay planned; management API never public; Python/Node trusted code only until per-project OS isolation is proven.
 
 ## Current implementation truth
 
 | Subsystem | Source-level position | Verification / limitation |
 |---|---|---|
-| Android host | Kotlin/Compose app, five destinations, foreground hosting service | Physical device and full visual acceptance remain |
-| Rust engine | Tokio async runtime, Hyper HTTP, static files, hostname routing, reverse proxy, bounded admission | Fairness and sustained-load evidence remain |
-| Python | CPython 3.11/Chaquopy moved into companion package | Real end-to-end and per-project isolated execution not proven |
-| Node | Node mobile 24.22.1 native runtime moved into companion package | Real end-to-end and per-project isolated execution not proven |
-| Companion | Separate package/UID, signature Binder permission, caller checks, versioned IPC, bounded archive transfer | Companion lifecycle/API matrix still requires exact-head proof |
-| Isolation | Isolated-service, Unix-domain and native seccomp probe source exists | Probe/runtime results are not accepted as production sandbox evidence |
+| Android host | Kotlin/Compose app, five destinations, foreground hosting service | Android compilation and visual/device acceptance deferred to Gate 8 |
+| Rust engine | Tokio/Hyper, static files, hostname routing, reverse proxy, bounded admission | Non-Android Rust tests pass; fairness and sustained-load evidence remain |
+| Python | CPython 3.11/Chaquopy moved into companion package | Python-through-Rust instrumentation test is written; not run yet |
+| Node | Node mobile 24.22.1 native runtime in companion, dedicated process | Node-through-Rust and static-origin continuity tests are written; not run yet |
+| Companion | Separate package/UID, signature Binder, caller checks, protocol negotiation, Binder death handling, rebind and orderly shutdown | Instrumentation tests written; API 26/33/35 execution deferred |
+| Project transfer | Bounded archive, staged extraction and recoverable previous-project rename | Source hardening present; Android transfer/rollback tests await Gate 8 |
+| Isolation | Isolated-service, Unix-domain and native seccomp proof source exists | Not a production per-project sandbox; Python/Node remain trusted-only |
 | Management | Authenticated loopback API and TypeScript/React console | External deployment and full security acceptance remain |
-| Cloudflare | Android cloudflared build integration; owner has existing named tunnel | External hostname/TLS verification remains |
-| AssayFlux Relay | Defined in North Star | Not implemented; no gateway or agent availability claim |
-| Capacity | Device telemetry, first Capacity Lab and admission derating foundations | Fair governor, workload coverage and safe-envelope evidence remain |
+| Cloudflare | Android cloudflared build integration; existing named tunnel is reused | External hostname/TLS verification remains |
+| AssayFlux Relay | Defined in North Star | Not implemented |
+| Capacity | Device telemetry, first Capacity Lab and admission derating | Fair governor, workload coverage and safe-envelope evidence remain |
 | Backup | Encrypted .afbackup and staged restore foundations | Full fault matrix remains |
 | Control plane | Axum/PostgreSQL source and deployment workflow | Deployment and device E2E not proven |
-| Release | Debug packaging workflow | No verified signed production APK pair |
+| Release | Manual signed-release workflow source | No verified signed production APK pair |
 
-## CI evidence at reviewed head
+## Reproducible build inputs
 
-- Source head: `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade`.
-- Quality run `43813160835`: completed success.
-- Android integration run `43813160678`: queued when this baseline was reviewed; therefore no API 26/33/35 pass is claimed from that run.
-- Previous API 26 failures on earlier commits are historical evidence and remain relevant until the corrected exact-head run passes.
-- Do not infer Android emulator success from quality CI or APK packaging.
+- Rust toolchain/MSRV: 1.88.0; `.cargo/config.toml` selects Rust-version-compatible dependency resolution.
+- Cargo locks: `rust-engine/Cargo.lock`, `control-plane/Cargo.lock`.
+- Gradle: wrapper 8.9, distribution SHA-256 pinned in `gradle/wrapper/gradle-wrapper.properties`; app and companion Gradle dependency lockfiles committed.
+- Android: SDK platform 35, Build Tools 35.0.0, NDK 27.2.12479018, CMake 3.22.1.
+- Native Rust Android tool: cargo-ndk 4.1.2 installed with `--locked`.
+- Console: exact direct package versions and `web-console/package-lock.json`; CI uses `npm ci`.
+- Python: 3.11; Node console CI: 22; Node runtime smoke CI: 24; cloudflared build Go toolchain: 1.27.4.
+- Dependency lock workflow resolves graphs and commits lockfiles; it does not build APKs.
 
-Recheck the live workflow state before using this as a current release report.
+## CI and Android build policy
 
-## Weighted readiness
+- Quality workflow: Rust, control plane/database migrations, Python, Node, console and Gradle wrapper validation. It does not compile Android or package APKs.
+- Android integration and signed-release workflows are manual-only.
+- Owner instruction: no Android APK build, emulator run or device test during Gates 0–7. All Android build/ABI/API 26/33/35 validation is deferred to Gate 8.
+- A legacy Android integration run `43824043298` for older SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` was already queued before the manual-only trigger change; it is not current-head evidence.
 
-The previous estimate of 37% predates the latest runtime/security source changes. It is retained as a historical baseline only; it is not recalculated here because current gate completion evidence is incomplete and the new Relay scope has not been implemented. Do not present 37% as a current audited readiness score.
+## Verification evidence
 
-Use the following release gates as the denominator for a future re-score:
-1. Runtime migration and lifecycle.
-2. Per-project isolation and adversarial security.
-3. AssayFlux Relay and device identity.
-4. Owner/visitor authentication.
-5. Rust governor and Capacity Lab.
-6. Backup, operations and lifecycle recovery.
-7. Product UX and onboarding.
-8. Exact-SHA CI, release signing, external and physical-device acceptance.
+- Quality run `43826475655`: all five jobs passed on `a647483060e08361ebeca401dc4ecb4460386372`.
+- Quality run `43826809648`: all five jobs passed on `ff0c66a32bf226733afafa5360a2f99cee526661`, including Rust 1.88 locked tests, control-plane database migrations/Compose validation and `npm ci`.
+- Dependency-lock workflow `43826809601`: completed successfully; generated and checksum-verified Gradle wrapper and resolved Cargo/npm/Gradle dependency graphs.
+- No Android source compile, APK packaging, emulator instrumentation or physical-device test is claimed on this baseline.
+
+## Gate status
+
+| Gate | Status |
+|---|---|
+| 0 — Repository truth and architecture freeze | Complete |
+| 1 — Runtime migration | Source implementation complete; Android verification deferred to Gate 8 |
+| 2 — Per-project isolation and adversarial security | Open; shared companion UID is not a sandbox |
+| 3 — AssayFlux Relay | Planned; not implemented |
+| 4 — Owner/visitor authentication | Open |
+| 5 — Rust governor and Capacity Lab | Open |
+| 6 — Backup, operations and lifecycle | Open |
+| 7 — Product UX and onboarding | Open |
+| 8 — Android builds, API matrix, release and independent review | Deferred until all earlier implementation work is complete |
+
+No current percentage is published. Source presence, compilation, automated testing, emulator verification, physical-device verification and production approval are separate states.
 
 ## Non-negotiable security limitations
 
 - Companion UID separation is host-vs-companion only; it is not per-project isolation.
 - Python/Node share companion UID and storage.
-- Outbound egress is not OS-enforced.
-- Seccomp/isolated UID/Unix-domain probes are not proof of production runtime confinement.
+- Outbound egress is not OS-enforced per project.
+- Seccomp/isolated UID/Unix-domain probes are not production runtime confinement.
 - Keep runtimes limited to owner-controlled trusted code.
 - Relay must not expose management API and must disclose that gateway-terminated TLS allows relay inspection.
 - A relay hides the phone's IP from ordinary visitors, not from relay infrastructure or carrier.
 
-## Evidence vocabulary
-
-- **Source present:** code exists.
-- **Compiled:** relevant target compiled.
-- **Automated tested:** named tests passed on exact SHA.
-- **Emulator verified:** Android instrumentation passed on named API level.
-- **Device verified:** physical-device test evidence exists.
-- **Externally verified:** real public DNS/TLS/request tested outside the device network.
-- **Production approved:** all release gates and independent review accepted.
-
-These terms are not interchangeable. Update this file with exact evidence whenever the baseline changes.
+Update this file with exact evidence whenever the baseline changes.
