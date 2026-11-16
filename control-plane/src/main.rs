@@ -675,7 +675,8 @@ struct CreateRelaySite {
 
 fn normalize_relay_hostname(value: &str) -> Result<String, (StatusCode, String)> {
     let hostname = value.trim().trim_end_matches('.').to_ascii_lowercase();
-    if hostname.len() > 253 || hostname.is_empty() || hostname.parse::<std::net::IpAddr>().is_ok() {
+    if hostname.len() > 253 || hostname.is_empty() || hostname.parse::<std::net::IpAddr>().is_ok() ||
+        hostname.split('.').count() < 2 {
         return Err((StatusCode::BAD_REQUEST, "invalid_relay_hostname".into()));
     }
     for label in hostname.split('.') {
