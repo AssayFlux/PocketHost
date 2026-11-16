@@ -109,3 +109,8 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - Gate 6: static deployment activation now has a startup recovery path. If Pocket Host starts and the active site is missing or lacks its entry page, it restores the newest retained release containing a valid index.html; invalid active data is preserved in the release directory for diagnosis. MainActivity invokes this before rendering the app and records recovery/failure events.
 - Android instrumentation source covers recovery of a missing active site from the newest valid release. This does not yet provide crash journaling/recovery for every full-application backup phase or prove reboot/Doze/network/service-death behavior. API 26/33/35 execution remains unverified; Gate 6 remains open.
 
+## 2026-11-16 five-destination UI test increment
+
+- Gate 7: added Android UI instrumentation that selects Dashboard, Sites, Activity, Learn and Settings through accessible navigation labels, verifies selected-screen content, and captures a screenshot plus accessibility hierarchy XML for each destination. The Android integration workflow now collects those artifacts from each API-matrix emulator.
+- This improves repeatable navigation and visual review coverage; it does not replace human TalkBack, font scaling, contrast, compact-screen or landscape acceptance. Gate 7 remains open pending executed evidence and completion of the full onboarding/Settings experience.
+
