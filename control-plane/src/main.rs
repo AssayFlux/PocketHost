@@ -950,7 +950,7 @@ mod tests {
         let token = new_token();
         sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'CI viewer','viewer',$2)")
             .bind(id).bind(token_hash(&token)).execute(&db).await.unwrap();
-        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
+        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap())]);
         assert_eq!(admin_credential(&credential_headers, &state).await.unwrap().role, "viewer");
         assert!(admin(&credential_headers, &state).await.is_err(), "Long-lived credentials must not authorize management routes directly.");
@@ -985,7 +985,7 @@ mod tests {
         let old_token = new_token();
         sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'rotation-test','editor',$2)")
             .bind(user_id).bind(token_hash(&old_token)).execute(&db).await.unwrap();
-        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
+        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let (_, Json(old_session_body)) = create_admin_session(
             State(state.clone()),
             HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())])
@@ -1029,7 +1029,7 @@ mod tests {
         let old_token = new_token();
         sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'CI rotation device',$2)")
             .bind(device).bind(token_hash(&old_token)).execute(&db).await.unwrap();
-        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
+        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
         let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
         let session_token = session_body["accessToken"].as_str().unwrap();
@@ -1060,7 +1060,7 @@ mod tests {
         let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
         let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
         sqlx::migrate!("./migrations").run(&db).await.unwrap();
-        let state = AppState { db: db.clone(), admin_token: "owner-session-test-token-0123456789abcdef".into() };
+        let state = AppState { db: db.clone(), admin_token: "owner-session-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
         let (_, Json(first_session)) = create_admin_session(State(state.clone()), credential_headers.clone()).await.unwrap();
         let first_token = first_session["accessToken"].as_str().unwrap();
