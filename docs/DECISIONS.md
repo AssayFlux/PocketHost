@@ -82,6 +82,18 @@ Distinguish implemented, automated-tested, emulator-verified, device-verified, e
 
 **Consequences:** Gate 2 remains open. The current Binder/seccomp probe is feasibility evidence only. The Chaquopy AndroidPlatform uses Application context and app-private storage conventions; Node also uses companion private storage. Runtime-specific bootstrap and module/file access adapters are still required.
 
+### ADR-018 — Keep the management API on a dedicated Host authority
+
+**Date:** 2026-11-16
+
+**Context:** The initial Relay visitor gateway and remote control/device APIs share the Axum process and listener. A visitor can choose an arbitrary HTTP path on a verified hostname; relying only on bearer authentication would leave management routes exposed on website hostnames.
+
+**Decision:** Production deployment requires POCKETHOST_CONTROL_API_HOST. Admin session/management routes and device control/Relay stream routes accept requests only when the Host authority matches that dedicated hostname. Other verified hostnames reach only the visitor gateway fallback. The deployment workflow derives this API host from the dedicated control-plane domain; the similarly named GitHub Actions POCKETHOST_CONTROL_HOST remains the SSH host/IP variable.
+
+**Alternatives:** Rely only on bearer authentication; run separate listener processes immediately; move to separate containers. Host authority guard was selected as an immediate defense-in-depth boundary while retaining the existing service topology.
+
+**Consequences:** Cloudflare/Caddy ingress must route the dedicated management hostname and verified Relay visitor hostnames to the gateway. The visitor host cannot access /v1/admin or /v1/device paths. The dedicated management hostname remains a separately authenticated remote-control endpoint and should be protected by the chosen edge policy. Local development without the deployment environment variable retains an unguarded development mode; production Compose requires it.
+
 ## Changing a decision
 
 Submit a PR updating this file, North Star, Master Plan and affected implementation docs. Explain why the old decision no longer serves the product, migration/security impact and acceptance tests. User-confirmed product intent takes precedence over contributor assumptions.
