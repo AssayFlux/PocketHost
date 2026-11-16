@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.NodeHostRuntime
+import com.assayflux.pockethost.runtime.RuntimeWorkerClient
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -24,6 +25,7 @@ class NodeRuntimeSmokeTest {
     fun cleanup() {
         runCatching { NativeEngine.stop() }
         runCatching { NodeHostRuntime.stop(context) }
+        runCatching { RuntimeWorkerClient.shutdownWorker(context) }
         context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
             .edit().putBoolean("trusted_runtime_code_ack", false).commit()
         project.deleteRecursively()
