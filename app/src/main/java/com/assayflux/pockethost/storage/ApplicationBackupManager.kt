@@ -86,6 +86,7 @@ object ApplicationBackupManager {
         val customStaticRoots: Map<String, File>
     )
 
+    @Synchronized
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
             require(passphrase.size in 12..128) { "Use a backup passphrase between 12 and 128 characters." }
@@ -169,6 +170,7 @@ object ApplicationBackupManager {
         }
     }
 
+    @Synchronized
     fun restore(context: Context, source: Uri, passphrase: CharArray): RestoreReport {
         val archive = File(context.cacheDir, "pockethost-full-backup-${UUID.randomUUID()}.zip")
         val stage = File(context.filesDir, "pockethost-full-restore-${UUID.randomUUID()}")
