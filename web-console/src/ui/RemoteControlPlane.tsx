@@ -306,7 +306,7 @@ export function RemoteControlPlane() {
     {selected && <div className="lower-grid">
       <article className="panel">
         <div className="panel-heading"><h3>AssayFlux Relay hostnames</h3><span className="muted-tag">OUTBOUND DEVICE STREAM</span></div>
-        <p>Bind a verified hostname to this device and an existing Pocket Host site ID. The phone must also have this hostname mapped locally. Visitor Private or Restricted access is enforced by the phone's site policy.</p>
+        <p>Bind a verified hostname to this device and an existing Pocket Host site ID. The selected site ID must resolve to an enabled local site with at least one configured hostname. Visitor Private or Restricted access is enforced by the phone's site policy.</p>
         <label>Hostname<input value={relayHostname} onChange={event => setRelayHostname(event.target.value)} placeholder="www.example.com" /></label>
         <label>Local site ID<input value={relaySiteId} onChange={event => setRelaySiteId(event.target.value)} placeholder="static-default" /></label>
         <div className="site-actions">
