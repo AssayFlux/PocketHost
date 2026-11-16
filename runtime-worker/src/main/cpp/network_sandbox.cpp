@@ -66,7 +66,6 @@ static int close_inherited_sockets_except(int listener_fd) {
     if (directory == nullptr) return errno == 0 ? EIO : errno;
     const int directory_fd = dirfd(directory);
     int failure = 0;
-    int failure = 0;
     while (true) {
         errno = 0;
         struct dirent* entry = readdir(directory);
