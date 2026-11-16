@@ -1,6 +1,6 @@
 # Pocket Host — Active Release Sequence
 
-**Baseline:** 2026-11-16 · **main:** `a8988f5068f4a65206b89451e8204b51b86abc55`  
+**Baseline:** 2026-11-16 · companion source integration `bd227b0e5564ad25c88064cfc36796469390b773`  
 **Canonical status:** [PROJECT_BASELINE.md](PROJECT_BASELINE.md)
 
 Only the current release sequence is retained here. Superseded snapshots belong in Git history.
@@ -11,9 +11,9 @@ Native Kotlin/Compose Android app; Rust public HTTP origin; Android 8/API 26+, A
 
 ## Gate 1 — Companion runtime migration (P0)
 
-Move Chaquopy/CPython and Node/V8 into the separate-UID companion. Implement authenticated/versioned IPC, bounded project transfer, worker-owned storage, lifecycle supervision, crash recovery and Rust upstream routing.
+Source integration now moves Chaquopy/CPython and Node/V8 into the separate-UID companion. Versioned signature-protected IPC, bounded project transfer and companion-owned storage are implemented in source. Complete and verify lifecycle supervision, crash recovery/rebind/update rollback, Rust upstream routing and static-origin continuity.
 
-**Exit:** Python WSGI and Node HTTP work end-to-end through Rust on API 26/33/35; cross-project and host-secret access denied; static origin survives worker failure.
+**Exit:** Python WSGI and Node HTTP work end-to-end through Rust on API 26/33/35; host-private file denial and transfer bounds are demonstrated; static origin survives worker failure. Per-project isolation and egress remain Gate 2.
 
 ## Gate 2 — Isolation and adversarial security (P0)
 
@@ -49,7 +49,7 @@ Configure owner-controlled signing secrets; create signed host/companion APKs; v
 
 | GATE | COMPLETION ESTIMATE |
 |---|---:|
-| Companion runtime migration | 15% |
+| Companion runtime migration | 15% (pre-migration verified baseline; pending re-score after CI) |
 | Isolation and adversarial security | 25% |
 | Rust governor and Capacity Lab | 60% |
 | Backup, operations and Settings | 65% |
