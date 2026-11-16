@@ -944,8 +944,20 @@ async fn relay_visitor(
         headers: forwarded_headers,
         body_base64: relay::encode_body(&bytes),
     };
+    // Re-lock the verified hostname row until the pending request is registered.
+    // A concurrent Owner deletion takes FOR UPDATE and will then cancel this request;
+    // if deletion won the race first, this lookup fails closed.
+    let mut route_tx = s.db.begin().await.map_err(internal)?;
+    let current_route = sqlx::query("SELECT device_id,site_id FROM relay_sites WHERE hostname=$1 AND verified_at IS NOT NULL AND enabled=TRUE FOR SHARE")
+        .bind(&hostname).fetch_optional(&mut *route_tx).await.map_err(internal)?
+        .ok_or((StatusCode::NOT_FOUND, "relay_hostname_not_found".into()))?;
+    if current_route.get::<Uuid,_>("device_id") != device ||
+        current_route.get::<String,_>("site_id") != site_id {
+        return Err((StatusCode::NOT_FOUND, "relay_hostname_route_changed".into()));
+    }
     let (sender, response_rx) = s.relay.register_pending(request_id, device, &site_id)
         .ok_or((StatusCode::SERVICE_UNAVAILABLE, "relay_device_offline_or_capacity_reached".into()))?;
+    route_tx.commit().await.map_err(internal)?;
     if sender.send(message).await.is_err() {
         s.relay.cancel_pending(request_id);
         return Err((StatusCode::SERVICE_UNAVAILABLE, "relay_device_disconnected".into()));
