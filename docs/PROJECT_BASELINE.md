@@ -198,3 +198,5 @@ Update this file with exact evidence whenever the baseline changes.
 - 41105536c41fc5502381b6ed98731eedc2c0e759 and 57ad1eaf9ab58ce0595108def1fbfc90ec879ecc add instrumentation source for restoring previous Python, static, custom-root, registry and settings state after simulated process interruption. a087882170f5b1ae10ce3fcb8af58a5c80d90dcc serializes backup export/restore operations.
 - The tests have not been executed. API 26/33/35, low-storage, forced process death and physical-device acceptance remain open.
 
+- 64607e8a3d159e1d0ff5b23db1f97a8fa5b2bf1b adds instrumentation coverage that a committed full restore is cleaned without rolling back the newly deployed site. This and the simulated interrupted-restore test remain unexecuted.
+
