@@ -1,5 +1,9 @@
 # Runtime project storage boundary
 
-Python and Node project launch APIs accept only canonical directories beneath PocketHost's app-private `files`, `cache`, `noBackup`, or `codeCache` directories. The check resolves symbolic links before validating containment, and the Node foreground service repeats the check when it receives its launch intent. Python multi-host startup validates every route root before importing any project.
+Host-side Python and Node project roots are validated as canonical descendants of Pocket Host's private `files`, `cache`, `noBackup` or `codeCache` directories before transfer.
 
-Projects selected through PocketHost's import flow are copied into app-private storage. A project path outside those directories is rejected and must be imported again through the app. This is a filesystem-boundary hardening measure, not a process sandbox: Python and Node code still run with the PocketHost application UID and network privileges. Only owner-controlled, trusted code may be executed. Public arbitrary-code hosting remains unsupported until an OS-enforced isolation design and adversarial security review are complete.
+The host packages the selected project into a bounded ZIP archive and passes a read-only file descriptor over the signature-protected, versioned companion Binder API. The companion validates each archive entry, rejects path traversal and common credential paths, enforces per-file and total extracted-size limits, and extracts into its own private `files/projects/<site-id>` directory using a staging-and-rename update.
+
+Current bounds: 10,000 entries, 64 MiB per extracted file and 256 MiB total extracted project size. Symlinked source entries are rejected. Common `.env*`, credential, SSH/cloud credential and private-key files are excluded or rejected. This is a practical transfer filter, not a comprehensive secret scanner.
+
+Python and Node execute under the companion app UID, not the host UID. The companion UID still has access to all projects within the companion package; per-site filesystem isolation and enforceable network-egress controls remain incomplete. Only owner-controlled trusted code may execute. Do not store credentials in runtime project folders or expose arbitrary third-party code.
