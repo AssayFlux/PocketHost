@@ -59,7 +59,7 @@ services:
       - caddy-config:/config
     networks:
       private:
-        ipv4_address: 172.31.240.10
+        ipv4_address: ${POCKETHOST_CADDY_IP:-172.31.240.10}
 
   cloudflared:
     profiles: ["cloudflare"]
@@ -69,7 +69,7 @@ services:
     depends_on: [control-plane]
     networks:
       private:
-        ipv4_address: 172.31.240.11
+        ipv4_address: ${POCKETHOST_CLOUDFLARED_IP:-172.31.240.11}
 
 volumes:
   pockethost-control-data:
