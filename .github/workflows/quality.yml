@@ -39,8 +39,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Resolve new control-plane dependencies and update Cargo.lock
+        run: cargo check --manifest-path control-plane/Cargo.toml
       - name: Test remote control-plane backend and database migrations
         run: cargo test --manifest-path control-plane/Cargo.toml --locked
+      - name: Export resolved control-plane lockfile for reproducible dependency pinning
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-control-plane-lock
+          path: control-plane/Cargo.lock
+          retention-days: 1
       - name: Validate Caddy Relay TLS configuration
         run: |
           docker run --rm -e CONTROL_PLANE_DOMAIN=relay.example.test \
