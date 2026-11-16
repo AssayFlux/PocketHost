@@ -1,6 +1,6 @@
 use axum::{
     body::{to_bytes, Body, Bytes},
-    extract::{DefaultBodyLimit, Path, Query, Request, State},
+    extract::{ConnectInfo, DefaultBodyLimit, Path, Query, Request, State},
     http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode, Response},
     response::sse::{Event, KeepAlive, Sse},
     routing::{any, get, post},
@@ -12,7 +12,7 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, convert::Infallible, fs, io::Write, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::Infallible, fs, io::Write, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -687,6 +687,13 @@ struct CreateRelaySite {
     site_id: String,
 }
 
+fn is_trusted_relay_proxy(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(value) => value.is_loopback() || value.is_private() || value.is_link_local(),
+        std::net::IpAddr::V6(value) => value.is_loopback() || value.is_unique_local() || value.is_unicast_link_local(),
+    }
+}
+
 fn normalize_relay_hostname(value: &str) -> Result<String, (StatusCode, String)> {
     let hostname = value.trim().trim_end_matches('.').to_ascii_lowercase();
     if hostname.len() > 253 || hostname.is_empty() || hostname.parse::<std::net::IpAddr>().is_ok() ||
@@ -835,7 +842,7 @@ async fn relay_device_response(
 }
 
 async fn relay_visitor(
-    State(s): State<AppState>, request: Request<Body>,
+    State(s): State<AppState>, ConnectInfo(peer): ConnectInfo<SocketAddr>, request: Request<Body>,
 ) -> Result<Response<Body>, (StatusCode, String)> {
     let (parts, body) = request.into_parts();
     let secure_frontend = parts.headers.get("x-forwarded-proto").and_then(|value| value.to_str().ok())
@@ -872,6 +879,17 @@ async fn relay_visitor(
             if value.len() <= 8_192 { forwarded_headers.insert(name.to_string(), value.to_string()); }
         }
     }
+    let client_ip = if is_trusted_relay_proxy(peer.ip()) {
+        parts.headers.get("cf-connecting-ip").and_then(|value| value.to_str().ok())
+            .and_then(|value| value.trim().parse::<std::net::IpAddr>().ok())
+            .or_else(|| parts.headers.get("x-forwarded-for").and_then(|value| value.to_str().ok())
+                .and_then(|value| value.split(',').next())
+                .and_then(|value| value.trim().parse::<std::net::IpAddr>().ok()))
+            .unwrap_or_else(|| peer.ip())
+    } else {
+        peer.ip()
+    };
+    forwarded_headers.insert("cf-connecting-ip".into(), client_ip.to_string());
     let request_id = Uuid::new_v4();
     let message = relay::RelayRequest {
         id: request_id,
@@ -965,7 +983,7 @@ async fn main() -> anyhow::Result<()> {
     let address = std::env::var("POCKETHOST_CONTROL_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&address).await?;
     tracing::info!(%address, "PocketHost control plane listening");
-    axum::serve(listener, app).with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; }).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; }).await?;
     Ok(())
 }
 
