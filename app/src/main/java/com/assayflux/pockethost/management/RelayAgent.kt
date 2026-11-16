@@ -5,9 +5,13 @@ import android.util.Base64
 import org.json.JSONObject
 import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.BufferedReader
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -133,81 +137,25 @@ object RelayAgent {
             require(id.matches(Regex("[0-9a-fA-F-]{36}"))) { "Invalid Relay request ID." }
             val method = message.getString("method")
             require(method in setOf("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS")) { "Unsupported Relay method." }
-            val hostname = message.getString("hostname").trimEnd('.').lowercase()
+            val hostname = message.getString("hostname")
             require(hostname.length in 1..253 && hostname.none { it.isWhitespace() }) { "Invalid Relay hostname." }
             val siteId = message.getString("site_id")
-            val registeredSite = SiteRegistry.list(context).firstOrNull { site ->
-                site.enabled && site.id == siteId && hostname in site.hostnames
+            require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}")) && SiteRegistry.isEnabledSite(context, siteId)) {
+                "Relay route does not identify an enabled local site."
             }
-            require(registeredSite != null) { "Relay hostname is not mapped to the expected local site ID." }
             val path = message.getString("path")
             require(path.startsWith("/") && path.length <= 8_192 && !path.startsWith("//")) { "Invalid Relay path." }
             val body = Base64.decode(message.optString("body_base64", ""), Base64.DEFAULT)
             require(body.size <= MAX_BODY_BYTES) { "Relay request body exceeds 8 MiB." }
-
             val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080)
-            val local = URL("http://127.0.0.1:$port$path")
-            val connection = local.openConnection() as HttpURLConnection
-            try {
-                connection.requestMethod = method
-                connection.connectTimeout = 5_000
-                connection.readTimeout = 35_000
-                connection.instanceFollowRedirects = false
-                connection.setRequestProperty("Host", hostname)
-                connection.setRequestProperty("X-Forwarded-Proto", "https")
-                connection.setRequestProperty("Connection", "close")
-                val incomingHeaders = message.optJSONObject("headers") ?: JSONObject()
-                val allowed = setOf(
-                    "accept", "accept-encoding", "accept-language", "authorization", "cache-control", "cf-connecting-ip",
-                    "content-type", "cookie", "if-match", "if-modified-since", "if-none-match",
-                    "origin", "range", "referer", "user-agent"
-                )
-                val keys = incomingHeaders.keys()
-                while (keys.hasNext()) {
-                    val name = keys.next()
-                    if (name.lowercase() in allowed) {
-                        val value = incomingHeaders.optString(name)
-                        if (value.length <= 8_192) connection.setRequestProperty(name, value)
-                    }
-                }
-                if (body.isNotEmpty()) {
-                    connection.doOutput = true
-                    connection.setFixedLengthStreamingMode(body.size)
-                    connection.outputStream.use { it.write(body) }
-                }
-                val status = connection.responseCode
-                val stream = if (status >= 400) connection.errorStream else connection.inputStream
-                val responseBytes = stream?.use { input ->
-                    ByteArrayOutputStream().use { output ->
-                        val buffer = ByteArray(16 * 1024)
-                        var total = 0
-                        while (true) {
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            total += count
-                            require(total <= MAX_BODY_BYTES) { "Relay response body exceeds 8 MiB." }
-                            output.write(buffer, 0, count)
-                        }
-                        output.toByteArray()
-                    }
-                } ?: ByteArray(0)
-                val responseHeaders = JSONObject()
-                connection.headerFields.forEach { (name, values) ->
-                    if (name != null && values != null && name.lowercase() in setOf(
-                            "cache-control", "content-disposition", "content-encoding", "content-language",
-                            "content-range", "content-type", "etag", "expires", "last-modified", "location", "set-cookie", "vary"
-                        )) {
-                        responseHeaders.put(name.lowercase(), values.firstOrNull().orEmpty())
-                    }
-                }
-                postResponse(endpoint, token, id, JSONObject()
-                    .put("id", id)
-                    .put("status", status)
-                    .put("headers", responseHeaders)
-                    .put("body_base64", Base64.encodeToString(responseBytes, Base64.NO_WRAP)))
-            } finally {
-                connection.disconnect()
-            }
+            val localResponse = forwardLocalRequest(
+                port, hostname, path, method, message.optJSONObject("headers") ?: JSONObject(), body
+            )
+            postResponse(endpoint, token, id, JSONObject()
+                .put("id", id)
+                .put("status", localResponse.status)
+                .put("headers", localResponse.headers)
+                .put("body_base64", Base64.encodeToString(localResponse.body, Base64.NO_WRAP)))
         } catch (error: Exception) {
             runCatching {
                 postResponse(endpoint, token, id, JSONObject()
@@ -223,6 +171,139 @@ object RelayAgent {
                     context, "WARN", "RELAY_RESPONSE_FAILED", "Could not return a visitor response to the Relay gateway."
                 )
             }
+        }
+    }
+
+
+    private data class LocalResponse(val status: Int, val headers: JSONObject, val body: ByteArray)
+
+    /** Raw loopback HTTP preserves the visitor Host header; HttpURLConnection filters it. */
+    private fun forwardLocalRequest(
+        port: Int, hostname: String, path: String, method: String,
+        incomingHeaders: JSONObject, body: ByteArray
+    ): LocalResponse {
+        val allowed = setOf("accept", "accept-encoding", "accept-language", "authorization",
+            "cache-control", "content-type", "cookie", "if-match", "if-modified-since",
+            "if-none-match", "origin", "range", "referer", "user-agent")
+        Socket().use { socket ->
+            socket.connect(InetSocketAddress("127.0.0.1", port), 5_000)
+            socket.soTimeout = 35_000
+            val output = BufferedOutputStream(socket.getOutputStream())
+            val input = BufferedInputStream(socket.getInputStream())
+            fun writeLine(value: String) {
+                output.write(value.toByteArray(Charsets.ISO_8859_1))
+                output.write(byteArrayOf(13, 10))
+            }
+            writeLine("$method $path HTTP/1.1")
+            writeLine("Host: $hostname")
+            writeLine("Connection: close")
+            writeLine("X-Forwarded-Proto: https")
+            val keys = incomingHeaders.keys()
+            while (keys.hasNext()) {
+                val name = keys.next()
+                val normalized = name.lowercase()
+                if (normalized in allowed) {
+                    val value = incomingHeaders.optString(name)
+                    require(value.length <= 8_192 && !value.contains('\r') && !value.contains('\n')) {
+                        "Invalid Relay request header."
+                    }
+                    writeLine("$normalized: $value")
+                }
+            }
+            if (body.isNotEmpty()) writeLine("Content-Length: ${body.size}")
+            writeLine("")
+            if (body.isNotEmpty()) output.write(body)
+            output.flush()
+
+            fun readLine(max: Int = 8_192): String {
+                val bytes = ByteArrayOutputStream()
+                var previous = -1
+                while (true) {
+                    val next = input.read()
+                    if (next < 0) throw IllegalStateException("Local site closed its response unexpectedly.")
+                    if (previous == 13 && next == 10) break
+                    if (previous >= 0) bytes.write(previous)
+                    previous = next
+                    if (bytes.size() > max) throw IllegalStateException("Local HTTP line exceeds its limit.")
+                }
+                return bytes.toString(Charsets.ISO_8859_1.name())
+            }
+
+            val statusParts = readLine().split(' ', limit = 3)
+            require(statusParts.size >= 2 && statusParts[0].startsWith("HTTP/1.")) { "Invalid local HTTP status line." }
+            val status = statusParts[1].toIntOrNull() ?: throw IllegalStateException("Invalid local HTTP status.")
+            require(status in 100..599) { "Invalid local HTTP status." }
+            val headers = LinkedHashMap<String, String>()
+            var headerBytes = 0
+            while (true) {
+                val line = readLine()
+                headerBytes += line.length + 2
+                require(headerBytes <= 64 * 1024) { "Local HTTP response headers exceed 64 KiB." }
+                if (line.isEmpty()) break
+                val split = line.indexOf(':')
+                require(split > 0) { "Malformed local HTTP response header." }
+                val name = line.substring(0, split).trim().lowercase()
+                val value = line.substring(split + 1).trim()
+                if (name in setOf("cache-control", "content-disposition", "content-encoding",
+                        "content-language", "content-range", "content-type", "etag", "expires",
+                        "last-modified", "location", "vary") && value.length <= 8_192) {
+                    headers[name] = if (headers.containsKey(name)) "${headers[name]}, $value" else value
+                }
+                if (name == "transfer-encoding" || name == "content-length") headers[name] = value
+            }
+            val response = ByteArrayOutputStream()
+            fun readExact(count: Int) {
+                require(count >= 0 && response.size().toLong() + count <= MAX_BODY_BYTES) {
+                    "Local response body exceeds 8 MiB."
+                }
+                var remaining = count
+                val buffer = ByteArray(16 * 1024)
+                while (remaining > 0) {
+                    val read = input.read(buffer, 0, minOf(buffer.size, remaining))
+                    if (read < 0) throw IllegalStateException("Truncated local HTTP response body.")
+                    response.write(buffer, 0, read)
+                    remaining -= read
+                }
+            }
+            if (method != "HEAD" && status !in 100..199 && status != 204 && status != 304) {
+                val transferEncoding = headers["transfer-encoding"].orEmpty()
+                val contentLength = headers["content-length"]?.toLongOrNull()
+                when {
+                    transferEncoding.split(',').any { it.trim().equals("chunked", true) } -> {
+                        while (true) {
+                            val size = readLine().substringBefore(';').trim().toLongOrNull(16)
+                                ?: throw IllegalStateException("Invalid chunk length.")
+                            require(size <= MAX_BODY_BYTES.toLong()) { "Chunked response exceeds 8 MiB." }
+                            if (size == 0L) {
+                                while (readLine().isNotEmpty()) { }
+                                break
+                            }
+                            readExact(size.toInt())
+                            require(input.read() == 13 && input.read() == 10) { "Malformed chunk terminator." }
+                        }
+                    }
+                    contentLength != null -> {
+                        require(contentLength in 0..MAX_BODY_BYTES.toLong()) { "Local response body exceeds 8 MiB." }
+                        readExact(contentLength.toInt())
+                    }
+                    else -> {
+                        val buffer = ByteArray(16 * 1024)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            require(response.size().toLong() + read <= MAX_BODY_BYTES) {
+                                "Local response body exceeds 8 MiB."
+                            }
+                            response.write(buffer, 0, read)
+                        }
+                    }
+                }
+            }
+            val jsonHeaders = JSONObject()
+            headers.filterKeys { it in setOf("cache-control", "content-disposition", "content-encoding",
+                "content-language", "content-range", "content-type", "etag", "expires",
+                "last-modified", "location", "vary") }.forEach { (name, value) -> jsonHeaders.put(name, value) }
+            return LocalResponse(status, jsonHeaders, response.toByteArray())
         }
     }
 
