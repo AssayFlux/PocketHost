@@ -178,3 +178,11 @@ Update this file with exact evidence whenever the baseline changes.
 - 19b963158b68ea685339b2050195a985220354e5 and c788553eed7307874c7ca0e6ae2f6d21c88192e9 display p95/p99 in the dashboard and identify legacy benchmark records without p99 as unavailable.
 - No benchmark or Android build execution is claimed; representative workload profiles and target-device measurements remain open.
 
+## 2026-11-16 Gate 5–7 correctness and UI follow-up
+
+- 6415357e0d00fe874cd8b41d1f3bc811c4a8d488 switches Capacity Lab latency percentiles to nearest-rank selection; e500ab818adb14c9b460837b23d252ecbd5f74b8 adds small-sample regression coverage.
+- 048ceb4ebcc9f8e08ccded5f2f403f4d5f28ec7f tests quarantine of invalid active static deployment; c64ee93dbac89a62516111638261709a1192e759 hardens recovery against symlinked active and release trees.
+- 9d47c946aca35b2d99981f690218a639f37b640e and 4c4296c45b37f8a0a8329c7dd6a4d822dae970f8 extract device preferences into a dedicated Settings composable; 71cfca3dc985cb614794b0ad7881e1deb0e55f83 and 1dc94fb2a1376a4c991d2b88d55ddfcf6972536b extract section navigation. 33ff08559f02be36b7bdf16c9c99326736df082d and da578b4e914576a3418c0addeb1f4843e45285f5 extend Settings subsection UI instrumentation and visual artifacts.
+- Source tests include terminal-free archive activation while Rust static hosting remains online, backup authentication/tamper failure, operational storage bounds, and settings navigation. They remain unexecuted until successful Android workflow evidence is reviewed.
+- Gates 5–7 remain open pending actual CI/device evidence, additional capacity workload profiles and lifecycle fault injection.
+
