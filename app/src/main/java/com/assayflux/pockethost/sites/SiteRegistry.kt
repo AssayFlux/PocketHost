@@ -29,13 +29,24 @@ object SiteRegistry {
         }
     }
 
+    private fun validateAccessPolicy(site: Site) {
+        require(site.accessMode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
+        require(site.visitorCredentials.size <= 100 && site.visitorCredentials.all { (name, hash) ->
+            name.matches(Regex("[A-Za-z0-9_.@-]{1,64}")) && hash.matches(Regex("[0-9a-f]{64}"))
+        }) { "Invalid visitor credential registry." }
+        require(site.accessMode != "private" || site.visitorCredentials.size <= 1) {
+            "Private mode supports one shared visitor credential."
+        }
+        require(site.accessMode != "public" || site.visitorCredentials.isEmpty()) {
+            "Public sites must not retain visitor credentials."
+        }
+    }
+
     @Synchronized fun put(context: Context, site: Site) {
         require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
         require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
         require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
-        require(site.accessMode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
-        require(site.visitorCredentials.size <= 100 && site.visitorCredentials.all { (name, hash) -> name.matches(Regex("[A-Za-z0-9_.@-]{1,64}")) && hash.matches(Regex("[0-9a-f]{64}")) }) { "Invalid visitor credential registry." }
-        require(site.accessMode != "private" || site.visitorCredentials.size <= 1) { "Private mode supports one shared visitor credential." }
+        validateAccessPolicy(site)
         val root = File(site.root).canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
         require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
@@ -82,6 +93,7 @@ object SiteRegistry {
             require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
             require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
             require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
+            validateAccessPolicy(site)
             val root = File(site.root).canonicalFile
             require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
                 "Restored site root must be an existing directory inside Pocket Host private storage."
