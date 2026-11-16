@@ -6,17 +6,21 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
+import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.net.ServerSocket
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -79,6 +83,59 @@ class RuntimeCompanionCapabilityTest {
             runCatching { context.unbindService(connection) }
             host.close()
             marker.delete()
+        }
+    }
+
+    @Test
+    fun companionRejectsProjectArchivePathTraversal() {
+        val connected = CountDownLatch(1)
+        val binderRef = AtomicReference<IBinder?>()
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                binderRef.set(service)
+                connected.countDown()
+            }
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        val intent = Intent().setComponent(
+            ComponentName(
+                "com.assayflux.pockethost.worker",
+                "com.assayflux.pockethost.worker.RuntimeWorkerService"
+            )
+        )
+        assertTrue(context.bindService(intent, connection, Context.BIND_AUTO_CREATE))
+        val archive = File(context.cacheDir, "pockethost-malicious-project.zip")
+        try {
+            assertTrue("Companion bind timed out", connected.await(10, TimeUnit.SECONDS))
+            ZipOutputStream(archive.outputStream()).use { zip ->
+                zip.putNextEntry(ZipEntry("../host-escape-marker.txt"))
+                zip.write("must-not-extract".toByteArray())
+                zip.closeEntry()
+            }
+            val descriptor = ParcelFileDescriptor.open(archive, ParcelFileDescriptor.MODE_READ_ONLY)
+            val data = Parcel.obtain()
+            val reply = Parcel.obtain()
+            try {
+                data.writeInterfaceToken(this@RuntimeCompanionCapabilityTest.descriptor)
+                data.writeString("malicious_project")
+                descriptor.writeToParcel(data, 0)
+                assertTrue(checkNotNull(binderRef.get()).transact(
+                    IBinder.FIRST_CALL_TRANSACTION + 4, data, reply, 0
+                ))
+                try {
+                    reply.readException()
+                    fail("Companion accepted a path-traversal archive.")
+                } catch (_: RuntimeException) {
+                    // Expected: the companion rejects the archive before activation.
+                }
+            } finally {
+                descriptor.close()
+                data.recycle()
+                reply.recycle()
+            }
+        } finally {
+            archive.delete()
+            runCatching { context.unbindService(connection) }
         }
     }
 
