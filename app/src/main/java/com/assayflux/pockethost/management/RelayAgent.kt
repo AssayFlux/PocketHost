@@ -30,6 +30,7 @@ object RelayAgent {
     @Volatile private var generation = 0L
     @Volatile private var worker: Thread? = null
     @Volatile private var streamConnection: HttpURLConnection? = null
+    @Volatile private var generation = 0L
     private val requests = ThreadPoolExecutor(
         4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(64),
         { runnable -> Thread(runnable, "PocketHost-Relay-Request").apply { isDaemon = true } },
@@ -41,6 +42,8 @@ object RelayAgent {
         if (running || !RemoteControlAgent.isConfigured(context)) return
         val endpoint = RemoteControlAgent.endpoint(context).trimEnd('/')
         val token = RemoteControlAgent.relayDeviceToken(context) ?: return
+        generation += 1
+        val runGeneration = generation
         generation += 1
         val runGeneration = generation
         running = true
@@ -74,6 +77,7 @@ object RelayAgent {
 
     @Synchronized
     fun stop() {
+        generation += 1
         generation += 1
         running = false
         streamConnection?.disconnect()
