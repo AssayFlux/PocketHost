@@ -30,7 +30,7 @@ ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE control_sessions
     ADD COLUMN IF NOT EXISTS owner_passkey_id TEXT
-    REFERENCES owner_passkeys(credential_id) ON DELETE SET NULL;
+    REFERENCES owner_passkeys(credential_id) ON DELETE CASCADE;
 
 ALTER TABLE control_sessions
     DROP CONSTRAINT IF EXISTS control_sessions_credential_binding_check;
