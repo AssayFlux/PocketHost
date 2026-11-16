@@ -78,3 +78,7 @@ The companion UID differs from the host UID, but Python and Node projects share 
 - Source commit: `dc18daa9855debdeb8fe7b5ed291b9ee8365bdcb`. CI run `43836611641` was still in progress at the time of this note; earlier six-job run `43836090906` passed on its own earlier SHA only.
 - Added Owner-only team-user token rotation across the control-plane API, PostgreSQL regression test, OpenAPI contract and web console. The prior credential is replaced immediately; the replacement is returned once and the audit record commits in the same transaction.
 - Gate 2 and Gate 4 remain open under the acceptance criteria in `docs/NORTH_STAR.md` and `docs/ROADMAP.md`.
+
+## Owner sequencing correction — 2026-11-16
+
+The historical validation deferral text above is superseded. The Owner explicitly moved intermediate host/companion APK and ABI builds plus API 26/33/35 emulator instrumentation into Gates 2–4. Gate 8 remains final signed-release, physical-device and independent-review acceptance. Current exact-SHA Actions evidence must be read from the linked workflow runs and the canonical `docs/PROJECT_BASELINE.md`; this historical snapshot is not current CI evidence.
