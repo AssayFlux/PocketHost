@@ -119,4 +119,30 @@ class PocketHostNavigationAccessibilityTest {
             visitorSiteRoot.deleteRecursively()
         }
     }
+
+    @Test
+    fun emptySitesScreenExplainsFirstPublishWithoutTerminal() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val registry = context.getSharedPreferences("pockethost_site_registry", 0)
+        val previousRegistry = registry.getString("sites", "[]") ?: "[]"
+        val device = UiDevice.getInstance(instrumentation)
+        try {
+            registry.edit().putString("sites", "[]").commit()
+            ActivityScenario.launch(MainActivity::class.java).use {
+                val sites = device.wait(Until.findObject(By.desc("Sites")), 20_000)
+                assertTrue("Sites navigation destination is not accessible", sites != null)
+                sites!!.click()
+                assertTrue("First-publish guidance is missing",
+                    device.wait(Until.hasObject(By.text("Your first publish — no terminal needed")), 15_000))
+                assertTrue("Root index.html requirement is not explained",
+                    device.wait(Until.hasObject(By.textContains("index.html at the top level")), 10_000))
+                assertTrue("Hosting start and preview steps are missing",
+                    device.wait(Until.hasObject(By.textContains("start hosting")), 10_000))
+            }
+        } finally {
+            registry.edit().putString("sites", previousRegistry).commit()
+        }
+    }
+
 }
