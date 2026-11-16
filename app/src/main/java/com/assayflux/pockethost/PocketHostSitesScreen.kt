@@ -93,7 +93,9 @@ internal fun PocketHostSitesScreen(
                         OutlinedButton(onClick = { actions.onUploadIndividualFile() }, enabled = !state.hosting && !state.importing,
                             modifier = Modifier.fillMaxWidth()) { Text("Upload individual file") }
                         if (state.siteFiles.isEmpty()) {
-                            Text("No imported site files yet. Choose a folder or ZIP to deploy your website.", color = palette.onSurfaceVariant)
+                            Text("Your first publish — no terminal needed", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("1. Choose a website folder or import a ZIP below.\n2. Keep index.html at the top level of that folder.\n3. Open Dashboard and start hosting; then return here and choose Preview site to verify it.", color = palette.onSurfaceVariant)
+                            Text("No website imported yet. Your current site stays in place until a new import has been validated.", color = palette.onSurfaceVariant)
                         } else {
                             state.siteFiles.forEach { entry ->
                                 Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
