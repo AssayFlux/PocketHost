@@ -286,3 +286,8 @@ No universal visitor number or uptime guarantee. Capacity is workload-specific a
 - `docs/PROJECT_STATUS_2026-11-16.md` — dated evidence snapshot.
 
 **Designed by AssayFlux · AssayFlux Scientific Systems**
+
+### Current gate evidence addendum — 2026-11-16
+
+- Gate 2 remains **open**. Lease/capability broker primitives, archive hardening and an isolated-UID/seccomp feasibility probe exist in source; the production runtime is still shared-UID and has not migrated Python/Node into per-project cells. No API 26/33/35 adversarial acceptance is claimed.
+- Gate 4 remains **open**. Remote control-plane user/device token lifecycle, immediate device-token rotation, role checks and transactional audit coverage have been implemented in source. This does not yet implement passkey-first owner identity or independent Public/Private/Restricted visitor authorization with site-scoped tokens.
