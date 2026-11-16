@@ -186,7 +186,7 @@ object SiteImporter {
      * between moving the active site aside and activating its replacement.
      * Invalid active data is preserved in the release directory for diagnosis.
      */
-    private fun isSafeRecoveryRelease(root: File): Boolean {
+    internal fun isSafeRecoveryRelease(root: File): Boolean {
         val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
         if (!java.nio.file.Files.isDirectory(root.toPath(), noFollow) ||
             !java.nio.file.Files.isRegularFile(File(root, "index.html").toPath(), noFollow)) return false
