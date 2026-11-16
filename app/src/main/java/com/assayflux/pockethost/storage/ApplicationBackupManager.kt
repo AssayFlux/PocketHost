@@ -84,7 +84,6 @@ object ApplicationBackupManager {
         val sites: List<SiteRegistry.Site>,
         val customStaticRoots: Map<String, File>
     )
-    private data class CustomRootChange(val active: File, val backup: File, val hadPrevious: Boolean)
 
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
@@ -250,7 +249,6 @@ object ApplicationBackupManager {
                 val previousPython = File(backupDir, "python-project")
                 if (activePython.exists()) {
                     if (!activePython.renameTo(previousPython)) throw IOException("Could not preserve the previous Python project.")
-                    pythonTouched = true
                 }
                 if (hasPython) {
                     if (!pythonStage.renameTo(activePython)) throw IOException("Could not activate the restored Python project.")
@@ -259,7 +257,6 @@ object ApplicationBackupManager {
                 val previousNode = File(backupDir, "node-project-default")
                 if (activeNode.exists()) {
                     if (!activeNode.renameTo(previousNode)) throw IOException("Could not preserve the previous Node.js project.")
-                    nodeTouched = true
                 }
                 if (hasNode) {
                     if (!nodeStage.renameTo(activeNode)) throw IOException("Could not activate the restored Node.js project.")
@@ -283,7 +280,6 @@ object ApplicationBackupManager {
                         throw IOException("The existing custom site root is a symbolic link.")
                     }
                     val previous = File(backupDir, "custom-static/${activeRoot.name}")
-                    var hadPrevious = false
                     if (activeRoot.exists()) {
                         if (!previous.parentFile!!.exists() && !previous.parentFile!!.mkdirs()) {
                             throw IOException("Could not create custom site rollback storage.")
@@ -291,7 +287,6 @@ object ApplicationBackupManager {
                         if (!activeRoot.renameTo(previous)) {
                             throw IOException("Could not preserve the previous custom site root.")
                         }
-                        hadPrevious = true
                     }
                     if (!stagedRoot.renameTo(activeRoot)) {
                         throw IOException("Could not activate the restored custom site root.")
