@@ -32,6 +32,9 @@ class RuntimeCellCapabilityBrokerTest {
         assertThrows(SecurityException::class.java) { broker.issue(lease.id, uid + 1) }
         val token = broker.issue(lease.id, uid)
         try {
+            assertThrows(IllegalArgumentException::class.java) {
+                broker.openReadOnly(lease.id, token, uid, "index.html\u0000/../secret")
+            }
             val descriptor = broker.openReadOnly(lease.id, token, uid, "index.html")
             try {
                 assertEquals("site-a", FileInputStream(descriptor.fileDescriptor).bufferedReader().readText())
