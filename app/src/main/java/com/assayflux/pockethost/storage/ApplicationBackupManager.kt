@@ -330,10 +330,15 @@ object ApplicationBackupManager {
     private const val RESTORE_COMMITTED = "restore-committed"
 
     private fun writeRestoreJournal(directory: File, journal: JSONObject) {
+        val temporary = File(directory, RESTORE_JOURNAL + ".tmp")
         val file = File(directory, RESTORE_JOURNAL)
-        java.io.FileOutputStream(file).use { output ->
+        java.io.FileOutputStream(temporary).use { output ->
             output.write(journal.toString().toByteArray(Charsets.UTF_8))
             output.fd.sync()
+        }
+        if (!temporary.renameTo(file)) {
+            temporary.delete()
+            throw IOException("Could not persist the full restore recovery journal.")
         }
     }
 
@@ -430,7 +435,9 @@ object ApplicationBackupManager {
                 val activePath = active.toPath().normalize()
                 val backupPath = backup.toPath().normalize()
                 val backupBase = File(directory, "custom-static").absoluteFile.toPath().normalize()
-                if (!activePath.startsWith(siteRoots) || !backupPath.startsWith(backupBase)) {
+                if (activePath == siteRoots || !activePath.startsWith(siteRoots) ||
+                    backupPath == backupBase || !backupPath.startsWith(backupBase) ||
+                    java.nio.file.Files.isSymbolicLink(File(directory, "custom-static").toPath())) {
                     throw IOException("Interrupted backup restore contains an unsafe custom site path.")
                 }
                 if (java.nio.file.Files.isSymbolicLink(backup.toPath())) {
