@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import android.os.RemoteException
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.io.File
@@ -48,7 +49,19 @@ object RuntimeWorkerClient {
 
     @Volatile private var cachedBinder: IBinder? = null
     @Volatile private var cachedConnection: ServiceConnection? = null
+    @Volatile private var cachedDeathRecipient: IBinder.DeathRecipient? = null
     private val connectionLock = Any()
+
+    private fun invalidateWorker(app: Context, expected: IBinder) {
+        synchronized(connectionLock) {
+            if (cachedBinder !== expected) return
+            cachedBinder = null
+            cachedDeathRecipient?.let { recipient -> runCatching { expected.unlinkToDeath(recipient, 0) } }
+            cachedDeathRecipient = null
+            cachedConnection?.let { connection -> runCatching { app.unbindService(connection) } }
+            cachedConnection = null
+        }
+    }
 
     private fun <T> withWorker(context: Context, operation: (IBinder) -> T): T {
         val app = context.applicationContext
@@ -61,6 +74,7 @@ object RuntimeWorkerClient {
                 binder = cachedBinder
                 if (binder == null || !binder!!.isBinderAlive) {
                     cachedBinder = null
+                    cachedDeathRecipient = null
                     cachedConnection?.let { previous -> runCatching { app.unbindService(previous) } }
                     cachedConnection = null
                     val intent = workerIntent()
@@ -70,24 +84,40 @@ object RuntimeWorkerClient {
                         throw IllegalStateException("Runtime companion is not installed. Install the matching companion APK first.", error)
                     }
                     val latch = CountDownLatch(1)
-                    var failure: Throwable? = null
+                    val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
                     val connection = object : ServiceConnection {
                         override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                            val recipient = IBinder.DeathRecipient {
+                                if (cachedBinder === service) {
+                                    cachedBinder = null
+                                    cachedDeathRecipient = null
+                                }
+                            }
                             cachedBinder = service
+                            cachedDeathRecipient = recipient
+                            try {
+                                service.linkToDeath(recipient, 0)
+                            } catch (error: RemoteException) {
+                                if (cachedBinder === service) cachedBinder = null
+                                cachedDeathRecipient = null
+                                failure.set(IllegalStateException("Runtime companion died while binding.", error))
+                            }
                             latch.countDown()
                         }
                         override fun onServiceDisconnected(name: ComponentName) {
                             cachedBinder = null
-                            failure = IllegalStateException("Runtime companion disconnected.")
+                            cachedDeathRecipient = null
+                            failure.set(IllegalStateException("Runtime companion disconnected."))
                             latch.countDown()
                         }
                         override fun onBindingDied(name: ComponentName) {
                             cachedBinder = null
-                            failure = IllegalStateException("Runtime companion binding died.")
+                            cachedDeathRecipient = null
+                            failure.set(IllegalStateException("Runtime companion binding died."))
                             latch.countDown()
                         }
                         override fun onNullBinding(name: ComponentName) {
-                            failure = IllegalStateException("Runtime companion returned an empty binding.")
+                            failure.set(IllegalStateException("Runtime companion returned an empty binding."))
                             latch.countDown()
                         }
                     }
@@ -102,11 +132,11 @@ object RuntimeWorkerClient {
                         cachedConnection = null
                         throw IllegalStateException("Timed out waiting for the runtime companion.")
                     }
-                    if (failure != null) {
+                    if (failure.get() != null) {
                         runCatching { app.unbindService(connection) }
                         runCatching { app.stopService(intent) }
                         cachedConnection = null
-                        throw failure!!
+                        throw failure.get()!!
                     }
                     binder = checkNotNull(cachedBinder) { "Runtime companion did not provide a Binder." }
                     try {
@@ -116,6 +146,7 @@ object RuntimeWorkerClient {
                         }
                     } catch (error: Throwable) {
                         cachedBinder = null
+                        cachedDeathRecipient = null
                         cachedConnection = null
                         runCatching { app.unbindService(connection) }
                         runCatching { app.stopService(intent) }
@@ -124,7 +155,13 @@ object RuntimeWorkerClient {
                 }
             }
         }
-        return operation(checkNotNull(binder))
+        val connectedBinder = checkNotNull(binder)
+        return try {
+            operation(connectedBinder)
+        } catch (error: RemoteException) {
+            invalidateWorker(app, connectedBinder)
+            throw IllegalStateException("Runtime companion connection was lost. Hosting supervision can reconnect it.", error)
+        }
     }
 
     /** Status queries must not start a foreground service or block the UI on first launch. */
@@ -301,8 +338,10 @@ object RuntimeWorkerClient {
             } as String
         }
 
-    fun stopNode(context: Context): String =
-        withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
+    fun stopNode(context: Context): String {
+        if (cachedWorkerAvailable() == null) return "STOPPED"
+        return withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
+    }
 
     fun nodeStatus(context: Context): String {
         // A status query is observational: never start the foreground companion just to
@@ -320,17 +359,25 @@ object RuntimeWorkerClient {
     }
 
     fun shutdownWorker(context: Context): String? {
-        if (cachedWorkerAvailable() == null) return null
+        val binder = cachedWorkerAvailable() ?: return null
         val app = context.applicationContext
         val result = withWorker(context) { transact(it, TRANSACTION_SHUTDOWN) as String }
-        cachedBinder = null
-        cachedConnection?.let { connection -> runCatching { app.unbindService(connection) } }
-        cachedConnection = null
+        synchronized(connectionLock) {
+            if (cachedBinder === binder) {
+                cachedDeathRecipient?.let { recipient -> runCatching { binder.unlinkToDeath(recipient, 0) } }
+                cachedBinder = null
+                cachedDeathRecipient = null
+            }
+            cachedConnection?.let { connection -> runCatching { app.unbindService(connection) } }
+            cachedConnection = null
+        }
         return result
     }
 
-    fun stopPython(context: Context): String =
-        withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
+    fun stopPython(context: Context): String {
+        if (cachedWorkerAvailable() == null) return "STOPPED"
+        return withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
+    }
 
     fun pythonStatus(context: Context): String {
         // A status query is observational: never start the foreground companion just to

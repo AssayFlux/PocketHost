@@ -3,9 +3,11 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.RuntimeWorkerClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -55,11 +57,43 @@ class PythonRuntimeSmokeTest {
             assertEquals("False", body.getOrElse(1) { "missing" })
             org.junit.Assert.assertNotEquals("Python must execute under companion UID, not host UID",
                 context.applicationInfo.uid, runtimeUid)
+
+            // Verify the complete visitor path: Rust routes by Host and proxies to
+            // the companion's loopback-only WSGI listener.
+            val staticRoot = File(context.cacheDir, "pockethost-python-proxy-${System.nanoTime()}")
+                .apply { mkdirs() }
+            val frontPort = ServerSocket(0).use { it.localPort }
+            val routes = JSONObject().put("python-smoke.local",
+                JSONObject().put("runtime", "python-wsgi").put("port", port))
+            try {
+                assertEquals("OK", NativeEngine.startMultiSite(
+                    staticRoot.absolutePath, routes.toString(), frontPort, false
+                ))
+                val proxied = Socket().use { socket ->
+                    socket.soTimeout = 5_000
+                    socket.connect(java.net.InetSocketAddress("127.0.0.1", frontPort), 5_000)
+                    socket.getOutputStream().write(
+                        "GET / HTTP/1.1\r\nHost: python-smoke.local\r\nConnection: close\r\n\r\n".toByteArray()
+                    )
+                    socket.getOutputStream().flush()
+                    socket.getInputStream().bufferedReader().readText()
+                }
+                assertTrue("Python request did not pass through Rust: $proxied",
+                    proxied.startsWith("HTTP/1.1 200"))
+                assertTrue("Rust proxy did not preserve the WSGI response: $proxied",
+                    proxied.contains("$runtimeUid:False"))
+            } finally {
+                NativeEngine.stop()
+                staticRoot.deleteRecursively()
+            }
         } finally {
             assertEquals("STOPPED", PythonHostRuntime.stop(context))
             RuntimeWorkerClient.shutdownWorker(context)
+            // A later explicit command must establish a fresh companion connection.
+            assertEquals("CONFIGURED", RuntimeWorkerClient.configurePython(context, 2))
+            assertEquals("STOPPED", PythonHostRuntime.status(context))
+            RuntimeWorkerClient.shutdownWorker(context)
             prefs.edit().putBoolean("trusted_runtime_code_ack", false).commit()
-            root.deleteRecursively()
         }
         assertEquals("STOPPED", PythonHostRuntime.status(context))
     }
