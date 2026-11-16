@@ -1,299 +1,415 @@
-<!-- ASSAYFLUX · POCKET HOST -->
+<!-- ASSAYFLUX POCKET HOST · REPOSITORY README -->
+
 <p align="center">
-  <img src="https://img.shields.io/badge/ASSAYFLUX-POCKET_HOST-1F3A5F?style=for-the-badge&labelColor=172B45" alt="AssayFlux Pocket Host">
+  <img src="https://img.shields.io/badge/ASSAYFLUX-POCKET%20HOST-172A3A?style=for-the-badge&labelColor=101B27&color=B18B5E" alt="AssayFlux Pocket Host">
 </p>
 <h1 align="center">ASSAYFLUX POCKET HOST</h1>
 <p align="center"><strong>Your website. Your device. Your control.</strong></p>
-<p align="center">Turn an Android phone into a self-hosted website origin — without root, Termux or a mandatory cloud server.</p>
-
+<p align="center">Turn an ordinary Android phone into the origin server for your website — without root, Termux or a mandatory VPS.</p>
 <p align="center">
-  <img src="https://img.shields.io/badge/ANDROID-8%2B-3D8061?style=flat-square&logo=android&logoColor=white" alt="Android 8+">
-  <img src="https://img.shields.io/badge/KOTLIN-COMPOSE-7657A6?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin">
-  <img src="https://img.shields.io/badge/RUST-TOKIO%20%2B%20HYPER-B47752?style=flat-square&logo=rust&logoColor=white" alt="Rust">
-  <img src="https://img.shields.io/badge/TYPESCRIPT-REACT-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/PYTHON-3.11-416B83?style=flat-square&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/NODE.JS-24-548B65?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js">
+  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&weight=600&size=16&pause=1600&color=B18B5E&center=true&vCenter=true&width=900&height=32&lines=PHONE-FIRST+WEBSITE+HOSTING;STATIC+SITES+AND+TRUSTED+APPLICATIONS;RUST+REQUEST+ENGINE;ANDROID-NATIVE+OPERATIONS;IMPORT+%E2%86%92+PUBLISH+%E2%86%92+OBSERVE+%E2%86%92+RECOVER" alt="Pocket Host product principles">
+</p>
+
+<!-- REPOSITORY STATUS -->
+<p align="center">
+  <img src="https://img.shields.io/github/license/AssayFlux/PocketHost?style=flat-square&label=LICENSE&labelColor=263746&color=B18B5E" alt="Apache 2.0 license">
+  <img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/quality.yml?branch=main&style=flat-square&label=QUALITY%20CI&labelColor=263746&color=6D9B83" alt="Quality workflow status">
+  <img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/android-integration.yml?branch=main&style=flat-square&label=ANDROID%20CI&labelColor=263746&color=6D9B83" alt="Android integration workflow status">
+  <img src="https://img.shields.io/github/last-commit/AssayFlux/PocketHost/main?style=flat-square&label=LAST%20COMMIT&labelColor=263746&color=8B9EAD" alt="Last commit">
+  <img src="https://img.shields.io/badge/RELEASE-PRE--RELEASE-B18B5E?style=flat-square&labelColor=263746" alt="Pre-release status">
+</p>
+
+<!-- TECHNOLOGY IDENTITY -->
+<p align="center">
+  <img src="https://img.shields.io/badge/ANDROID-API%2026%2B-3D8061?style=flat-square&logo=android&logoColor=white" alt="Android API 26 and newer">
+  <img src="https://img.shields.io/badge/KOTLIN-JETPACK%20COMPOSE-7657A6?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin and Jetpack Compose">
+  <img src="https://img.shields.io/badge/RUST-TOKIO%20%2B%20HYPER-B47752?style=flat-square&logo=rust&logoColor=white" alt="Rust Tokio and Hyper">
+  <img src="https://img.shields.io/badge/PYTHON-CPYTHON%203.11-416B83?style=flat-square&logo=python&logoColor=white" alt="Python 3.11">
+  <img src="https://img.shields.io/badge/NODE.JS-24.22.1-548B65?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js 24.22.1">
+  <img src="https://img.shields.io/badge/TYPESCRIPT-REACT%20%2B%20VITE-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript React and Vite">
 </p>
 <p align="center">
-  <img src="https://img.shields.io/badge/QUALITY-CI%20TRACKED-527D75?style=flat-square" alt="Quality CI">
-  <img src="https://img.shields.io/badge/RELEASE-PRE--RELEASE-B18B5E?style=flat-square" alt="Pre-release">
-  <img src="https://img.shields.io/badge/SECURITY-GATES%20OPEN-C62828?style=flat-square" alt="Security gates open">
+  <img src="https://img.shields.io/badge/ANDROID%20NDK-C%2B%2B%20%2F%20JNI-658B6C?style=flat-square&logo=android&logoColor=white" alt="Android NDK and JNI">
+  <img src="https://img.shields.io/badge/NETWORKING-HTTP%20%2F%20TLS-527D75?style=flat-square" alt="HTTP and TLS networking">
+  <img src="https://img.shields.io/badge/EDGE-CLOUDFLARE%20TUNNEL-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Tunnel integration">
+  <img src="https://img.shields.io/badge/CONTROL%20PLANE-AXUM%20%2B%20POSTGRES-416B83?style=flat-square&logo=postgresql&logoColor=white" alt="Axum and PostgreSQL">
+  <img src="https://img.shields.io/badge/IDENTITY-DESIGNED%20BY%20ASSAYFLUX-800020?style=flat-square" alt="Designed by AssayFlux">
 </p>
 
 ---
 
-## 01 · PROJECT OVERVIEW
+## ABOUT THE PROJECT
 
-AssayFlux Pocket Host makes an Android phone the origin server for websites and small web applications. The phone runs the website engine; optional edge connectivity makes it reachable from the internet. The app is designed for budget-conscious owners, independent developers and operators who want understandable hosting controls on hardware they already own.
+**AssayFlux Pocket Host** is a phone-first website hosting system. An Android device stores and serves the website; its native Rust engine handles HTTP ingress, hostname routing, static delivery and reverse-proxy traffic. Optional connectivity services make a locally hosted site reachable beyond the phone's network.
 
-**Core promise:** Import → Validate → Preview → Publish → Observe → Protect → Recover.
+The product is designed for people who want to publish a website from hardware they already own, while retaining understandable controls over hosting, networking, resource use and recovery.
 
-**Product identity**
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/smartphone.svg?color=%23B18B5E" width="30" height="30" alt="Phone"><br>
+      <strong>PHONE AS ORIGIN</strong><br><sub>The website runs from the Android device, not a required VPS.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/network.svg?color=%23B18B5E" width="30" height="30" alt="Network"><br>
+      <strong>ONE REQUEST ENGINE</strong><br><sub>Rust owns website ingress, routing and application proxying.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23B18B5E" width="30" height="30" alt="Security"><br>
+      <strong>EVIDENCE BEFORE CLAIMS</strong><br><sub>Source, build, test, device and production status are distinct.</sub>
+    </td>
+  </tr>
+</table>
+
+### Product identity
+
 | Property | Value |
 |---|---|
-| Application | AssayFlux Pocket Host |
-| Developer | Designed by AssayFlux |
-| Android package | `com.assayflux.pockethost` |
-| Runtime companion | `com.assayflux.pockethost.worker` |
-| Minimum Android | Android 8.0 · API 26 |
-| Device target | ARMv7 / ARM64; x86_64 for emulator coverage |
-| Operating model | Native Android; no root; no Termux |
-| Release position | Pre-release engineering; not production approved |
+| Product | AssayFlux Pocket Host |
+| Developer identity | Designed by AssayFlux |
+| Steward | AssayFlux Scientific Systems |
+| Android host package | <code>com.assayflux.pockethost</code> |
+| Runtime companion package | <code>com.assayflux.pockethost.worker</code> |
+| Minimum Android target | Android 8.0 · API 26 |
+| Device architecture targets | ARMv7 and ARM64; x86_64 for emulator coverage |
+| Operating model | Native Android · no root · no Termux |
+| Release position | Pre-release engineering · not production approved |
 
-The phone remains the website origin. A VPS is not required for local hosting. Public access can use the owner's existing Cloudflare Tunnel; a first-party AssayFlux Relay is now part of the product north star but is **planned, not yet implemented**.
+## PRODUCT CAPABILITIES
 
-## 02 · PRODUCT MODES
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="https://api.iconify.design/lucide/globe.svg?color=%23B18B5E" width="28" height="28" alt="Website"><br>
+      <strong>STATIC WEBSITE HOSTING</strong><br><sub>Import a folder or ZIP, validate the site, preview it and publish from the phone.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="https://api.iconify.design/lucide/server.svg?color=%23B18B5E" width="28" height="28" alt="Server"><br>
+      <strong>RUST HTTP ENGINE</strong><br><sub>Hostname routing, static files, byte ranges, SPA fallback and loopback reverse proxy.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/code-2.svg?color=%23B18B5E" width="28" height="28" alt="Python"><br>
+      <strong>PYTHON WSGI</strong><br><sub>Companion-hosted CPython 3.11 for owner-trusted Python applications.</sub>
+    </td>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/terminal.svg?color=%23B18B5E" width="28" height="28" alt="Node"><br>
+      <strong>NODE.JS APPLICATIONS</strong><br><sub>Companion-hosted Node.js mobile runtime with prebundled dependencies.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/cloud.svg?color=%23B18B5E" width="28" height="28" alt="Tunnel"><br>
+      <strong>PUBLIC CONNECTIVITY</strong><br><sub>Reuse an existing Cloudflare Tunnel; first-party AssayFlux Relay is planned.</sub>
+    </td>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/activity.svg?color=%23B18B5E" width="28" height="28" alt="Operations"><br>
+      <strong>OPERATIONS AND RECOVERY</strong><br><sub>Hosting status, activity, resource telemetry, encrypted backup foundations and recovery work.</sub>
+    </td>
+  </tr>
+</table>
 
-| Mode | Workflow | Intended capabilities |
-|---|---|---|
-| **Simple** | Import a static site, preview, publish and monitor | Static website hosting, hostname setup, connection status, backup and restore |
-| **Advanced** | Operate multiple sites and trusted application backends | Host routing, Python WSGI, Node.js, resource budgets, Capacity Lab, diagnostics and optional remote management |
+**Two operating modes**
 
-Static hosting is the dependable foundation. Python, Node, public tunnels and remote management must remain optional. Pocket Host targets modest websites and workloads; it is not an unlimited cloud-region replacement or uptime guarantee.
-
-## 03 · TECHNOLOGY ECOSYSTEM
-
-<p align="center">
-  <img src="https://img.shields.io/badge/ANDROID-NATIVE%20APP-3D8061?style=flat-square&logo=android&logoColor=white">
-  <img src="https://img.shields.io/badge/JETPACK-COMPOSE-6657A5?style=flat-square&logo=jetpackcompose&logoColor=white">
-  <img src="https://img.shields.io/badge/GRADLE-BUILD-477C75?style=flat-square&logo=gradle&logoColor=white">
-  <img src="https://img.shields.io/badge/NDK%20%2B%20JNI-NATIVE-658B6C?style=flat-square">
-</p>
-<p align="center">
-  <img src="https://img.shields.io/badge/RUST-1.83%2B%20TOOLCHAIN-B47752?style=flat-square&logo=rust&logoColor=white">
-  <img src="https://img.shields.io/badge/TOKIO-ASYNC%20RUNTIME-2C6B8A?style=flat-square">
-  <img src="https://img.shields.io/badge/HYPER-HTTP-5C7896?style=flat-square">
-  <img src="https://img.shields.io/badge/C%2B%2B-NATIVE%20BRIDGE-557A95?style=flat-square&logo=cplusplus&logoColor=white">
-</p>
-<p align="center">
-  <img src="https://img.shields.io/badge/PYTHON-CPYTHON%203.11-416B83?style=flat-square&logo=python&logoColor=white">
-  <img src="https://img.shields.io/badge/CHAQUOPY-ANDROID%20PYTHON-527D73?style=flat-square">
-  <img src="https://img.shields.io/badge/NODE.JS-24-548B65?style=flat-square&logo=nodedotjs&logoColor=white">
-</p>
-<p align="center">
-  <img src="https://img.shields.io/badge/TYPESCRIPT-CONSOLE-3178C6?style=flat-square&logo=typescript&logoColor=white">
-  <img src="https://img.shields.io/badge/REACT-18-287D9B?style=flat-square&logo=react&logoColor=white">
-  <img src="https://img.shields.io/badge/VITE-6-7461A8?style=flat-square&logo=vite&logoColor=white">
-  <img src="https://img.shields.io/badge/AXUM-CONTROL%20PLANE-795548?style=flat-square">
-  <img src="https://img.shields.io/badge/POSTGRESQL-DATABASE-416B83?style=flat-square&logo=postgresql&logoColor=white">
-</p>
-
-| Technology | Responsibility |
+| Mode | Designed workflow |
 |---|---|
-| Kotlin + Jetpack Compose | Android UI, lifecycle, permissions, storage access and device telemetry |
-| Rust + Tokio + Hyper | HTTP ingress, static files, hostname routing, reverse proxy, bounded admission and engine metrics |
-| C++ / JNI | Native Node bridge and coarse-grained host-engine integration |
-| CPython 3.11 / Chaquopy | Embedded Python WSGI runtime, currently companion-UID trusted-code scope |
-| Node.js mobile 24.22.1 | Embedded Node runtime, currently companion-UID trusted-code scope |
-| TypeScript + React + Vite | Browser management console |
-| Axum + SQLx + PostgreSQL | Optional remote management control plane |
-| cloudflared | Existing Cloudflare outbound tunnel connector |
-| Android Keystore / AES-GCM | Device-bound secret protection and encrypted backups |
+| **Simple** | Import static site → validate → preview → publish → monitor |
+| **Advanced** | Manage multiple sites → configure hostnames → operate trusted runtimes → inspect capacity and diagnostics |
 
-Technology icons describe the repository's stack, not proof that every subsystem has passed release acceptance.
+Static hosting is the foundational service. Python, Node, public tunnels and remote management are optional layers. Pocket Host targets modest workloads on ordinary Android devices; it is not an unlimited cloud-server replacement or uptime guarantee.
 
-## 04 · SYSTEM ARCHITECTURE
+## TECHNOLOGY ECOSYSTEM
 
-```mermaid
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=androidstudio,kotlin,gradle,rust,cpp,python,nodejs,ts,react,vite,postgres,cloudflare,linux,git&perline=7" alt="Android, Kotlin, Gradle, Rust, C++, Python, Node.js, TypeScript, React, Vite, PostgreSQL, Cloudflare, Linux and Git technology icons">
+</p>
+
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Android application | Kotlin · Jetpack Compose · AndroidX | UI, lifecycle, storage access, permissions and device integration |
+| Website engine | Rust · Tokio · Hyper | HTTP listener, hostname/site routing, static delivery, reverse proxy and admission |
+| Native integration | C++ · Android NDK · JNI | Native bridge and runtime integration |
+| Python runtime | CPython 3.11 · Chaquopy | WSGI application execution in the companion package |
+| Node runtime | Node.js mobile 24.22.1 | Embedded Node application execution in the companion package |
+| Management console | TypeScript · React · Vite | Browser-based owner/operator console |
+| Optional control plane | Rust · Axum · SQLx · PostgreSQL | Remote management, device registration and leased commands |
+| Public connector | cloudflared | Optional outbound Cloudflare Tunnel connection |
+| Secret protection | Android Keystore · AES-GCM | Device-bound secret protection and encrypted backup primitives |
+
+Technology badges identify components present in the repository. They are not a claim that every subsystem has passed production acceptance.
+
+## SYSTEM ARCHITECTURE
+
+~~~mermaid
 flowchart TB
-  V[Website visitor] --> EDGE[Public edge: Cloudflare today / AssayFlux Relay planned]
-  EDGE -->|outbound-established encrypted tunnel| RUST[Rust · Tokio · Hyper on Android]
-  RUST --> ROUTER[Hostname and site router]
-  ROUTER --> STATIC[Static site roots]
-  ROUTER --> PY[Python WSGI · trusted code]
-  ROUTER --> NODE[Node.js · trusted code]
-  OWNER[Owner / Operator] --> APP[Kotlin · Jetpack Compose]
-  APP --> SERVICE[Android foreground hosting service]
-  APP --> API[Authenticated loopback management API]
-  API <--> CONSOLE[TypeScript · React console]
-  APP <-->|signature-protected Binder IPC| BROKER[Runtime companion broker]
-  BROKER --> CELLS[Per-project isolated execution cells · target design]
-  APP -. optional heartbeat and leased commands .-> CP[Optional Axum / PostgreSQL control plane]
-```
+    VISITOR["Website visitor"] --> EDGE["Public edge<br/>Cloudflare today · AssayFlux Relay planned"]
+    EDGE -->|"forwarded website traffic"| RUST["Rust · Tokio · Hyper<br/>Android website listener"]
+    RUST --> ROUTER["Hostname and site router"]
+    ROUTER --> STATIC["Static site files"]
+    ROUTER --> PY["Python WSGI<br/>trusted code"]
+    ROUTER --> NODE["Node.js<br/>trusted code"]
 
-**Responsibility boundaries**
-- Rust is the website request engine and only intended public ingress.
-- Kotlin owns Android lifecycle and device integration.
-- The management API is separate, authenticated and loopback-only; never route a public hostname to it.
-- The companion is a separate Android package/UID from the host. It does **not** yet isolate projects from one another.
-- The AssayFlux Relay gateway and isolated runtime cells are planned architecture, not current shipped capability.
+    OWNER["Owner / Operator"] --> ANDROID["Kotlin · Jetpack Compose"]
+    ANDROID --> LIFE["Android lifecycle<br/>foreground hosting service"]
+    ANDROID --> MGMT["Authenticated loopback<br/>management API"]
+    MGMT <--> CONSOLE["TypeScript · React<br/>management console"]
 
-## 05 · REQUEST AND CONTROL FLOWS
+    ANDROID <-->|"signature-protected Binder"| BROKER["Runtime companion broker"]
+    BROKER --> WORKERS["Python and Node workers<br/>shared companion UID today"]
 
-**Website request**
+    ANDROID -. optional heartbeat .-> CP["Optional Axum / PostgreSQL<br/>remote control plane"]
+    RELAY["AssayFlux Relay<br/>planned gateway and device agent"] -. future path .-> EDGE
+~~~
+
+### Responsibility boundaries
+
+- **Kotlin** owns Android lifecycle, permissions, storage access, foreground operation and device telemetry.
+- **Rust** is the website request engine and the intended single public ingress path.
+- **The runtime companion** hosts Python and Node separately from the main host package and communicates through protected Binder IPC.
+- **The TypeScript console** is a management client; it is not a second website request router.
+- **The optional control plane** manages devices and remote operations; it is not the website origin.
+- **Public hostnames must never target the management API.**
+
+## HOW A WEBSITE REQUEST IS SERVED
+
 1. A visitor requests a configured hostname.
-2. The selected public connector forwards traffic to the phone's Rust listener.
-3. Rust validates the host and selects the registered site.
-4. Static content is served directly, or Rust proxies to the configured trusted runtime.
-5. The response returns through the same connector.
+2. The selected connector forwards website traffic to the phone's Rust listener.
+3. Rust validates the hostname and resolves the registered site.
+4. Static content is served directly, or the request is proxied to the configured loopback application runtime.
+5. The response returns through the same network path.
 
-**Local administration**
-1. Owner opens Pocket Host or the local console.
-2. Browser pairing requires an approval challenge in the Android app.
-3. An expiring session authorizes the permitted management routes.
-4. Session revocation and service restart invalidate access as specified by the API.
+For local hosting, the connector is not required. The phone remains the origin in every mode.
 
-**Optional remote management**
-1. Phone agent establishes outbound authenticated communication with the control plane.
-2. Control plane stores device registration, heartbeat, roles and leased commands.
-3. Device validates command scope, expiry and replay state before execution.
-4. Website traffic still terminates at the phone's Rust engine; the control plane does not serve the site.
+## NETWORKING OPTIONS
 
-## 06 · IMPLEMENTED FOUNDATIONS AND OPEN GATES
-
-| Area | Source-level foundation | Evidence still required |
+| Option | What it does | Current position |
 |---|---|---|
-| Android app | Kotlin/Compose, five destinations, foreground hosting service | Exact-head emulator and physical-device acceptance |
-| Rust engine | Tokio async runtime, Hyper HTTP, static serving, routing, proxy and bounded admission | Fairness, fault injection and sustained-load evidence |
-| Python | CPython 3.11 / WSGI moved to companion package | Companion build, end-to-end routing and per-project isolation |
-| Node | Node 24.22.1 mobile native runtime moved to companion | ABI/runtime proof, end-to-end routing and per-project isolation |
-| Companion IPC | Signature permission, caller validation, protocol versioning and bounded archive transfer | API 26/33/35 lifecycle and security acceptance |
-| Isolation | Native seccomp/isolated-UID proof code exists | Probe success, production Python/Node migration and adversarial review |
-| Console | TypeScript/React/Vite management UI | Responsive, accessibility and visual acceptance |
-| Cloudflare | Android cloudflared build integration; owner already has a tunnel | Verify existing named tunnel and external HTTPS against Rust origin |
-| AssayFlux Relay | Product architecture defined in North Star | Gateway, agent, stream transport, enrollment, auth and operations are not implemented |
-| Capacity | Telemetry, initial static Capacity Lab and admission controls | Full governor, runtime profiles, percentile and thermal evidence |
-| Backup | Encrypted .afbackup format and staged restore foundation | Corruption, interruption, low-storage and rollback fault matrix |
-| Control plane | Axum/PostgreSQL source and deployment workflow | Actual deployment, device pairing and end-to-end remote-command evidence |
-| Release | Debug packaging workflow | Signed host/companion release, checksums, upgrades and independent review |
+| **Local network** | Makes a site available to devices on the owner's trusted LAN | Local hosting path; device and network acceptance required |
+| **Cloudflare Tunnel** | Uses the owner's existing outbound tunnel and domain | Integration exists; verify the named tunnel and external HTTPS |
+| **AssayFlux Relay** | First-party outbound tunnel and public visitor gateway | **Planned — not implemented** |
+| **Direct public ingress** | Owner-managed DNS, firewall and port forwarding | Advanced future option; not the default |
 
-**Security warning:** Python and Node are currently trusted owner-controlled code only. A separate companion UID protects host-private data better than in-process execution, but all projects still share the companion UID and outbound egress is not OS-enforced. Do not run hostile or visitor-submitted code. Gate 2 is open.
+### AssayFlux Relay — first-party connectivity direction
 
-## 07 · NETWORKING OPTIONS — PRODUCT TARGET
+The phone will initiate an authenticated outbound connection to an AssayFlux-operated relay. Visitors will connect to the relay hostname, and the relay will forward bounded visitor streams through the device tunnel to the Rust listener. This is intended to work behind common NAT/CGNAT environments where outbound connectivity is permitted.
 
-| Option | Purpose | Position |
+The relay should hide the phone's public IP from ordinary visitors, **not from the relay operator, carrier or network provider**. Standard TLS termination allows the gateway to inspect HTTP traffic and must be disclosed. End-to-end TLS pass-through is a later advanced mode. Device enrollment, mutual authentication, revocation, hostname authorization, stream limits, abuse controls and operations must be implemented before this can be offered.
+
+## IMPLEMENTATION STATUS AND ACCEPTANCE
+
+The following table separates source foundations from evidence still required. A source file or successful compile is not proof of production behavior.
+
+| Engineering area | Current source position | Remaining acceptance |
 |---|---|---|
-| AssayFlux Relay | First-party outbound private tunnel; visitor connects to relay, phone maintains outbound encrypted session | **Planned** |
-| Cloudflare Tunnel | Reuse existing named tunnel and domain; Public Hostname targets Rust listener | Existing integration; external verification required |
-| Local network | Serve on trusted LAN without public exposure | Existing local-hosting path; device/network acceptance required |
-| Direct hosting | Owner-managed public ingress, firewall and TLS | Advanced future option; not a recommended default |
+| Android host | Kotlin/Compose application and foreground hosting architecture | Exact-head API 26/33/35 and physical-device lifecycle verification |
+| Rust engine | Tokio/Hyper listener, static delivery, routing, proxy and bounded admission foundations | Fairness, fault injection, sustained-load and thermal evidence |
+| Python | CPython 3.11 / WSGI moved to companion package | Real Rust-to-WSGI routing and per-project isolation |
+| Node.js | Node 24.22.1 mobile runtime moved to companion package | Real Rust-to-Node routing, ABI coverage and per-project isolation |
+| Companion IPC | Signature permission, caller validation, protocol versioning and bounded project transfer | API-level lifecycle and adversarial IPC acceptance |
+| Runtime isolation | Separate host/companion UID and isolation proof work | Distinct OS identity per project, file confinement, egress denial and independent review |
+| Web console | TypeScript/React/Vite management UI | Responsive, accessibility and end-to-end control acceptance |
+| Cloudflare | Android cloudflared integration | Validate the owner's existing tunnel and public HTTPS path |
+| AssayFlux Relay | Architecture and requirements documented | Gateway, Android agent, enrollment, transport, visitor policy and operations |
+| Capacity | Telemetry and initial admission/health foundations | Full governor, workload profiles, percentile measurements and long-duration tests |
+| Backup | Encrypted backup and staged-restore foundations | Corruption, interruption, low-storage and rollback fault matrix |
+| Control plane | Axum/PostgreSQL service source and deployment workflow | Actual deployment, device pairing and remote-command recovery evidence |
+| Release | CI packaging workflow | Signed host/companion release, checksums, upgrade validation and independent review |
 
-AssayFlux Relay must hide the phone's public IP from ordinary visitors, not from the relay operator or network provider. It needs mutual device authentication, revocation, hostname authorization, rate limits, TLS, bounded streams and clear relay privacy disclosure. Visitor authentication must be separate from Owner/Operator management authentication. The relay must never expose the management API.
+### Security boundary — read before enabling application runtimes
 
-## 08 · STEP-BY-STEP: PUBLISH A STATIC WEBSITE
+<blockquote>
+<strong>Python and Node are currently for owner-trusted code only.</strong> The host and runtime companion use separate Android package identities, but projects inside the companion still share its UID. Outbound network egress is not yet enforced as a per-project operating-system boundary. The current trust acknowledgement is not a sandbox. Do not execute hostile, visitor-submitted or untrusted third-party code.
+</blockquote>
 
-1. **Prepare the website.** Build your site with its normal toolchain. Pocket Host serves deployment output; it does not run your desktop build process.
-2. **Find the output folder.** Examples: Vite `dist/`, static Next.js export `out/`, or the framework's production output. Confirm a root `index.html` exists.
-3. **Import.** Open Pocket Host → Sites → choose a website folder or import a ZIP.
-4. **Validate.** Check the site manifest, file sizes, paths and entry page. Do not activate an invalid archive.
-5. **Preview.** Test the site locally before publication.
-6. **Configure hostname.** Add the hostname that should map to this site. Avoid duplicate or malformed hostnames.
-7. **Choose connectivity.** For the existing setup, reuse the already configured Cloudflare Tunnel. The planned AssayFlux Relay will be another option when implemented.
-8. **Point the edge to Rust.** Cloudflare Public Hostname must target the Rust website listener, never the management API.
-9. **Publish and verify.** Start hosting and request the hostname from a separate network. A local connector status is not proof of external HTTPS.
-10. **Protect and recover.** Create an encrypted backup, review logs and use staged update/rollback for future deployments.
+Gate 2 in the North Star defines the required per-project isolated execution cells, project-only file capabilities, brokered visitor streams, fail-closed network policy and adversarial validation.
 
-## 09 · STEP-BY-STEP: PYTHON AND NODE APPLICATIONS
+## QUICK START · PUBLISH A STATIC SITE
 
-These are advanced, trusted-code workflows; do not deploy arbitrary third-party code.
+### 1. Prepare your website
 
-**Python WSGI**
-1. Prepare a root `wsgi.py` exporting callable `application(environ, start_response)`.
-2. Bundle supported dependencies before import; Pocket Host does not automatically run pip.
-3. Import the project through Sites → Python.
-4. Review the trust acknowledgement and start the worker.
-5. Confirm Rust routes the configured hostname to the loopback WSGI upstream.
-6. Inspect lifecycle and logs; test stop/restart and static-site continuity.
+Build your site with its normal development toolchain. Pocket Host serves the generated production output; it does not run your desktop build process.
 
-**Node.js**
-1. Prepare a self-contained project with `package.json` and a resolvable server entry.
-2. Include prebundled dependencies; on-device `npm install`, PM2 and arbitrary child-process workflows are not supported.
-3. Import through Sites → Node.
-4. Review the trust acknowledgement and start the worker.
-5. Confirm Rust proxies requests to the Node loopback listener.
-6. Verify memory, shutdown and restart behaviour.
+| Website toolchain | Common output |
+|---|---|
+| Vite | <code>dist/</code> |
+| Static Next.js export | <code>out/</code> |
+| Plain HTML/CSS/JS | Project folder containing <code>index.html</code> |
 
-**Current security limitation:** Python and Node share the companion UID and do not have OS-enforced per-project egress denial. Runtime hosting remains owner-trusted-code-only until Gate 2 is implemented and independently verified.
+Confirm that the selected folder contains a root <code>index.html</code>.
 
-## 10 · DEVICE CAPACITY AND PROTECTION
+### 2. Import and validate
 
-Capacity depends on response size, route mix, caching, tunnel overhead, network, memory pressure and thermal state. Do not publish a universal visitor count.
+1. Open Pocket Host and go to **Sites**.
+2. Import a website folder or ZIP archive.
+3. Review validation results for paths, archive size and the entry page.
+4. Preview the site locally before publishing.
 
-Pocket Host's direction is to measure:
-- Observed peak throughput in a named test.
-- Sustainable safe concurrency/throughput within latency, memory and thermal limits.
-- Current configured admission budget after health derating.
+### 3. Configure and publish
 
-The first Capacity Lab and health-based admission derating are foundations. Fair per-site scheduling, representative Python/Node profiles, p50/p95/p99, long-duration load, energy and recovery evidence remain open. Android may stop processes; the app cannot promise to override OEM power management.
+1. Assign the hostname that should resolve to the site.
+2. Choose local network or a configured public connector.
+3. If using Cloudflare, reuse the existing named tunnel.
+4. Ensure the Cloudflare Public Hostname targets the Rust website listener — never the management API.
+5. Start hosting and verify the hostname from a separate network.
 
-## 11 · BACKUP, OPERATIONS AND RECOVERY
+### 4. Protect the deployment
 
-The encrypted `.afbackup` format protects supported site data and selected non-secret settings. Device-bound credentials, account sessions, Cloudflare tokens and Keystore keys are excluded and must be configured again on a replacement device. Python/Node projects are executable source; protect backup files and passphrases separately.
+Create an encrypted backup, review activity and logs, and preserve the last known-good website when replacing site files. A connector showing as running is not proof that the public hostname is reachable.
 
-Before production, fault-test corrupted archives, wrong passphrases, interruption, low storage, failed activation, rollback and secret exclusion. Logs must be bounded and redact tokens, passwords, session values and sensitive headers.
+## PYTHON AND NODE APPLICATIONS
 
-## 12 · BUILD FROM SOURCE
+These are advanced runtime paths and remain restricted to owner-trusted code.
 
-**Prerequisites**
-- Android Studio or compatible Gradle environment.
-- Repository Gradle wrapper and the Android SDK/NDK versions declared by the project.
-- JDK version required by the Gradle/Android Gradle Plugin configuration.
-- Rust toolchain and Android targets required by the native build.
+### Python WSGI
+
+1. Prepare a project with a <code>wsgi.py</code> entry point.
+2. Export a callable named <code>application(environ, start_response)</code>.
+3. Bundle supported dependencies before importing the project; automatic on-device package installation is not assumed.
+4. Import the project using the Python site workflow.
+5. Start the companion worker and verify that Rust proxies the configured hostname to its loopback listener.
+6. Inspect logs and lifecycle behavior.
+
+### Node.js
+
+1. Prepare a self-contained Node project with <code>package.json</code> and a resolvable server entry point.
+2. Include prebundled dependencies; arbitrary on-device package installation and process managers are not part of the supported workflow.
+3. Import the project using the Node site workflow.
+4. Start the companion worker and verify Rust-to-Node loopback routing.
+5. Inspect logs, memory behavior, shutdown and restart.
+
+**Important:** Do not deploy untrusted code until Gate 2 is implemented and independently verified.
+
+## CAPACITY, DEVICE HEALTH AND RECOVERY
+
+A phone's sustainable hosting capacity depends on workload, response size, route mix, caching, memory pressure, thermal state, battery policy, network quality and tunnel overhead. There is no universal visitor count.
+
+Pocket Host's capacity work distinguishes:
+
+- **Observed throughput:** what a named test actually measured.
+- **Sustainable operating budget:** the load that remains within latency, memory and thermal limits.
+- **Configured admission budget:** the limit currently applied by the engine after health derating.
+
+The initial engine has bounded admission and device-health foundations. Full per-site fairness, representative Python/Node profiles, p50/p95/p99 latency, long-duration load, energy and recovery evidence remain open. Android OEM power management can stop background work; the application cannot promise to override it.
+
+## BACKUP AND OPERATIONS
+
+The encrypted <code>.afbackup</code> format is intended to protect supported website data and selected non-secret settings. Device-bound credentials, account sessions, Cloudflare tokens and Android Keystore keys are excluded and must be configured again when moving to another device. Treat Python and Node project backups as executable source and protect them accordingly.
+
+Production acceptance must include corrupted archives, wrong passphrases, interrupted restore, low-storage conditions, failed activation, rollback and secret-exclusion tests. Logs must be bounded and redact tokens, passwords, session values and sensitive headers.
+
+## BUILD FROM SOURCE
+
+### Prerequisites
+
+- Android Studio or a compatible Gradle environment.
+- Android SDK and NDK versions declared by the project.
+- The JDK version required by the configured Gradle and Android Gradle Plugin.
+- Rust toolchain and Android compilation targets required by the native build.
 - Network access for pinned dependencies and native runtime archives.
 
-**Inspect project configuration first**
-1. Read `gradle/libs.versions.toml`, root Gradle files and module build files.
-2. Read `local.properties.example` if present; create local SDK configuration without committing machine-specific paths.
-3. Review `.github/workflows/quality.yml` and `.github/workflows/android-integration.yml` for authoritative CI tasks.
-4. Do not invent SDK, NDK, Rust or JDK versions; use the pinned repository configuration.
+Use the repository's Gradle configuration and CI workflows as the source of truth for toolchain versions. Do not substitute arbitrary SDK, NDK, JDK or Rust versions.
 
-**Build**
-```bash
+### Clone and inspect
+
+~~~bash
 git clone https://github.com/AssayFlux/PocketHost.git
 cd PocketHost
 git checkout main
 ./gradlew tasks
+~~~
+
+### Build the Android application
+
+~~~bash
 ./gradlew assembleDebug
-```
+~~~
 
-The repository contains separate host and runtime companion Android modules. Confirm the exact APK output paths from Gradle task output; do not assume a single APK is sufficient. ABI-specific native dependencies must match the target device. CI builds are the reproducible reference; a successful local compile is not device acceptance.
+The project includes a main host application and a separate runtime companion Android module. Inspect Gradle task output and generated APK metadata to identify both package artifacts and their ABI coverage. A local compile does not prove runtime routing, Android lifecycle behavior or device compatibility.
 
-## 13 · CI, TESTING AND RELEASE EVIDENCE
+## CI, TESTING AND RELEASE EVIDENCE
 
-Quality CI covers language-specific checks, native engine tests, control-plane checks, console build and Android source compilation. Android integration separately builds native Cloudflare dependencies, packages Android variants and runs emulator API levels.
+The repository has separate quality and Android integration workflows.
 
-A release record must identify:
-- Exact commit SHA and workflow run.
-- Host and companion APKs, ABI and package IDs.
-- API level, test count, failures and skipped tests.
-- Artifact integrity, signing certificate and SHA-256 checksums.
-- External hostname/TLS test and physical-device test evidence.
-
-Never treat a queued workflow as a pass, compilation as runtime proof, an emulator as a physical phone, or a source file as a completed feature.
-
-## 14 · REPOSITORY MAP
-
-| Path | Purpose |
+| Workflow | Responsibility |
 |---|---|
-| `app/` | Main Android host app, UI, lifecycle, management and Rust integration |
-| `runtime-worker/` | Companion Android package, CPython/Node integration and isolation probes |
-| `rust-engine/` | Tokio/Hyper website engine and JNI-facing native core |
-| `console/` | TypeScript/React/Vite management console |
-| `control-plane/` | Optional Axum/PostgreSQL remote-management service |
-| `scripts/` | Native dependency and build helpers |
-| `.github/workflows/` | Quality, Android integration, deployment and release workflows |
-| `docs/` | North Star, architecture, security, operations and release specifications |
-| `examples/` | Starter website/runtime projects |
+| <code>.github/workflows/quality.yml</code> | Console, Rust, Python runtime, control-plane, Android source and Node runtime checks |
+| <code>.github/workflows/android-integration.yml</code> | Native dependency preparation, Android packaging and emulator integration coverage |
+| <code>.github/workflows/deploy-control-plane.yml</code> | Optional control-plane deployment workflow |
+| <code>.github/workflows/release.yml</code> | Release packaging and release checks |
 
-## 15 · DOCUMENTATION GUIDE
+A release record must identify the exact commit SHA, workflow run, host and companion APKs, ABI, package IDs, API levels, test counts, failures, skipped tests, signing certificate and SHA-256 checksums. Public connectivity and physical-device verification must be recorded separately.
 
-Read these in order; paths are intentionally shown as plain text for easy copying.
+Never treat a queued workflow as a pass, compilation as runtime proof, an emulator as a physical phone, or source presence as feature completion.
 
-1. `docs/NORTH_STAR.md` — product vision, principles and complete primary-version sequence.
-2. `docs/DEVELOPMENT_CONTEXT.md` — mandatory engineering handoff and constraints.
-3. `docs/PROJECT_BASELINE.md` — evidence-based scope and readiness method.
-4. `docs/ROADMAP.md` — ordered release gates and exit criteria.
-5. `docs/MASTER_PLAN.md` — architecture and implementation contracts.
-6. `docs/DECISIONS.md` — accepted architecture decisions.
-7. `docs/INDEX.md` — full documentation catalogue.
-8. `docs/SECURITY_GATE_2_EXECUTION_PLAN.md` and `docs/SECURITY_ISOLATION_DESIGN.md` — runtime isolation.
-9. `docs/CLOUDFLARE_TUNNEL.md` — existing tunnel setup.
-10. `docs/ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md` — capacity and operational protection.
-11. `docs/SITE_BACKUP.md` — encrypted backup and restore.
-12. `docs/RELEASE_SIGNING.md` — production signing and artifact acceptance.
+## PRIMARY IMPLEMENTATION JOURNEY
 
-## 16 · RELEASE POSITION
+The primary version follows the ordered North Star gates. Later gates depend on earlier runtime and security foundations.
 
-Pocket Host remains pre-release. Companion source migration and isolation proof work are not equivalent to verified production runtime isolation. AssayFlux Relay is a planned first-party service and must not be represented as available. Complete the ordered North Star gates, pass API 26/33/35 on one exact source SHA, validate real devices and public connectivity, and obtain independent security review before production approval.
+| Sequence | Gate | Required outcome |
+|:---:|---|---|
+| 0 | Repository truth and architecture freeze | One evidence-based baseline; consistent docs, workflows and contracts |
+| 1 | Runtime migration | Python and Node route end-to-end through Rust; static hosting survives runtime failure |
+| 2 | Per-project security isolation | Separate project identities, confined files, enforced egress policy and adversarial review |
+| 3 | AssayFlux Relay | Authenticated device tunnel, public gateway, enrollment, visitor policy and operations |
+| 4 | Owner/Operator and visitor identity | Separate management and visitor authentication, roles, revocation and audit |
+| 5 | Rust governor and Capacity Lab | Fair admission, health-aware limits and measured operating envelopes |
+| 6 | Backup, operations and lifecycle recovery | Verified restore, rollback, monitoring and process-death recovery |
+| 7 | Product UX and onboarding | Simple/Advanced workflows, Learn guidance and accessible operations |
+| 8 | Release acceptance | Exact-SHA API 26/33/35, signed artifacts, external connectivity, physical devices and independent review |
 
-**Designed by AssayFlux · AssayFlux Scientific Systems**
+Read <code>docs/NORTH_STAR.md</code> for the complete acceptance criteria and dependencies.
+
+## REPOSITORY MAP
+
+| Directory | Responsibility |
+|---|---|
+| <code>app/</code> | Main Android host app, UI, lifecycle, management and Rust integration |
+| <code>runtime-worker/</code> | Companion Android package, CPython/Node integration and isolation work |
+| <code>rust-engine/</code> | Tokio/Hyper website engine and JNI-facing native core |
+| <code>web-console/</code> | TypeScript/React/Vite management console |
+| <code>control-plane/</code> | Optional Axum/PostgreSQL remote-management service |
+| <code>scripts/</code> | Native dependency and build helpers |
+| <code>.github/workflows/</code> | Quality, Android integration, deployment and release workflows |
+| <code>docs/</code> | North Star, architecture, security, networking, operations and release specifications |
+| <code>examples/</code> | Starter website and runtime projects |
+| <code>third_party/</code> | Pinned third-party source and notices |
+
+## DOCUMENTATION AND ENGINEERING GUIDE
+
+Read the project in this order:
+
+1. <code>docs/NORTH_STAR.md</code> — product principles, network options, authentication and implementation sequence.
+2. <code>docs/PROJECT_BASELINE.md</code> — canonical source truth and evidence rules.
+3. <code>docs/ROADMAP.md</code> — ordered gates, tasks and exit criteria.
+4. <code>docs/MASTER_PLAN.md</code> — system architecture and technical contracts.
+5. <code>docs/DEVELOPMENT_CONTEXT.md</code> — mandatory engineering constraints and contributor handoff.
+6. <code>docs/DECISIONS.md</code> — accepted architecture decisions.
+7. <code>docs/INDEX.md</code> — complete documentation catalogue.
+8. <code>docs/RUNTIME_COMPANION.md</code>, <code>docs/PYTHON_RUNTIME.md</code> and <code>docs/NODE_RUNTIME.md</code> — runtime integration.
+9. <code>docs/SECURITY_GATE_2_EXECUTION_PLAN.md</code> and <code>docs/SECURITY_ISOLATION_DESIGN.md</code> — isolation and adversarial acceptance.
+10. <code>docs/CLOUDFLARE_TUNNEL.md</code> and <code>docs/ASSAYFLUX_RELAY.md</code> — current and planned public connectivity.
+11. <code>docs/ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md</code> and <code>docs/SITE_BACKUP.md</code> — capacity and recovery.
+12. <code>docs/RELEASE_SIGNING.md</code> and <code>docs/COMPLETION_MILESTONE.md</code> — signed release and production definition of done.
+
+## CONTRIBUTION STANDARD
+
+1. Read the North Star, baseline and active gate before changing architecture.
+2. Preserve the single Rust website request path and Android lifecycle ownership.
+3. Keep static hosting independent from optional runtimes and remote services.
+4. Add tests, contracts, security controls and operational evidence with each implementation.
+5. Update affected documentation in the same change set.
+6. Report exact checks run, checks not run, limitations and remaining acceptance gates.
+7. Never claim a security boundary, visitor capacity, device compatibility or production readiness without corresponding evidence.
+
+## LICENSE AND THIRD-PARTY NOTICES
+
+The repository is distributed under the Apache License 2.0. Third-party runtimes, native libraries, build tools and assets may have separate licenses and redistribution conditions. Review the relevant upstream notices and repository third-party inventory before bundling or redistributing components.
+
+---
+
+<p align="center">
+  <img src="https://img.shields.io/badge/ASSAYFLUX-SCIENTIFIC%20SYSTEMS-800020?style=for-the-badge&labelColor=172A3A" alt="AssayFlux Scientific Systems">
+</p>
+<p align="center"><strong>Designed by AssayFlux</strong></p>
+<p align="center"><sub>Build deliberately. Host responsibly. Verify everything.</sub></p>
