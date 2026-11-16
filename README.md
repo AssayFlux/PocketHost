@@ -102,7 +102,7 @@ The product is designed for people who want to publish a website from hardware t
   <tr>
     <td align="center">
       <img src="https://api.iconify.design/lucide/cloud.svg?color=%23B18B5E" width="28" height="28" alt="Tunnel"><br>
-      <strong>PUBLIC CONNECTIVITY</strong><br><sub>Reuse an existing Cloudflare Tunnel; first-party AssayFlux Relay is planned.</sub>
+      <strong>PUBLIC CONNECTIVITY</strong><br><sub>Reuse an existing Cloudflare Tunnel; a bounded HTTP AssayFlux Relay is partially implemented in source (not deployed or production-approved).</sub>
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/activity.svg?color=%23B18B5E" width="28" height="28" alt="Operations"><br>
