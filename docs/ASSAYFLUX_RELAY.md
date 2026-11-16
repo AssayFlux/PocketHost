@@ -32,7 +32,7 @@ This hides the phone IP from ordinary visitors, not from the relay operator, car
 
 - Not a replacement for Rust website serving on the phone.
 - Not a remote shell or arbitrary command channel.
-- Not a public management API.
+- Not a management API on Relay visitor hostnames. The remote control plane remains a separate, authenticated service on its dedicated management hostname.
 - Not an uptime guarantee or unlimited-bandwidth service.
 - Not custom cryptography.
 - Not a prerequisite for local hosting or Cloudflare Tunnel.
@@ -130,7 +130,7 @@ Acceptance tests:
 - Cross-device/site stream injection fails.
 - Unknown Host/SNI, malformed headers and oversized frames fail safely.
 - Relay cannot invoke arbitrary shell or filesystem operations.
-- Management API is not reachable through any public hostname.
+- Admin and device API routes are not reachable through Relay visitor hostnames; they are host-guarded to the dedicated control-plane API hostname.
 - Backpressure and overload remain bounded.
 - Network transitions recover and stale sessions expire.
 - Relay logs redact tokens and sensitive content.
