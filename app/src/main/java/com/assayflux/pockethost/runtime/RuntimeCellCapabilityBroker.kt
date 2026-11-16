@@ -18,7 +18,7 @@ import java.security.SecureRandom
 class RuntimeCellCapabilityBroker(
     private val leases: RuntimeCellLeaseRegistry,
     private val projectRootFor: (projectId: String) -> File?
-) {
+) : AutoCloseable {
     private data class Grant(
         val leaseId: String,
         val projectId: String,
@@ -100,6 +100,11 @@ class RuntimeCellCapabilityBroker(
     }
 
     fun activeGrantCount(): Int = synchronized(lock) { purgeExpiredLocked(); grants.size }
+
+    override fun close() {
+        leaseStateListener.close()
+        synchronized(lock) { grants.clear() }
+    }
 
     private fun purgeExpiredLocked() {
         val now = SystemClock.elapsedRealtime()
