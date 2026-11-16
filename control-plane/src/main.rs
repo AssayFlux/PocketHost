@@ -226,6 +226,32 @@ async fn revoke_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
+async fn rotate_user_token(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let actor = admin(&headers, &s).await?;
+    if actor.role != "owner" {
+        return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
+    }
+    let token = new_token();
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let updated = sqlx::query("UPDATE control_users SET token_hash=$2 WHERE id=$1 AND active=TRUE")
+        .bind(id).bind(token_hash(&token)).execute(&mut *tx).await.map_err(internal)?;
+    if updated.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "active_user_not_found".into()));
+    }
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&actor.name).bind("user.token.rotate").bind(id.to_string())
+        .bind(json!({"previous_token_revoked":true}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::OK, Json(json!({
+        "userId": id,
+        "token": token,
+        "warning": "The previous user token is revoked immediately. Store this replacement securely; it is shown only once."
+    }))))
+}
+
 async fn device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (StatusCode, String)> {
     let token = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "device_auth_required".into()))?;
     let row = sqlx::query("SELECT id FROM devices WHERE token_hash = $1")
@@ -574,6 +600,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/audit", get(list_audit))
         .route("/v1/admin/users", get(list_users).post(create_user))
         .route("/v1/admin/users/:id", axum::routing::delete(revoke_user))
+        .route("/v1/admin/users/:id/rotate-token", post(rotate_user_token))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
         .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
         .route("/v1/admin/devices/:id/rotate-token", post(rotate_device_token))
@@ -619,6 +646,33 @@ mod tests {
         assert_eq!(count, 1);
         sqlx::query("DELETE FROM control_users WHERE id=$1").bind(id).execute(&db).await.unwrap();
         assert!(admin(&headers, &state).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn rotating_user_token_revokes_old_credential_immediately() {
+        let Some(state) = test_state().await else { return };
+        let user_id = Uuid::new_v4();
+        let old_token = new_token();
+        sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'rotation-test','editor',$2)")
+            .bind(user_id).bind(token_hash(&old_token)).execute(&state.db).await.unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap());
+        let (status, Json(body)) = rotate_user_token(
+            State(state.clone()), headers, Path(user_id)
+        ).await.unwrap();
+        assert_eq!(status, StatusCode::OK);
+        let replacement = body["token"].as_str().unwrap();
+        assert_ne!(replacement, old_token);
+        assert!(admin(&HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())]), &state).await.is_err());
+        let replacement_actor = admin(
+            &HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement}")).unwrap())]),
+            &state
+        ).await.unwrap();
+        assert_eq!(replacement_actor.name, "rotation-test");
+        let audit_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM audit_events WHERE target=$1 AND action='user.token.rotate'")
+            .bind(user_id.to_string()).fetch_one(&state.db).await.unwrap();
+        assert_eq!(audit_count, 1);
+        sqlx::query("DELETE FROM control_users WHERE id=$1").bind(user_id).execute(&state.db).await.unwrap();
     }
 
     #[tokio::test]
