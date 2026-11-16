@@ -96,7 +96,7 @@ object RuntimeWorkerClient {
                         throw IllegalStateException("Could not bind to the runtime companion. Check that both APKs are installed and signed with the same certificate.")
                     }
                     cachedConnection = connection
-                    if (!latch.await(20, TimeUnit.SECONDS)) {
+                    if (!latch.await(60, TimeUnit.SECONDS)) {
                         runCatching { app.unbindService(connection) }
                         runCatching { app.stopService(intent) }
                         cachedConnection = null
