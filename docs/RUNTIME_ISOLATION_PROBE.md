@@ -1,35 +1,44 @@
-# Runtime isolation architecture probe
+# Runtime isolation and companion migration
 
-**Status:** capability probes only; no customer project code is executed by either probe.
+**Source migration:** integrated in main source at `bd227b0e5564ad25c88064cfc36796469390b773`; subsequent fixes are in later main commits.
+**Verification:** companion build and API 26/33/35 instrumentation for the migrated implementation are pending.
 
-## Existing same-UID runtime risk
+## Why the host UID was a problem
 
-Python (Chaquopy) currently executes in the PocketHost application process. Node executes in a secondary process, but that process still has the application's Android UID. App-private project-root validation limits accidental path selection; it does not stop hostile project code from reading other files available to that UID or using the app's permissions.
+Android assigns each installed application a Linux UID. Before migration, Chaquopy Python ran inside the host app and Node ran in a secondary process that still shared the host app UID. Customer code could potentially access any host-private file available to that UID. Canonical project-root checks did not create a process security boundary.
 
-## Isolated-process result
+## Isolated-process experiment
 
-`RuntimeIsolationProbeService` uses `android:isolatedProcess="true"` and executes no project code. Instrumentation on API 26 and API 33 passed and recorded:
+The original `android:isolatedProcess="true"` probe proved that a fully isolated service could not access host-private files, but it also could not bind/connect to the loopback TCP sockets required by Rust reverse proxying. That experiment remains useful evidence; it is not the runtime implementation.
 
-- Worker UID differs from the PocketHost UID.
-- Host-private marker file is unreadable from the isolated process.
-- **Loopback TCP networking is unavailable** from the isolated process: it cannot bind/connect to the host listener.
+## Separate-UID companion now integrated in source
 
-This makes Android's isolated-process service unsuitable as the live Python/Node hosting worker: it blocks the network capability required by the local website router. API 35 had no result in that run because the emulator went offline before instrumentation started.
+The `:runtime-worker` Android application has package `com.assayflux.pockethost.worker` and its own Android UID.
 
-## Companion-package prototype
+- Chaquopy CPython 3.11 and WSGI now live in the companion.
+- Node.js 24 native libraries, JNI bridge, Node foreground service and metrics preload now live in the companion.
+- Python runs in companion process `:runtime_worker`; Node runs in companion process `:node`. Both processes share the companion UID.
+- The host uses signature-protected Binder IPC, host-package/signature checks and protocol version 1.
+- Projects are transferred by bounded ZIP archive through a file descriptor and extracted into companion-owned storage.
+- Rust remains in the host app and routes to companion loopback listeners.
+- Tests now assert actual Python/Node runtime UIDs differ from the host UID.
 
-A new `:runtime-worker` Android application module is now present. It has a distinct package/UID, INTERNET permission, and a service protected by a signature-level permission. The main app and worker share the build signing identity for local/debug integration. A capability test checks UID separation, denial of host-private file access, and loopback bind/connect.
+## What this boundary does and does not provide
 
-The companion is currently a **probe only**. It does not yet load Chaquopy, Node/V8, customer code, project files, or production credentials. The test must pass on API 26/33/35 before runtime migration begins. A production design must additionally implement authenticated/versioned IPC, scoped project transfer, lifecycle supervision, worker crash recovery, resource monitoring, explicit network-egress policy, package install/update/rollback and owner-visible recovery when the companion is missing or outdated.
+**It does:** prevent ordinary companion runtime code from directly reading files protected by the host app UID, subject to Android's package/UID model.
 
-## Migration gates
+**It does not:** isolate one site from another site in the companion package; prevent all access to companion-owned files; enforce outbound network restrictions; prevent access to reachable loopback services; or impose hard CPU quotas.
 
-1. Verify companion UID, filesystem isolation and loopback networking on API 26, 33 and 35.
-2. Test Binder lifecycle, process death/rebind and narrow content/file descriptor transfer.
-3. Prototype Chaquopy and Node native runtime loading inside the companion package, retaining Python WSGI, Node, multi-site hostname routing and Cloudflare connectivity.
-4. Keep management credentials, Cloudflare tokens and unrestricted app storage out of the worker. Apply an explicit egress policy and project-scoped filesystem access.
-5. Add bounded worker/request limits, memory caps where available, monitoring, termination and restart. Do not claim arbitrary hard CPU quotas that ordinary unrooted Android apps cannot enforce.
+Common secret files are excluded/rejected during project transfer, but filename filters are not a complete secret scanner. Host management credentials and Cloudflare tokens must never be copied into runtime project roots.
 
-## Current security posture
+Until per-project filesystem isolation and enforceable network egress controls are implemented and adversarially tested, runtimes remain trusted-code-only. Do not call this a complete sandbox or support arbitrary third-party code.
 
-Python and Node production hosting remain trusted-code-only until the companion runtime migration is fully implemented and tested. Neither the isolated service nor the companion probe is currently the production execution boundary.
+## Remaining gates
+
+1. Pass companion build and actual runtime UID tests on API 26, 33 and 35.
+2. Test project transfer bounds, archive traversal, corrupted archives, interrupted transfer and replacement rollback.
+3. Prove Rust-to-Python and Rust-to-Node proxy routing and static-host continuity under runtime failure.
+4. Implement per-project filesystem isolation or a documented owner-trust model with explicit consent.
+5. Implement enforceable network egress policy, including raw sockets, DNS rebinding, management loopback, private/link-local and metadata targets.
+6. Test process death, reconnection, update/rollback, low memory and Android foreground-service lifecycle.
+7. Complete independent adversarial review before production claims.
