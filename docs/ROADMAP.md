@@ -84,7 +84,7 @@ Run all required jobs on one exact SHA. Build host and companion APKs for declar
 |---|---|---|
 | Local network | Existing local hosting path; device acceptance pending | LAN-only website access |
 | Cloudflare Tunnel | Existing connector integration | Reuse owner's named tunnel and hostname |
-| AssayFlux Relay | Planned Gate 3 | First-party outbound tunnel and visitor access gateway |
+| AssayFlux Relay | Partial bounded HTTP implementation in source; external deployment and acceptance open | First-party outbound tunnel and visitor access gateway |
 | Direct port forwarding | Deferred advanced option | Owner-managed public exposure and firewall/TLS |
 
 ## Readiness reporting
