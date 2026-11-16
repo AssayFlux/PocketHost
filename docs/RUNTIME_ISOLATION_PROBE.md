@@ -1,29 +1,35 @@
 # Runtime isolation architecture probe
 
-**Status:** prototype instrumentation only; not a production sandbox and not a runtime migration.
+**Status:** capability probes only; no customer project code is executed by either probe.
 
-## Why this exists
+## Existing same-UID runtime risk
 
 Python (Chaquopy) currently executes in the PocketHost application process. Node executes in a secondary process, but that process still has the application's Android UID. App-private project-root validation limits accidental path selection; it does not stop hostile project code from reading other files available to that UID or using the app's permissions.
 
-## Probe implementation
+## Isolated-process result
 
-`RuntimeIsolationProbeService` is declared with `android:isolatedProcess="true"` and executes no project code. The instrumentation test measures:
+`RuntimeIsolationProbeService` uses `android:isolatedProcess="true"` and executes no project code. Instrumentation on API 26 and API 33 passed and recorded:
 
-- Whether its Android UID differs from the host app UID.
-- Whether it can read a marker file in the host app's private files directory.
-- Whether it can connect to a host-process loopback TCP listener.
+- Worker UID differs from the PocketHost UID.
+- Host-private marker file is unreadable from the isolated process.
+- **Loopback TCP networking is unavailable** from the isolated process: it cannot bind/connect to the host listener.
 
-The loopback result is recorded in instrumentation status/log output rather than assumed. This matters because a worker that cannot reach the Rust router cannot host a website, even if its UID is isolated.
+This makes Android's isolated-process service unsuitable as the live Python/Node hosting worker: it blocks the network capability required by the local website router. API 35 had no result in that run because the emulator went offline before instrumentation started.
 
-## Decision gates before migration
+## Companion-package prototype
 
-1. Run the probe on API 26, 33 and 35 and retain the per-API loopback result.
-2. Verify Binder lifecycle, process death/rebind, file transfer via narrowly scoped descriptors/URI grants, and runtime library loading.
-3. Separately prototype Chaquopy and Node native initialization. The probe intentionally does not load either runtime.
-4. If isolated services cannot support required network access, evaluate a separately installed same-signature companion package with its own UID and signature-protected IPC. Do not silently fall back to same-UID execution and call it sandboxed.
-5. Define explicit egress policy, project-scoped file access, worker limits, crash recovery and secret separation before enabling untrusted projects.
+A new `:runtime-worker` Android application module is now present. It has a distinct package/UID, INTERNET permission, and a service protected by a signature-level permission. The main app and worker share the build signing identity for local/debug integration. A capability test checks UID separation, denial of host-private file access, and loopback bind/connect.
+
+The companion is currently a **probe only**. It does not yet load Chaquopy, Node/V8, customer code, project files, or production credentials. The test must pass on API 26/33/35 before runtime migration begins. A production design must additionally implement authenticated/versioned IPC, scoped project transfer, lifecycle supervision, worker crash recovery, resource monitoring, explicit network-egress policy, package install/update/rollback and owner-visible recovery when the companion is missing or outdated.
+
+## Migration gates
+
+1. Verify companion UID, filesystem isolation and loopback networking on API 26, 33 and 35.
+2. Test Binder lifecycle, process death/rebind and narrow content/file descriptor transfer.
+3. Prototype Chaquopy and Node native runtime loading inside the companion package, retaining Python WSGI, Node, multi-site hostname routing and Cloudflare connectivity.
+4. Keep management credentials, Cloudflare tokens and unrestricted app storage out of the worker. Apply an explicit egress policy and project-scoped filesystem access.
+5. Add bounded worker/request limits, memory caps where available, monitoring, termination and restart. Do not claim arbitrary hard CPU quotas that ordinary unrooted Android apps cannot enforce.
 
 ## Current security posture
 
-The production Python and Node runtimes remain trusted-code-only. This probe is evidence gathering, not a security boundary for customer workloads. Android ordinary applications cannot promise arbitrary hard CPU quotas for another process; memory caps, worker limits, monitoring, termination and restart must be described according to what is actually enforceable.
+Python and Node production hosting remain trusted-code-only until the companion runtime migration is fully implemented and tested. Neither the isolated service nor the companion probe is currently the production execution boundary.

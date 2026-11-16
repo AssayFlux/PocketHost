@@ -22,7 +22,8 @@ class PocketHostDashboardUiSmokeTest {
             .commit()
 
         val device = UiDevice.getInstance(instrumentation)
-        val screenshotDir = File(context.getExternalFilesDir(null), "screenshots")
+        val externalFiles = checkNotNull(context.getExternalFilesDir(null)) { "App external files directory is unavailable" }
+        val screenshotDir = File(externalFiles, "screenshots")
         assertTrue("Screenshot directory could not be created", screenshotDir.mkdirs() || screenshotDir.isDirectory)
         val screenshot = File(screenshotDir, "dashboard.png")
         screenshot.delete()

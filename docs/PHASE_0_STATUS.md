@@ -1,10 +1,11 @@
 > **Current reconciliation — 2026-11-16**
 >
-> - Quality workflow on the latest source passed all six jobs: Android source compilation, Rust, Python, Node, control-plane and console.
-> - Android integration on the latest source passed cloudflared Android native build, all three ABI debug APKs, API 26 instrumentation and API 33 instrumentation.
-> - API 35 did not execute tests: the emulator went offline and the runner reported an instrumentation process crash with 0 tests started. This is recorded as an emulator infrastructure failure, not a passing API 35 test or a confirmed app defect. Emulator guest RAM/CPU settings have been reduced and boot timeout extended for the next run.
-> - The isolated-process service is a capability probe only. It is not used to execute customer code. Python and Node remain trusted-code-only under the app UID until the runtime migration is designed and validated.
-> - The Compose top app chrome, Activity destination and Sites destination have been extracted from MainActivity. Dashboard, Learn and Settings still need further decomposition and rendered screenshot review.
+> - API 26 and API 33 instrumentation each completed 29 tests with zero failures on the preceding source revision.
+> - The isolated-process probe on API 26/33 proved UID separation and host-private file denial, but loopback TCP is unavailable; this service is not a viable web-hosting worker.
+> - A separate `:runtime-worker` application module now provides a signature-permission-protected Binder capability probe with INTERNET permission. It is not yet wired to production runtimes. New instrumentation validates separate UID, private-file denial and loopback networking.
+> - A UI instrumentation test launches the Dashboard and captures a reviewable screenshot; workflow collection is wired to pull that screenshot from each emulator.
+> - API 35 previously went offline before executing tests. Emulator guest RAM/CPU was reduced and boot timeout extended for the rerun.
+> - Python/Node still execute under the main app UID and remain trusted-code-only until runtime migration into the tested companion architecture is complete.
 > - Remote control-plane deployment, signed production release and physical-device acceptance remain open release gates.
 > - **Release state:** integrated development build; not production approved.
 
