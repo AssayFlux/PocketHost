@@ -19,4 +19,7 @@ object NetworkSandbox {
 
     /** Returns 1 only when fcntl(F_GETFD) reports EBADF, 0 when open, negative errno otherwise. */
     @JvmStatic external fun isDescriptorClosed(fd: Int): Int
+
+    /** Returns errno from a valid AF_UNIX connect attempt; seccomp must return EPERM. */
+    @JvmStatic external fun probeConnectErrno(listenerFd: Int): Int
 }
