@@ -16,6 +16,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.runtime.RuntimeIsolationProbeService
+import com.assayflux.pockethost.runtime.RuntimeProjectFileBroker
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -83,45 +84,46 @@ class RuntimeIsolationProbeTest {
                 runCatching { context.unbindService(secondConnection) }
             }
 
-            // Probe whether an isolated UID can use only a directory capability passed
-            // by the host, while the app-private parent and sibling project stay closed.
+            // Use a brokered per-file descriptor, not a directory FD. The host validates
+            // each relative path and passes only the requested file capability to the cell.
             val capabilityParent = File(context.filesDir, "isolation-fs-" + System.nanoTime()).apply { mkdirs() }
             val projectRoot = File(capabilityParent, "project-a").apply { mkdirs() }
             val siblingRoot = File(capabilityParent, "sibling").apply { mkdirs() }
             val markerFile = File(projectRoot, "marker.txt").apply { writeText("project-a-only") }
+            val outputFile = File(projectRoot, "worker-created.txt").apply { createNewFile() }
             File(siblingRoot, "secret.txt").writeText("project-b-secret")
-            Os.chmod(capabilityParent.absolutePath, 0x1C0) // 0700: inaccessible without a passed capability.
-            Os.chmod(projectRoot.absolutePath, 0x1FF) // 0777: access only through the passed directory FD.
-            Os.chmod(siblingRoot.absolutePath, 0x1FF)
-            Os.chmod(markerFile.absolutePath, 0x1A4) // 0644.
-            Os.chmod(File(siblingRoot, "secret.txt").absolutePath, 0x1A4)
-            val rawDirectoryFd = Os.open(projectRoot.absolutePath, OsConstants.O_RDONLY, 0)
-            val directoryFd = ParcelFileDescriptor.dup(rawDirectoryFd)
-            Os.close(rawDirectoryFd)
-            val directoryData = Parcel.obtain()
-            val directoryReply = Parcel.obtain()
-            val directoryCapabilities = try {
-                directoryData.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
-                directoryFd.writeToParcel(directoryData, 0)
+            Os.chmod(capabilityParent.absolutePath, 0x1C0)
+            val inputFd = RuntimeProjectFileBroker.openReadOnly(projectRoot, "marker.txt")
+            val outputFd = RuntimeProjectFileBroker.openWriteOnly(projectRoot, "worker-created.txt")
+            val traversalRejected = runCatching {
+                RuntimeProjectFileBroker.openReadOnly(projectRoot, "../sibling/secret.txt")
+            }.isFailure
+            val fileData = Parcel.obtain()
+            val fileReply = Parcel.obtain()
+            val fileResults = try {
+                fileData.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
+                fileFdWrite(inputFd, fileData)
+                fileFdWrite(outputFd, fileData)
+                fileData.writeInt(context.applicationInfo.uid)
                 check(binder.transact(
-                    RuntimeIsolationProbeService.TRANSACTION_PROJECT_DIRECTORY,
-                    directoryData, directoryReply, 0
-                )) { "Project directory capability transaction failed." }
-                directoryReply.readException()
-                directoryReply.readInt()
+                    RuntimeIsolationProbeService.TRANSACTION_PROJECT_FILES,
+                    fileData, fileReply, 0
+                )) { "Brokered project-file capability transaction failed." }
+                fileReply.readException()
+                listOf(fileReply.readInt(), fileReply.readInt(), fileReply.readInt())
             } finally {
-                directoryFd.close()
-                directoryData.recycle()
-                directoryReply.recycle()
+                inputFd.close()
+                outputFd.close()
+                fileData.recycle()
+                fileReply.recycle()
             }
-            assertTrue("Isolated cell could not read its explicitly shared project directory",
-                directoryCapabilities and 1 != 0)
-            assertFalse("Isolated cell traversed into a sibling project directory",
-                directoryCapabilities and 2 != 0)
-            assertTrue("Isolated cell could not create data inside its own project directory",
-                directoryCapabilities and 4 != 0)
-            assertTrue("Host could not read the isolated cell's project-local output",
-                File(projectRoot, "worker-created.txt").readText() == "created-by-isolated-cell")
+            assertTrue("Isolated cell could not read its explicitly brokered project file", fileResults[0] == 1)
+            assertTrue("Isolated cell could not write through its explicitly brokered output file", fileResults[1] == 1)
+            assertTrue("Host file broker accepted a sibling traversal path", traversalRejected)
+            assertTrue("Host did not receive the isolated cell's project-local output",
+                outputFile.readText() == "created-by-isolated-cell")
+            assertTrue("Sibling project data changed during the capability test",
+                File(siblingRoot, "secret.txt").readText() == "project-b-secret")
             capabilityParent.deleteRecursively()
 
             // API 26 SELinux denies isolated_app access to a Binder-passed TCP socket.
@@ -199,6 +201,10 @@ class RuntimeIsolationProbeTest {
             host.close()
             marker.delete()
         }
+    }
+
+    private fun fileFdWrite(descriptor: ParcelFileDescriptor, parcel: Parcel) {
+        descriptor.writeToParcel(parcel, 0)
     }
 
     private fun transactInt(
