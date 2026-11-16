@@ -5,15 +5,15 @@
 
 ## 1. Companion runtime migration
 
-- Python and Node execute inside the separate-UID companion.
-- Authenticated/versioned IPC, bounded transfer and scoped project capabilities.
-- Worker lifecycle, readiness, crash recovery, bounded restart and update/rollback.
+- Python and Node source implementations execute inside the separate-UID companion.
+- Versioned signature-protected IPC and bounded project transfer are integrated.
+- Complete worker readiness, process-death/rebind, crash recovery, bounded restart and update/rollback.
 - Rust routes both runtime types through companion; static origin survives worker failure.
-- API 26/33/35 end-to-end tests pass.
+- API 26/33/35 end-to-end tests pass on the same candidate SHA.
 
 ## 2. Isolation and security
 
-- Worker cannot read host credentials, management secrets or unrelated site data.
+- Worker cannot read host credentials or management secrets; per-project filesystem isolation must prevent cross-site access.
 - Egress restrictions cover raw sockets, DNS rebinding, private/link-local/metadata destinations and management loopback.
 - Adversarial archive, traversal, symlink, SSRF, cross-project, protocol-abuse and exhaustion tests pass.
 - Android resource-control limitations are documented accurately.
