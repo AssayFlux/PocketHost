@@ -24,5 +24,6 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started local website hosting service"/>
         </service>
         <service android:name=".runtime.RuntimeIsolationProbeService" android:exported="false" android:isolatedProcess="true" android:process=":runtime_probe" />
+        <service android:name=".runtime.RuntimeIsolationProbeServiceTwo" android:exported="false" android:isolatedProcess="true" android:process=":runtime_probe_2" />
     </application>
 </manifest>

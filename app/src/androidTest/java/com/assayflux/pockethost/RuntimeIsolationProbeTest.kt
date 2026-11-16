@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
+import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -17,6 +18,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.net.ServerSocket
+import java.net.Socket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -53,6 +55,61 @@ class RuntimeIsolationProbeTest {
             val binder = checkNotNull(binderRef.get())
             val workerUid = transactInt(binder, RuntimeIsolationProbeService.TRANSACTION_UID)
             assertNotEquals("Probe must run under a distinct Android UID", context.applicationInfo.uid, workerUid)
+
+            val secondConnected = CountDownLatch(1)
+            val secondBinder = AtomicReference<IBinder?>()
+            val secondConnection = object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                    secondBinder.set(service)
+                    secondConnected.countDown()
+                }
+                override fun onServiceDisconnected(name: ComponentName) = Unit
+            }
+            assertTrue("Second isolated execution slot did not bind", context.bindService(
+                Intent().setComponent(ComponentName(
+                    context.packageName,
+                    "com.assayflux.pockethost.runtime.RuntimeIsolationProbeServiceTwo"
+                )), secondConnection, Context.BIND_AUTO_CREATE
+            ))
+            try {
+                assertTrue("Second isolated execution slot timed out", secondConnected.await(10, TimeUnit.SECONDS))
+                val secondUid = transactInt(checkNotNull(secondBinder.get()), RuntimeIsolationProbeService.TRANSACTION_UID)
+                assertNotEquals("Two active isolated slots must not share a UID", workerUid, secondUid)
+            } finally {
+                runCatching { context.unbindService(secondConnection) }
+            }
+
+            // A no-network isolated process can still serve a host-accepted visitor
+            // stream when the host explicitly transfers that socket FD over Binder.
+            val client = Socket("127.0.0.1", host.localPort)
+            val accepted = host.accept()
+            try {
+                client.getOutputStream().write("pockethost-broker-probe".toByteArray(Charsets.UTF_8))
+                client.getOutputStream().flush()
+                val socketFd = ParcelFileDescriptor.fromSocket(accepted)
+                val data = Parcel.obtain()
+                val reply = Parcel.obtain()
+                val brokered = try {
+                    data.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
+                    socketFd.writeToParcel(data, 0)
+                    check(binder.transact(
+                        RuntimeIsolationProbeService.TRANSACTION_BROKERED_SOCKET, data, reply, 0
+                    )) { "Brokered socket transaction failed." }
+                    reply.readException()
+                    reply.readInt() == 1
+                } finally {
+                    socketFd.close()
+                    data.recycle()
+                    reply.recycle()
+                }
+                assertTrue("Isolated process did not consume the brokered visitor stream", brokered)
+                val response = client.getInputStream().bufferedReader().readText()
+                assertTrue("Isolated process could not answer on the brokered visitor stream",
+                    response == "isolated-cell-response")
+            } finally {
+                client.close()
+                accepted.close()
+            }
 
             val canRead = transactInt(
                 binder,

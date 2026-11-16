@@ -6,6 +6,8 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.Process
+import android.os.ParcelFileDescriptor
+import android.system.Os
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -15,7 +17,7 @@ import java.net.Socket
  * app data. Instrumentation measures isolated-UID filesystem and loopback behavior
  * before a runtime worker architecture is selected.
  */
-class RuntimeIsolationProbeService : Service() {
+open class RuntimeIsolationProbeService : Service() {
     private val probeBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code == IBinder.INTERFACE_TRANSACTION) {
@@ -38,6 +40,27 @@ class RuntimeIsolationProbeService : Service() {
                     }.getOrDefault(false)
                     reply?.writeInt(if (connected) 1 else 0)
                 }
+                TRANSACTION_BROKERED_SOCKET -> {
+                    val descriptor = ParcelFileDescriptor.CREATOR.createFromParcel(data)
+                    val acceptedRequest = try {
+                        val expected = "pockethost-broker-probe"
+                        val request = ByteArray(256)
+                        var count = 0
+                        while (count < expected.length) {
+                            val read = Os.read(descriptor.fileDescriptor, request, count, request.size - count)
+                            if (read <= 0) break
+                            count += read
+                        }
+                        val received = String(request, 0, count, Charsets.UTF_8)
+                        val payload = (if (received == expected) "isolated-cell-response" else "rejected")
+                            .toByteArray(Charsets.UTF_8)
+                        Os.write(descriptor.fileDescriptor, payload, 0, payload.size)
+                        received == expected
+                    } finally {
+                        descriptor.close()
+                    }
+                    reply?.writeInt(if (acceptedRequest) 1 else 0)
+                }
                 else -> return super.onTransact(code, data, reply, flags)
             }
             return true
@@ -51,5 +74,9 @@ class RuntimeIsolationProbeService : Service() {
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION
         const val TRANSACTION_CAN_READ = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_LOOPBACK = IBinder.FIRST_CALL_TRANSACTION + 2
+        const val TRANSACTION_BROKERED_SOCKET = IBinder.FIRST_CALL_TRANSACTION + 3
     }
 }
+
+/** Second isolated process used to verify distinct per-process UIDs. */
+class RuntimeIsolationProbeServiceTwo : RuntimeIsolationProbeService()
