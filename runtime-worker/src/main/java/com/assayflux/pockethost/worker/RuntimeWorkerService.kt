@@ -285,7 +285,7 @@ class RuntimeWorkerService : Service() {
             runCatching {
                 server.accept().use { client ->
                     client.getOutputStream().apply {
-                        write("PocketHost companion loopback OK\\n".toByteArray())
+                        write("PocketHost companion loopback OK\n".toByteArray())
                         flush()
                     }
                 }
