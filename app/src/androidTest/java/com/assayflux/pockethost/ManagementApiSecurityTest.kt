@@ -131,6 +131,64 @@ class ManagementApiSecurityTest {
     }
 
     @Test
+    fun ownerCanConfigureSiteScopedPrivateAndRestrictedVisitorCredentials() {
+        val challenge = JSONObject(request("POST", "/api/v1/pair/challenge", "{}").second)
+        val code = ManagementApiServer.pendingApprovalCode()!!
+        assertEquals(true, ManagementApiServer.approvePairing(code))
+        val ownerToken = JSONObject(request("POST", "/api/v1/pair/complete",
+            JSONObject().put("challengeId", challenge.getString("challengeId")).put("code", code).toString()).second)
+            .getString("accessToken")
+
+        val siteId = "visitor_" + System.nanoTime().toString().takeLast(10)
+        val root = File(context.filesDir, siteId)
+        assertEquals(true, root.mkdirs())
+        File(root, "index.html").writeText("private-site")
+        val hostname = "$siteId.example.test"
+        try {
+            val create = request("POST", "/api/v1/sites",
+                JSONObject().put("id", siteId).put("name", "Visitor policy test")
+                    .put("runtime", "static").put("root", root.absolutePath)
+                    .put("hostnames", org.json.JSONArray().put(hostname)).put("enabled", true).toString(),
+                authorization = ownerToken)
+            assertEquals(201, create.first)
+
+            assertEquals(200, request("PUT", "/api/v1/sites/$siteId/access",
+                JSONObject().put("mode", "restricted").toString(), authorization = ownerToken).first)
+            val invite = request("POST", "/api/v1/sites/$siteId/visitors",
+                JSONObject().put("username", "alice").toString(), authorization = ownerToken)
+            assertEquals(201, invite.first)
+            val visitorToken = JSONObject(invite.second).getString("token")
+            assertEquals(true, visitorToken.length >= 32)
+
+            val site = (0 until JSONObject(request("GET", "/api/v1/sites", authorization = ownerToken).second)
+                .getJSONArray("items").length()).map {
+                JSONObject(request("GET", "/api/v1/sites", authorization = ownerToken).second)
+                    .getJSONArray("items").getJSONObject(it)
+            }.first { it.getString("id") == siteId }
+            assertEquals("restricted", site.getString("accessMode"))
+            assertEquals("alice", site.getJSONArray("visitors").getString(0))
+
+            val stored = com.assayflux.pockethost.sites.SiteRegistry.list(context).first { it.id == siteId }
+            assertEquals(false, stored.visitorCredentials.values.contains(visitorToken))
+            assertEquals(64, stored.visitorCredentials.getValue("alice").length)
+
+            assertEquals(204, request("DELETE", "/api/v1/sites/$siteId/visitors/alice",
+                authorization = ownerToken).first)
+            assertEquals(0, com.assayflux.pockethost.sites.SiteRegistry.list(context)
+                .first { it.id == siteId }.visitorCredentials.size)
+
+            assertEquals(200, request("PUT", "/api/v1/sites/$siteId/access",
+                JSONObject().put("mode", "public").toString(), authorization = ownerToken).first)
+            val publicSite = com.assayflux.pockethost.sites.SiteRegistry.list(context).first { it.id == siteId }
+            assertEquals("public", publicSite.accessMode)
+            assertEquals(0, publicSite.visitorCredentials.size)
+        } finally {
+            runCatching { com.assayflux.pockethost.sites.SiteRegistry.remove(context, siteId) }
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun accountStoreClearsCallerPasswordAndVerifierBuffers() {
         val username = "secure_" + System.nanoTime().toString().takeLast(8)
         val password = "PocketHost-Secure-Test-42".toCharArray()
