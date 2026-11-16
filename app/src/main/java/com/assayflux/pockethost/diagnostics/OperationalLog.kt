@@ -25,7 +25,13 @@ object OperationalLog {
             val directory = File(context.applicationContext.filesDir, DIRECTORY)
             if (!directory.exists()) directory.mkdirs()
             val file = File(directory, CURRENT)
-            if (file.exists() && file.length() >= MAX_FILE_BYTES) rotate(directory, file)
+            if (file.exists() && file.length() >= MAX_FILE_BYTES) {
+                rotate(directory, file)
+                // A failed rename must never turn a bounded log into an unbounded one.
+                if (file.exists() && file.length() >= MAX_FILE_BYTES && !file.delete()) {
+                    return@runCatching
+                }
+            }
             val safeMessage = redact(message).take(1_200)
             val line = JSONObject()
                 .put("timestamp", Instant.now().toString())
