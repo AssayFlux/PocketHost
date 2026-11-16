@@ -47,6 +47,21 @@ class PocketHostNavigationAccessibilityTest {
                     device.takeScreenshot(File(screenshotDir, "navigation-${destinationName.lowercase()}.png")))
                 device.dumpWindowHierarchy(File(screenshotDir, "navigation-${destinationName.lowercase()}-hierarchy.xml"))
             }
+            device.wait(Until.findObject(By.desc("Settings")), 10_000)!!.click()
+            listOf(
+                "Network" to "CLOUDFLARE TUNNEL",
+                "Runtimes" to "TRUSTED APPLICATION CODE ONLY",
+                "About" to "AssayFlux Pocket Host",
+                "General" to "Dark theme"
+            ).forEach { (section, expectedText) ->
+                val sectionTab = device.wait(Until.findObject(By.text(section)), 10_000)
+                assertTrue("Settings section $section is not reachable", sectionTab != null)
+                sectionTab!!.click()
+                assertTrue("Settings section $section did not render $expectedText",
+                    device.wait(Until.hasObject(By.text(expectedText)), 10_000))
+                assertTrue("Settings header changed while selecting $section",
+                    device.hasObject(By.text("ASSAYFLUX  ·  Settings")))
+            }
         }
     }
 }
