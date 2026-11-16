@@ -68,12 +68,12 @@ class RuntimeIsolationProbeTest {
             ) == 1
             Log.i(
                 "PocketHostIsolationProbe",
-                "hostUid=" + Process.myUid() + " workerUid=" + workerUid +
+                "hostUid=" + context.applicationInfo.uid + " workerUid=" + workerUid +
                     " hostPrivateReadable=" + canRead + " loopbackAllowed=" + loopbackAllowed
             )
             instrumentation.sendStatus(0, android.os.Bundle().apply {
                 putString("runtime_isolation_worker_uid", workerUid.toString())
-                putString("runtime_isolation_host_uid", Process.myUid().toString())
+                putString("runtime_isolation_host_uid", context.applicationInfo.uid.toString())
                 putString("runtime_isolation_host_private_readable", canRead.toString())
                 putString("runtime_isolation_loopback_allowed", loopbackAllowed.toString())
             })
