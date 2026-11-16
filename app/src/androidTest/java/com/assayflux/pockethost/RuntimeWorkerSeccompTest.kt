@@ -19,7 +19,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -27,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference
 @RunWith(AndroidJUnit4::class)
 class RuntimeWorkerSeccompTest {
     @Test(timeout = 30_000)
-    fun isolatedCellDeniesNewSocketsAndConnectButAcceptsHostUnixListener() {
+    fun isolatedCellClosesInheritedSocketsDeniesNewSocketsAndAcceptsHostUnixListener() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val socketName = "pockethost-seccomp-" + System.nanoTime()
         val address = LocalSocketAddress(socketName)
@@ -104,7 +103,7 @@ class RuntimeWorkerSeccompTest {
                     reply.recycle()
                 }
                 assertEquals("socket() must be denied with EPERM", 1, results[0])
-                assertEquals("connect() must be denied with EPERM", 1, results[1])
+                assertEquals("The inherited connected-socket capability must be closed before policy install", 1, results[1])
                 assertEquals("The brokered Unix listener must accept visitor traffic", 1, results[2])
                 assertEquals("SO_PEERCRED must identify the host app UID", 1, results[3])
                 assertEquals("Cell response must return on the accepted visitor stream",
