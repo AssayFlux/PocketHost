@@ -37,6 +37,7 @@ object RuntimeWorkerClient {
     private const val TRANSACTION_NODE_STOP = IBinder.FIRST_CALL_TRANSACTION + 11
     private const val TRANSACTION_NODE_STATUS = IBinder.FIRST_CALL_TRANSACTION + 12
     private const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
+    private const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
     private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRIES = 10_000
 
@@ -112,7 +113,7 @@ object RuntimeWorkerClient {
                 in setOf(TRANSACTION_INSTALL_PROJECT, TRANSACTION_PYTHON_START,
                     TRANSACTION_PYTHON_START_SITES, TRANSACTION_PYTHON_STOP,
                     TRANSACTION_PYTHON_STATUS, TRANSACTION_PYTHON_METRICS, TRANSACTION_NODE_START,
-                    TRANSACTION_NODE_STOP, TRANSACTION_NODE_STATUS, TRANSACTION_NODE_METRICS) -> reply.readString()
+                    TRANSACTION_NODE_STOP, TRANSACTION_NODE_STATUS, TRANSACTION_NODE_METRICS, TRANSACTION_SHUTDOWN) -> reply.readString()
                 else -> reply.readInt()
             }
         } finally {
@@ -267,6 +268,11 @@ object RuntimeWorkerClient {
             if ((transact(it, TRANSACTION_NODE_STATUS) as String) != "RUNNING") null
             else JSONObject(transact(it, TRANSACTION_NODE_METRICS) as String).put("source", "node-companion")
         }
+    }
+
+    fun shutdownWorker(context: Context): String? {
+        if (cachedWorkerAvailable() == null) return null
+        return withWorker(context) { transact(it, TRANSACTION_SHUTDOWN) as String }
     }
 
     fun stopPython(context: Context): String =
