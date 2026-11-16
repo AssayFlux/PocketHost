@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Modifier
+import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,11 +60,11 @@ internal fun PocketHostActivityScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         val filteredEvents = events.filter { event ->
-                            val matchesText = logFilter.isBlank() ||
-                                event.level.contains(logFilter, ignoreCase = true) ||
-                                event.event.contains(logFilter, ignoreCase = true) ||
-                                event.message.contains(logFilter, ignoreCase = true)
-                            val matchesMode = when (logFilterMode) {
+                            val matchesText = filterText.isBlank() ||
+                                event.level.contains(filterText, ignoreCase = true) ||
+                                event.event.contains(filterText, ignoreCase = true) ||
+                                event.message.contains(filterText, ignoreCase = true)
+                            val matchesMode = when (filterMode) {
                                 "Errors" -> event.level.equals("ERROR", ignoreCase = true)
                                 "Today" -> event.timestamp.startsWith(LocalDate.now().toString())
                                 else -> true
@@ -96,10 +96,10 @@ internal fun PocketHostActivityScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Export diagnostics bundle") }
                         OutlinedButton(onClick = { onShowClearConfirmationChange(true) },
-                            enabled = recentEvents.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                            enabled = events.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
                             Text("Clear logs")
                         }
-                        if (showClearLogsConfirmation) {
+                        if (showClearConfirmation) {
                             AlertDialog(
                                 onDismissRequest = { onShowClearConfirmationChange(false) },
                                 title = { Text("Clear operational logs?") },
