@@ -48,7 +48,7 @@ val prepareNodeRuntime by tasks.registering {
             while (entries.hasMoreElements()) {
                 val entry = entries.nextElement()
                 if (entry.isDirectory) continue
-                val name = entry.name.replace('\\\\', '/')
+                val name = entry.name.replace('\\', '/')
                 val abi = abis.firstOrNull { name.endsWith("bin/$it/libnode.so") }
                 if (abi != null) {
                     val destination = File(jniRoot, "$abi/libnode.so")
