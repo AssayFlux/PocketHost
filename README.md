@@ -1,84 +1,124 @@
-# AssayFlux Pocket Host
+<!-- ASSAYFLUX POCKET HOST · ENGINEERING BASELINE -->
+<p align="center">
+  <img src="https://img.shields.io/badge/ASSAYFLUX-POCKET_HOST-1F3A5F?style=for-the-badge&labelColor=172B45" alt="AssayFlux Pocket Host">
+</p>
+<p align="center">
+  <strong>YOUR PHONE. YOUR WEBSITE ORIGIN.</strong><br>
+  A native Android website host for small sites, development and modest workloads.
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/ANDROID-8%2B-3B8061?style=flat-square&logo=android&logoColor=white">
+  <img src="https://img.shields.io/badge/KOTLIN-COMPOSE-6657A5?style=flat-square&logo=kotlin&logoColor=white">
+  <img src="https://img.shields.io/badge/RUST-HTTP_ENGINE-A66B42?style=flat-square&logo=rust&logoColor=white">
+  <img src="https://img.shields.io/badge/TYPESCRIPT-MANAGEMENT-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img src="https://img.shields.io/badge/PYTHON-TRUSTED_RUNTIME-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/NODE.JS-TRUSTED_RUNTIME-548B65?style=flat-square&logo=nodedotjs&logoColor=white">
+</p>
+<p align="center">
+  <a href="https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml"><img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/quality.yml?branch=main&style=flat-square&label=QUALITY%20CI"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/commits/main"><img src="https://img.shields.io/github/last-commit/AssayFlux/PocketHost/main?style=flat-square&label=MAIN"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/issues"><img src="https://img.shields.io/github/issues/AssayFlux/PocketHost?style=flat-square&label=ISSUES"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AssayFlux/PocketHost?style=flat-square&label=LICENSE"></a>
+</p>
 
-**A native Android website host. Your phone is the origin.**
+> **Engineering baseline · 16 November 2026 · main:** `a8988f5068f4a65206b89451e8204b51b86abc55`  
+> **Estimated overall engineering readiness: 37%.** This is a weighted milestone assessment, not a test-coverage metric or a claim of production readiness. The native app, static Rust origin, local management and several operations foundations exist. The separate-UID companion is not yet running Python or Node. See [the single current baseline](docs/PROJECT_BASELINE.md).
 
-AssayFlux Pocket Host turns an Android phone into a small website host. It runs a Rust HTTP engine on-device, serves static sites, and can route owner-installed Python WSGI and Node.js applications. Cloudflare Tunnel can expose the phone's website without opening an inbound router port.
+---
 
-No Termux. No root. No mandatory VPS. The existing domain and named Cloudflare Tunnel can be reused.
+## THE PROJECT
 
-> **Current status — 2026-11-16:** reviewed source commit `6a2a54d76e8ae71c8abc4cc9d5f6f0e20a03b34f`; the quality checks and three-ABI host plus companion debug APK packaging passed. API 26 instrumentation executed 31 tests: 28 passed, including the companion UID/loopback test, and 3 failed (two management API timeouts under concurrent PBKDF2 load and one Dashboard accessibility-selector mismatch). The test harness has been adjusted and requires a fresh run. API 33/35 are not yet validated on this exact source. Python and Node still execute under the host app UID; the companion is a capability prototype, not a production runtime sandbox. No production-ready or signed-release claim is made. See [verified project status](docs/PROJECT_STATUS_2026-11-16.md) for evidence.
+AssayFlux Pocket Host turns an Android phone into a self-hosted website origin. The phone serves static websites through a Rust HTTP engine and can route owner-installed Python WSGI and Node.js applications. An existing Cloudflare Tunnel can expose the website without opening an inbound router port.
 
-## What is included
+**No Termux. No root. No mandatory VPS.** Static hosting must remain usable when optional runtimes or remote management are stopped.
 
-- **Static hosting:** folder/ZIP import, staged deployment, safe path checks, retained releases and rollback.
-- **Python:** embedded CPython 3.11 with a WSGI entry point.
-- **Node.js:** pinned Node.js 24 mobile runtime with prebundled dependencies.
-- **HTTP engine:** Rust + Tokio + Hyper, hostname routing, streaming, byte ranges, MIME handling and bounded admission.
-- **Capacity protection:** active-connection ceiling, bounded waiting queue, per-client rate limiting, per-site concurrency caps and graceful shutdown.
-- **Cloudflare:** Android-targeted cloudflared connector with encrypted token storage and lifecycle supervision.
-- **Local management:** authenticated loopback API and paired TypeScript/React console.
-- **Operations:** traffic and device metrics, activity logs, diagnostics and Capacity Lab.
-- **Backup:** passphrase-encrypted full-app backup for the active website, registered custom static roots, configured Python/Node project roots, hostname routes and selected non-secret settings. Device-bound credentials are excluded; restored runtimes remain stopped pending owner approval.
+<table>
+<tr>
+<td align="center" width="33%"><strong>PHONE-FIRST</strong><br>Android 8+, ARMv7 and ARM64 design target, including budget devices.</td>
+<td align="center" width="33%"><strong>OWNER-CONTROLLED</strong><br>Local management, owner/operator roles and explicit runtime trust.</td>
+<td align="center" width="33%"><strong>EVIDENCE-LED</strong><br>Builds, tests, security boundaries and external acceptance are reported separately.</td>
+</tr>
+</table>
 
-## App navigation
+## CURRENT SOFTWARE SCOPE
 
-The Android app uses five focused destinations:
-
-| Screen | Purpose |
+| AREA | IMPLEMENTED FOUNDATION |
 |---|---|
-| **Dashboard** | Hosting control, traffic, capacity and device health |
-| **Sites** | Website files, import/deploy and backup/restore |
-| **Activity** | Filterable operational events and exports |
-| **Learn** | Collapsible setup and troubleshooting guides |
-| **Settings** | General, Network, Runtimes and About sections |
+| Android app | Kotlin, Jetpack Compose, five destinations, foreground hosting service |
+| Website origin | Rust, Tokio and Hyper; hostname routing, static files, streaming and byte ranges |
+| Static deployment | Folder/ZIP import, staged deployment, file management and rollback |
+| Python | Embedded CPython 3.11 / WSGI integration; trusted owner-installed code only |
+| Node.js | Pinned Node.js 24 mobile runtime; trusted owner-installed code only |
+| Management | Authenticated loopback API and TypeScript/React console |
+| Edge connectivity | Android cloudflared connector; use the owner's existing named tunnel |
+| Operations | Device/resource metrics, activity logs, diagnostics and initial Capacity Lab |
+| Backup | Passphrase-encrypted backup/restore with device-bound credentials excluded |
+| Companion | Separate package/UID and signature-protected Binder capability probe; runtime migration is not complete |
 
-The visual system uses a restrained navy, ivory and neutral palette, compact cards, clear status hierarchy and Simple/Advanced modes.
+## ARCHITECTURE
 
-## Request flow
-
-```text
-Visitor
-  │ HTTPS
-  ▼
-Cloudflare edge
-  │ existing outbound tunnel
-  ▼
-Pocket Host on Android
-  │
-  ├── Rust HTTP engine ── static website files
-  │
-  ├── loopback proxy ──── Python WSGI runtime
-  │
-  └── loopback proxy ──── Node.js runtime
+```mermaid
+flowchart TD
+  V[Website visitors] --> CF[Cloudflare edge]
+  CF --> T[Existing outbound Tunnel]
+  T --> R[Rust HTTP origin on Android]
+  R --> S[Static site roots]
+  R --> P[Python WSGI upstream]
+  R --> N[Node.js upstream]
+  A[Native Android app] --> R
+  A --> M[Authenticated local management API]
+  M --> C[TypeScript / React console]
+  A -. future isolated worker IPC .-> W[Separate-UID companion prototype]
 ```
 
-The public hostname must point to the Rust website listener. It must never point to the management API. Local and remote management are separate from visitor traffic.
+The public hostname must route to the Rust website listener. It must **never** route to the management API. The current Python and Node runtimes still execute under the host app UID; do not treat the companion probe or path canonicalization as an OS sandbox.
 
-## Platform targets
+## RELEASE READINESS
 
-- Android 8.0 / API 26 and newer.
-- ARM64 and ARMv7 phones; x86_64 build target for emulator use.
-- 4 GB RAM is the baseline design target, not a promise of a universal visitor count.
-- The phone remains subject to Android lifecycle, battery, thermal and OEM restrictions.
+<details>
+<summary><strong>Weighted engineering readiness — 37 / 100</strong></summary>
 
-## Build and validation
+| RELEASE SEQUENCE | WEIGHT | CURRENT ESTIMATE |
+|---|---:|---:|
+| Companion runtime migration | 25% | 15% |
+| Isolation and adversarial security | 20% | 25% |
+| Rust governor and Capacity Lab | 15% | 60% |
+| Backup, operations and Settings | 15% | 65% |
+| API 26/33/35 CI and APK evidence | 15% | 55% |
+| Signing, external HTTPS and review | 10% | 15% |
+| **Weighted total** | **100%** | **37%** |
 
-- Repository: [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)
-- Latest reviewed main: `6a2a54d76e8ae71c8abc4cc9d5f6f0e20a03b34f`.
-- Quality workflow [43786695783](https://github.com/AssayFlux/PocketHost/actions/runs/43786695783) passed all six jobs.
-- Android integration [43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821): cloudflared build and three-ABI host + companion debug APK packaging passed; API 26 emulator is running and API 33/35 are queued. Do not infer emulator success until the jobs finish.
-- [Debug APK artifact](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821/artifacts/14190833098) is available. It is not a production release.
-- See [verified project status](docs/PROJECT_STATUS_2026-11-16.md), [roadmap](docs/ROADMAP.md) and [phase status](docs/PHASE_0_STATUS.md) for exact boundaries and remaining gates.
+These percentages are engineering estimates against acceptance criteria. They are not LOC completion, test coverage or a substitute for release approval. Exact gates and evidence are in [PROJECT_BASELINE.md](docs/PROJECT_BASELINE.md).
 
-## Security boundaries and known gaps
+</details>
 
-- Python and Node hosting are supported features for **owner-installed applications**. Visitors can access those hosted sites through normal HTTP routing; visitor-submitted executable code is not a supported workflow.
-- Python and Node project roots are now canonicalized and restricted to descendants of PocketHost's app-private directories, including symlink-escape rejection. However, both runtimes still execute with the app UID. The new separate-UID companion package is only a capability probe and does not yet host Python or Node. Path validation and a separate process are not an OS sandbox. Only run trusted code until the runtime migration, network confinement and security review are complete.
-- The management API is loopback-only and authenticated. Do not expose it through Cloudflare.
-- Full backups exclude device-bound credentials and common secret files. Secrets embedded in ordinary source/config files cannot be detected reliably; review project contents before sharing a backup.
-- Route manifest v3 now includes registered custom static roots under app-private storage. Custom Python/Node route roots outside their configured project roots remain unsupported.
-- The optional remote control-plane source is not proof of a deployed backend or a paired device.
-- Payment-provider integration and independent security review are not complete.
-- Physical Android 8/15 device acceptance, public HTTPS verification, sustained thermal/battery tests and OEM lifecycle checks remain outstanding.
+## VERIFIED CI SNAPSHOT
 
-Pocket Host is intended for small sites, development and modest workloads—not cloud-region uptime or unbounded public application execution.
+- [Quality workflow 43789396734](https://github.com/AssayFlux/PocketHost/actions/runs/43789396734): all six jobs passed.
+- [Android integration workflow 43789396568](https://github.com/AssayFlux/PocketHost/actions/runs/43789396568): API 26 passed 31 instrumentation tests with zero failures; APK packaging and cloudflared Android build passed. API 33 was still running and API 35 queued at the last check.
+- Debug APK packaging is not a signed production release. The previous artifact download attempt was truncated; do not use that archive.
+
+## BUILD
+
+Open the repository in Android Studio or use the Gradle wrapper in an Android SDK environment. The host app and `:runtime-worker` companion are separate Android application modules. CI builds debug artifacts for the configured ABIs. Production signing is intentionally gated on owner-controlled GitHub Actions secrets; see [RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md).
+
+## PRODUCT BOUNDARIES
+
+- Supported target: small websites, development and modest workloads on a phone.
+- Not a cloud-region replacement or an uptime guarantee.
+- Python and Node are for trusted owner-installed code only until genuine isolation and egress enforcement are implemented and independently reviewed.
+- No hard CPU quota is claimed for ordinary Android app processes.
+- Physical device lifecycle/thermal/battery acceptance and external Cloudflare HTTPS verification are not inferred from emulator or connector builds.
+
+## ENGINEERING DOCUMENTS
+
+| DOCUMENT | PURPOSE |
+|---|---|
+| [Project baseline](docs/PROJECT_BASELINE.md) | Canonical scope, weighted readiness, six gates and evidence |
+| [Roadmap](docs/ROADMAP.md) | Only the active release sequence |
+| [Phase status](docs/PHASE_0_STATUS.md) | Implemented behavior and explicit limitations |
+| [Completion milestone](docs/COMPLETION_MILESTONE.md) | Acceptance criteria for release completion |
+| [Development context](docs/DEVELOPMENT_CONTEXT.md) | Architecture and constraints for contributors |
+| [Release signing](docs/RELEASE_SIGNING.md) | Secure owner-controlled release signing |
+
+**Maintained by AssayFlux.** The code and evidence—not a badge, plan or percentage—determine release readiness.
