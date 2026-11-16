@@ -122,7 +122,11 @@ jobs:
           worker="app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk"
           worker_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$worker" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
           test -n "$worker_cert"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$worker" > "$RUNNER_TEMP/worker-badging.txt"
+          grep -Fq "package: name='com.assayflux.pockethost.worker'" "$RUNNER_TEMP/worker-badging.txt"
+          grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/worker-badging.txt"
           unzip -Z1 "$worker" > "$RUNNER_TEMP/worker-contents.txt"
+          sha256sum "$worker"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             grep -Fxq "lib/$abi/libnode.so" "$RUNNER_TEMP/worker-contents.txt"
             grep -Fxq "lib/$abi/libnodebridge.so" "$RUNNER_TEMP/worker-contents.txt"
@@ -135,6 +139,9 @@ jobs:
               *x86_64*) abi=x86_64 ;;
               *) echo "Unexpected APK: $apk"; exit 1 ;;
             esac
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/app-badging.txt"
+            grep -Fq "package: name='com.assayflux.pockethost'" "$RUNNER_TEMP/app-badging.txt"
+            grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/app-badging.txt"
             unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-contents.txt"
             grep -Fxq "lib/$abi/libpockethost.so" "$RUNNER_TEMP/apk-contents.txt"
             grep -Fxq "lib/$abi/libcloudflared.so" "$RUNNER_TEMP/apk-contents.txt"
