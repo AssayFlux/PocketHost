@@ -202,6 +202,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/pockethost-ui"
           timeout 30s adb wait-for-device || { echo "Emulator unavailable; screenshot skipped."; exit 0; }
           adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots/dashboard.png "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
+          adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots "$RUNNER_TEMP/pockethost-ui/navigation-api-${{ matrix.api-level }}"
           file "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
       - name: Upload Android instrumentation reports
         if: always()
