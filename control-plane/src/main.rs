@@ -427,6 +427,7 @@ async fn delete_device(
         .bind(&role.name).bind("device.revoke").bind(id.to_string()).bind(json!({}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    s.relay.revoke_device(id);
 
     // Blob deletion is deliberately post-commit: database revocation remains durable
     // even if storage cleanup is temporarily unavailable.
@@ -454,6 +455,7 @@ async fn rotate_device_token(
         .bind(&actor.name).bind("device.token.rotate").bind(id.to_string())
         .bind(json!({"previous_token_revoked":true})).execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    s.relay.revoke_device(id);
     Ok((StatusCode::OK, Json(json!({
         "deviceId": id,
         "device_token": token,
