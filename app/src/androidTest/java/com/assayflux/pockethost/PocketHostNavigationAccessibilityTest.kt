@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,9 +18,17 @@ class PocketHostNavigationAccessibilityTest {
     fun allFiveDestinationsExposeLabelsAndRenderTheirOwnScreen() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
-        context.getSharedPreferences("pockethost_state", 0).edit()
+        val statePreferences = context.getSharedPreferences("pockethost_state", 0)
+        statePreferences.edit()
             .putBoolean("biometric_unlock_enabled", false)
+            .putBoolean("python_enabled", false)
+            .putBoolean("node_enabled", false)
+            .putBoolean("tunnel_enabled", false)
+            .putBoolean("auto_start_on_boot", false)
             .commit()
+        val registryPreferences = context.getSharedPreferences("pockethost_site_registry", 0)
+        val previousRegistry = registryPreferences.getString("sites", "[]") ?: "[]"
+        val visitorSiteRoot = File(context.filesDir, "ui-visitor-site-${System.nanoTime()}")
         val device = UiDevice.getInstance(instrumentation)
         val screenshotDir = File(checkNotNull(context.getExternalFilesDir(null)), "screenshots")
         assertTrue(screenshotDir.mkdirs() || screenshotDir.isDirectory)
@@ -31,7 +40,18 @@ class PocketHostNavigationAccessibilityTest {
             "Settings" to "Dark theme",
             "Dashboard" to "HOSTING STATUS"
         )
-        ActivityScenario.launch(MainActivity::class.java).use {
+        try {
+            assertTrue(visitorSiteRoot.mkdirs())
+            File(visitorSiteRoot, "index.html").writeText("<h1>UI visitor policy test</h1>")
+            SiteRegistry.put(context, SiteRegistry.Site(
+                id = "ui-visitor-test",
+                name = "UI visitor test",
+                runtime = "static",
+                root = visitorSiteRoot.absolutePath,
+                hostnames = listOf("ui-visitor-test.local"),
+                enabled = true
+            ))
+            ActivityScenario.launch(MainActivity::class.java).use {
             expectedContent.forEach { (destinationName, expectedText) ->
                 val accessibleDestination = device.wait(
                     Until.findObject(By.desc(destinationName)), 20_000
@@ -79,6 +99,10 @@ class PocketHostNavigationAccessibilityTest {
                     device.takeScreenshot(File(screenshotDir, "settings-${section.lowercase()}.png")))
                 device.dumpWindowHierarchy(File(screenshotDir, "settings-${section.lowercase()}-hierarchy.xml"))
             }
+            }
+        } finally {
+            registryPreferences.edit().putString("sites", previousRegistry).commit()
+            visitorSiteRoot.deleteRecursively()
         }
     }
 }
