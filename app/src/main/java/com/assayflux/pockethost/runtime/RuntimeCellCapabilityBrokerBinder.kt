@@ -23,6 +23,7 @@ class RuntimeCellCapabilityBrokerBinder(
         }
         if (reply == null || flags and IBinder.FLAG_ONEWAY != 0) return false
         data.enforceInterface(DESCRIPTOR)
+        require(data.dataSize <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder transfer limit." }
         val callerUid = Binder.getCallingUid()
         return try {
             when (code) {
@@ -74,5 +75,6 @@ class RuntimeCellCapabilityBrokerBinder(
         const val TRANSACTION_OPEN_READ_ONLY = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_WRITE_BYTES = IBinder.FIRST_CALL_TRANSACTION + 2
         const val MAX_RELATIVE_PATH_CHARS = 4096
+        const val MAX_BINDER_REQUEST_BYTES = 512 * 1024
     }
 }
