@@ -1,134 +1,282 @@
-# PocketHost North Star
+# ASSAYFLUX POCKET HOST — NORTH STAR
 
-**Product:** AssayFlux PocketHost  
-**Steward:** AssayFlux  
+**Product:** AssayFlux Pocket Host  
+**Steward:** AssayFlux Scientific Systems  
 **Developer identity:** Designed by AssayFlux  
-**Package:** `com.assayflux.pockethost`
+**Host package:** `com.assayflux.pockethost`  
+**Runtime companion:** `com.assayflux.pockethost.worker`  
+**Initial product version target:** `0.1.0`  
+**Status:** Pre-release engineering; no production approval.
 
-## The North Star
+---
 
-**Make affordable, dependable and understandable self-hosting possible on an Android phone—without Termux, root or a mandatory cloud server.**
+## 1. THE NORTH STAR
 
-PocketHost should become the first choice for people with limited budgets or modest hosting needs: publish a static website, add a small trusted backend when needed, understand the actual capacity of the phone, and let the system protect itself from overload.
+**Make secure, understandable and affordable self-hosting possible on an Android phone — without root, Termux or a mandatory cloud server.**
 
-The **phone is the website origin**. Rust handles HTTP serving and routing. Kotlin owns Android lifecycle and native controls. TypeScript owns the management console. Python and Node.js are optional trusted application runtimes. Cloudflare Tunnel provides outbound public connectivity. The optional remote control plane is for management only; it is neither the website host nor a prerequisite for local hosting.
+Pocket Host turns a phone the owner already has into the actual origin for static websites and modest web applications. The product should make publishing straightforward for beginners while giving advanced operators meaningful controls for capacity, security, networking, recovery and diagnostics.
 
-The owner already has a domain and connected Cloudflare Tunnel. Reuse the existing named tunnel and verify its Public Hostname origin. Never tell the owner to create a duplicate tunnel.
+**Brand promise:** Your website. Your device. Your control.
 
-## Who it serves
+**Operating loop:** Import → Validate → Preview → Publish → Observe → Protect → Recover.
 
-1. **Budget-conscious site owner:** needs low-cost static hosting and a simple publishing workflow.
-2. **Independent developer:** needs a small trusted Python or Node backend for development or lightweight production workloads.
-3. **Technical operator:** needs clear capacity, logs, alerts, controls, deployment history and recovery.
-4. **Learning and testing user:** needs a safe way to run a website or backend temporarily from hardware they already own.
+The phone is the origin. Kotlin owns Android lifecycle and native UI. Rust/Tokio/Hyper owns website ingress and routing. TypeScript/React provides the management console. Python and Node are optional application runtimes. External tunnel infrastructure is a connectivity path, not the website origin.
 
-## Core product promise
+## 2. WHO THE PRODUCT SERVES
 
-Import → validate → preview → publish → observe → protect → recover.
+1. **Simple site owner:** publish a static site from a folder or ZIP without a terminal.
+2. **Independent developer:** host a modest trusted Python WSGI or Node application.
+3. **Technical operator:** manage multiple sites, hostnames, resource budgets, logs, backups and recovery.
+4. **Privacy-conscious owner:** expose a website through an outbound tunnel without advertising the phone's public IP to visitors.
+5. **Learning user:** understand the real limits of hosting on ordinary Android hardware.
 
-A first-time user should not need a shell, Termux, root, or deep server knowledge to publish a static website. Advanced users can tune limits and runtimes, but safe defaults remain the default.
+## 3. PRODUCT PROMISES AND NON-NEGOTIABLES
 
-## Product principles
+### Phone-first, no-root hosting
+- Core static hosting must run on the phone and work locally without a VPS, control plane, Cloudflare account or AssayFlux account.
+- Support Android 8.0 / API 26 and newer, ARMv7 and ARM64 as declared targets; x86_64 supports emulator coverage.
+- No Termux, root, custom kernel or privileged device-owner assumption.
+- Be honest about Doze, battery, thermal, OEM process management, carrier NAT and power loss.
 
-### 1. Phone-first hosting
-The phone runs the actual website server. The core product must work locally without a VPS, remote control plane or paid cloud service. Optional external providers must be clearly identified.
+### Static-first reliability
+- Static websites are the foundational workload.
+- Python, Node, tunnel connectors, remote management and future billing must be optional.
+- A runtime crash, tunnel outage or remote control-plane outage must not take down local static hosting.
+- Stage imports and updates; preserve the last known-good deployment and support rollback.
 
-### 2. Native, no-root operation
-Use Kotlin and Jetpack Compose with supported Android APIs. Target Android 8.0 (API 26)+, a 4 GB RAM baseline and ARMv7/ARM64 compatibility. No Termux and no root requirement.
+### Rust owns the request path
+- Rust/Tokio/Hyper owns HTTP ingress, hostname routing, static serving, reverse proxy, admission and request metrics.
+- Kotlin owns Android integration and lifecycle.
+- JNI is coarse-grained and versioned; do not implement a second request router in Kotlin or JavaScript.
+- Management endpoints remain separate from website ingress.
 
-### 3. Rust is the central request engine
-Rust owns public HTTP ingress, static serving, hostname routing, reverse proxying, bounded admission, and engine metrics. Kotlin owns Android integration. JNI remains coarse-grained and versioned.
+### Security is an implementation gate
+- The companion UID is not a per-project sandbox.
+- Python/Node remain trusted owner-controlled code until every execution cell has a distinct OS-enforced identity, project-only file capabilities and enforced network policy.
+- No hostile visitor-submitted code, marketplace code or multi-tenant execution before independent security review.
+- No language-level monkey patch or filename filter may be represented as an OS security boundary.
 
-### 4. Static hosting is foundational
-Static hosting must work independently of Python, Node.js, remote management and payment integrations. Optional components must not destabilize the static origin.
+### Evidence before claims
+- Separate source-present, compiled, automated-tested, emulator-verified, physical-device-verified, externally-verified and production-approved states.
+- Never invent visitor limits, availability, test results or security guarantees.
+- Capacity claims must state device, workload, duration, network, thermal conditions and measurement method.
 
-### 5. Measure before making capacity claims
-Do not invent a maximum visitor count. Discover hardware, benchmark representative workloads, calculate sustainable safe capacity and show the workload and test conditions. A measured safe envelope is more useful than a theoretical peak.
-
-### 6. Protect the device automatically
-A Resource Governor must adapt to CPU load, memory pressure, thermal state, battery, storage and observed queue/latency. It must bound queues, throttle, reject gracefully and recover with hysteresis. It must never promise to override Android's own process-kill decisions.
-
-### 7. Owner control without unsafe defaults
-Provide Simple and Advanced modes, presets and custom settings. Schedules such as 30% capacity for three hours must be first-class. Capacity percentages refer to the calibrated safe budget, not raw CPU utilization.
-
-### 8. Security is not a checkbox
-Separate website traffic from management. Protect credentials. Restrict network and filesystem access. Treat Python/Node code as trusted until strong per-project isolation is proven. Use payment providers rather than handling card data. Do not claim PCI compliance without assessment.
-
-### 9. Auditable operations
-Keep bounded, redacted operational logs, daily reports, conventional tamper-evident audit records and recoverable backups. Use local hash chaining and signed checkpoints.
-
-### 10. Honest availability
-A phone is not a cloud region. Battery, heat, Doze, OEM process management, mobile network, carrier NAT, storage and power outages affect availability. Explain degraded states and never promise unlimited traffic or 24/7 uptime.
-
-### 11. Reversible changes
-Use staged deployment, integrity checks, rollback and tested restore. A failed upload or runtime restart must not destroy the last known-good static site.
-
-### 12. Small, testable boundaries
-Version API contracts and schemas. Keep static hosting independent from optional runtimes. Make each module observable and testable. Prefer fewer reliable capabilities over a large set of superficial toggles.
-
-### 13. Consistent product interface
-The interface should feel modern, calm and operational—not like a generic developer console. Preserve the AssayFlux palette: deep teal `#24434A`, bronze `#B18B5E`, ivory `#F6F4EF` and slate `#657174`. Use clear card hierarchy, restrained bronze highlights, readable metadata and responsive spacing. The native Android dashboard must scroll vertically on compact screens and keep Simple/Advanced modes. The TypeScript console must adapt to mobile widths and clearly show disconnected states rather than invented live data.
-
-## What success looks like
+## 4. PRODUCT EXPERIENCE
 
 ### Simple Mode
-- Import a folder or ZIP containing a static site.
-- Validate it before activation.
-- Preview locally.
-- Start/stop hosting with clear status.
-- Connect the existing Cloudflare Tunnel and verify the public hostname externally.
-- Publish updates and roll back.
-- See a concise health/capacity indicator and daily summary.
+1. Import a website folder or ZIP.
+2. Validate paths, file sizes and root entry page.
+3. Preview on the phone.
+4. Assign hostname(s).
+5. Choose local-only or public connectivity.
+6. Publish and verify from another network if public.
+7. Observe status and activity.
+8. Back up and safely update/rollback.
 
 ### Advanced Mode
-- Manage multiple sites and hostnames.
-- Configure per-site resource budgets and request limits.
-- Inspect live metrics, capacity graphs, logs and alerts.
-- Run trusted Python WSGI or Node applications with clear limitations.
-- Schedule custom capacity profiles, including 30% for three hours.
-- Configure backup, retention, remote management and security settings.
-- Review payment-provider events and audit records if the payment module is enabled.
+- Multiple static sites and hostname routing.
+- Trusted Python WSGI and Node applications, only after the security gate is passed for their production support tier.
+- Per-site capacity budgets, concurrency and request controls.
+- Capacity Lab, hardware health, graphs, logs and alerts.
+- Tunnel, domain and visitor-access policies.
+- Backup schedules, retention, recovery and optional remote management.
 
-## Explicit non-goals
+### Navigation contract
+Five destinations: Dashboard, Sites, Activity, Learn and Settings. Use a clean classic interface, light default with optional dark, navy identity, monochrome icons and card-based hierarchy. No gradients, neon or glass effects. A UI control must never imply a backend capability that does not exist.
 
-- Replacing enterprise cloud infrastructure or offering cloud-region availability.
-- Unlimited bandwidth, traffic, concurrency or guaranteed visitor counts.
-- Mandatory VPS or mandatory remote control plane.
-- General-purpose Linux, root access, Docker or arbitrary shell hosting.
-- Public multi-tenant execution of hostile code without a reviewed sandbox.
-- Storing card numbers, CVVs, PINs or payment secrets in website projects.
-- Claiming PCI compliance or security certification without independent evidence.
+## 5. NETWORKING NORTH STAR — THREE CORE MODES
 
-## Decision filter
+Pocket Host must not force every user into one provider. Provide these distinct paths:
 
-Before implementing a feature, ask:
+### A. AssayFlux Relay — first-party private tunnel (planned P0)
+A first-party outbound tunnel for owners who do not want to use Cloudflare and do not want visitors to learn the phone's public IP.
 
-1. Does it make self-hosting simpler, safer, more affordable or more reliable?
-2. Does it preserve the phone as the actual website origin?
-3. Can it run within measured target-device resource budgets?
-4. Does it preserve separation between visitor traffic and administration?
-5. Does it have a clear threat model and privacy impact?
-6. Can it be tested on API 26+ and physical ARMv7/ARM64 hardware?
-7. Does it have observable behavior, failure handling and documentation?
-8. Is it genuinely needed, or does it add complexity without helping the target user?
+**Target traffic path**
+```text
+Visitor → AssayFlux Relay public gateway → authenticated encrypted device tunnel
+        → Pocket Host Rust listener → hostname/site router → website
+```
 
-If it fails these tests, defer or redesign it.
+The phone initiates and maintains the outbound connection. Visitors connect to the relay's public address, not directly to the phone. This works behind ordinary NAT/CGNAT where outbound connectivity is permitted. It hides the phone's public IP from ordinary visitors, **not from the relay operator, the carrier or the network provider**.
 
-## Identity
+**Required components**
+1. Public Relay Gateway — TLS termination or encrypted pass-through, hostname routing and bounded ingress.
+2. Android Tunnel Agent — outbound session, heartbeat, network-change detection and reconnect.
+3. Device Enrollment Broker — one-time pairing, device identity, mutual authentication and revocation.
+4. Multiplexed Stream Transport — concurrent visitor streams, flow control, backpressure and bounded buffers.
+5. Domain Registry — verified hostname ownership and device/site binding.
+6. Certificate Manager — domain validation, issuance, renewal and key rotation.
+7. Visitor Access Gateway — public/private/restricted policy enforcement before forwarding.
+8. Relay Operations — health, metrics, abuse prevention, rate limits, quotas, audit and incident response.
 
-- Name: **AssayFlux PocketHost**
-- Developer: **Designed by AssayFlux**
-- Package: `com.assayflux.pockethost`
-- Core engine: `pockethost-core`
-- Browser console: **PocketHost Console**
-- Initial version target: `0.1.0`
-- Brand line: **Your website. Your device. Your control.**
+**Protocol strategy**
+- Begin with mature TLS-protected HTTP/2 streams or an established reverse-tunnel protocol; use WebSocket/TLS only as a compatibility fallback.
+- Evaluate QUIC/HTTP/3 only after reliable TCP transport, lifecycle and security acceptance.
+- Do not invent a cryptographic protocol.
+- Use mutual TLS or an equivalently reviewed device-authentication design; short-lived credentials and revocation must be first-class.
+- Bound every stream, queue, frame, connection, memory buffer and reconnect loop.
+- Relay commands must be typed, scoped, expiring and replay-resistant. The relay must not become arbitrary remote shell access.
 
-## Source-of-truth documents
+**Privacy modes**
+- Standard relay: TLS terminates at gateway, which can inspect HTTP traffic. Disclose this trust boundary.
+- End-to-end TLS pass-through: phone terminates website TLS; relay routes opaque encrypted streams. This is a later advanced mode because domain routing, certificate ownership and visitor authentication are more complex.
+- Never imply that a relay hides the phone's IP from the relay itself.
 
-- [Development Context](DEVELOPMENT_CONTEXT.md) — mandatory handoff and contribution rules.
-- [Roadmap](ROADMAP.md) — sequence and priorities.
-- [Master Plan](MASTER_PLAN.md) — architecture and contracts.
-- [Implementation Status](PHASE_0_STATUS.md) — actual evidence, not aspiration.
-- [Completion Milestone](COMPLETION_MILESTONE.md) — release definition.
-- [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md) — detailed new workstream.
+### B. Cloudflare Tunnel — existing connector
+- Reuse the owner's existing named tunnel and domain; never create a duplicate.
+- Public Hostname must target the Rust website listener only.
+- Keep Cloudflare Access available for private-site policy.
+- Verify external HTTPS; a running cloudflared process is not proof of public reachability.
+
+### C. Local Network — no public tunnel
+- Serve on the trusted LAN where the device/network permits it.
+- No public DNS or relay is required.
+- Show the current local address and explain that it may change across Wi-Fi networks.
+- Keep LAN exposure opt-in and distinct from public ingress.
+
+Direct port-forwarded hosting may be an advanced future option, not the default.
+
+## 6. AUTHENTICATION NORTH STAR
+
+Two security planes must remain separate.
+
+### Owner / Operator identity
+- Owner enrollment and recovery.
+- Passkeys as preferred interactive authentication; secure fallback and recovery codes.
+- Operator roles with explicit least-privilege permissions.
+- Device pairing, device approval, session expiry and revocation.
+- Sensitive actions require fresh authorization where appropriate.
+- Device-bound secrets use Android Keystore where available.
+
+### Visitor identity
+- **Public:** no login, intentionally public content.
+- **Private:** visitor authenticates before the gateway forwards requests.
+- **Restricted:** only approved identities, groups or invitation grants.
+- Short-lived, audience-bound, site-scoped signed access tokens.
+- Revocation, brute-force controls, audit and privacy disclosure.
+
+A website visitor must never inherit Owner/Operator privileges. The public gateway must not expose the management API. The phone's local management API remains separately authenticated and loopback-only.
+
+## 7. TARGET SYSTEM ARCHITECTURE
+
+| Layer | Technology | Contract |
+|---|---|---|
+| Android host | Kotlin, Jetpack Compose | UI, SAF, lifecycle, foreground service, device telemetry |
+| Website engine | Rust, Tokio, Hyper | Single request path, routing, static files, reverse proxy, admission |
+| Native bridge | C++ / JNI | Versioned coarse-grained integration |
+| Runtime broker | Android companion package + Binder | Authenticated orchestration; never execute project code in broker |
+| Runtime cells | Android isolated services, native policy | One project per OS identity; file/network capability confinement |
+| Python | CPython 3.11 / Chaquopy | WSGI only within accepted isolation profile |
+| Node | Node mobile 24.22.1 | Embedded HTTP app within accepted isolation profile |
+| Local console | TypeScript, React, Vite | Owner/operator management client |
+| Relay | Rust gateway + authenticated stream transport | Public edge and device tunnel; independently deployable |
+| Identity service | Auth service + device registry | Owner/device enrollment, tokens, visitor policy |
+| Optional control plane | Rust/Axum + PostgreSQL | Remote management only; not website origin |
+| Edge connector | cloudflared | Optional Cloudflare path |
+
+## 8. PRIMARY-VERSION IMPLEMENTATION SEQUENCE
+
+The primary version is complete only when the gates below have objective exit evidence. Work is sequential where later work depends on earlier security or runtime foundations; documentation and non-conflicting UI work may proceed in parallel.
+
+### Gate 0 — Repository truth and architecture freeze
+- Audit source, workflows, manifests, permissions, ABI packaging, API contracts and all active docs.
+- Resolve contradictions and mark historical evidence as historical.
+- Pin dependencies and reproducible build inputs.
+- Acceptance: one canonical baseline, no docs claiming planned work is implemented, CI evidence tied to exact SHA.
+
+### Gate 1 — Runtime migration
+- Finish companion service lifecycle, Binder death/rebind, transfer rollback and shutdown.
+- Prove Python WSGI and Node serve real HTTP through Rust.
+- Preserve static hosting if a runtime fails.
+- Acceptance: host + companion APKs build; end-to-end tests pass on API 26/33/35; ABI and lifecycle evidence retained.
+
+### Gate 2 — Per-project security isolation
+- Prove isolated UID, project-only file descriptors, listener capability and seccomp policy on API 26/33/35.
+- Build bounded isolated-cell supervisor and broker.
+- Move archive extraction, Python interpreter and Node environment into one cell per project.
+- Deny outbound sockets, DNS and alternate networking at OS boundary; prove child/native code cannot bypass.
+- Add CPU/memory/process/FD/storage budgets and kill/restart semantics.
+- Acceptance: two live adversarial projects cannot inspect or interfere with one another, host data or management state; real visitor requests still flow through Rust; independent review passes.
+- If Android 8/SELinux cannot support the selected mechanism, stop and redesign. Do not weaken SELinux or relabel an unproven design as secure. Runtime support may be capability-tiered only with explicit owner approval and honest compatibility disclosure.
+
+### Gate 3 — AssayFlux Relay and identity foundation
+- Implement device enrollment, mutual authentication, revocation and hostname ownership proof.
+- Implement gateway, Android outbound agent, multiplexed streams, flow control, backpressure and reconnect.
+- Add TLS/certificate lifecycle, rate limiting, abuse controls, observability and visitor access gateway.
+- Keep Cloudflare and LAN modes working.
+- Acceptance: no phone inbound port; visitor sees relay address rather than phone address; unauthorized device/site mapping rejected; revoked devices lose sessions; network transitions recover; no management API route.
+
+### Gate 4 — Visitor authentication and operator security
+- Implement public/private/restricted site policy.
+- Implement passkey-first owner identity, operator roles, session management, recovery and audit.
+- Add short-lived site-scoped tokens, brute-force protection and revocation.
+- Acceptance: site authorization tests pass independently of management authorization; cross-site token reuse and privilege escalation fail.
+
+### Gate 5 — Rust governor and Capacity Lab
+- Fair per-site scheduler and global/per-site bounded queues.
+- Admission control, 429/503 retry hints, slow-client defense and cancellation.
+- Static-origin reserve under runtime overload.
+- Representative cached/uncached, payload, keep-alive, Python/Node and tunnel profiles.
+- Measure RPS, throughput, p50/p95/p99, errors, memory, CPU, temperature and battery impact.
+- Acceptance: repeatable safe envelopes on target phones; no universal visitor count.
+
+### Gate 6 — Backup, operations and lifecycle
+- Fault-test backup/restore, interrupted writes, corruption, wrong passphrase, low storage and rollback.
+- Keep credentials/device keys excluded and rotate/re-enroll separately.
+- Bounded redacted logs, durable reports, alerting and support bundle.
+- Verify reboot, screen-off, battery saver, Doze, Wi-Fi/mobile changes, service death and low-memory recovery.
+- Acceptance: recoverable last-known-good site and auditable operational state.
+
+### Gate 7 — Product UX and onboarding
+- Complete Dashboard, Sites, Activity, Learn and Settings.
+- Guided static-site publishing, hostname and tunnel setup.
+- AssayFlux Relay enrollment and visitor-access wizard.
+- Simple/Advanced modes, accessible responsive layouts, meaningful empty/error states.
+- Acceptance: first-time static site publication without terminal; UI states match backend; accessibility and compact-screen review pass.
+
+### Gate 8 — Full CI and release candidate
+- Exact-SHA API 26/33/35 matrix, ABI builds, host/companion packaging and test reports.
+- SBOM, dependency provenance, license audit and vulnerability scan.
+- Signed release APK pair, signer match, checksums and upgrade test.
+- External Cloudflare and AssayFlux Relay HTTPS tests.
+- Physical ARMv7/ARM64 acceptance and independent security review.
+- Acceptance: all evidence attached to one release candidate and Owner approves.
+
+## 9. CAPACITY, AVAILABILITY AND BUSINESS HONESTY
+
+No universal visitor number or uptime guarantee. Capacity is workload-specific and phone-dependent. Android/OEM policies, heat, battery, storage, carrier network and relay availability can interrupt service. Relay infrastructure may have cost and availability dependencies; disclose pricing and limits before enabling paid plans. Static local hosting must not depend on relay account availability.
+
+## 10. NON-GOALS FOR PRIMARY 0.1.0
+
+- Unlimited cloud-scale hosting or guaranteed 24/7 availability.
+- General-purpose Linux/Docker/root shell hosting.
+- Arbitrary hostile-code execution without proven isolation.
+- Custom cryptography or an undocumented tunnel protocol.
+- Mandatory VPS, Cloudflare account or remote control plane.
+- Payment-card storage or self-asserted compliance certification.
+- Global multi-region relay mesh before one region is secure and reliable.
+
+## 11. ACCEPTED DESIGN RULES
+
+1. User-confirmed product requirements outrank contributor convenience.
+2. Preserve the existing domain and Cloudflare Tunnel; do not create duplicates.
+3. Static hosting remains independently useful.
+4. Rust is the only website ingress and request router.
+5. TypeScript remains the console source language.
+6. No public management API.
+7. Python/Node are trusted-only until per-project OS isolation is proven.
+8. No secret values in source, docs, screenshots, logs or project archives.
+9. Do not claim a feature based on a plan, dependency, UI toggle or compilation alone.
+10. Update the North Star, baseline, roadmap and affected technical document whenever an architecture decision changes.
+
+## 12. SOURCE-OF-TRUTH DOCUMENTS
+
+- `docs/DEVELOPMENT_CONTEXT.md` — mandatory engineering handoff.
+- `docs/PROJECT_BASELINE.md` — current implementation and weighted evidence.
+- `docs/ROADMAP.md` — release gates and exit criteria.
+- `docs/MASTER_PLAN.md` — technical architecture and contracts.
+- `docs/DECISIONS.md` — accepted architecture decisions.
+- `docs/INDEX.md` — complete documentation map.
+- `docs/PROJECT_STATUS_2026-11-16.md` — dated evidence snapshot.
+
+**Designed by AssayFlux · AssayFlux Scientific Systems**
