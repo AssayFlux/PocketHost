@@ -82,3 +82,5 @@ The recovery journal is capped at 1 MB, the previous route-registry snapshot at 
 
 Manual release rollback also handles a missing active site and quarantines an invalid/symlinked active tree rather than treating it as a valid release or deleting its target. Release pruning now considers only safe, non-symlink release trees.
 
+A candidate release or custom static rollback root must also pass the same import limits (5,000 files, 10,000 total entries, 50 MiB and depth 32), contain no symbolic links or special files, and contain no blocked secret-bearing names. Recovery therefore does not reactivate an oversized or unsafe historical tree.
+
