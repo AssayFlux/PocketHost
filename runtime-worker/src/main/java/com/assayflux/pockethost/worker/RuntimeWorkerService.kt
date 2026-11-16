@@ -77,8 +77,8 @@ class RuntimeWorkerService : Service() {
         require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid project identifier." }
         val destination = File(projectsRoot, siteId).canonicalFile
         check(destination.toPath().startsWith(projectsRoot.canonicalFile.toPath())) { "Invalid project destination." }
-        check(pythonModule()?.callAttr("status")?.toString() != "RUNNING") {
-            "Stop Python hosting before replacing a transferred project."
+        check(pythonModule()?.callAttr("is_project_active", destination.absolutePath)?.toString() != "True") {
+            "Stop the Python site before replacing its transferred project."
         }
         check(NodeRuntimeStateStore.projectRoot(this) != destination.absolutePath) {
             "Stop the Node.js site before replacing its transferred project."
