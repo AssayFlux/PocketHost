@@ -172,3 +172,9 @@ Update this file with exact evidence whenever the baseline changes.
 - GitHub combined commit-status lookup returned no status entries for the latest source commit at review time. This is not evidence of workflow success or failure; inspect Actions runs/artifacts before claiming Android or Rust verification.
 - Gates 5, 6 and 7 remain open pending weighted/global fairness and representative capacity evidence, full backup/lifecycle fault acceptance, and executed UI/accessibility/onboarding review.
 
+## 2026-11-16 Capacity Lab tail-latency increment
+
+- f9fd4f4f6773e1fc79f693e65b9e07abb8a60467 adds p99 latency to each Capacity Lab concurrency result.
+- 19b963158b68ea685339b2050195a985220354e5 and c788553eed7307874c7ca0e6ae2f6d21c88192e9 display p95/p99 in the dashboard and identify legacy benchmark records without p99 as unavailable.
+- No benchmark or Android build execution is claimed; representative workload profiles and target-device measurements remain open.
+
