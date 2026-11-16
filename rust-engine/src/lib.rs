@@ -578,7 +578,27 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     let site_limits = Arc::new(site_keys.into_iter()
         .map(|key| (key, Arc::new(Semaphore::new(per_site_limit))))
         .collect::<HashMap<_, _>>());
+    let mut canonical_access = HashMap::new();
+    for (host, policy) in host_access {
+        let normalized = normalize_hostname(&host)?;
+        if !matches!(policy.mode.as_str(), "public" | "private" | "restricted") {
+            return Err(format!("Invalid visitor access mode for {normalized}"));
+        }
+        if policy.credentials.len() > 100 || policy.credentials.iter().any(|(name, hash)| {
+            name.is_empty() || name.len() > 64 ||
+            !name.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.@-".contains(&b)) ||
+            hash.len() != 64 || !hash.bytes().all(|b| b.is_ascii_hexdigit())
+        }) { return Err(format!("Invalid visitor credentials for {normalized}")); }
+        if policy.mode == "private" && policy.credentials.len() > 1 {
+            return Err(format!("Private site {normalized} may have only one shared visitor credential"));
+        }
+        if !canonical_hosts.contains_key(&normalized) {
+            return Err(format!("Visitor policy has no matching hostname route: {normalized}"));
+        }
+        canonical_access.insert(normalized, policy);
+    }
     let canonical_hosts = Arc::new(canonical_hosts);
+    let canonical_access = Arc::new(canonical_access);
     let mut state = engine().lock().map_err(|_| "Engine state unavailable".to_string())?;
     if state.is_some() { return Err("Engine already running".into()); }
     REQUESTS.store(0, Ordering::Relaxed);
@@ -620,7 +640,7 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
             }
         };
         if ready_tx.send(Ok(())).is_err() { return; }
-        runtime.block_on(accept_loop(listener, root, canonical_hosts, site_limits, stop_rx));
+        runtime.block_on(accept_loop(listener, root, canonical_hosts, canonical_access, site_limits, stop_rx));
     }).map_err(|e| format!("Cannot start engine thread: {e}"))?;
 
     match ready_rx.recv() {
