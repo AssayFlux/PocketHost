@@ -16,7 +16,12 @@ import java.net.Socket
 class PythonMultiSiteSmokeTest {
     @Test
     fun routesMultipleWsgiProjectsByHostAndAppliesWorkerLimit() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        instrumentation.runOnMainSync {
+            context.startActivity(android.content.Intent(context, MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
         val first = File(context.cacheDir, "pockethost-python-a-${System.nanoTime()}")
         val second = File(context.cacheDir, "pockethost-python-b-${System.nanoTime()}")
         assertTrue(first.mkdirs())
