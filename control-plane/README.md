@@ -46,7 +46,7 @@ The returned device token is displayed once. Enter it in PocketHost → Advanced
 - Create/revoke Editor and Viewer users; bootstrap token is Owner.
 - Exchange the bootstrap/team API credential for a 12-hour server-side administrative session; session tokens are stored hashed, expire, can be explicitly revoked, and are invalidated immediately when the underlying team account is revoked or its API token is rotated.
 - Rotate a team-user token immediately (Owner only); the previous token is invalidated in the same transaction as the audit event and the replacement is returned once.
-- Rotate a device token immediately; the previous credential is invalidated and the replacement is returned once.
+- Rotate a device token immediately (Owner only); the previous credential is invalidated and the replacement is returned once.
 - Read latest 200 audit events.
 
 Supported configuration keys include `pythonMaxWorkers` (2–16), `nodeHeapMb` (96–512) and `tunnelEnabled` (boolean). The phone validates settings before applying them.
