@@ -226,14 +226,15 @@ object SiteImporter {
 
     fun listReleases(context: Context): List<String> =
         File(context.filesDir, "site-releases").listFiles()
-            ?.filter { it.isDirectory && it.name.startsWith("release-") }
+            ?.filter { it.name.startsWith("release-") && isSafeRecoveryRelease(it) }
             ?.sortedByDescending { it.name }
             ?.map { it.name } ?: emptyList()
 
     fun rollbackLatest(context: Context): String {
         val releases = File(context.filesDir, "site-releases")
-        val latest = releases.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
-            ?.maxByOrNull { it.name } ?: throw IOException("There is no previous deployment to restore.")
+        val latest = releases.listFiles()
+            ?.filter { it.name.startsWith("release-") && isSafeRecoveryRelease(it) }
+            ?.maxByOrNull { it.name } ?: throw IOException("There is no safe previous deployment to restore.")
         val active = File(context.filesDir, "site")
         val displaced = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
         if (!active.exists() || !active.renameTo(displaced)) throw IOException("Could not preserve the current deployment.")
