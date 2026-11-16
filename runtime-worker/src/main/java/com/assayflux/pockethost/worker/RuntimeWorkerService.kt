@@ -71,6 +71,21 @@ class RuntimeWorkerService : Service() {
         }
     }
 
+    private fun isSensitiveProjectPath(relativePath: String): Boolean {
+        val normalized = relativePath.lowercase()
+        val segments = normalized.split('/')
+        val name = segments.lastOrNull().orEmpty()
+        if (segments.any { it in setOf(".ssh", ".aws", ".azure", ".gnupg", ".pki") }) return true
+        if (segments.size >= 2 && segments.takeLast(2) == listOf(".docker", "config.json")) return true
+        if (name.startsWith(".env") || name in setOf(
+                ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials",
+                "credentials.json", "secrets", "secrets.json", "service-account.json",
+                "id_rsa", "id_ed25519", "known_hosts", "kubeconfig"
+            )) return true
+        return listOf(".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".mobileprovision")
+            .any { name.endsWith(it) }
+    }
+
     private fun installProject(siteId: String, descriptor: ParcelFileDescriptor): String {
         require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid project identifier." }
         val destination = File(projectsRoot, siteId).canonicalFile
@@ -95,7 +110,8 @@ class RuntimeWorkerService : Service() {
                     require(entries <= MAX_ARCHIVE_ENTRIES) { "Project archive contains too many entries." }
                     val name = entry.name.replace('\\', '/').trimEnd('/')
                     require(name.isNotBlank() && !name.startsWith("/") &&
-                        name.split('/').none { it.isBlank() || it == ".." || it == "." }) {
+                        name.split('/').none { it.isBlank() || it == ".." || it == "." } &&
+                        !isSensitiveProjectPath(name)) {
                         "Project archive contains an unsafe path."
                     }
                     val target = File(staging, name).canonicalFile
