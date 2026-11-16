@@ -99,7 +99,7 @@ internal fun PocketHostNavigationBar(
                 // Keep a stable, explicit accessible name on the whole destination
                 // control. Some platform accessibility bridges flatten the icon and
                 // visible label differently, so the parent must remain discoverable.
-                modifier = Modifier.semantics { contentDescription = listOf(destination) },
+                modifier = Modifier.semantics { contentDescription = destination },
                 selected = selectedTab == destination,
                 onClick = { onDestinationSelected(destination) },
                 icon = { Icon(symbol, contentDescription = destination) },
