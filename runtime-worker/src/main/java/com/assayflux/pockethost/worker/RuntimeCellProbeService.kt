@@ -46,7 +46,6 @@ class RuntimeCellProbeService : Service() {
 
             val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
             val outbound = ParcelFileDescriptor.CREATOR.createFromParcel(data)
-            val expectedHostUid = data.readInt()
             try {
                 // The broker transfers a listener plus an intentionally untrusted socket.
                 // Detach ownership before native cleanup so a later FD reuse cannot be
@@ -89,6 +88,10 @@ class RuntimeCellProbeService : Service() {
                 val accepted = Os.accept(listener.fileDescriptor, null)
                 val acceptedPfd = ParcelFileDescriptor.dup(accepted)
                 val peerUid = try { NetworkSandbox.getPeerUid(acceptedPfd.fd) } finally { acceptedPfd.close() }
+                val hostUid = packageManager.getApplicationInfo(HOST_PACKAGE, 0).uid
+                check(peerUid == hostUid) {
+                    "Visitor socket peer is not the installed host app UID; refusing the capability."
+                }
                 val request = ByteArray(5)
                 var count = 0
                 while (count < request.size) {
@@ -111,7 +114,7 @@ class RuntimeCellProbeService : Service() {
                 reply?.writeInt(if (bindDenied) 1 else 0)
                 reply?.writeInt(if (inheritedSocketClosed) 1 else 0)
                 reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
-                reply?.writeInt(if (peerUid == expectedHostUid) 1 else 0)
+                reply?.writeInt(if (peerUid == hostUid) 1 else 0)
                 return true
             } finally {
                 listener.close()
