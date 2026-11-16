@@ -76,3 +76,5 @@ Instrumentation source simulates process interruption after partial Python, stat
 
 Recovery also verifies all hosting runtimes are stopped before touching transaction files, treats journal/commit markers as no-follow regular files, rejects symlinked transaction directories and rollback roots, and validates custom static rollback trees without following symbolic links.
 
+Recovery runs before both Activity startup and the HostingService ingress startup. This also covers Android boot auto-start and sticky foreground-service restart paths, so a service cannot begin serving a partially restored website before the recovery journal has been resolved.
+
