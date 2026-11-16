@@ -358,7 +358,7 @@ class ManagementApiSecurityTest {
     private fun rawRequest(method: String, path: String, origin: String): String {
         Socket("127.0.0.1", 17841).use { socket ->
             socket.soTimeout = 10_000
-            val headers = "$method $path HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nOrigin: $origin\\r\\nConnection: close\\r\\n\\r\\n"
+            val headers = "$method $path HTTP/1.1\r\nHost: 127.0.0.1\r\nOrigin: $origin\r\nConnection: close\r\n\r\n"
             socket.getOutputStream().write(headers.toByteArray(Charsets.ISO_8859_1))
             socket.getOutputStream().flush()
             return socket.getInputStream().bufferedReader(Charsets.UTF_8).readText()
