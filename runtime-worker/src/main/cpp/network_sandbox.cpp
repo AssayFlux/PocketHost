@@ -5,6 +5,10 @@
 #include <linux/sched.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <stdlib.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -44,6 +48,45 @@
     BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, CLONE_THREAD, 0, 1), \
     BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW), \
     BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA))
+
+
+/**
+ * Close every inherited socket except the broker-created visitor listener.
+ * This must run before project code. Seccomp cannot distinguish read/write on
+ * an arbitrary connected socket from ordinary file I/O, so descriptor hygiene
+ * is a required part of the egress boundary.
+ */
+static int close_inherited_sockets_except(int listener_fd) {
+    if (listener_fd < 0) return EINVAL;
+    struct stat listener_stat {};
+    if (fstat(listener_fd, &listener_stat) != 0) return errno;
+    if (!S_ISSOCK(listener_stat.st_mode)) return ENOTSOCK;
+
+    DIR* directory = opendir("/proc/self/fd");
+    if (directory == nullptr) return errno == 0 ? EIO : errno;
+    const int directory_fd = dirfd(directory);
+    int failure = 0;
+    errno = 0;
+    while (struct dirent* entry = readdir(directory)) {
+        char* end = nullptr;
+        long parsed = strtol(entry->d_name, &end, 10);
+        if (end == entry->d_name || *end != '\\0' || parsed < 3 ||
+            parsed == listener_fd || parsed == directory_fd) continue;
+        const int fd = static_cast<int>(parsed);
+        struct stat metadata {};
+        if (fstat(fd, &metadata) != 0) {
+            if (errno != EBADF && failure == 0) failure = errno;
+            continue;
+        }
+        if (S_ISSOCK(metadata.st_mode) && close(fd) != 0 && errno != EINTR && failure == 0) {
+            failure = errno;
+        }
+        errno = 0;
+    }
+    if (errno != 0 && failure == 0) failure = errno;
+    closedir(directory);
+    return failure;
+}
 
 static int install_policy(int listener_fd) {
     if (listener_fd < 0) return EINVAL;
@@ -190,4 +233,10 @@ Java_com_assayflux_pockethost_worker_NetworkSandbox_getPeerUid(
         return -errno;
     }
     return static_cast<jint>(credentials.uid);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_closeInheritedSocketsExcept(
+    JNIEnv*, jclass, jint listener_fd) {
+    return close_inherited_sockets_except(listener_fd);
 }
