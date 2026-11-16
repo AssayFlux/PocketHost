@@ -14,6 +14,40 @@ class SiteImporterRecoveryTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
+    fun invalidActiveEntryIsQuarantinedBeforeLastKnownGoodRecovery() {
+        val active = File(context.filesDir, "site")
+        val releases = File(context.filesDir, "site-releases")
+        val original = File(context.cacheDir, "site-recovery-invalid-original-${System.nanoTime()}")
+        val hadActive = active.isDirectory
+        if (hadActive) active.copyRecursively(original, overwrite = true)
+        val release = File(releases, "release-${System.currentTimeMillis() + 120_000_000L}-invalid-test")
+        val marker = "preserve-invalid-active-${System.nanoTime()}"
+        try {
+            assertTrue(releases.exists() || releases.mkdirs())
+            assertTrue(release.mkdirs())
+            File(release, "index.html").writeText("<h1>recovered</h1>")
+            active.deleteRecursively()
+            assertTrue(active.mkdirs())
+            File(active, "broken.txt").writeText(marker)
+
+            assertTrue(SiteImporter.recoverInterruptedActivation(context))
+            assertEquals("<h1>recovered</h1>", File(active, "index.html").readText())
+            val quarantine = releases.listFiles().orEmpty().firstOrNull {
+                it.name.startsWith("recovery-invalid-") && File(it, "broken.txt").isFile
+            }
+            assertTrue("Invalid active deployment should be preserved for diagnosis.", quarantine != null)
+            assertEquals(marker, File(quarantine, "broken.txt").readText())
+        } finally {
+            active.deleteRecursively()
+            if (hadActive && original.isDirectory) original.copyRecursively(active, overwrite = true)
+            release.deleteRecursively()
+            releases.listFiles().orEmpty().filter { it.name.startsWith("recovery-invalid-") }
+                .forEach { it.deleteRecursively() }
+            original.deleteRecursively()
+        }
+    }
+
+    @Test
     fun missingActiveSiteRecoversNewestValidLastKnownGoodRelease() {
         val active = File(context.filesDir, "site")
         val releases = File(context.filesDir, "site-releases")
