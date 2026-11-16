@@ -89,7 +89,7 @@ class RuntimeWorkerService : Service() {
                     val entry = zip.nextEntry ?: break
                     entries++
                     require(entries <= MAX_ARCHIVE_ENTRIES) { "Project archive contains too many entries." }
-                    val name = entry.name.replace('\\\\', '/')
+                    val name = entry.name.replace('\\', '/')
                     require(name.isNotBlank() && !name.startsWith("/") &&
                         name.split('/').none { it == ".." || it == "." || it.isEmpty() }) {
                         "Project archive contains an unsafe path."
@@ -178,11 +178,21 @@ class RuntimeWorkerService : Service() {
             verifyHostCaller()
             data.enforceInterface(DESCRIPTOR)
             try {
+                reply?.writeNoException()
                 when (code) {
                     TRANSACTION_UID -> reply?.writeInt(Process.myUid())
                     TRANSACTION_CAN_READ -> {
                         val path = data.readString().orEmpty()
                         reply?.writeInt(if (runCatching { File(path).canRead() }.getOrDefault(false)) 1 else 0)
+                    }
+                    TRANSACTION_LOOPBACK_BIND -> reply?.writeInt(startLoopbackProbeServer())
+                    TRANSACTION_LOOPBACK_CONNECT -> {
+                        val port = data.readInt()
+                        val connected = runCatching {
+                            java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", port), 1_000) }
+                            true
+                        }.getOrDefault(false)
+                        reply?.writeInt(if (connected) 1 else 0)
                     }
                     TRANSACTION_INSTALL_PROJECT -> {
                         val siteId = data.readString().orEmpty()
@@ -210,18 +220,42 @@ class RuntimeWorkerService : Service() {
         }
     }
 
+    private fun startLoopbackProbeServer(): Int = runCatching {
+        runCatching { probeServer?.close() }
+        val server = java.net.ServerSocket().apply {
+            reuseAddress = true
+            bind(java.net.InetSocketAddress(java.net.InetAddress.getByName("127.0.0.1"), 0))
+        }
+        probeServer = server
+        Thread({
+            runCatching {
+                server.accept().use { client ->
+                    client.getOutputStream().apply {
+                        write("PocketHost companion loopback OK\\n".toByteArray())
+                        flush()
+                    }
+                }
+            }
+            if (probeServer === server) probeServer = null
+            runCatching { server.close() }
+        }, "PocketHost-Worker-Probe").apply { isDaemon = true; start() }
+        server.localPort
+    }.getOrDefault(-1)
+
     override fun onBind(intent: Intent?): IBinder = workerBinder
 
     companion object {
         const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_WORKER"
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION
         const val TRANSACTION_CAN_READ = IBinder.FIRST_CALL_TRANSACTION + 1
-        const val TRANSACTION_INSTALL_PROJECT = IBinder.FIRST_CALL_TRANSACTION + 2
-        const val TRANSACTION_PYTHON_START = IBinder.FIRST_CALL_TRANSACTION + 3
-        const val TRANSACTION_PYTHON_START_SITES = IBinder.FIRST_CALL_TRANSACTION + 4
-        const val TRANSACTION_PYTHON_STOP = IBinder.FIRST_CALL_TRANSACTION + 5
-        const val TRANSACTION_PYTHON_STATUS = IBinder.FIRST_CALL_TRANSACTION + 6
-        const val TRANSACTION_PYTHON_METRICS = IBinder.FIRST_CALL_TRANSACTION + 7
+        const val TRANSACTION_LOOPBACK_BIND = IBinder.FIRST_CALL_TRANSACTION + 2
+        const val TRANSACTION_LOOPBACK_CONNECT = IBinder.FIRST_CALL_TRANSACTION + 3
+        const val TRANSACTION_INSTALL_PROJECT = IBinder.FIRST_CALL_TRANSACTION + 4
+        const val TRANSACTION_PYTHON_START = IBinder.FIRST_CALL_TRANSACTION + 5
+        const val TRANSACTION_PYTHON_START_SITES = IBinder.FIRST_CALL_TRANSACTION + 6
+        const val TRANSACTION_PYTHON_STOP = IBinder.FIRST_CALL_TRANSACTION + 7
+        const val TRANSACTION_PYTHON_STATUS = IBinder.FIRST_CALL_TRANSACTION + 8
+        const val TRANSACTION_PYTHON_METRICS = IBinder.FIRST_CALL_TRANSACTION + 9
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
