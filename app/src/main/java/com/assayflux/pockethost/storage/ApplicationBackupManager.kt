@@ -433,19 +433,24 @@ object ApplicationBackupManager {
                     java.nio.file.Files.exists(directory.toPath(), noFollow)
             }
             ?.sortedBy { it.name } ?: emptyList()
-        if (directories.isNotEmpty()) requireAllRuntimesStopped(context)
-        var recovered = false
-        for (directory in directories) {
+        val requiresRollback = directories.any { directory ->
             if (java.nio.file.Files.isSymbolicLink(directory.toPath()) ||
                 !java.nio.file.Files.isDirectory(directory.toPath(), noFollow)) {
                 throw IOException("Interrupted backup restore directory is not a safe app-private directory.")
             }
+            val marker = File(directory, RESTORE_COMMITTED)
+            val markerExists = java.nio.file.Files.exists(marker.toPath(), noFollow)
+            if (markerExists && !java.nio.file.Files.isRegularFile(marker.toPath(), noFollow)) {
+                throw IOException("Restore commit marker is not a regular file.")
+            }
+            !markerExists
+        }
+        if (requiresRollback) requireAllRuntimesStopped(context)
+        var recovered = false
+        for (directory in directories) {
             val committedFile = File(directory, RESTORE_COMMITTED)
             val committedExists = java.nio.file.Files.exists(committedFile.toPath(), noFollow)
             if (committedExists) {
-                if (!java.nio.file.Files.isRegularFile(committedFile.toPath(), noFollow)) {
-                    throw IOException("Restore commit marker is not a regular file.")
-                }
                 if (!cleanupCommittedRestore(directory)) {
                     throw IOException("Could not clean up a committed backup restore transaction.")
                 }
