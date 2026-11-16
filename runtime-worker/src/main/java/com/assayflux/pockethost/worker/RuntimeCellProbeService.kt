@@ -88,6 +88,7 @@ open class RuntimeCellProbeService : Service() {
                 }.exceptionOrNull()?.let {
                     it is android.system.ErrnoException && it.errno == OsConstants.EPERM
                 } ?: false
+                val deniedNetworkIoMask = NetworkSandbox.probeDeniedNetworkIo(listener.fd)
 
                 val resourceLimits = NetworkSandbox.getResourceLimits()
                 check(resourceLimits.size == 4 &&
@@ -129,6 +130,7 @@ open class RuntimeCellProbeService : Service() {
                     reply?.writeInt(if (standardSocketClosed) 1 else 0)
                     reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
                     reply?.writeInt(if (peerUid == hostUid) 1 else 0)
+                    reply?.writeInt(deniedNetworkIoMask)
                     reply?.writeLongArray(resourceLimits)
                     return true
                 } finally {
