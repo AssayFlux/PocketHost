@@ -39,6 +39,24 @@ struct PendingResponse {
 }
 
 #[derive(Clone, Default)]
+pub struct PendingRequestGuard<'a> {
+    hub: &'a RelayHub,
+    request_id: Uuid,
+}
+
+impl<'a> PendingRequestGuard<'a> {
+    pub fn new(hub: &'a RelayHub, request_id: Uuid) -> Self {
+        Self { hub, request_id }
+    }
+}
+
+impl Drop for PendingRequestGuard<'_> {
+    fn drop(&mut self) {
+        // Also runs when Hyper cancels the visitor handler after a client disconnect.
+        self.hub.cancel_pending(self.request_id);
+    }
+}
+
 pub struct RelayHub {
     sessions: Arc<Mutex<HashMap<Uuid, (Uuid, mpsc::Sender<RelayRequest>)>>>,
     pending: Arc<Mutex<HashMap<Uuid, PendingResponse>>>,
@@ -305,6 +323,21 @@ mod tests {
         hub.disconnect(device, second);
         assert!(second_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_none());
+    }
+
+    #[test]
+    fn pending_request_guard_cleans_up_when_visitor_handler_is_dropped() {
+        let hub = RelayHub::default();
+        let device = Uuid::new_v4();
+        let (_session, _stream) = hub.connect(device);
+        let request_id = Uuid::new_v4();
+        let mut receiver = hub.register_pending(request_id, device, "site-a").unwrap().1;
+        {
+            let _guard = PendingRequestGuard::new(&hub, request_id);
+        }
+        assert!(receiver.blocking_recv().is_err());
+        assert!(hub.register_pending(request_id, device, "site-a").is_some(),
+            "canceled visitor request must release its quota and request ID");
     }
 
     #[test]
