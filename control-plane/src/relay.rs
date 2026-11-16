@@ -261,7 +261,7 @@ mod tests {
         let request_id = Uuid::new_v4();
         let response_rx = hub.register_pending(request_id, device).unwrap();
         assert!(!hub.complete(other_device, RelayResponse {
-            id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new()
+            id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
         hub.cancel_pending(request_id);
         assert!(response_rx.blocking_recv().is_err());
