@@ -84,7 +84,7 @@ static int close_inherited_sockets_except(int listener_fd) {
             if (errno != EBADF && failure == 0) failure = errno;
             continue;
         }
-        if (S_ISSOCK(metadata.st_mode) && close(fd) != 0 && errno != EINTR && failure == 0) {
+        if (S_ISSOCK(metadata.st_mode) && close(fd) != 0 && failure == 0) {
             failure = errno;
         }
     }
