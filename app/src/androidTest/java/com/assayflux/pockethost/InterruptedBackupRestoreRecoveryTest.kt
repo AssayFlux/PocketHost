@@ -16,6 +16,32 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class InterruptedBackupRestoreRecoveryTest {
     @Test
+    fun committedRestoreIsCleanedWithoutRollingBackNewSite() {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(base.cacheDir, "restore-committed-${System.nanoTime()}")
+        assertTrue(root.mkdirs())
+        val context = object : ContextWrapper(base) {
+            override fun getFilesDir(): File = root
+        }
+        val transaction = File(root, "pockethost-restore-previous-committed")
+        val active = File(root, "site")
+        try {
+            assertTrue(transaction.mkdirs())
+            assertTrue(active.mkdirs())
+            File(active, "index.html").writeText("committed-new-site")
+            File(transaction, "python-project").mkdirs()
+            File(transaction, "python-project/old.txt").writeText("old-project")
+            File(transaction, "restore-committed").writeText("committed")
+
+            assertFalse(ApplicationBackupManager.recoverInterruptedRestore(context))
+            assertEquals("committed-new-site", File(active, "index.html").readText())
+            assertFalse(transaction.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun startupRecoveryRestoresPreviousSiteRuntimeRegistryAndSettings() {
         val base = InstrumentationRegistry.getInstrumentation().targetContext
         val root = File(base.cacheDir, "restore-recovery-${System.nanoTime()}")
