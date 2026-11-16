@@ -2,7 +2,7 @@
 
 A project must provide wsgi.py with a callable named application.
 This runtime intentionally binds to loopback unless LAN access is explicitly enabled.
-Imported project code is untrusted executable code and runs with the app's privileges.
+Imported project code runs with the companion package UID; this is not a per-project sandbox.
 """
 from __future__ import annotations
 
