@@ -119,27 +119,55 @@ class RuntimeWorkerService : Service() {
         check(staging.mkdirs() || staging.isDirectory) { "Could not create project staging directory." }
         var entries = 0
         var totalBytes = 0L
+        // Track explicit and implicit directories as well as files. ZIP archives can
+        // contain duplicate names or file/directory collisions that otherwise overwrite
+        // earlier entries during extraction.
+        val archivePaths = HashMap<String, Boolean>()
+        val portableNames = HashSet<String>()
         try {
             ZipInputStream(FileInputStream(descriptor.fileDescriptor).buffered()).use { zip ->
                 while (true) {
                     val entry = zip.nextEntry ?: break
                     entries++
                     require(entries <= MAX_ARCHIVE_ENTRIES) { "Project archive contains too many entries." }
-                    val name = entry.name.replace('\\', '/').trimEnd('/')
+                    val rawName = entry.name.replace('\\\\', '/')
+                    val isDirectory = entry.isDirectory || rawName.endsWith("/")
+                    val name = rawName.trimEnd('/')
                     require(name.isNotBlank() && !name.startsWith("/") &&
+                        !name.contains('\u0000') &&
                         name.split('/').none { it.isBlank() || it == ".." || it == "." } &&
                         !isSensitiveProjectPath(name)) {
                         "Project archive contains an unsafe path."
+                    }
+                    val segments = name.split('/')
+                    var parent = ""
+                    for (segment in segments.dropLast(1)) {
+                        parent = if (parent.isEmpty()) segment else "$parent/$segment"
+                        val knownParent = archivePaths[parent]
+                        require(knownParent != false) { "Project archive has a file used as a directory." }
+                        archivePaths.putIfAbsent(parent, true)
+                    }
+                    val previousType = archivePaths.putIfAbsent(name, isDirectory)
+                    require(previousType == null) { "Project archive contains duplicate or conflicting paths." }
+                    require(portableNames.add(name.lowercase(java.util.Locale.ROOT))) {
+                        "Project archive contains paths that differ only by letter case."
                     }
                     val target = File(staging, name).canonicalFile
                     require(target.toPath().startsWith(staging.canonicalFile.toPath())) {
                         "Project archive path escapes its destination."
                     }
-                    if (entry.isDirectory) {
-                        target.mkdirs()
+                    if (isDirectory) {
+                        require(!target.exists() || target.isDirectory) {
+                            "Project archive has a directory/file path collision."
+                        }
+                        require(target.mkdirs() || target.isDirectory) { "Could not create project directory." }
                     } else {
-                        target.parentFile?.mkdirs()
+                        require(!target.exists()) { "Project archive would overwrite an existing path." }
+                        target.parentFile?.let { parentDir ->
+                            require(parentDir.mkdirs() || parentDir.isDirectory) { "Could not create project directory." }
+                        }
                         var fileBytes = 0L
+                        require(target.createNewFile()) { "Could not create project file." }
                         target.outputStream().buffered().use { output ->
                             val buffer = ByteArray(32 * 1024)
                             while (true) {
