@@ -3,6 +3,7 @@ package com.assayflux.pockethost.management
 import android.content.Context
 import android.util.Base64
 import org.json.JSONObject
+import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
@@ -126,8 +127,13 @@ object RelayAgent {
             require(id.matches(Regex("[0-9a-fA-F-]{36}"))) { "Invalid Relay request ID." }
             val method = message.getString("method")
             require(method in setOf("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS")) { "Unsupported Relay method." }
-            val hostname = message.getString("hostname")
+            val hostname = message.getString("hostname").trimEnd('.').lowercase()
             require(hostname.length in 1..253 && hostname.none { it.isWhitespace() }) { "Invalid Relay hostname." }
+            val siteId = message.getString("site_id")
+            val registeredSite = SiteRegistry.list(context).firstOrNull { site ->
+                site.enabled && site.id == siteId && hostname in site.hostnames
+            }
+            require(registeredSite != null) { "Relay hostname is not mapped to the expected local site ID." }
             val path = message.getString("path")
             require(path.startsWith("/") && path.length <= 8_192 && !path.startsWith("//")) { "Invalid Relay path." }
             val body = Base64.decode(message.optString("body_base64", ""), Base64.DEFAULT)
