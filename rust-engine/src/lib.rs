@@ -480,11 +480,11 @@ async fn serve(
             return Ok(response);
         }
     };
-    let response = serve_inner(root, host_roots, host_access, req).await?;
+    let response = serve_inner(root, host_roots, req).await?;
     Ok(hold_site_permit(response, permit))
 }
 
-async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, host_access: Arc<HashMap<String, SiteAccess>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
+async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, req: Request<Incoming>) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<hyper::http::uri::Authority>().ok())
