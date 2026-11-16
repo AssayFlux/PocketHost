@@ -849,10 +849,10 @@ async fn relay_visitor(
     State(s): State<AppState>, ConnectInfo(peer): ConnectInfo<SocketAddr>, request: Request<Body>,
 ) -> Result<Response<Body>, (StatusCode, String)> {
     let (parts, body) = request.into_parts();
-    let secure_frontend = parts.headers.get("x-forwarded-proto").and_then(|value| value.to_str().ok())
+    let secure_frontend = is_trusted_relay_proxy(peer.ip()) && (parts.headers.get("x-forwarded-proto").and_then(|value| value.to_str().ok())
         .map(|value| value.eq_ignore_ascii_case("https")).unwrap_or(false) ||
         parts.headers.get("cf-visitor").and_then(|value| value.to_str().ok())
-            .map(|value| value.contains(r#""scheme":"https""#)).unwrap_or(false);
+            .map(|value| value.contains(r#""scheme":"https""#)).unwrap_or(false));
     if !secure_frontend {
         return Err((StatusCode::FORBIDDEN, "relay_requires_https".into()));
     }
