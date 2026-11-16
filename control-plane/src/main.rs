@@ -1,25 +1,31 @@
 use axum::{
-    body::Bytes,
-    extract::{DefaultBodyLimit, Path, State},
+    body::{to_bytes, Body, Bytes},
+    extract::{DefaultBodyLimit, Path, Request, State},
     http::{header::{AUTHORIZATION, CONTENT_TYPE}, HeaderMap, HeaderValue, Method, StatusCode, Response},
-    routing::{get, post},
+    response::sse::{Event, KeepAlive, Sse},
+    routing::{any, get, post},
     Json, Router,
 };
 use chrono::{DateTime, Utc};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use futures_util::StreamExt;
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{fs, io::Write, path::PathBuf};
+use std::{collections::HashMap, convert::Infallible, fs, io::Write, path::PathBuf, sync::Arc, time::Duration};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 
+mod relay;
+
 #[derive(Clone)]
 struct AppState {
     db: PgPool,
     admin_token: String,
+    relay: relay::RelayHub,
 }
 
 #[derive(Serialize)]
@@ -667,7 +673,7 @@ async fn main() -> anyhow::Result<()> {
     anyhow::ensure!(admin_token.len() >= 32, "admin token must contain at least 32 characters");
     let db = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
     sqlx::migrate!("./migrations").run(&db).await?;
-    let state = AppState { db, admin_token };
+    let state = AppState { db, admin_token, relay: relay::RelayHub::default() };
     let cors = match std::env::var("POCKETHOST_CONTROL_ORIGIN") {
         Ok(origin) => CorsLayer::new()
             .allow_origin(origin.parse::<HeaderValue>()?)
