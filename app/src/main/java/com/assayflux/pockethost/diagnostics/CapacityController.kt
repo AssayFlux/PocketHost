@@ -273,7 +273,9 @@ object CapacityLab {
                     if (batteryPercent in 0..10 && !charging) { stopReason = "low_battery"; break }
                     val deviceBefore = DeviceTelemetry.snapshot(context)
                     val executor = java.util.concurrent.Executors.newFixedThreadPool(level)
-                    val requestCount = (level * 2).coerceAtMost(32)
+                    // Keep at least 20 observations at every level so tail
+                    // percentiles are not inferred from one or two requests.
+                    val requestCount = (level * 4).coerceAtLeast(20).coerceAtMost(64)
                     val latencies = java.util.Collections.synchronizedList(mutableListOf<Long>())
                     val failures = java.util.concurrent.atomic.AtomicInteger(0)
                     val successes = java.util.concurrent.atomic.AtomicInteger(0)
@@ -364,7 +366,7 @@ object CapacityLab {
                     .put("safeConcurrency", if (hasSafeLevel && !cancelled) safe else JSONObject.NULL)
                     .put("stopReason", stopReason)
                     .put("levels", results)
-                    .put("workload", "Loopback static-origin GET / with unique query strings and no-cache headers; reports request rate, byte throughput, latency distribution and before/after device health snapshots for each concurrency level.")
+                    .put("workload", "Loopback static-origin GET / with unique query strings and no-cache headers; at least 20 observations per concurrency level; reports request rate, byte throughput, latency distribution and before/after device health snapshots.")
                     .put("threshold", "Zero errors, p95 latency <= 750 ms and safe post-load memory, CPU, thermal and battery state; stopped on cancellation or device health guards.")
                 if (cancelled) {
                     OperationalLog.record(context, "INFO", "CAPACITY_BENCHMARK_CANCELLED", "Capacity benchmark cancelled by the owner; previous calibration retained.")
