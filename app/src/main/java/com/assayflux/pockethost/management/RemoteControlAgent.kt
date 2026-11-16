@@ -9,6 +9,7 @@ import com.assayflux.pockethost.storage.SiteImporter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.FileInputStream
+import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -28,6 +29,9 @@ import javax.crypto.spec.GCMParameterSpec
 object RemoteControlAgent {
     private const val PREFS = "pockethost_remote_control"
     private const val KEY_ALIAS = "assayflux.pockethost.remote-control.v1"
+    private const val POLL_INTERVAL_MS = 15_000L
+    private const val MAX_RETRY_DELAY_MS = 5 * 60_000L
+    private const val MAX_CONTROL_RESPONSE_BYTES = 10 * 1024 * 1024
     @Volatile private var worker: Thread? = null
     @Volatile private var running = false
 
@@ -71,14 +75,22 @@ object RemoteControlAgent {
         running = true
         val app = context.applicationContext
         worker = Thread({
+            var retryDelay = POLL_INTERVAL_MS
             while (running && !Thread.currentThread().isInterrupted) {
+                var succeeded = false
                 try {
                     pollOnce(app)
+                    succeeded = true
+                    retryDelay = POLL_INTERVAL_MS
                 } catch (error: Exception) {
                     OperationalLog.record(app, "WARN", "REMOTE_CONTROL_UNAVAILABLE",
                         error.message?.take(180) ?: "Remote control connection unavailable.")
+                    retryDelay = (retryDelay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
                 }
-                try { Thread.sleep(15_000) } catch (_: InterruptedException) { break }
+                val delay = if (succeeded) POLL_INTERVAL_MS else retryDelay
+                val jitter = (delay * 0.2).toLong()
+                val waitMs = (delay - jitter + java.util.concurrent.ThreadLocalRandom.current().nextLong((jitter * 2 + 1).coerceAtLeast(1))).coerceAtLeast(1)
+                try { Thread.sleep(waitMs) } catch (_: InterruptedException) { break }
             }
             running = false
             worker = null
@@ -226,9 +238,22 @@ object RemoteControlAgent {
             }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            val responseBytes = stream?.use { input ->
+                ByteArrayOutputStream().use { output ->
+                    val buffer = ByteArray(16 * 1024)
+                    var total = 0
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= MAX_CONTROL_RESPONSE_BYTES) { "Control-plane response exceeds the 10 MiB safety limit." }
+                        output.write(buffer, 0, count)
+                    }
+                    output.toByteArray()
+                }
+            } ?: ByteArray(0)
             if (status !in 200..299) throw IllegalStateException("Control plane returned HTTP $status")
-            return response
+            return String(responseBytes, Charsets.UTF_8)
         } finally {
             connection.disconnect()
         }
