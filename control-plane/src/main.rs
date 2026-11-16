@@ -278,7 +278,7 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
     ensure_control_plane_host(headers)?;
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_session_required".into()))?;
     let row = sqlx::query(
-        "SELECT s.id,s.name,s.role FROM control_sessions s \
+        "SELECT s.id,s.name,s.role,s.created_at FROM control_sessions s \
          LEFT JOIN control_users u ON u.id=s.user_id \
          WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() \
          AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL) OR \
