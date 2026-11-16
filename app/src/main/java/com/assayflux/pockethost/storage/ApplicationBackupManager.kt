@@ -227,6 +227,9 @@ object ApplicationBackupManager {
             val previousSettings = captureCurrentSafeSettings(context)
             val previousRegistry = context.getSharedPreferences("pockethost_site_registry", Context.MODE_PRIVATE)
                 .getString("sites", "[]") ?: "[]"
+            if (previousRegistry.toByteArray(Charsets.UTF_8).size > 256_000) {
+                throw IOException("The existing site registry is too large to snapshot safely for backup restore.")
+            }
             val previousLatestRelease = SiteImporter.listReleases(context).firstOrNull()
             if (!backupDir.mkdirs()) throw IOException("Could not create a rollback directory.")
             val customRootJournal = JSONArray().also { entries ->
@@ -335,12 +338,14 @@ object ApplicationBackupManager {
     private fun writeRestoreJournal(directory: File, journal: JSONObject) {
         val temporary = File(directory, RESTORE_JOURNAL + ".tmp")
         val file = File(directory, RESTORE_JOURNAL)
+        val bytes = journal.toString().toByteArray(Charsets.UTF_8)
+        if (bytes.size > 1_000_000) throw IOException("Restore recovery journal exceeds its safety limit.")
         if (java.nio.file.Files.isSymbolicLink(temporary.toPath()) ||
             java.nio.file.Files.isSymbolicLink(file.toPath())) {
             throw IOException("Restore journal path cannot be a symbolic link.")
         }
         java.io.FileOutputStream(temporary).use { output ->
-            output.write(journal.toString().toByteArray(Charsets.UTF_8))
+            output.write(bytes)
             output.fd.sync()
         }
         if (!temporary.renameTo(file)) {
@@ -474,6 +479,9 @@ object ApplicationBackupManager {
             if (!java.nio.file.Files.isRegularFile(journalFile.toPath(), noFollow)) {
                 throw IOException("Interrupted backup restore journal is not a regular file.")
             }
+            if (journalFile.length() > 1_000_000L) {
+                throw IOException("Interrupted backup restore journal exceeds its safety limit.")
+            }
             val journal = runCatching { JSONObject(journalFile.readText(Charsets.UTF_8)) }
                 .getOrElse { throw IOException("Interrupted backup restore journal is unreadable.", it) }
             if (journal.optInt("version") != 1) throw IOException("Unsupported interrupted backup restore journal.")
@@ -484,6 +492,7 @@ object ApplicationBackupManager {
 
             val siteRoots = File(context.filesDir, "site-roots").absoluteFile.toPath().normalize()
             val customRoots = journal.optJSONArray("customRoots") ?: JSONArray()
+            if (customRoots.length() > 100) throw IOException("Interrupted restore journal contains too many custom roots.")
             for (index in customRoots.length() - 1 downTo 0) {
                 val item = customRoots.getJSONObject(index)
                 val active = File(item.getString("activePath")).absoluteFile
