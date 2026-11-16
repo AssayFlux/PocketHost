@@ -114,3 +114,10 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - Gate 7: added Android UI instrumentation that selects Dashboard, Sites, Activity, Learn and Settings through accessible navigation labels, verifies selected-screen content, and captures a screenshot plus accessibility hierarchy XML for each destination. The Android integration workflow now collects those artifacts from each API-matrix emulator.
 - This improves repeatable navigation and visual review coverage; it does not replace human TalkBack, font scaling, contrast, compact-screen or landscape acceptance. Gate 7 remains open pending executed evidence and completion of the full onboarding/Settings experience.
 
+## 2026-11-16 latest Gate 5–7 follow-up
+
+- Gate 5: fixed small-sample p95/p99 under-reporting by switching Capacity Lab to nearest-rank percentile calculation; added instrumentation assertions for two- and four-sample distributions.
+- Gate 6: startup deployment recovery now rejects symlinked release trees and quarantines invalid active deployments; instrumentation covers both missing and invalid active-site recovery.
+- Gate 7: extracted device preferences and section navigation into dedicated Compose Settings components; UI instrumentation now visits all four Settings sections and captures per-section screenshots/accessibility hierarchies.
+- These are code and test-definition improvements. Android API 26/33/35 and Rust CI execution, artifact inspection, device lifecycle testing, capacity profiles and human accessibility review remain open. Gates 5–7 are not yet complete.
+
