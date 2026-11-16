@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +95,10 @@ internal fun PocketHostNavigationBar(
                 else -> Icons.Outlined.Settings
             }
             NavigationBarItem(
+                // Keep a stable, explicit accessible name on the whole destination
+                // control. Some platform accessibility bridges flatten the icon and
+                // visible label differently, so the parent must remain discoverable.
+                modifier = Modifier.semantics { contentDescription = destination },
                 selected = selectedTab == destination,
                 onClick = { onDestinationSelected(destination) },
                 icon = { Icon(symbol, contentDescription = destination) },
