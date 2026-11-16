@@ -80,3 +80,5 @@ Recovery runs before both Activity startup and the HostingService ingress startu
 
 The recovery journal is capped at 1 MB, the previous route-registry snapshot at 256 KB, and custom-root rollback records at 100. Journal writes are fsynced to a temporary file and atomically renamed before restore mutations begin.
 
+Manual release rollback also handles a missing active site and quarantines an invalid/symlinked active tree rather than treating it as a valid release or deleting its target. Release pruning now considers only safe, non-symlink release trees.
+
