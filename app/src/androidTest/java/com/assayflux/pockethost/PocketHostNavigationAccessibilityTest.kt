@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,6 +21,8 @@ class PocketHostNavigationAccessibilityTest {
             .putBoolean("biometric_unlock_enabled", false)
             .commit()
         val device = UiDevice.getInstance(instrumentation)
+        val screenshotDir = File(checkNotNull(context.getExternalFilesDir(null)), "screenshots")
+        assertTrue(screenshotDir.mkdirs() || screenshotDir.isDirectory)
 
         val expectedContent = linkedMapOf(
             "Sites" to "WEBSITE",
@@ -40,6 +43,9 @@ class PocketHostNavigationAccessibilityTest {
                     device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  $destinationName")), 15_000))
                 assertTrue("$destinationName screen did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 15_000))
+                assertTrue("Could not capture $destinationName screenshot",
+                    device.takeScreenshot(File(screenshotDir, "navigation-${destinationName.lowercase()}.png")))
+                device.dumpWindowHierarchy(File(screenshotDir, "navigation-${destinationName.lowercase()}-hierarchy.xml"))
             }
         }
     }
