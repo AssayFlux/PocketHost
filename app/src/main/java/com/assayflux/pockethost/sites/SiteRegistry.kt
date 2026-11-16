@@ -142,9 +142,6 @@ object SiteRegistry {
         val current = sites[index]
         val updated = current.visitorCredentials.toMutableMap()
         require(updated.remove(username) != null) { "Visitor not found." }
-        require(current.accessMode != "restricted" || updated.isNotEmpty()) {
-            "Restricted mode must retain at least one invited visitor; switch to Public or Private first."
-        }
         sites[index] = current.copy(visitorCredentials = updated)
         save(context, sites)
     }
