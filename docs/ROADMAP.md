@@ -38,7 +38,7 @@ Complete companion lifecycle, Binder death/rebind, version negotiation, bounded 
 
 ## Gate 3 — AssayFlux Relay and device identity (P0 new subsystem)
 
-Build a first-party, independently deployable relay so users can publish without Cloudflare and without exposing their phone IP to ordinary visitors. Current repository truth: specification only. The HTTPS-polling RemoteControlAgent and remote control-plane are not a Relay gateway; no persistent device tunnel or visitor stream forwarding is implemented.
+Build a first-party, independently deployable relay so users can publish without Cloudflare and without exposing their phone IP to ordinary visitors. A first bounded HTTP Relay path is now implemented: Owner DNS TXT hostname proof, verified host-to-device/site registry, authenticated outbound Android SSE stream, bounded request/response forwarding, exact local site-ID check, and immediate stream revocation on device token rotation/deletion. This is not yet a general streaming Relay: request/response bodies are capped at 8 MiB, request deadline is 45 seconds, four local requests run concurrently per device, and WebSocket upgrades, streaming downloads/SSE and HTTP/2 end-to-end multiplexing are not supported. Public TLS/DNS deployment and reconnect/load/soak validation remain unproven.
 
 **Components:** public gateway, Android outbound tunnel agent, device enrollment broker, authenticated multiplexed streams, hostname registry, certificate lifecycle, visitor access gateway, rate/abuse controls, metrics and operations.
 
@@ -50,7 +50,7 @@ Build a first-party, independently deployable relay so users can publish without
 
 ## Gate 4 — Owner and visitor authentication (P0)
 
-Separate Owner/Operator management identity from website visitor identity. Implement passkey-first owner login, recovery, scoped Operator roles, device approval, session expiry/revocation and fresh authorization for sensitive actions. Visitor modes: Public, Private and Restricted, with site-scoped short-lived tokens, brute-force controls and audit.
+Separate Owner/Operator management identity from website visitor identity. Remote control-plane now has 12-hour revocable server-side admin sessions, hashed tokens, role enforcement and transactional audit. The Android host now supports site-scoped Public/Private/Restricted access, 256-bit one-time visitor credentials stored as SHA-256 hashes, Owner-only invite/revoke APIs, and browser Basic-auth challenge on protected sites; protected requests require HTTPS at a trusted loopback proxy and credentials are removed before proxying to customer runtimes. Still open: passkey-first Owner identity, fresh biometric/credential authorization for sensitive actions, visitor brute-force throttling and end-to-end Relay access tests.
 
 **Exit:** cross-site token reuse, privilege escalation, revoked sessions and unauthorized relay access fail; visitor credentials never authorize management routes.
 
@@ -94,5 +94,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 ### 2026-11-16 implementation evidence addendum
 
 - Gate 2: isolated-UID and seccomp probe hardening includes inherited connected-socket closure and socket/connect/bind denial assertions. It is not production runtime confinement; Python/Node storage bootstrap, actual Binder UID authorization, per-project service allocation, strict policy and API 26/33/35 adversarial acceptance remain open. Trusted-code-only policy remains mandatory.
-- Gate 3: specification only. No Relay gateway, persistent device stream, visitor multiplexing, hostname registry/certificate lifecycle or Android Relay Agent exists. Keep Cloudflare Tunnel independent.
-- Gate 4: remote control-plane API credentials now exchange for 12-hour server-side sessions; sessions are hashed, expire, can be revoked and are invalidated on user token rotation/account revocation. Role enforcement, token rotation and audit transactions remain. Passkey-first local Owner identity and site-scoped visitor Public/Private/Restricted authorization remain unimplemented; the gate is therefore open.
+- Gate 3: bounded HTTP Relay gateway, DNS TXT hostname proof, Android outbound SSE agent and request/response forwarding are implemented in source. The agent verifies hostname-to-local-site-ID before forwarding; device token rotation/deletion closes the stream. Streaming/WebSocket support, public DNS/TLS deployment and load/soak evidence remain open. Keep Cloudflare Tunnel independent.
+- Gate 4: remote admin sessions and transactional audit remain implemented. Local site-scoped Public/Private/Restricted visitor authorization and Owner invite/revoke controls are now implemented in Kotlin/Rust source; Android instrumentation source covers the management API lifecycle. Passkey-first Owner identity, visitor brute-force throttling and executed Android/native integration tests remain open.
