@@ -27,7 +27,7 @@ object RelayAgent {
     private val requests = ThreadPoolExecutor(
         4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(64),
         { runnable -> Thread(runnable, "PocketHost-Relay-Request").apply { isDaemon = true } },
-        ThreadPoolExecutor.AbortPolicy()
+        ThreadPoolExecutor.CallerRunsPolicy()
     )
 
     @Synchronized
