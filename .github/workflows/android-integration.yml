@@ -1,13 +1,20 @@
 name: PocketHost Android integration
 
 on:
-  # This no-op push trigger lets a workflow-file update supersede any legacy run
-  # created before Android builds were deferred to the final gate.
+  # Security implementation changes must be compiled and exercised on the
+  # supported Android API matrix before their gates can be considered complete.
   push:
     branches: [main]
     paths:
       - ".github/workflows/android-integration.yml"
-  # Actual Android build and emulator execution remain manual-only.
+      - "app/**"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
   workflow_dispatch:
     inputs:
       run_emulators:
@@ -25,7 +32,7 @@ concurrency:
 
 jobs:
   cloudflared-android:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +63,7 @@ jobs:
           retention-days: 7
 
   android-apk:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: cloudflared-android
     runs-on: ubuntu-latest
     steps:
@@ -142,7 +149,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_emulators
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_emulators)
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
