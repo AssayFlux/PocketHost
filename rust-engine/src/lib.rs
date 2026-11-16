@@ -879,7 +879,7 @@ mod tests {
     #[test]
     fn site_visitor_sha256_matches_standard_vectors() {
         assert_eq!(sha256_hex(b""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-        assert_eq!(sha256_hex(b"secret"), "2bb80d537b1da3e38bd30361aa855686bde0ba7c6c8c7e6a7e2e8f3e4e7f5f0");
+        assert_eq!(sha256_hex(b"secret"), "2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b");
     }
 
     #[test]
