@@ -25,13 +25,13 @@ Capacity Lab performs a bounded local static GET sweep. Run it on a cool, adequa
 Pocket Host can host built static output from HTML/CSS/JavaScript, TypeScript and frontend frameworks such as React, Vue, Svelte and Angular. For build steps, Next.js static export boundaries, and current Python/Node runtime requirements, see the [Website Deployment Guide](WEBSITE_DEPLOYMENT.md).
 
 ## Python and Node runtimes
-These runtimes are for trusted code only. Python currently supports one WSGI application. Node runs one active application with prebundled dependencies. Both run under the Pocket Host app identity; neither is an OS-enforced sandbox. Do not run untrusted projects.
+These runtimes are for trusted owner-controlled code only. CPython 3.11 / WSGI and Node.js 24 are now packaged in the separate-UID runtime companion in source. They run under the companion package UID, which differs from the host app UID, but both runtime processes share that companion UID. Per-project filesystem isolation and enforceable outbound network restrictions are not complete; this is not a hostile-code sandbox. Python supports WSGI (not ASGI/WebSockets) and Node supports one active prebundled application. The migrated build and API 26/33/35 tests remain verification gates.
 
 ## Activity and diagnostics
 Use Activity to inspect operational events, filter errors, search and export redacted logs or diagnostics. Review exports before sharing and remove private information that should not leave the device.
 
 ## Backup and restore
-The current encrypted backup covers static website content. It does not include runtime projects, credentials, all settings or remote-control state. Keep the passphrase separately; it cannot be recovered.
+The encrypted `.afbackup` includes static website content, optional Python/Node project directories, hostname routes and an allowlist of non-secret settings. It excludes Cloudflare/remote credentials, accounts, session tokens and device-bound keys. Restored runtimes do not start automatically; review and re-enable trusted code deliberately. Keep the passphrase separately; it cannot be recovered. See [Site Backup](SITE_BACKUP.md) for format and limits.
 
 ## Device safety and availability
 Keep the phone ventilated, monitor battery/temperature/storage and use conservative capacity settings. Android Doze, OEM power policies, process termination and network changes can interrupt hosting. Pocket Host does not guarantee 24/7 uptime or unlimited traffic.
@@ -65,4 +65,4 @@ The website file manager now supports individual file upload (50 MiB maximum), f
 
 The management console supports changing an Owner or Operator password. Owner recovery requires approving a fresh pairing challenge on the Android phone. Biometric app-launch unlock is optional and remains separate from management API authentication.
 
-Main commit `34f8d5329223d59e984e98b977e92d86e6efd555` passed all six Quality CI jobs in [run 43703703022](https://github.com/AssayFlux/PocketHost/actions/runs/43703703022). Android integration [run 43703702835](https://github.com/AssayFlux/PocketHost/actions/runs/43703702835) was pending at reconciliation time. Runtime sandboxing, complete backup, physical-device/network acceptance and production release remain outstanding.
+Historical CI runs cited above predate the current companion migration. Use [Project Status](PROJECT_STATUS_2026-11-16.md) for the current source snapshot and exact verification gates. The companion migration, per-project isolation, network egress, physical-device/network acceptance and production release must not be treated as complete until tested.
