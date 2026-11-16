@@ -23,10 +23,10 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 | Isolation | Isolated-service, Unix-domain and native seccomp proof source exists | Not a production per-project sandbox; Python/Node remain trusted-only |
 | Management | Authenticated loopback API and TypeScript/React console | External deployment and full security acceptance remain |
 | Cloudflare | Android cloudflared build integration; existing named tunnel is reused | External hostname/TLS verification remains |
-| AssayFlux Relay | Defined in North Star | Not implemented |
+| AssayFlux Relay | Defined in North Star and `docs/ASSAYFLUX_RELAY.md` | Specification only; no gateway, persistent stream, visitor forwarding or Android Relay Agent |
 | Capacity | Device telemetry, first Capacity Lab and admission derating | Fair governor, workload coverage and safe-envelope evidence remain |
 | Backup | Encrypted .afbackup and staged restore foundations | Full fault matrix remains |
-| Control plane | Axum/PostgreSQL source and deployment workflow | Deployment and device E2E not proven |
+| Control plane | Axum/PostgreSQL source, device/user token rotation, 12-hour revocable admin sessions and audit | Deployment and device E2E not proven |
 | Release | Manual signed-release workflow source | No verified signed production APK pair |
 
 ## Reproducible build inputs
@@ -98,3 +98,14 @@ Update this file with exact evidence whenever the baseline changes.
 - Source commits: `e1a1e1d`, `8d9b87a`, `be0b1fb`, `1b2e7b0`, `bd6af74`, `e8b4616`, `3986990`; documentation commits `7815887`, `fd0eef3`.
 - This is feasibility-probe hardening only. It does not migrate Python/Node into isolated services, provide project directory capabilities, establish a strict syscall allowlist, or pass the API 26/33/35 adversarial matrix. Gate 2 remains open. No Android build or instrumentation execution was performed, per the Gate 8 build policy.
 - The latest six-job quality workflow before these changes passed on `1497f8b` (run `43837524062`). The native Android C++ and instrumentation changes have not been compiled or executed by that workflow; a new workflow run must be checked for the non-Android jobs only.
+
+
+## 2026-11-16 Gate 2–4 implementation evidence
+
+- Latest six-job quality run: `43840365268`, completed success on `4357e06ef696e348ef6fe18f35840ae2b2a2f754` (Rust, control-plane/PostgreSQL migrations, Python, Node, console and Gradle wrapper).
+- Gate 2 source: inherited socket descriptors are closed before seccomp installation in the isolated-UID probe; instrumentation source checks an inherited connected TCP socket is closed and `socket`, `connect`, `bind` are denied while the brokered Unix listener remains usable. This is not production Python/Node confinement. Android C++/Kotlin instrumentation was not compiled or run; no API 26/33/35 evidence is claimed.
+- Gate 2 architecture research: `android:isolatedProcess` services have no permissions; `bindIsolatedService` multi-instance binding begins at API 29, requiring fixed service slots on API 26–28. Chaquopy and the current Node worker use app-private runtime/project/cache paths; they need descriptor-rooted storage and runtime-specific bootstrap adaptation before isolated execution can be enabled.
+- Gate 3 remains specification-only. HTTP polling in `RemoteControlAgent` is not a Relay. No gateway, persistent tunnel, visitor stream multiplexer, hostname/certificate registry or Android Relay Agent is implemented.
+- Gate 4 source: long-lived bootstrap/team API credentials are accepted only by `POST /v1/admin/session`; management routes require a 12-hour hashed server-side session. Sessions are explicitly revocable and are invalidated by user token rotation/revocation; session creation/revocation is audited. The console holds the session in memory and does not persist the long-lived credential. PostgreSQL regression tests cover viewer authorization, expiry, explicit revoke, user revoke, and token-rotation revocation. Latest six-job CI pass covers these changes.
+- Gate 4 remains open: passkey-first local Owner identity and site-scoped visitor Public/Private/Restricted authorization are not implemented.
+- Android build/device validation and external Relay deployment remain deferred/unverified. No production-ready claim is made.
