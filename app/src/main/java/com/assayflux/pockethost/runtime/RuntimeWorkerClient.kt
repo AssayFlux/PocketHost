@@ -57,6 +57,9 @@ object RuntimeWorkerClient {
             synchronized(connectionLock) {
                 binder = cachedBinder
                 if (binder == null || !binder!!.isBinderAlive) {
+                    cachedBinder = null
+                    cachedConnection?.let { previous -> runCatching { app.unbindService(previous) } }
+                    cachedConnection = null
                     val intent = workerIntent()
                     ContextCompat.startForegroundService(app, intent)
                     val latch = CountDownLatch(1)
