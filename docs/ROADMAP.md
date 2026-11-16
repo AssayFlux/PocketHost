@@ -134,3 +134,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 - Gate 5 ingress hardening also adds a 10-second HTTP/1 header deadline, a 64-header cap and 16 KiB connection buffer; the HTTP/2 eight-stream cap remains separate. Slow-header and mixed HTTP/1/2 load validation is still open.
 
+- Gate 6 recovery is now invoked before HostingService starts the management API or Rust website ingress, covering boot auto-start and sticky service restart as well as Activity launch.
+
