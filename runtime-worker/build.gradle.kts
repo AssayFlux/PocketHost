@@ -42,6 +42,7 @@ val prepareNodeRuntime by tasks.registering {
         root.deleteRecursively()
         val jniRoot = File(root, "jniLibs")
         val includeRoot = File(root, "include")
+        val assetRoot = File(root, "assets")
         val abis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         ZipFile(archive).use { zip ->
             val entries = zip.entries()
@@ -49,6 +50,13 @@ val prepareNodeRuntime by tasks.registering {
                 val entry = entries.nextElement()
                 if (entry.isDirectory) continue
                 val name = entry.name.replace('\\', '/')
+                val lowerName = name.lowercase()
+                if (lowerName.substringAfterLast('/').let { it.startsWith("license") || it.startsWith("notice") || it.startsWith("copying") }) {
+                    val destination = File(assetRoot, "licenses/nodejs-mobile/" + name.substringAfterLast('/')).canonicalFile
+                    check(destination.toPath().startsWith(assetRoot.canonicalFile.toPath())) { "Unsafe Node license archive path." }
+                    destination.parentFile.mkdirs()
+                    zip.getInputStream(entry).use { input -> destination.outputStream().use { input.copyTo(it) } }
+                }
                 val abi = abis.firstOrNull { name.endsWith("bin/$it/libnode.so") }
                 if (abi != null) {
                     val destination = File(jniRoot, "$abi/libnode.so")
@@ -98,6 +106,7 @@ android {
         }
     }
     sourceSets["main"].jniLibs.srcDir(nodeRuntimeDir.map { it.dir("jniLibs") })
+    sourceSets["main"].assets.srcDir(nodeRuntimeDir.map { it.dir("assets") })
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
