@@ -280,6 +280,28 @@ async fn delete_device(
     Ok(StatusCode::NO_CONTENT)
 }
 
+async fn rotate_device_token(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    let token = new_token();
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let updated = sqlx::query("UPDATE devices SET token_hash=$2 WHERE id=$1")
+        .bind(id).bind(token_hash(&token)).execute(&mut *tx).await.map_err(internal)?;
+    if updated.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
+    }
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&actor.name).bind("device.token.rotate").bind(id.to_string())
+        .bind(json!({"previous_token_revoked":true})).execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::OK, Json(json!({
+        "deviceId": id,
+        "device_token": token,
+        "warning": "The previous token is revoked immediately. Store this replacement securely; it is shown only once."
+    }))))
+}
+
 async fn get_config(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<Json<ConfigView>, (StatusCode, String)> {
@@ -496,6 +518,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/users/:id", axum::routing::delete(revoke_user))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
         .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
+        .route("/v1/admin/devices/:id/rotate-token", post(rotate_device_token))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
         .route("/v1/admin/devices/:id/commands", post(queue_command))
         .route("/v1/admin/devices/:id/artifacts", post(upload_site_archive))
