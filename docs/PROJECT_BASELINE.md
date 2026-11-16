@@ -209,3 +209,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - c820d05809b0c79ead9d12171a97c54e2c326197 adds the same recovery guard to HostingService before Management API or Rust ingress startup, preventing boot/sticky service paths from bypassing interrupted restore recovery.
 
+- f528bdd9e1b6c40e6dc3e8038a70219ea289372b serializes startup site recovery, release rollback and interrupted full-restore release rollback to avoid Activity/foreground-service startup races.
+
