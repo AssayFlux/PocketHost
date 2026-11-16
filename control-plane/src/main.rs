@@ -567,6 +567,39 @@ mod tests {
         assert!(admin(&headers, &state).await.is_err());
     }
 
+    #[tokio::test]
+    async fn rotating_device_token_revokes_old_credential_immediately() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let device = Uuid::new_v4();
+        let old_token = new_token();
+        sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'CI rotation device',$2)")
+            .bind(device).bind(token_hash(&old_token)).execute(&db).await.unwrap();
+        let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap());
+        let (status, Json(body)) = rotate_device_token(
+            State(state.clone()), headers, Path(device)
+        ).await.unwrap();
+        assert_eq!(status, StatusCode::OK);
+        let replacement = body.get("device_token").and_then(Value::as_str).unwrap();
+        assert_ne!(replacement, old_token);
+        assert!(device_id(&{
+            let mut h = HeaderMap::new();
+            h.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap());
+            h
+        }, &state).await.is_err());
+        let mut new_headers = HeaderMap::new();
+        new_headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement}")).unwrap());
+        assert_eq!(device_id(&new_headers, &state).await.unwrap(), device);
+        let audit_count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM audit_events WHERE action='device.token.rotate' AND target=$1"
+        ).bind(device.to_string()).fetch_one(&db).await.unwrap();
+        assert_eq!(audit_count, 1);
+        sqlx::query("DELETE FROM devices WHERE id=$1").bind(device).execute(&db).await.unwrap();
+    }
+
     #[test]
     fn generated_tokens_are_unique_and_not_stored_as_plaintext() {
         let a = new_token();
