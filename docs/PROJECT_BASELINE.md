@@ -1,6 +1,6 @@
 # AssayFlux Pocket Host — Project Baseline
 
-**Baseline date:** 2026-11-16 · **reviewed source:** `a8988f5068f4a65206b89451e8204b51b86abc55`  
+**Baseline date:** 2026-11-16 · **companion source integration:** `bd227b0e5564ad25c88064cfc36796469390b773`  
 **Status:** integrated development software; not production approved.
 
 This is the canonical current baseline. Superseded progress snapshots belong in Git history, not active project documentation.
@@ -15,9 +15,9 @@ Native Android phone-hosted website origin; Android 8/API 26+, ARMv7/ARM64; no T
 |---|---|---|
 | Android | Kotlin/Compose, foreground service | Physical/OEM acceptance |
 | HTTP | Rust/Tokio/Hyper, static serving, host routing, runtime proxy | Full fairness/fault acceptance |
-| Python | Chaquopy CPython 3.11, WSGI | Host app UID |
-| Node | Node.js mobile 24.22.1, dedicated process | Same host app UID |
-| Companion | Separate package/UID, signature Binder probe | Does not host runtimes or receive project payloads |
+| Python | Chaquopy CPython 3.11 / WSGI in companion package | Build/API-matrix verification pending; trusted code only |
+| Node | Node.js mobile 24.22.1, companion `:node` process | Shares companion UID; build/API-matrix verification pending |
+| Companion | Separate package/UID, versioned signature Binder IPC, bounded project transfer, Python/Node source integration | Build, API 26/33/35 and lifecycle verification pending |
 | Management | Authenticated loopback API, TypeScript/React | External deployment not proven |
 | Edge | cloudflared Android connector | Existing tunnel/public HTTPS not verified |
 | Backup | Encrypted backup/restore | Full interruption/rollback/storage-pressure matrix open |
@@ -25,7 +25,7 @@ Native Android phone-hosted website origin; Android 8/API 26+, ARMv7/ARM64; no T
 
 ## Weighted readiness: 37%
 
-This is a judgement-based estimate against six release gates, not code volume, test coverage or a claim that 37% of features are usable.
+This is the last verified weighted estimate from before the companion runtime migration source changes. It is retained at 37% until the new companion build and instrumentation evidence are available. It is a judgement-based estimate against six release gates, not code volume, test coverage or a claim that 37% of features are usable.
 
 | Gate | Weight | Estimated completion | Contribution |
 |---|---:|---:|---:|
@@ -39,11 +39,11 @@ This is a judgement-based estimate against six release gates, not code volume, t
 
 ## Gate 1 — Companion runtime migration (25%)
 
-Present: separate-UID companion APK, signature-protected Binder probe and API 26 capability test.
+Present in source: CPython/Chaquopy and Node/V8 are packaged in the companion; host-side Binder client negotiates protocol version 1; signature permission and caller package/signature checks protect control calls; bounded ZIP/file-descriptor transfer extracts into companion-owned storage; Python and Node lifecycle/status/metrics operations route through the companion; Rust remains the loopback reverse-proxy front door.
 
-Required: move CPython/Chaquopy and Node/V8 into companion UID; authenticated/versioned IPC; bounded project transfer and worker-owned storage; lifecycle/readiness/crash recovery/update rollback; Rust upstream routing; static-origin continuity under worker failure.
+Required: successful native/Chaquopy build; API 26/33/35 runtime tests; robust worker process-death/rebind/update rollback; end-to-end Rust upstream tests; prove static-origin continuity under runtime failure. The separate UID protects host-private files but all companion projects still share one UID, and network egress is not yet enforced.
 
-Exit: Python WSGI and Node HTTP end-to-end through Rust on API 26/33/35; cross-project and host-secret access denied.
+Exit: Python WSGI and Node HTTP end-to-end through Rust on API 26/33/35; host-private file denial, transfer bounds, lifecycle recovery and documented limitations demonstrated. Cross-project isolation and egress enforcement remain security gates.
 
 ## Gate 2 — Isolation and adversarial security (20%)
 
@@ -93,7 +93,7 @@ Exit: owner approval, signed artifacts, external HTTPS/device evidence and indep
 
 ## Explicit non-claims
 
-No companion-hosted runtimes, arbitrary-code sandbox, completed egress enforcement, hard CPU quota, representative sustained-capacity certification, fully fault-hardened backup, external HTTPS verification, signed production release, independent security approval or physical-device certification.
+No verified companion runtime build yet for this source snapshot; no per-project sandbox, completed egress enforcement, hard CPU quota, representative sustained-capacity certification, fully fault-hardened backup, external HTTPS verification, signed production release, independent security approval or physical-device certification.
 
 ## Baseline maintenance
 
