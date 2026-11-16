@@ -20,7 +20,7 @@ object RuntimeProjectFileBroker {
     const val MAX_BROKER_WRITE_BYTES = 1024 * 1024
 
     fun captureRootIdentity(projectRoot: File): RootIdentity {
-        val flags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val flags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
         val fd = Os.open(projectRoot.absoluteFile.toPath().normalize().toString(), flags, 0)
         try {
             val stat = Os.fstat(fd)
