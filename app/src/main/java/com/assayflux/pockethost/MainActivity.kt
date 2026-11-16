@@ -508,15 +508,10 @@ private fun PocketHostDashboard() {
                 }
                 }
                 if (selectedTab == "Settings") {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("General", "Network", "Runtimes", "About").forEach { section ->
-                            FilterChip(
-                                selected = settingsSection == section,
-                                onClick = { settingsSection = section },
-                                label = { Text(section, fontSize = 12.sp) }
-                            )
-                        }
-                    }
+                    PocketHostSettingsSectionNavigation(
+                        selectedSection = settingsSection,
+                        onSectionSelected = { settingsSection = it }
+                    )
                 }
                 if (selectedTab == "Settings" && settingsSection == "General") {
                     PocketHostSettingsScreen(
