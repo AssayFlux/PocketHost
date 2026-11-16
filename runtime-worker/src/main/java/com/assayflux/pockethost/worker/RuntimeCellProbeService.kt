@@ -86,36 +86,39 @@ open class RuntimeCellProbeService : Service() {
                 } ?: false
 
                 val accepted = Os.accept(listener.fileDescriptor, null)
-                val acceptedPfd = ParcelFileDescriptor.dup(accepted)
-                val peerUid = try { NetworkSandbox.getPeerUid(acceptedPfd.fd) } finally { acceptedPfd.close() }
-                val hostUid = packageManager.getApplicationInfo(HOST_PACKAGE, 0).uid
-                check(peerUid == hostUid) {
-                    "Visitor socket peer is not the installed host app UID; refusing the capability."
-                }
-                val request = ByteArray(5)
-                var count = 0
-                while (count < request.size) {
-                    val read = Os.read(accepted, request, count, request.size - count)
-                    if (read <= 0) break
-                    count += read
-                }
-                val response = "cell-accepted".toByteArray(Charsets.UTF_8)
-                var sent = 0
-                while (sent < response.size) {
-                    val written = Os.write(accepted, response, sent, response.size - sent)
-                    if (written <= 0) break
-                    sent += written
-                }
-                Os.close(accepted)
+                try {
+                    val acceptedPfd = ParcelFileDescriptor.dup(accepted)
+                    val peerUid = try { NetworkSandbox.getPeerUid(acceptedPfd.fd) } finally { acceptedPfd.close() }
+                    val hostUid = packageManager.getApplicationInfo(HOST_PACKAGE, 0).uid
+                    check(peerUid == hostUid) {
+                        "Visitor socket peer is not the installed host app UID; refusing the capability."
+                    }
+                    val request = ByteArray(5)
+                    var count = 0
+                    while (count < request.size) {
+                        val read = Os.read(accepted, request, count, request.size - count)
+                        if (read <= 0) break
+                        count += read
+                    }
+                    val response = "cell-accepted".toByteArray(Charsets.UTF_8)
+                    var sent = 0
+                    while (sent < response.size) {
+                        val written = Os.write(accepted, response, sent, response.size - sent)
+                        if (written <= 0) break
+                        sent += written
+                    }
 
-                reply?.writeNoException()
-                reply?.writeInt(if (socketCreationDenied) 1 else 0)
-                reply?.writeInt(if (connectDenied) 1 else 0)
-                reply?.writeInt(if (bindDenied) 1 else 0)
-                reply?.writeInt(if (inheritedSocketClosed) 1 else 0)
-                reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
-                reply?.writeInt(if (peerUid == hostUid) 1 else 0)
-                return true
+                    reply?.writeNoException()
+                    reply?.writeInt(if (socketCreationDenied) 1 else 0)
+                    reply?.writeInt(if (connectDenied) 1 else 0)
+                    reply?.writeInt(if (bindDenied) 1 else 0)
+                    reply?.writeInt(if (inheritedSocketClosed) 1 else 0)
+                    reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
+                    reply?.writeInt(if (peerUid == hostUid) 1 else 0)
+                    return true
+                } finally {
+                    runCatching { Os.close(accepted) }
+                }
             } finally {
                 listener.close()
                 runCatching { outbound.close() }
