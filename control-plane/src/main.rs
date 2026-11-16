@@ -12,7 +12,7 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, convert::Infallible, fs, io::Write, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::Infallible, fs, io::Write, net::{IpAddr, SocketAddr}, path::PathBuf, sync::{Arc, Mutex, OnceLock}, time::{Duration, Instant}};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -180,6 +180,45 @@ struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, boot
 
 const ADMIN_SESSION_TTL_HOURS: i64 = 12;
 
+const MAX_ADMIN_SESSION_BUCKETS: usize = 2_048;
+const ADMIN_SESSION_WINDOW: Duration = Duration::from_secs(60);
+const ADMIN_SESSION_LIMIT: u8 = 20;
+
+struct AdminSessionBucket {
+    window_started: Instant,
+    attempts: u8,
+    last_seen: Instant,
+}
+
+static ADMIN_SESSION_ATTEMPTS: OnceLock<Mutex<HashMap<IpAddr, AdminSessionBucket>>> = OnceLock::new();
+
+fn allow_admin_session_attempt(client_ip: IpAddr) -> bool {
+    let now = Instant::now();
+    let buckets = ADMIN_SESSION_ATTEMPTS.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut buckets) = buckets.lock() else { return false };
+    if let Some(bucket) = buckets.get_mut(&client_ip) {
+        bucket.last_seen = now;
+        if now.duration_since(bucket.window_started) >= ADMIN_SESSION_WINDOW {
+            bucket.window_started = now;
+            bucket.attempts = 0;
+        }
+        if bucket.attempts >= ADMIN_SESSION_LIMIT { return false; }
+        bucket.attempts = bucket.attempts.saturating_add(1);
+        return true;
+    }
+    if buckets.len() >= MAX_ADMIN_SESSION_BUCKETS {
+        if let Some(oldest) = buckets.iter().min_by_key(|(_, bucket)| bucket.last_seen)
+            .map(|(ip, _)| *ip) {
+            buckets.remove(&oldest);
+        }
+    }
+    if buckets.len() >= MAX_ADMIN_SESSION_BUCKETS { return false; }
+    buckets.insert(client_ip, AdminSessionBucket {
+        window_started: now, attempts: 1, last_seen: now,
+    });
+    true
+}
+
 /// Long-lived API credentials are accepted only at the session-exchange endpoint.
 async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<AdminCredential, (StatusCode, String)> {
     ensure_control_plane_host(headers)?;
@@ -205,8 +244,12 @@ async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<Admin
 }
 
 async fn create_admin_session(
-    State(s): State<AppState>, headers: HeaderMap,
+    State(s): State<AppState>, headers: HeaderMap, ConnectInfo(peer): ConnectInfo<SocketAddr>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let client_ip = relay_client_ip(peer.ip(), headers.get("cf-connecting-ip").and_then(|value| value.to_str().ok()));
+    if !allow_admin_session_attempt(client_ip) {
+        return Err((StatusCode::TOO_MANY_REQUESTS, "admin_session_rate_limited".into()));
+    }
     let credential = admin_credential(&headers, &s).await?;
     let id = Uuid::new_v4();
     let token = new_token();
@@ -1255,6 +1298,17 @@ mod tests {
         assert_eq!(revoke_admin_session(State(state.clone()), second_headers.clone()).await.unwrap(), StatusCode::NO_CONTENT);
         assert!(admin(&second_headers, &state).await.is_err(), "Explicitly revoked sessions must be rejected.");
         sqlx::query("DELETE FROM control_sessions WHERE id=$1").bind(first_id).execute(&db).await.unwrap();
+    }
+
+    #[test]
+    fn admin_session_exchange_is_rate_limited_per_effective_client_ip() {
+        let first: IpAddr = "198.51.100.101".parse().unwrap();
+        let second: IpAddr = "198.51.100.102".parse().unwrap();
+        for _ in 0..ADMIN_SESSION_LIMIT {
+            assert!(allow_admin_session_attempt(first));
+        }
+        assert!(!allow_admin_session_attempt(first));
+        assert!(allow_admin_session_attempt(second));
     }
 
     #[test]
