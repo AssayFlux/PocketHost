@@ -108,9 +108,14 @@ impl PendingArtifactFile {
     fn create(path: PathBuf, bytes: &[u8]) -> std::io::Result<Self> {
         // Never overwrite an existing artifact, even if the storage directory is reused.
         let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&path)?;
+        // Arm cleanup immediately after exclusive creation so partial writes are removed.
+        let pending = Self { path, committed: false };
         file.write_all(bytes)?;
         file.sync_all()?;
-        Ok(Self { path, committed: false })
+        if let Some(parent) = pending.path.parent() {
+            fs::File::open(parent)?.sync_all()?;
+        }
+        Ok(pending)
     }
 
     fn commit(&mut self) {
