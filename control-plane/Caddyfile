@@ -1,4 +1,28 @@
+{
+    on_demand_tls {
+        ask http://control-plane:8080/v1/relay/tls-check
+    }
+}
+
 {$CONTROL_PLANE_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy control-plane:8080
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}
+
+:443 {
+    tls {
+        on_demand
+    }
     encode zstd gzip
     reverse_proxy control-plane:8080
     header {
