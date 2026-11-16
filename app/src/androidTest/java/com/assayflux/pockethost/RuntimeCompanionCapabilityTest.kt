@@ -56,6 +56,8 @@ class RuntimeCompanionCapabilityTest {
                 context.bindService(intent, connection, Context.BIND_AUTO_CREATE))
             assertTrue("Companion service bind timed out", connected.await(10, TimeUnit.SECONDS))
             val binder = checkNotNull(binderRef.get())
+            assertTrue("Unexpected companion Binder protocol version",
+                transactInt(binder, IBinder.FIRST_CALL_TRANSACTION + 16) == 1)
             val workerUid = transactInt(binder, transactionUid)
             assertNotEquals("Companion must have a distinct Android UID", context.applicationInfo.uid, workerUid)
             assertFalse(
