@@ -221,3 +221,12 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 8252db29d97a3fae149f4364e78367a1252796bf adds an instrumentation test that keeps the Rust static server running while a committed restore's rollback directory is cleaned, proving cleanup does not unnecessarily stop live hosting. The test is source-only until Android CI executes.
 
+## Latest source snapshot — 2026-11-16
+
+- Main HEAD at this audit: f5df10576750c9a024dd6504582b230044ef9a0b.
+- Combined commit-status lookup returned no status entries, and the available commit-workflow lookup returned no PR-triggered runs for this main commit. This is not evidence of a pass or a failure. Android API 26/33/35 build/instrumentation artifacts and Rust quality logs still need to be obtained and reviewed.
+- Gate 5 source now includes nearest-rank p50/p95/p99, at least 20 benchmark observations per concurrency level, FIFO per-target permits, cross-target permit isolation tests, HTTP/2 eight-stream limits, and HTTP/1 10-second header deadlines with bounded headers/buffers. Live mixed-protocol load and sustained target-device capacity/thermal measurements remain open.
+- Gate 6 source now includes startup recovery for interrupted static activation and full encrypted backup restore, durable pre-mutation journaling, committed-transaction cleanup, no-follow metadata validation, and recovery guards before Activity and foreground-service ingress startup. Fault-injection source exists; executed API-matrix, low-storage, forced process-death and physical-device evidence remain open.
+- Gate 7 source includes dedicated Dashboard/Sites/Activity/Learn screens, extracted device-preference and settings-section Compose components, and UIAutomator screenshot/hierarchy capture for all five destinations and four Settings sections. Human TalkBack, font scaling, contrast, compact/landscape and complete first-run UI publishing acceptance remain open.
+- Gates 5, 6 and 7 are therefore still open. Do not mark them complete until the recorded source tests execute successfully and the remaining device/production acceptance criteria are met.
+
