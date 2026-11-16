@@ -67,6 +67,13 @@ The North Star defines each gate's full exit criteria. Do not reorder security-d
 
 The isolated-UID probe now closes inherited socket descriptors other than the explicitly brokered visitor listener before applying seccomp. The source-level regression test passes an already-connected loopback TCP socket and expects the isolated process to close it. This closes one identified egress path in the probe only; it does not make the probe a production runtime cell. The seccomp policy is still a denylist with an allow fallback, and Python/Node remain in the shared companion UID until their runtimes and storage are migrated.
 
+## 2026-11-16 active Gate 2–4 source status
+
+- Gate 2 probe hardening closes inherited socket descriptors other than the brokered visitor listener before seccomp. The instrumentation source now asserts denial of `socket`, `connect` and `bind`, closure of an already-connected inherited TCP socket, and successful brokered Unix-stream accept with peer UID verification. These Android tests have not been run; APK/native compilation remains deferred to Gate 8.
+- Android API research: isolated services have no permissions; multiple instances through `bindIsolatedService` are API 29+, so API 26–28 require fixed declared slots. Chaquopy's Android platform extracts runtime assets under app-private files and uses app-private HOME/cache paths; NodeHostingService uses companion `filesDir` and `noBackupFilesDir`. Do not move either runtime into an isolated UID without descriptor-rooted storage and runtime-specific bootstrap adaptation.
+- Gate 3 remains specification-only. The HTTP polling remote-control agent is not a persistent visitor Relay and must not be described as one.
+- Gate 4 remote control-plane administration now exchanges long-lived API credentials for 12-hour hashed server-side sessions. Session creation/revocation is audited; session expiry, explicit revocation, team-account revocation and token rotation have PostgreSQL regression coverage. Browser code does not persist the long-lived API credential or session token. Passkey-first Owner identity and visitor Public/Private/Restricted policies remain open.
+
 ## Build and test discipline
 
 - Use the checksum-verified Gradle 8.9 wrapper (`./gradlew`) and committed dependency lockfiles.
