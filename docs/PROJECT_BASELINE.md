@@ -188,3 +188,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - adb58da6fbdbc5b1bbb19f04ed5b6820879cada1 adds a Rust regression test for independent per-target response permits under saturation. The Rust test suite has not yet been run in the current environment.
 
+- 2601e4448a1d535af730a41c4ea36f090e1324b0 makes an invalid active website with no safe fallback an explicit startup recovery error; 0472357a848d57a4daf35a7eb1a1e0af826602f7 adds instrumentation coverage for symlinked active-root quarantine without following the target.
+
