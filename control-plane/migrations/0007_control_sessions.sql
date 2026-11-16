@@ -5,15 +5,18 @@ CREATE TABLE IF NOT EXISTS control_sessions (
     role TEXT NOT NULL CHECK (role IN ('owner','editor','viewer')),
     token_hash CHAR(64) NOT NULL UNIQUE,
     bootstrap_token_hash CHAR(64),
+    user_token_hash CHAR(64),
     expires_at TIMESTAMPTZ NOT NULL,
     revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (
-        (user_id IS NULL AND role='owner' AND bootstrap_token_hash IS NOT NULL) OR
-        (user_id IS NOT NULL AND bootstrap_token_hash IS NULL)
+        (user_id IS NULL AND role='owner' AND bootstrap_token_hash IS NOT NULL AND user_token_hash IS NULL) OR
+        (user_id IS NOT NULL AND bootstrap_token_hash IS NULL AND user_token_hash IS NOT NULL)
     )
 );
 
 CREATE INDEX IF NOT EXISTS control_sessions_user_active_idx
     ON control_sessions(user_id, expires_at)
     WHERE revoked_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS control_sessions_expiry_idx ON control_sessions(expires_at);
