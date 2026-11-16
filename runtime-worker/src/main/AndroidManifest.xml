@@ -21,5 +21,14 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-started website runtime companion for Python and Node.js" />
         </service>
+        <service
+            android:name=".NodeHostingService"
+            android:exported="false"
+            android:process=":node"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started Node.js website runtime in the isolated companion application UID" />
+        </service>
     </application>
 </manifest>
