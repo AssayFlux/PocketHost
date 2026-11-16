@@ -77,6 +77,69 @@ impl RateBucket {
 
 static RATE_LIMITS: OnceLock<Mutex<HashMap<IpAddr, RateBucket>>> = OnceLock::new();
 
+const MAX_AUTH_FAILURE_BUCKETS: usize = 4_096;
+const AUTH_FAILURE_WINDOW: Duration = Duration::from_secs(60);
+const AUTH_FAILURE_THRESHOLD: u8 = 8;
+const AUTH_FAILURE_LOCKOUT: Duration = Duration::from_secs(60);
+
+struct AuthFailureBucket {
+    window_started: Instant,
+    failures: u8,
+    blocked_until: Option<Instant>,
+    last_seen: Instant,
+}
+
+static AUTH_FAILURES: OnceLock<Mutex<HashMap<(IpAddr, String), AuthFailureBucket>>> = OnceLock::new();
+
+fn auth_attempt_allowed(client_ip: IpAddr, hostname: &str) -> bool {
+    let now = Instant::now();
+    let buckets = AUTH_FAILURES.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut buckets) = buckets.lock() else { return false };
+    let key = (client_ip, hostname.to_string());
+    let Some(bucket) = buckets.get_mut(&key) else { return true };
+    bucket.last_seen = now;
+    if bucket.blocked_until.map(|until| until > now).unwrap_or(false) { return false; }
+    if now.duration_since(bucket.window_started) >= AUTH_FAILURE_WINDOW {
+        bucket.window_started = now;
+        bucket.failures = 0;
+        bucket.blocked_until = None;
+    }
+    true
+}
+
+fn record_auth_failure(client_ip: IpAddr, hostname: &str) {
+    let now = Instant::now();
+    let buckets = AUTH_FAILURES.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut buckets) = buckets.lock() else { return };
+    let key = (client_ip, hostname.to_string());
+    if !buckets.contains_key(&key) && buckets.len() >= MAX_AUTH_FAILURE_BUCKETS {
+        if let Some(oldest) = buckets.iter().min_by_key(|(_, bucket)| bucket.last_seen).map(|(key, _)| key.clone()) {
+            buckets.remove(&oldest);
+        }
+    }
+    let bucket = buckets.entry(key).or_insert_with(|| AuthFailureBucket {
+        window_started: now, failures: 0, blocked_until: None, last_seen: now,
+    });
+    if now.duration_since(bucket.window_started) >= AUTH_FAILURE_WINDOW {
+        bucket.window_started = now;
+        bucket.failures = 0;
+        bucket.blocked_until = None;
+    }
+    bucket.last_seen = now;
+    bucket.failures = bucket.failures.saturating_add(1);
+    if bucket.failures >= AUTH_FAILURE_THRESHOLD {
+        bucket.blocked_until = Some(now + AUTH_FAILURE_LOCKOUT);
+    }
+}
+
+fn clear_auth_failures(client_ip: IpAddr, hostname: &str) {
+    if let Some(buckets) = AUTH_FAILURES.get() {
+        if let Ok(mut buckets) = buckets.lock() {
+            buckets.remove(&(client_ip, hostname.to_string()));
+        }
+    }
+}
+
 fn allow_request_rate(client_ip: IpAddr) -> bool {
     let now = Instant::now();
     let limits = RATE_LIMITS.get_or_init(|| Mutex::new(HashMap::new()));
@@ -458,12 +521,20 @@ async fn serve(
                 response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
                 return Ok(response);
             }
+            if !auth_attempt_allowed(client_ip, &requested_host) {
+                let mut response = text_response(StatusCode::TOO_MANY_REQUESTS, "text/plain; charset=utf-8", "Visitor authentication temporarily rate limited.");
+                response.headers_mut().insert("retry-after", "60".parse().unwrap());
+                response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
+                return Ok(response);
+            }
             if !authorize_site_request(req.headers(), policy) {
+                record_auth_failure(client_ip, &requested_host);
                 let mut response = text_response(StatusCode::UNAUTHORIZED, "text/plain; charset=utf-8", "Visitor authentication required.");
                 response.headers_mut().insert("www-authenticate", r#"Basic realm="AssayFlux Pocket Host", charset="UTF-8""#.parse().unwrap());
                 response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
                 return Ok(response);
             }
+            clear_auth_failures(client_ip, &requested_host);
             req.headers_mut().remove(hyper::header::AUTHORIZATION);
         }
     }
