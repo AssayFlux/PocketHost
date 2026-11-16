@@ -15,7 +15,12 @@ import java.net.Socket
 class PythonRuntimeSmokeTest {
     @Test
     fun runsWsgiApplicationOnLoopbackAndStops() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        instrumentation.runOnMainSync {
+            context.startActivity(android.content.Intent(context, MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
         val root = File(context.cacheDir, "pockethost-python-${System.nanoTime()}")
         assertTrue(root.mkdirs())
         File(root, "wsgi.py").writeText(
