@@ -50,7 +50,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci-only-postgres-password
           POCKETHOST_CONTROL_ADMIN_TOKEN: ci-only-test-admin-token-0123456789abcdef
-          POCKETHOST_CONTROL_HOST: api.example.test
+          POCKETHOST_CONTROL_API_HOST: api.example.test
           POCKETHOST_CONTROL_ORIGIN: https://console.example.test
           CONTROL_PLANE_DOMAIN: api.example.test
           POCKETHOST_CONTROL_TUNNEL_TOKEN: ci-only-cloudflare-tunnel-token
