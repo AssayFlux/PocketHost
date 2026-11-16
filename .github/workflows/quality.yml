@@ -19,6 +19,8 @@ jobs:
 
   control-plane:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     services:
       postgres:
         image: postgres:16
@@ -41,13 +43,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
       - name: Test remote control-plane backend and database migrations
         run: cargo test --manifest-path control-plane/Cargo.toml
-      - name: Export resolved control-plane Cargo lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: control-plane-cargo-lock
-          path: control-plane/Cargo.lock
-          if-no-files-found: error
+      - name: Commit resolved control-plane Cargo lockfile
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if ! git diff --quiet -- control-plane/Cargo.lock; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add control-plane/Cargo.lock
+            git commit -m "Update control-plane Cargo lockfile"
+            git push
+          fi
       - name: Validate public and Cloudflare Tunnel Compose profiles
         env:
           POSTGRES_PASSWORD: ci-only-postgres-password
