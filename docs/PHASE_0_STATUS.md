@@ -54,7 +54,7 @@ The companion UID differs from the host UID, but Python and Node projects share 
 
 ## CI evidence
 
-- Quality `43827396536`: all six jobs passed on `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`, including Gradle wrapper validation.
+- Quality `43827669251`: all six jobs passed on `a48485469aef7b0099f158dc4ebb80cdcc19b949`, including Gradle wrapper validation.
 - Dependency-lock workflow `43826809601`: succeeded; Gradle wrapper and dependency locks generated.
 - No Android build or instrumentation result is claimed for the current baseline.
 - Legacy Android run `43824043298` was queued on an older SHA before the manual-only policy; it is not evidence for the current baseline.

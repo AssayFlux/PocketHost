@@ -49,7 +49,7 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 
 ## Verification evidence
 
-- Quality run `43827396536`: all six jobs passed on `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca` (Rust 1.88 locked tests, control-plane migrations and Compose profiles, Python, Node, `npm ci`, Gradle wrapper validation).
+- Quality run `43827669251`: all six jobs passed on `a48485469aef7b0099f158dc4ebb80cdcc19b949` (Rust 1.88 locked tests, control-plane migrations and Compose profiles, Python, Node, `npm ci`, Gradle wrapper validation).
 - Dependency-lock workflow `43826809601`: completed successfully; generated Cargo/npm/Gradle locks and the checksum-verified Gradle wrapper.
 - No Android source compile, APK packaging, emulator instrumentation or physical-device test is claimed on this baseline.
 
