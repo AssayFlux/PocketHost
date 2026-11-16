@@ -201,6 +201,7 @@ object SiteImporter {
         }.getOrDefault(false)
     }
 
+    @Synchronized
     fun recoverInterruptedActivation(context: Context): Boolean {
         val active = File(context.filesDir, "site")
         if (isSafeRecoveryRelease(active)) return false
@@ -230,6 +231,7 @@ object SiteImporter {
             ?.sortedByDescending { it.name }
             ?.map { it.name } ?: emptyList()
 
+    @Synchronized
     fun rollbackLatest(context: Context): String {
         val releases = File(context.filesDir, "site-releases")
         val latest = releases.listFiles()
@@ -251,6 +253,7 @@ object SiteImporter {
      * snapshot. If activation stopped after moving the old site but before the
      * replacement was renamed into place, the active path may be absent.
      */
+    @Synchronized
     fun restoreLatestReleaseIfChanged(context: Context, previousLatest: String?): Boolean {
         val releases = File(context.filesDir, "site-releases")
         val latestName = listReleases(context).firstOrNull() ?: return false
