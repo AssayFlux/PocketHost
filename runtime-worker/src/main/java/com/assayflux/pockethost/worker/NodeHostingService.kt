@@ -16,7 +16,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
 
-/** Node.js runs once in a dedicated Android process because V8 cannot be safely restarted in-process. */
+/** Node.js runs in the companion app's :node process; it shares the companion UID with the Python worker. */
 class NodeHostingService : Service() {
     @Volatile private var activeProjectRoot: String? = null
     @Volatile private var stopping = false
