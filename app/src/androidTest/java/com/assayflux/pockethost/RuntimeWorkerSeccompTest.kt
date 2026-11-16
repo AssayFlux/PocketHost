@@ -33,6 +33,57 @@ import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class RuntimeWorkerSeccompTest {
+    @Test(timeout = 20_000)
+    fun fixedIsolatedWorkerSlotsHaveDistinctUids() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val packageName = "com.assayflux.pockethost.worker"
+        val serviceClasses = listOf(
+            "$packageName.RuntimeCellProbeService",
+            "$packageName.RuntimeCellProbeServiceTwo"
+        )
+        val binders = serviceClasses.map { AtomicReference<IBinder?>() }
+        val latches = serviceClasses.map { CountDownLatch(1) }
+        val connections = serviceClasses.mapIndexed { index, _ ->
+            object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                    binders[index].set(service)
+                    latches[index].countDown()
+                }
+                override fun onServiceDisconnected(name: ComponentName) = Unit
+            }
+        }
+        val bound = mutableListOf<ServiceConnection>()
+        try {
+            serviceClasses.forEachIndexed { index, className ->
+                val intent = Intent().setComponent(ComponentName(packageName, className))
+                assertTrue("Isolated slot $index must bind",
+                    context.bindService(intent, connections[index], Context.BIND_AUTO_CREATE))
+                bound += connections[index]
+            }
+            latches.forEachIndexed { index, latch ->
+                assertTrue("Isolated slot $index bind timed out", latch.await(10, TimeUnit.SECONDS))
+            }
+            val uids = binders.map { reference ->
+                val data = Parcel.obtain()
+                val reply = Parcel.obtain()
+                try {
+                    data.writeInterfaceToken(DESCRIPTOR)
+                    check(requireNotNull(reference.get()).transact(TRANSACTION_UID, data, reply, 0))
+                    reply.readException()
+                    reply.readInt()
+                } finally {
+                    data.recycle()
+                    reply.recycle()
+                }
+            }
+            assertNotEquals("First slot must have an isolated UID", context.applicationInfo.uid, uids[0])
+            assertNotEquals("Second slot must have an isolated UID", context.applicationInfo.uid, uids[1])
+            assertNotEquals("Two simultaneous project slots must not share a UID", uids[0], uids[1])
+        } finally {
+            bound.forEach { connection -> runCatching { context.unbindService(connection) } }
+        }
+    }
+
     @Test(timeout = 30_000)
     fun isolatedCellClosesInheritedSocketsDeniesNewSocketsAndAcceptsHostUnixListener() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
