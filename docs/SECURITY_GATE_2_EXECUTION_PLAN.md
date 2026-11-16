@@ -40,13 +40,17 @@ If SELinux rejects the directory-FD path, do not weaken SELinux or expose the wh
 
 ### 2.3 Network capability boundary
 
-The trusted host creates the website-side listener socket and transfers its descriptor to the isolated cell. The cell accepts requests only on this already-created listener. The host/Rust engine remains the only process that creates public/LAN sockets and routes the website hostname to the cell's loopback upstream.
+The trusted broker creates a loopback listener and transfers its descriptor to the isolated cell. Rust connects to the broker-owned loopback port; the cell accepts only on the passed listener. The cell never creates a socket. Rust remains the only public/LAN ingress and the existing Cloudflare Tunnel continues to terminate at Rust.
 
-The current proof first passes an already-accepted visitor socket FD over Binder and checks request/response bytes end-to-end. The next integration proof must pass a pre-bound listening socket FD, let the isolated cell accept multiple connections, and verify Rust can connect to the host-owned loopback listener.
+**Mandatory syscall enforcement:** before project code is imported or executed, the cell installs a seccomp-BPF filter with `PR_SET_NO_NEW_PRIVS` and thread synchronization (`SECCOMP_FILTER_FLAG_TSYNC`). The filter denies `socket`, `socketpair`, `connect`, `bind`, socket-call multiplexors, io_uring socket paths, and namespace changes. It permits `listen`, `accept` and `accept4` only when the descriptor argument equals the single listener FD passed by the broker. Any other listener/accept descriptor is denied. The filter is irreversible for the process and inherited by its threads/children. If filter installation or TSYNC fails, the cell must fail closed and must not import project code.
 
-The isolated cell must fail to create new IPv4/IPv6 TCP, UDP and raw sockets, resolve DNS through network APIs, connect to loopback management endpoints, or reach private/link-local/metadata targets. A listener FD is a one-way inbound capability; it is not permission to create outbound sockets.
+The isolated UID also has no Android permissions of its own. This is defense in depth; the seccomp boundary is what prevents native/JNI code, Python sockets, Node sockets, DNS, UDP, raw sockets and loopback management connections from opening or connecting other sockets. The process must not receive any other network socket FD. Close unexpected inherited AF_INET/AF_INET6 descriptors before project code starts.
 
-Remove the runtime worker package's `INTERNET` permission once the brokered-listener design is integrated and all broker/control operations are proven not to need it. The host app retains the network permission for Rust, cloudflared and owner-approved network operations.
+The current proof passes an accepted visitor socket FD and checks request/response bytes, and separately passes a host-created listener FD to verify that the isolated process can accept multiple connections. The production design uses the listener FD plus the syscall filter. The next acceptance tests must prove that the filter blocks socket creation/connect while allowing accept on only that exact listener FD, and that Rust can still connect to the broker-owned loopback port.
+
+The isolated cell must fail attempts using IPv4/IPv6 TCP, UDP, raw sockets, DNS resolvers, native/JNI calls, io_uring, loopback management endpoints, private/link-local/metadata targets and child processes. A passed listener FD is a one-way inbound capability, not general network permission.
+
+The runtime worker package's `INTERNET` permission may be removed after the broker/control path is proven not to need it. The host app retains the network permission for Rust, cloudflared and owner-approved network operations.
 
 ### 2.4 Runtime adaptation
 

@@ -29,7 +29,7 @@ Five destinations: Dashboard, Sites, Activity, Learn and Settings. Card-first la
 
 **Current runtime trust:** Python and Node still run in the shared companion UID, distinct from the host UID. Binder IPC is signature-protected and project transfer is bounded. Python loopback binding and Node listener pinning are not outbound-egress controls. Projects are still mutually accessible within the companion.
 
-**Gate 2 target:** one Android isolated service process/UID per project, with no permissions. The companion becomes a trusted broker and passes only a project directory/runtime FD plus a host-created listener FD. The cell accepts visitor traffic from that listener; it cannot create general network sockets. Instrumentation now probes simultaneous isolated UIDs, directory-FD isolation and listener-FD acceptance. Results must pass API 26/33/35 before Python/Node migration begins. Follow [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md).
+**Gate 2 target:** one Android isolated service process/UID per project, with no permissions. The companion becomes a trusted broker and passes only a project directory/runtime FD plus a host-created listener FD. A TSYNC seccomp-BPF filter denies socket creation/connect/bind and permits accept only on that listener FD. Filter failure prevents project startup. Instrumentation now probes simultaneous isolated UIDs, directory-FD isolation and listener-FD acceptance. Results must pass API 26/33/35 before Python/Node migration begins. Follow [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md).
 
 Never call the current companion a sandbox, run untrusted visitor code, claim egress enforcement, or place host credentials in project roots.
 
