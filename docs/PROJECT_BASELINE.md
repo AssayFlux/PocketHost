@@ -1,7 +1,7 @@
 # ASSAYFLUX POCKET HOST — CANONICAL PROJECT BASELINE
 
 **Baseline review:** 2026-11-16  
-**Source reviewed:** `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`  
+**Source reviewed:** `4357e06ef696e348ef6fe18f35840ae2b2a2f754` (latest six-job quality run; subsequent commits update documentation only)  
 **Release:** 0.1.0 target · **Status:** pre-release · **Production approval:** no.
 
 This is the current evidence baseline. Source implementation is unchanged since the wrapper/dependency freeze; this commit records the six-job exact-SHA quality result.
