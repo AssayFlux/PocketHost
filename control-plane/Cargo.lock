@@ -1050,11 +1050,11 @@ name = "pockethost-control-plane"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64",
  "axum",
+ "base64",
  "chrono",
- "hex",
  "futures-util",
+ "hex",
  "http-body-util",
  "rand",
  "serde",
@@ -1069,7 +1069,6 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
 ]
-
 [[package]]
 name = "potential_utf"
 version = "0.1.6"
