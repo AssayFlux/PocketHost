@@ -19,7 +19,7 @@ val releaseSigningReady = listOf(releaseKeystorePath, releaseStorePassword, rele
 val buildRustAndroid by tasks.registering(Exec::class) {
     workingDir = rustDir.asFile
     commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86_64", "-o",
-        layout.buildDirectory.dir("generated/rust/jniLibs").get().asFile.absolutePath, "build", "--release")
+        layout.buildDirectory.dir("generated/rust/jniLibs").get().asFile.absolutePath, "build", "--release", "--locked")
     inputs.dir(rustDir)
     outputs.dir(layout.buildDirectory.dir("generated/rust/jniLibs"))
 }

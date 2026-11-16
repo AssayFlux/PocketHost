@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --manifest-path rust-engine/Cargo.toml
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - run: cargo test --manifest-path rust-engine/Cargo.toml --locked
 
   control-plane:
     runs-on: ubuntu-latest
@@ -38,9 +38,9 @@ jobs:
       POCKETHOST_CONTROL_ADMIN_TOKEN: ci-only-test-admin-token-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - name: Test remote control-plane backend and database migrations
-        run: cargo test --manifest-path control-plane/Cargo.toml
+        run: cargo test --manifest-path control-plane/Cargo.toml --locked
       - name: Validate public and Cloudflare Tunnel Compose profiles
         env:
           POSTGRES_PASSWORD: ci-only-postgres-password
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
       - run: npm run build
 
   node-runtime:

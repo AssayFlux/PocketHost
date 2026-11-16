@@ -2,7 +2,7 @@ FROM rust:1.88-bookworm AS builder
 WORKDIR /workspace
 COPY control-plane ./control-plane
 WORKDIR /workspace/control-plane
-RUN cargo build --release
+RUN cargo build --release --locked
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates     && rm -rf /var/lib/apt/lists/*     && useradd --system --uid 10001 --no-create-home pockethost
