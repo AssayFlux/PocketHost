@@ -122,6 +122,10 @@ fn role_can_write(role: &str) -> bool {
     matches!(role, "owner" | "editor")
 }
 
+fn role_can_rotate_device_credential(role: &str) -> bool {
+    role == "owner"
+}
+
 struct PendingArtifactFile {
     path: PathBuf,
     committed: bool,
@@ -463,7 +467,10 @@ async fn delete_device(
 async fn rotate_device_token(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
-    let actor = admin_write(&headers, &s).await?;
+    let actor = admin(&headers, &s).await?;
+    if !role_can_rotate_device_credential(&actor.role) {
+        return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
+    }
     let token = new_token();
     let mut tx = s.db.begin().await.map_err(internal)?;
     let updated = sqlx::query("UPDATE devices SET token_hash=$2 WHERE id=$1")
@@ -1252,6 +1259,9 @@ mod tests {
         assert!(role_can_write("editor"));
         assert!(role_can_write("owner"));
         assert!(!role_can_write("unknown"));
+        assert!(role_can_rotate_device_credential("owner"));
+        assert!(!role_can_rotate_device_credential("editor"));
+        assert!(!role_can_rotate_device_credential("viewer"));
     }
 
     #[test]
