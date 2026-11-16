@@ -27,9 +27,11 @@ Five destinations: Dashboard, Sites, Activity, Learn and Settings. Card-first la
 
 **Management path:** owner/operator → authenticated local management API → app services and TypeScript/React console. This path is not part of public visitor origin.
 
-**Runtime trust:** Python runs in companion process `:runtime_worker`; Node runs in companion process `:node`. Both share one companion package UID, distinct from the host UID. Binder IPC is signature-protected and project transfer is bounded. Python always binds to loopback; Node's ordinary TCP listeners are pinned to loopback. This protects host-private files and limits listener exposure, but does not isolate projects from each other or enforce outbound egress.
+**Current runtime trust:** Python and Node still run in the shared companion UID, distinct from the host UID. Binder IPC is signature-protected and project transfer is bounded. Python loopback binding and Node listener pinning are not outbound-egress controls. Projects are still mutually accessible within the companion.
 
-Gate 2 remains open. The current isolated-process probe cannot use the existing loopback TCP route. Follow [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md); never call the companion a sandbox, run untrusted visitor code, claim egress enforcement, or place host credentials in project roots.
+**Gate 2 target:** one Android isolated service process/UID per project, with no permissions. The companion becomes a trusted broker and passes only a project directory/runtime FD plus a host-created listener FD. The cell accepts visitor traffic from that listener; it cannot create general network sockets. Instrumentation now probes simultaneous isolated UIDs, directory-FD isolation and listener-FD acceptance. Results must pass API 26/33/35 before Python/Node migration begins. Follow [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md).
+
+Never call the current companion a sandbox, run untrusted visitor code, claim egress enforcement, or place host credentials in project roots.
 
 ## Engineering sequence
 

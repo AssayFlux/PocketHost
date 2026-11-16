@@ -1,0 +1,120 @@
+# Security Gate 2 — Execution Plan and Technical Decision Record
+
+**Status:** implementation spike in CI; Gate 2 is not complete.  
+**Applies to:** Android API 26+, ARMv7/ARM64, no root, no Termux.  
+**Security objective:** execute each Python or Node site as hostile code inside an OS-enforced boundary while preserving Rust website ingress and static hosting.
+
+## 1. Security invariants
+
+1. One active site per isolated execution cell. No two projects share an execution process, interpreter globals, UID or writable project directory.
+2. The cell runs as an Android isolated process with no Android permissions. The normal companion is a trusted broker only; it must never import or execute customer project code.
+3. A cell receives only two network capabilities: the visitor listener/accepted stream explicitly opened by the trusted host, and no general-purpose socket-creation capability.
+4. A cell receives only file capabilities for its own project and runtime scratch space. Host data, sibling project roots, account/session data, tunnel credentials, backup keys and management state remain inaccessible.
+5. Rust remains the only website ingress and the only component exposed through the existing Cloudflare Tunnel. The management API is never placed on the public hostname.
+6. Static hosting must continue if any runtime cell crashes, is stopped, is overloaded or is unavailable.
+7. No language-level monkey-patch, import hook, Node preload, hostname allowlist or path-validation check may be counted as the security boundary.
+
+## 2. Chosen architecture: isolated execution cells + capability broker
+
+### 2.1 Process and UID boundary
+
+Use Android services declared with `android:isolatedProcess="true"`, each assigned a unique manifest process name (for example `:cell_0`, `:cell_1`, `:cell_2`, `:cell_3`). Android documents that an isolated service runs with a special isolated UID and has no permissions of its own.
+
+Each live cell is assigned exactly one project. A pool of statically declared isolated service components provides a bounded number of concurrent runtime sites; it is not a shared-UID worker pool. The broker reserves a free cell, binds it, verifies the reported UID differs from the host and all other active cells, then transfers that site's capabilities. No project is imported into the normal companion process.
+
+The initial pool size is four cells. This is a concurrent runtime limit, not a static-site limit. Static sites remain independent and can be numerous. The pool size is a tunable capacity decision after memory measurements; do not increase it merely to claim unlimited hosting.
+
+### 2.2 File capability boundary
+
+The trusted broker creates a private parent directory under the companion's app-private storage (mode 0700). Each project root is a child directory. Only that project's root and a separate scratch/cache directory are made traversable/writable for the isolated UID, and the broker passes open directory descriptors through Binder.
+
+The isolated cell addresses its own root through `/proc/self/fd/<project-root-fd>`; it must not receive a path to the private parent or a descriptor for a sibling. The parent remains inaccessible by ordinary path traversal. The cell may read/write only inside its passed root and scratch directory.
+
+**This is a hypothesis until the API matrix proves it.** Android SELinux may reject access to app-data-labelled files even when the descriptor is passed and Unix mode bits permit traversal. The current instrumentation spike tests:
+- Read a file beneath the passed project directory FD.
+- Create a file in that directory and have the host read the result.
+- Attempt `../sibling/secret.txt` and require denial.
+- Keep the host-private parent inaccessible.
+
+If SELinux rejects the directory-FD path, do not weaken SELinux or expose the whole companion files directory. Switch to a descriptor-only workspace: the broker passes one bounded project archive FD; the cell uses an in-memory/FD-backed filesystem adapter, and all persistent reads/writes are brokered through per-project file descriptors. Python and Node compatibility work must be proven before selecting this fallback.
+
+### 2.3 Network capability boundary
+
+The trusted host creates the website-side listener socket and transfers its descriptor to the isolated cell. The cell accepts requests only on this already-created listener. The host/Rust engine remains the only process that creates public/LAN sockets and routes the website hostname to the cell's loopback upstream.
+
+The current proof first passes an already-accepted visitor socket FD over Binder and checks request/response bytes end-to-end. The next integration proof must pass a pre-bound listening socket FD, let the isolated cell accept multiple connections, and verify Rust can connect to the host-owned loopback listener.
+
+The isolated cell must fail to create new IPv4/IPv6 TCP, UDP and raw sockets, resolve DNS through network APIs, connect to loopback management endpoints, or reach private/link-local/metadata targets. A listener FD is a one-way inbound capability; it is not permission to create outbound sockets.
+
+Remove the runtime worker package's `INTERNET` permission once the brokered-listener design is integrated and all broker/control operations are proven not to need it. The host app retains the network permission for Rust, cloudflared and owner-approved network operations.
+
+### 2.4 Runtime adaptation
+
+**Python:** one interpreter per isolated cell. Replace self-binding `make_server("127.0.0.1", port, ...)` with a WSGI server that adopts the passed listening socket FD. Set the project root and scratch paths from the passed directory FDs. Chaquopy startup must use a cell-owned runtime/cache path; if its Android bootstrap requires inaccessible package-private paths, implement and test a supported context/path adapter rather than granting broad storage access.
+
+**Node:** one Node environment per isolated cell. Adopt the passed listener FD through Node's supported existing-FD server path; the preload may translate the app's declared port into that already-open descriptor, but it is not the security control. Set project root and cache paths to the passed cell directories. Keep native addon loading disabled until its filesystem and process behavior has passed review.
+
+**Routing:** the broker records `project ID → cell ID → loopback port/listener capability → runtime type`. Rust routes only to the broker-registered port. Hostname mapping stays in Rust; Python's current shared-interpreter `start_many` mode is replaced by one isolated project per cell. Node is no longer special-cased as a shared-UID process.
+
+### 2.5 Lifecycle, cleanup and slot reuse
+
+- A cell is not reassigned until stop/revoke is acknowledged, its listener is closed, its Binder connection is dropped, and the isolated process is confirmed dead.
+- Test child-process creation, detached processes, threads, fork/exec and descriptor inheritance. If descendants can outlive the service, implement process-group/cgroup cleanup or make the cell non-reusable until the OS confirms all processes for that isolated UID are gone.
+- On project replacement, stop the cell, revoke listener and file descriptors, wait for process death, then atomically stage and activate the new root.
+- On crash, Rust returns a bounded 502/503 for that runtime site; static sites remain available. The broker may restart the cell only after cleanup and backoff.
+- No secrets are copied into the project root. Credential filename filtering is defense in depth, not a secret scanner.
+
+## 3. Implementation sequence
+
+| Order | Work | Required evidence |
+|---|---|---|
+| 0 | Isolated UID proof | Two simultaneous isolated services report distinct UIDs; each differs from host and normal companion |
+| 1 | Directory FD proof | Cell reads/writes only its passed root; sibling traversal and host-private reads fail on API 26/33/35 |
+| 2 | Network FD proof | Cell serves a request on a host-created listener FD; socket creation/connect/DNS/UDP/raw/IPv6 attempts fail |
+| 3 | Broker and slot manager | One project per cell, bounded slot allocation, authenticated control, descriptor revocation, crash recovery |
+| 4 | Python migration | WSGI app runs in isolated cell, per-project interpreter, no outbound sockets, Rust routing passes end-to-end |
+| 5 | Node migration | Node HTTP app runs in isolated cell using passed listener FD, no outbound sockets, Rust routing passes end-to-end |
+| 6 | Adversarial hardening | Cross-project, filesystem, archive, network, process, resource and lifecycle attacks fail |
+| 7 | Release verification | Same-commit API 26/33/35 CI, ABI APKs, reports, checksums and independent security review |
+
+Do not implement Python and Node integration before the file and network capability proofs pass. This prevents a large runtime migration being built on an invalid Android assumption.
+
+## 4. Adversarial acceptance matrix
+
+### Filesystem
+- Read/list/write/delete another site's marker, project files, runtime cache and uploads.
+- Read host files, preferences, databases, account/session state, tunnel credentials, backups, signing material and logs.
+- Attempt `..`, absolute paths, `/proc/self/fd` enumeration, symlink/hard-link tricks, Unicode normalization, case collisions and archive traversal.
+- Attempt to open the app-private parent, sibling root, management storage and any FD not explicitly granted.
+- Test archive bombs, excessive entries, duplicate names, sparse files, oversized files and interrupted activation.
+
+### Network
+- Create IPv4/IPv6 TCP, UDP and raw sockets; bind/listen/connect/send/receive.
+- DNS via libc, TCP/UDP, custom resolver, DNS-over-HTTPS, numeric literals, IPv4-mapped IPv6 and rebinding.
+- Reach loopback management, other app services, RFC1918, CGNAT, link-local, multicast, broadcast and cloud metadata addresses.
+- Attempt native/JNI networking, child-process networking and use of every inherited/open descriptor.
+- Prove only the host-created inbound listener/accepted stream works and that it cannot be repurposed for outbound connect.
+
+### Process and resources
+- Attempt fork/exec, detached child processes, thread storms, infinite loops, file-descriptor exhaustion and process persistence after stop.
+- Apply and verify per-cell RLIMITs where Android permits them: CPU time, file size, open descriptors and child process count. Do not claim a hard RAM quota unless the OS actually enforces one.
+- Measure PSS/RSS, native heap, CPU, thread count, open FDs, disk writes, request size, response size and queue time.
+- Verify low-memory, thermal derating, Doze, FGS restrictions, process reclamation, cell crash and restart do not take down Rust static hosting.
+
+## 5. Security policy before Gate 2 exit
+
+Python and Node remain restricted to owner-controlled, reviewed code. Do not run visitor-submitted code, public scripts, marketplace packages or unknown dependencies. Keep management API authentication enabled. Never put host credentials or Cloudflare tokens in project roots.
+
+## 6. Gate 2 exit criteria
+
+Gate 2 is complete only when:
+- Two simultaneously active project cells have distinct OS-enforced UIDs and private storage.
+- Cross-project and host-private read/write attempts fail on API 26/33/35.
+- Cells cannot create outbound IPv4/IPv6 TCP/UDP/raw sockets or bypass via DNS/native/child processes.
+- The host-created listener capability supports real Python and Node visitor traffic through Rust.
+- Management endpoints, credentials and private-network targets are inaccessible from project code.
+- Descriptor revocation, project replacement, process cleanup, resource controls and static-origin continuity pass adversarial tests.
+- All Android and quality CI jobs pass on the same commit.
+- Independent security review has no unresolved critical/high findings.
+
+Until all exit criteria are evidenced, Gate 2 is **incomplete** and Pocket Host must not be described as a secure multi-tenant code-hosting platform.

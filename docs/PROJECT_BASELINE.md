@@ -47,13 +47,17 @@ Exit: Python WSGI and Node HTTP end-to-end through Rust on API 26/33/35; host-pr
 
 ## Gate 2 — Isolation and adversarial security (20%)
 
-Present: runtime trust acknowledgement, canonical project-root and archive-path checks, authenticated management API, signature-protected companion service, host-vs-companion UID separation, and Python loopback-only binding. These controls do **not** isolate projects from one another.
+Present: host-vs-companion UID separation, signature-protected Binder service, bounded project archive transfer, canonical path checks, Python loopback-only listener and an isolated-process architecture probe. These controls do **not** isolate projects from one another today.
 
-Verified design gaps: Python multi-site projects share a process/interpreter; all Python/Node projects share one companion UID and files directory; the companion has `INTERNET`; ordinary Node TCP listener pinning does not block outbound TCP/UDP/raw sockets, DNS bypasses or loopback management access. The Android isolated-process probe cannot use the existing loopback TCP architecture.
+Verified current gap: Python multi-site projects share one interpreter/process; all Python/Node projects share one companion UID and files directory; the companion package grants `INTERNET`; listener pinning does not block outbound TCP/UDP/raw sockets, DNS bypasses or loopback management access.
 
-Required: a per-project OS identity/private storage boundary; brokered inbound sockets from Rust; OS-enforced outbound denial; adversarial tests for cross-project file/process access, IPv4/IPv6 TCP/UDP/raw sockets, DNS, rebinding, loopback management, private/link-local/metadata targets, archive attacks, resource exhaustion and restart/reuse. Test API 26/33/35 and obtain independent security review.
+Chosen target: one Android `isolatedProcess=true` service process/UID per hosted project. The normal companion becomes a trusted broker only. It passes one project directory/runtime descriptor and a host-created loopback listener descriptor to each isolated cell. The cell accepts inbound traffic only on the passed listener; Rust remains the sole public ingress. A descriptor-only VFS is the fallback if SELinux blocks directory-FD traversal. The implementation sequence and acceptance tests are in [SECURITY_GATE_2_EXECUTION_PLAN.md](SECURITY_GATE_2_EXECUTION_PLAN.md).
 
-Exit: two projects cannot read or interfere with one another; project code cannot initiate outbound connections or reach management/private targets; brokered inbound hosting still works; the OS boundary is demonstrated by adversarial tests. A process boundary or path validation alone is not sandboxing.
+Current implementation evidence: instrumentation has been added for two simultaneous isolated UIDs, Binder socket transfer, a host-created listener FD accepting two requests, and project-directory FD read/write with sibling traversal denial. The first compile attempt found two Android test SDK mistakes; fixes are now in the latest source commit and the rerun is pending. Do not count this as an accepted security boundary yet.
+
+Required: pass the UID, directory-FD and listener-FD proofs on API 26/33/35; build the cell manager; move archive extraction, CPython and Node execution into cells; deny all new outbound IPv4/IPv6 TCP/UDP/raw sockets and DNS/native/child-process bypasses; test host/sibling files, management services, private/link-local/metadata targets, descriptor revocation, process cleanup, resource exhaustion and restart; obtain independent security review.
+
+Exit: two live projects have distinct OS-enforced identities and private storage; project code cannot read or interfere with another project or host data; project code cannot create outbound network connections; Rust can still serve real Python and Node visitor traffic through the brokered listener; API 26/33/35 tests and independent review pass. A separate process or path validation alone is not sandboxing.
 
 ## Gate 3 — Rust governor and Capacity Lab (15%)
 

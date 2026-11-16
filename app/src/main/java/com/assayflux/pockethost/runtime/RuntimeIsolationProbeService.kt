@@ -83,6 +83,7 @@ open class RuntimeIsolationProbeService : Service() {
                             0x1A4
                         )
                         try {
+                            Os.fchmod(fd, 0x1A4)
                             val bytes = "created-by-isolated-cell".toByteArray(Charsets.UTF_8)
                             Os.write(fd, bytes, 0, bytes.size)
                         } finally {
@@ -93,6 +94,41 @@ open class RuntimeIsolationProbeService : Service() {
                     directory.close()
                     reply?.writeInt((if (ownFileReadable) 1 else 0) or
                         (if (siblingFileReadable) 2 else 0) or (if (created) 4 else 0))
+                }
+                TRANSACTION_BROKERED_LISTENER -> {
+                    val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
+                    var acceptedCount = 0
+                    try {
+                        repeat(2) {
+                            val accepted = Os.accept(listener.fileDescriptor, null)
+                            try {
+                                val request = ByteArray(128)
+                                var count = 0
+                                while (count < request.size) {
+                                    val read = Os.read(accepted, request, count, request.size - count)
+                                    if (read <= 0 || request.copyOfRange(0, count + read).contains(10.toByte())) {
+                                        count += read.coerceAtLeast(0)
+                                        break
+                                    }
+                                    count += read
+                                }
+                                val line = String(request, 0, count, Charsets.UTF_8).trim()
+                                val response = "isolated-listener:$line\n".toByteArray(Charsets.UTF_8)
+                                var sent = 0
+                                while (sent < response.size) {
+                                    val written = Os.write(accepted, response, sent, response.size - sent)
+                                    if (written <= 0) break
+                                    sent += written
+                                }
+                                if (line == "request-one" || line == "request-two") acceptedCount++
+                            } finally {
+                                Os.close(accepted)
+                            }
+                        }
+                    } finally {
+                        listener.close()
+                    }
+                    reply?.writeInt(acceptedCount)
                 }
                 else -> return super.onTransact(code, data, reply, flags)
             }
@@ -109,6 +145,7 @@ open class RuntimeIsolationProbeService : Service() {
         const val TRANSACTION_LOOPBACK = IBinder.FIRST_CALL_TRANSACTION + 2
         const val TRANSACTION_BROKERED_SOCKET = IBinder.FIRST_CALL_TRANSACTION + 3
         const val TRANSACTION_PROJECT_DIRECTORY = IBinder.FIRST_CALL_TRANSACTION + 4
+        const val TRANSACTION_BROKERED_LISTENER = IBinder.FIRST_CALL_TRANSACTION + 5
     }
 }
 

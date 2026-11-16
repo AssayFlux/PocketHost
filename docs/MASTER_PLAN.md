@@ -98,6 +98,12 @@ Rust serves GET/HEAD, streams files, supports ranges/MIME, canonicalizes paths, 
 - Executes under companion UID, distinct from host UID; cross-project access and outbound egress remain unresolved. Trusted code only.
 - See [Node Runtime](NODE_RUNTIME.md) and [Runtime Companion](RUNTIME_COMPANION.md).
 
+## 5.1 Security execution-cell target (Gate 2 — not yet implemented)
+
+The current companion process is a trusted broker only. User project code must move into one Android `isolatedProcess=true` service per project, with unique process names/UIDs. The broker passes a per-project directory FD, a separate scratch/runtime FD and a host-created loopback listener FD. The isolated cell has no Android permissions; it can accept on the already-created listener but cannot create outbound sockets. The Rust engine continues to proxy to the loopback port and remains the only public ingress.
+
+The first acceptance tests must prove that the directory FD allows project-local reads/writes while sibling and host paths remain inaccessible, and that a listener FD can accept multiple visitor connections from an isolated process. Do not migrate Chaquopy or Node until these primitives pass API 26/33/35. See [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md).
+
 ## 6. Adaptive hardware and capacity architecture (partially implemented)
 
 ### Telemetry

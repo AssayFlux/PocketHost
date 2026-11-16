@@ -32,6 +32,12 @@ The isolated-process probe showed that a distinct UID can deny host-private file
 
 Common credential files are filtered during project transfer, but this is not a complete secret scanner. Host management credentials and Cloudflare tokens must never be copied into runtime project roots. Python and Node remain owner-trusted-code-only. Do not call this a complete sandbox or expose arbitrary third-party code. Gate 2 is incomplete.
 
+## Security architecture proof spike — in progress
+
+The main branch now includes instrumentation for: (1) two simultaneous isolated service processes reporting distinct UIDs; (2) a connected visitor socket passed by Binder; (3) a host-created listener FD passed to the isolated process, which must accept and answer two connections; and (4) a project directory FD that must allow project-local read/write while blocking sibling traversal. The first directory-FD test compile exposed two SDK-surface mistakes (`adoptFd` expected an integer and `O_DIRECTORY` was unavailable); the latest source fixes this by duplicating the `FileDescriptor` with `ParcelFileDescriptor.dup` and opening the directory with `O_RDONLY`. The rerun must compile and execute the probe before the result is accepted. No runtime migration or Gate 2 completion is claimed.
+
+The selected architecture and full implementation sequence are in [SECURITY_GATE_2_EXECUTION_PLAN.md](SECURITY_GATE_2_EXECUTION_PLAN.md).
+
 ## Existing foundations
 
 Native Kotlin/Compose app; Rust/Tokio/Hyper static website origin; authenticated local management API and TypeScript/React console; Android cloudflared connector; encrypted backup/restore foundation; operational metrics/logs; initial Capacity Lab; separate-UID runtime companion source integration.

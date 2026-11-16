@@ -44,37 +44,35 @@ The existing isolated-process probe showed that Android can provide a distinct i
 - Do not require a device-wide VPN as the sole security boundary. Android permits only one active VPN service, and it can conflict with a user's existing VPN.
 - No user project code receives host credentials or a general-purpose network capability.
 
-## 4. Target execution-cell architecture
+## 4. Chosen target: isolated per-project service cells
 
-Every hosted project needs its own OS-enforced identity and private storage. A project cell must not share a Linux UID, writable directory, interpreter globals, process namespace or runtime cache with another project.
+The selected design is an Android isolated service process for each hosted project, not a shared companion UID and not a separately installed APK for every site. Android documents that an isolated service runs under a special isolated UID and has no permissions of its own.
 
-The preferred implementation spike is to compare these Android mechanisms:
+The normal runtime companion becomes a trusted broker only. It does not import project modules, start CPython or execute Node. Each declared cell service has a unique process name and is bound to exactly one project while active. The initial pool is four isolated cells; this is a bounded concurrent runtime capacity, not a limit on static sites. Revisit the pool size only after low-memory device measurements.
 
-### Option A — isolated per-project worker process
+The broker creates a private parent directory inaccessible by ordinary path traversal. It passes a descriptor for only the selected project's directory and its scratch/runtime directory. The cell addresses those roots through /proc/self/fd/<n>. The parent remains mode 0700; only the passed child directory is traversable. The cell must not receive a sibling descriptor or a descriptor for the parent.
 
-Use an Android isolated service identity for each project execution cell. The host/Rust broker passes only the project files and accepted visitor socket descriptors required by that cell. The cell must not receive general network permission or access to the host/companion app data directories.
+The broker also creates a loopback listener socket and passes its descriptor to the cell. The cell accepts visitor connections on that pre-created listener. It does not create TCP/UDP/raw sockets. Rust continues to proxy to the loopback port and remains the only public/LAN ingress. The current proof tests both a connected socket FD and a host-created listener FD.
 
-This option is acceptable only if the team proves all of the following on API 26+:
-- A distinct isolated UID is allocated per concurrently active project, not merely one UID shared by all service instances.
-- Python and Node can load the transferred project without granting access to host or sibling-project storage.
-- Rust can pass an already-accepted visitor socket descriptor to the cell and relay request/response bytes without giving the cell general socket creation/connect capability.
-- The cell cannot create outbound TCP/UDP/raw sockets or use DNS, IPv6, alternate transports or native code to bypass the restriction.
-- Process death, descriptor revocation, cleanup and project replacement do not leak access between cells.
+**Critical proof gate:** SELinux may prevent an isolated app from traversing app-data-labelled files even when a directory descriptor and Unix mode bits are passed. The current instrumentation tests own-project read/write and sibling traversal. If this fails, use the descriptor-only archive/VFS fallback in [SECURITY_GATE_2_EXECUTION_PLAN.md](SECURITY_GATE_2_EXECUTION_PLAN.md); do not chmod the companion parent or expose the full files directory.
 
-The existing loopback test is not evidence that this architecture works; it must be re-designed around brokered file/socket descriptors.
+The normal broker may retain only the permissions it needs to receive projects, create listener descriptors and manage cells. Project code runs only in isolated cells. Remove the worker package's INTERNET permission once the brokered-listener design is integrated and verified.
 
-### Option B — one signed worker package per project
+### Runtime integration requirements
 
-Generate/install a worker package for each project, with a unique Android package UID, private project directory, the same owner-controlled signing identity and no general `INTERNET` permission. Rust brokers inbound sockets to the worker through a capability-limited IPC interface.
+- Python: one CPython interpreter per cell; WSGI server adopts the passed listener FD; Chaquopy files/cache paths must be redirected to that cell's passed runtime directory.
+- Node: one Node environment per cell; Node adopts the passed listener FD using its existing-FD server support; project and cache paths use the cell's descriptors.
+- Rust: retain hostname/site routing and loopback reverse proxy; the broker registers each cell's loopback port and lifecycle state.
+- Lifecycle: revoke descriptors, stop and reap the isolated process before reusing a cell; prove child processes cannot outlive the cell.
+- Resource controls: enforce RLIMITs where Android permits them and measure PSS/CPU/FD/storage; do not claim a hard RAM quota without OS evidence.
 
-This option gives a natural Android package/UID boundary but has substantial product costs: package installation consent, package-count limits, APK duplication/size, updates, uninstall/recovery, signature rotation and API 26+ compatibility. It must be evaluated before adoption.
+### Rejected shortcuts
 
-### Rejected as primary controls
-
-- Python import hooks, monkey-patching `socket`, Node preload wrappers or hostname allowlists: bypassable by native code/raw sockets and not an OS security boundary.
-- Canonical path checks, archive filters or separate directories under one UID: code running as that UID can still access sibling files.
-- A shared companion UID with one process per project: process separation alone does not separate filesystem permissions.
-- A device-wide `VpnService` as the only egress control: one VPN is active at a time, it is not per-project when projects share a UID, and loopback handling must be proven rather than assumed.
+- One isolated process shared by multiple sites: UID and filesystem boundary are shared.
+- Same companion UID with separate processes/directories: projects can still read each other's files.
+- Python/Node monkey-patches, DNS allowlists or path validation as the primary boundary: bypassable.
+- Device-wide VPN as the only per-project egress control: conflicts with user VPNs and does not isolate same-UID projects.
+- One separately installed worker APK per project as the default: adds package-install prompts, signing/update complexity and repeated runtime storage; retain only as a fallback if isolated service file capabilities prove impossible.
 
 ## 5. Network capability model
 

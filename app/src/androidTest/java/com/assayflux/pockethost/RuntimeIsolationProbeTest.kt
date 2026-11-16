@@ -20,6 +20,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.net.ServerSocket
+import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -125,9 +127,9 @@ class RuntimeIsolationProbeTest {
             Os.chmod(siblingRoot.absolutePath, 0x1FF)
             Os.chmod(markerFile.absolutePath, 0x1A4) // 0644.
             Os.chmod(File(siblingRoot, "secret.txt").absolutePath, 0x1A4)
-            val directoryFd = ParcelFileDescriptor.adoptFd(
-                Os.open(projectRoot.absolutePath, OsConstants.O_RDONLY or OsConstants.O_DIRECTORY, 0)
-            )
+            val rawDirectoryFd = Os.open(projectRoot.absolutePath, OsConstants.O_RDONLY, 0)
+            val directoryFd = ParcelFileDescriptor.dup(rawDirectoryFd)
+            Os.close(rawDirectoryFd)
             val directoryData = Parcel.obtain()
             val directoryReply = Parcel.obtain()
             val directoryCapabilities = try {
@@ -153,6 +155,51 @@ class RuntimeIsolationProbeTest {
             assertTrue("Host could not read the isolated cell's project-local output",
                 File(projectRoot, "worker-created.txt").readText() == "created-by-isolated-cell")
             capabilityParent.deleteRecursively()
+
+            // A trusted process creates and binds the listener. The isolated process
+            // receives only that listener FD and accepts two visitor connections from it.
+            val listenerFd = Os.socket(
+                OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP
+            )
+            Os.bind(listenerFd, InetAddress.getByName("127.0.0.1"), 0)
+            Os.listen(listenerFd, 8)
+            val listenerPort = (Os.getsockname(listenerFd) as InetSocketAddress).port
+            val listenerPfd = ParcelFileDescriptor.dup(listenerFd)
+            val visitorOne = Socket("127.0.0.1", listenerPort)
+            val visitorTwo = Socket("127.0.0.1", listenerPort)
+            try {
+                visitorOne.getOutputStream().write("request-one\n".toByteArray(Charsets.UTF_8))
+                visitorOne.getOutputStream().flush()
+                visitorTwo.getOutputStream().write("request-two\n".toByteArray(Charsets.UTF_8))
+                visitorTwo.getOutputStream().flush()
+                val data = Parcel.obtain()
+                val reply = Parcel.obtain()
+                val acceptedCount = try {
+                    data.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
+                    listenerPfd.writeToParcel(data, 0)
+                    check(binder.transact(
+                        RuntimeIsolationProbeService.TRANSACTION_BROKERED_LISTENER,
+                        data, reply, 0
+                    )) { "Brokered listener transaction failed." }
+                    reply.readException()
+                    reply.readInt()
+                } finally {
+                    listenerPfd.close()
+                    data.recycle()
+                    reply.recycle()
+                }
+                assertTrue("Isolated process did not accept both host-listener connections", acceptedCount == 2)
+                val responses = listOf(
+                    visitorOne.getInputStream().bufferedReader().readLine(),
+                    visitorTwo.getInputStream().bufferedReader().readLine()
+                )
+                assertTrue("Listener FD did not return visitor responses", responses.toSet() ==
+                    setOf("isolated-listener:request-one", "isolated-listener:request-two"))
+            } finally {
+                visitorOne.close()
+                visitorTwo.close()
+                Os.close(listenerFd)
+            }
 
             val canRead = transactInt(
                 binder,

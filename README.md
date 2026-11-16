@@ -42,6 +42,7 @@
 - [Sites, deployment and file management](#sites-deployment-and-file-management)
 - [Backup, logs and operational reporting](#backup-logs-and-operational-reporting)
 - [Security model and limitations](#security-model-and-limitations)
+- [Security Gate 2 Execution Plan](docs/SECURITY_GATE_2_EXECUTION_PLAN.md)
 - [Build from source](#build-from-source)
 - [CI and verification](#ci-and-verification)
 - [Repository map](#repository-map)

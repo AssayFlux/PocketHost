@@ -57,15 +57,15 @@ These filters reduce accidental secret transfer; they are not a complete secret 
 
 ## Network and filesystem boundaries
 
-The companion UID prevents ordinary runtime code from directly reading host-app-private files. It does not create a security boundary between hosted projects: Python multi-site applications are imported into one interpreter/process, and every Python/Node project resides under the same companion UID and private directory.
+The current companion UID prevents ordinary runtime code from directly reading host-app-private files. It does not isolate hosted projects: Python multi-site applications share one interpreter/process, and all Python/Node projects reside under the same companion UID and private directory.
 
-Python WSGI now always binds to `127.0.0.1`; the Python API no longer accepts a LAN-bind override. Node's preload rewrites ordinary `net.Server.listen` calls to loopback. These are ingress/listener controls only. They do not block outbound TCP/UDP/raw sockets, DNS-based bypasses, native networking, private/link-local/metadata destinations or connections to loopback management services. The companion manifest currently grants Android `INTERNET` permission.
+Python WSGI is pinned to `127.0.0.1`; Node's preload constrains ordinary TCP listener binds. These are listener controls only. They do not block outbound TCP/UDP/raw sockets, DNS bypasses, native networking, private/link-local/metadata destinations or loopback management access. The current companion manifest still grants Android `INTERNET`.
 
-The isolated-process experiment produced a distinct UID and denied host-private file reads, but it could not use the existing loopback TCP path. Simply marking the current service `isolatedProcess=true` would break runtime routing and does not solve project file delivery.
+The isolated-process probe previously showed a distinct UID and denied host-private file reads, but its loopback attempt failed. The new design does not ask an isolated cell to create or connect a loopback socket: a trusted broker creates the listener and passes its already-open file descriptor to the isolated cell. Instrumentation now probes simultaneous isolated UIDs, Binder-transferred sockets, and a project-directory FD with sibling traversal denial. The API 26/33/35 results are still pending; these probes are not yet proof of a completed sandbox.
 
 **Security status: not a complete sandbox; Gate 2 remains open.** Python/Node are owner-trusted-code-only. Never run visitor-submitted, marketplace or other untrusted code. Do not put host credentials, Cloudflare tokens or other secrets in project roots.
 
-The target is a distinct OS identity and private project storage for every project, with outbound networking denied at the OS boundary and inbound visitor sockets brokered by Rust. See [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md).
+The chosen target is one `android:isolatedProcess=true` execution cell per project, with no permissions, a project-only directory/runtime descriptor and a host-created inbound listener descriptor. The normal companion becomes a trusted broker and must never execute project code. See [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md) and [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md).
 
 ## APK installation and updates
 

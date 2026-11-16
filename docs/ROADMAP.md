@@ -17,15 +17,15 @@ Source integration now moves Chaquopy/CPython and Node/V8 into the separate-UID 
 
 ## Gate 2 — Isolation and adversarial security (P0)
 
-**Current finding:** the companion is one Android UID for every project. Python multi-site routing imports multiple sites into one interpreter; Node/Python can read the companion-owned project tree. The companion has `INTERNET`, and its loopback-only listener policy does not restrict outbound sockets. Gate 2 is therefore **not complete**.
+**Current finding:** the normal runtime companion is one Android UID for every project. Python multi-site routing imports multiple sites into one interpreter; Node and Python can access companion-owned project files. The companion has `INTERNET`; loopback-only listener binding does not constrain outbound sockets. Gate 2 remains **incomplete**.
 
-The Android isolated-process probe demonstrated a different UID but could not use the current loopback TCP path. Do not flip `isolatedProcess=true` on the existing worker as a superficial fix.
+**Chosen implementation:** per-project Android isolated service processes, each with a distinct isolated UID and no permissions. A trusted broker passes only that project's directory/runtime descriptors and a host-created listener socket descriptor. The cell accepts visitor traffic from that pre-created listener; it does not create network sockets. Rust remains the only public ingress. See [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md).
 
-**Implementation sequence:** (1) spike a per-project OS identity with private project storage; (2) broker accepted visitor sockets from Rust so project workers need no general network permission; (3) enforce outbound denial at the OS boundary, not in Python/Node wrappers; (4) test IPv4/IPv6 TCP/UDP/raw sockets, DNS, rebinding, private/link-local/metadata targets and management loopback; (5) test cross-project file/process access, archive attacks, resource exhaustion and worker restart; (6) independent adversarial review.
+**Current proof spike:** instrumentation now checks simultaneous isolated UIDs, a Binder-transferred accepted visitor socket, a Binder-transferred listener that accepts two connections, and a directory-FD boundary that must allow access to one project while denying sibling traversal. CI is compiling/running this probe; results are not yet accepted. The directory-FD approach must pass SELinux checks on API 26/33/35. If it fails, use the descriptor-only VFS fallback; never broaden access to the companion files directory.
 
-Candidate Android mechanisms and their API 26+ constraints are recorded in [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md). Until that design is implemented and tested, only owner-trusted code may run.
+**Implementation sequence:** (1) pass the UID, directory-FD and listener-FD proofs; (2) build the isolated-cell slot manager and authenticated broker; (3) move bounded archive extraction into each isolated cell; (4) migrate Python to one interpreter per cell and WSGI over the passed listener FD; (5) migrate Node to one environment per cell and an existing-FD listener; (6) enforce descriptor revocation, process cleanup and resource limits; (7) complete filesystem/network/process adversarial tests and independent review.
 
-**Exit:** two projects cannot read or interfere with each other; worker processes cannot create outbound network connections or reach management/private targets; Rust can still deliver inbound requests through a brokered socket; tests prove the OS boundary on API 26/33/35. A separate process or path validation alone is not sandboxing.
+**Exit:** two live projects have distinct UIDs and cannot read or interfere with each other; project code cannot create outbound TCP/UDP/raw sockets or bypass through DNS/native/child processes; the host-created listener supports real Python and Node requests through Rust; API 26/33/35 and independent security review pass. A separate process or path validation alone is not sandboxing.
 
 ## Gate 3 — Rust governor and Capacity Lab (P0)
 

@@ -13,6 +13,8 @@ Start here, in this order:
 ## Feature and operations references
 
 - [Adaptive Capacity, Security, Payments and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
+- [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md)
+- [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md)
 - [Runtime Companion](RUNTIME_COMPANION.md)
 - [Python Runtime](PYTHON_RUNTIME.md)
 - [Node Runtime](NODE_RUNTIME.md)
