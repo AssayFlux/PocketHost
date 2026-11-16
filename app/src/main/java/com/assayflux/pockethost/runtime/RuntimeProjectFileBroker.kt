@@ -60,7 +60,7 @@ object RuntimeProjectFileBroker {
         require(content.size <= MAX_BROKER_WRITE_BYTES) { "Write chunk exceeds the broker limit." }
         val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
-        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
@@ -109,7 +109,7 @@ object RuntimeProjectFileBroker {
     ): ParcelFileDescriptor {
         val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
-        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
