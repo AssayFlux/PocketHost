@@ -16,4 +16,7 @@ object NetworkSandbox {
     @JvmStatic external fun duplicateToStandardInput(socketFd: Int): Int
     @JvmStatic external fun getResourceLimits(): LongArray
     @JvmStatic external fun getPeerUid(socketFd: Int): Int
+
+    /** Returns 1 only when fcntl(F_GETFD) reports EBADF, 0 when open, negative errno otherwise. */
+    @JvmStatic external fun isDescriptorClosed(fd: Int): Int
 }
