@@ -21,6 +21,12 @@
             android:isolatedProcess="true"
             android:process=":cell_probe" />
         <service
+            android:name=".RuntimeCellProbeServiceTwo"
+            android:exported="true"
+            android:permission="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
+            android:isolatedProcess="true"
+            android:process=":cell_probe_2" />
+        <service
             android:name=".RuntimeWorkerService"
             android:exported="true"
             android:permission="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
