@@ -8,6 +8,7 @@ on:
       - "app/build.gradle.kts"
       - "runtime-worker/build.gradle.kts"
       - "rust-engine/Cargo.toml"
+      - ".cargo/config.toml"
       - "control-plane/Cargo.toml"
       - "web-console/package.json"
       - ".github/workflows/lock-dependencies.yml"
@@ -37,7 +38,7 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: "platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
