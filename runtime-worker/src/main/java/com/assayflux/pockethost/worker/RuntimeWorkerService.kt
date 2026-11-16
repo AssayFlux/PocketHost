@@ -93,7 +93,9 @@ class RuntimeWorkerService : Service() {
         check(pythonModule()?.callAttr("is_project_active", destination.absolutePath)?.toString() != "True") {
             "Stop the Python site before replacing its transferred project."
         }
-        check(NodeRuntimeStateStore.projectRoot(this) != destination.absolutePath) {
+        val nodeState = NodeRuntimeStateStore.state(this)
+        val nodeProject = NodeRuntimeStateStore.projectRoot(this)
+        check(nodeState !in setOf("RUNNING", "STARTING", "STOPPING") || nodeProject != destination.absolutePath) {
             "Stop the Node.js site before replacing its transferred project."
         }
         val staging = File(projectsRoot, ".$siteId-staging").apply {
