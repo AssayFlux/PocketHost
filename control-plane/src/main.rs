@@ -827,7 +827,7 @@ async fn relay_visitor(
         .ok_or((StatusCode::NOT_FOUND, "relay_hostname_not_found".into()))?;
     let device: Uuid = route.get("device_id");
     let site_id: String = route.get("site_id");
-    if !matches!(parts.method, Method::GET | Method::HEAD | Method::POST | Method::PUT | Method::PATCH | Method::DELETE | Method::OPTIONS) {
+    if ![Method::GET, Method::HEAD, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS].contains(&parts.method) {
         return Err((StatusCode::METHOD_NOT_ALLOWED, "relay_method_not_allowed".into()));
     }
     let path = parts.uri.path_and_query().map(|value| value.as_str()).unwrap_or("/");
