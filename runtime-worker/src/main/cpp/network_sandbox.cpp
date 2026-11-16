@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <linux/sched.h>
 #include <sys/socket.h>
+#include <sys/un.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -321,4 +323,27 @@ Java_com_assayflux_pockethost_worker_NetworkSandbox_isDescriptorClosed(
     if (fcntl(fd, F_GETFD) >= 0) return 0;
     if (errno == EBADF) return 1;
     return -(errno == 0 ? EIO : errno);
+}
+
+
+/**
+ * Attempt connect() with a valid AF_UNIX sockaddr while seccomp is active.
+ * Using the broker listener FD avoids creating a new socket (also denied).
+ * The kernel must report EPERM from seccomp before socket-state validation.
+ */
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_probeConnectErrno(
+    JNIEnv*, jclass, jint listener_fd) {
+    struct sockaddr_un address {};
+    address.sun_family = AF_UNIX;
+    const char name[] = "pockethost-seccomp-denied";
+    address.sun_path[0] = '\0';
+    memcpy(address.sun_path + 1, name, sizeof(name) - 1);
+    const socklen_t address_length = static_cast<socklen_t>(
+        offsetof(struct sockaddr_un, sun_path) + 1 + sizeof(name) - 1);
+    errno = 0;
+    if (connect(listener_fd, reinterpret_cast<struct sockaddr*>(&address), address_length) == 0) {
+        return 0;
+    }
+    return errno == 0 ? EIO : errno;
 }
