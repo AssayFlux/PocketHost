@@ -55,9 +55,7 @@ class RuntimeWorkerService : Service() {
 
     private fun ensurePython(): com.chaquo.python.PyObject {
         if (!Python.isStarted()) Python.start(AndroidPlatform(applicationContext))
-        val module = Python.getInstance().getModule("pockethost_runtime")
-        module.callAttr("configure", 8)
-        return module
+        return Python.getInstance().getModule("pockethost_runtime")
     }
 
     private fun pythonModule(): com.chaquo.python.PyObject? =
@@ -246,6 +244,12 @@ class RuntimeWorkerService : Service() {
                         val fd = ParcelFileDescriptor.CREATOR.createFromParcel(data)
                         installProject(siteId, fd)
                     }
+                    TRANSACTION_PYTHON_CONFIGURE -> {
+                        val workers = data.readInt()
+                        require(workers in 2..16) { "Python worker limit must be between 2 and 16." }
+                        ensurePython().callAttr("configure", workers)
+                        "CONFIGURED"
+                    }
                     TRANSACTION_PYTHON_START -> startPython(data.readString().orEmpty(), data.readInt())
                     TRANSACTION_PYTHON_START_SITES -> startPythonSites(data.readString().orEmpty(), data.readInt())
                     TRANSACTION_PYTHON_STOP -> synchronized(runtimeLock) {
@@ -321,6 +325,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_NODE_STATUS = IBinder.FIRST_CALL_TRANSACTION + 12
         const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
         const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
+        const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
