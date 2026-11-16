@@ -62,3 +62,7 @@ Credentials remain device-bound and must be configured independently on a replac
 - Existing custom-root round-trip coverage also exercises duplicate-host validation failure and rollback of the previous custom root, default site and route registry.
 - These are test definitions only until the API 26/33/35 Android integration workflow executes successfully. Low-storage, interrupted I/O, process-death recovery and rollback-failure preservation still require dedicated fault injection and executed evidence.
 
+## Interrupted deployment recovery — 2026-11-16
+
+If activation is interrupted after the previous static site has been moved into release history, the next app startup checks the active website entry page. When the active site is missing or invalid, Pocket Host restores the newest retained release with a valid root index.html and preserves invalid active data for diagnosis. This recovery path is instrumented in source; API 26/33/35 execution and full backup-restore process-death recovery remain unverified.
+
