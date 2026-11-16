@@ -66,6 +66,30 @@ static int install_policy(int listener_fd) {
 #ifdef __NR_bind
         DENY_SYSCALL(__NR_bind),
 #endif
+// A pre-opened or inherited socket must not become an egress channel.
+// Visitor traffic is consumed only from the brokered accepted stream using
+// read/write; socket-specific send/receive and descriptor-passing APIs are denied.
+#ifdef __NR_sendto
+        DENY_SYSCALL(__NR_sendto),
+#endif
+#ifdef __NR_sendmsg
+        DENY_SYSCALL(__NR_sendmsg),
+#endif
+#ifdef __NR_sendmmsg
+        DENY_SYSCALL(__NR_sendmmsg),
+#endif
+#ifdef __NR_recvfrom
+        DENY_SYSCALL(__NR_recvfrom),
+#endif
+#ifdef __NR_recvmsg
+        DENY_SYSCALL(__NR_recvmsg),
+#endif
+#ifdef __NR_recvmmsg
+        DENY_SYSCALL(__NR_recvmmsg),
+#endif
+#ifdef __NR_shutdown
+        DENY_SYSCALL(__NR_shutdown),
+#endif
 #ifdef __NR_socketcall
         DENY_SYSCALL(__NR_socketcall),
 #endif
