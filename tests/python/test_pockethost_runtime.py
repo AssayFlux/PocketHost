@@ -31,6 +31,7 @@ class PythonHostRuntimeTest(unittest.TestCase):
                 self.assertEqual("RUNNING", runtime.start(project, port))
                 self.assertEqual("ALREADY_RUNNING", runtime.start(project, port))
                 self.assertEqual("RUNNING", runtime.status())
+                self.assertTrue(runtime.is_project_active(project))
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
                     self.assertEqual(200, response.status)
                     self.assertEqual(b"PocketHost WSGI test", response.read())
@@ -47,6 +48,7 @@ class PythonHostRuntimeTest(unittest.TestCase):
             finally:
                 self.assertEqual("STOPPED", runtime.stop())
             self.assertEqual("STOPPED", runtime.status())
+            self.assertFalse(runtime.is_project_active(project))
 
     def test_rejects_invalid_port(self):
         with tempfile.TemporaryDirectory() as project:
