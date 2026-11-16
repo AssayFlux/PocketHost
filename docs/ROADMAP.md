@@ -125,3 +125,8 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 - Gate 6 recovery hardening: invalid active websites without any safe fallback now emit a recovery error; instrumentation adds a symlinked-active-root case proving the link target is not activated.
 
+## 2026-11-16 full backup restore recovery increment
+
+- Gate 6: full app restore now persists a fsynced transaction journal before destructive renames and a separate commit marker only after site, routes and safe settings are committed. Startup recovery restores previous Python/Node projects, custom static roots, the previous static release, route registry and non-secret settings when a process dies mid-restore. Failed recovery preserves its remaining rollback material.
+- Android instrumentation simulates a killed restore after partial static/Python/custom-root and preference mutation and verifies the prior state is restored. This source test remains unexecuted pending API 26/33/35 workflow evidence.
+
