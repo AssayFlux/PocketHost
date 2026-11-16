@@ -42,6 +42,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Generate checksum-pinned Gradle wrapper
+        run: |
+          gradle wrapper --gradle-version 8.9 --distribution-type bin --gradle-distribution-sha256-sum d725d707bfabd4dfdc958c624003b3c80accc03f7037b5122c4b1d0ef15cecab
+          echo "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17  gradle/wrapper/gradle-wrapper.jar" | sha256sum --check
       - name: Resolve Cargo dependency graphs
         run: |
           cargo generate-lockfile --manifest-path rust-engine/Cargo.toml
@@ -50,7 +54,7 @@ jobs:
         working-directory: web-console
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Resolve Android Gradle dependency graphs without building APKs
-        run: gradle --no-daemon --write-locks :app:dependencies :runtime-worker:dependencies
+        run: ./gradlew --no-daemon --write-locks :app:dependencies :runtime-worker:dependencies
       - name: Commit generated dependency locks
         run: |
           set -euo pipefail
