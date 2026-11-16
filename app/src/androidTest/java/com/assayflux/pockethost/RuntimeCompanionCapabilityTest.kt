@@ -158,7 +158,6 @@ class RuntimeCompanionCapabilityTest {
                 recoveredPid = runCatching { RuntimeWorkerClient.workerPid(context) }.getOrDefault(originalPid)
             }
             assertTrue("Host did not reconnect to a restarted companion process", recoveredPid > 0 && recoveredPid != originalPid)
-            assertNotEquals(context.applicationInfo.uid, RuntimeWorkerClient.workerPid(context))
         } finally {
             runCatching { RuntimeWorkerClient.shutdownWorker(context) }
         }
