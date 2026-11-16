@@ -139,7 +139,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || github.event_name == 'pull_request'
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_emulators) || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[emulators]'))
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
