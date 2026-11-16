@@ -185,7 +185,7 @@ The primary version is complete only when the gates below have objective exit ev
 - Pin Rust 1.88, checksum-verified Gradle 8.9 wrapper, Android SDK/NDK/CMake inputs and native runtime artifacts.
 - Acceptance: one canonical baseline; active docs distinguish planned/source-present/verified work; locked dependency resolution succeeds on exact SHA.
 
-**Status:** complete at source baseline `b7775a2450c0633aaa44b58cb2cdb468a47ea0ca`.
+**Status:** complete; canonical source/evidence baseline refreshed 2026-11-16 in `docs/PROJECT_BASELINE.md`.
 
 ### Gate 1 — Runtime migration
 - Complete companion lifecycle, Binder death/rebind, version negotiation, bounded transfer, crash-recoverable replacement and coordinated shutdown.
@@ -289,5 +289,6 @@ No universal visitor number or uptime guarantee. Capacity is workload-specific a
 
 ### Current gate evidence addendum — 2026-11-16
 
-- Gate 2 remains **open**. Lease/capability broker primitives, archive hardening and an isolated-UID/seccomp feasibility probe exist in source; the production runtime is still shared-UID and has not migrated Python/Node into per-project cells. No API 26/33/35 adversarial acceptance is claimed.
-- Gate 4 remains **open**. Remote control-plane user/device token lifecycle, immediate device- and team-user-token rotation, role checks and transactional audit coverage have been implemented in source. This does not yet implement passkey-first owner identity or independent Public/Private/Restricted visitor authorization with site-scoped tokens.
+- Gate 2 remains **open**. Lease/capability broker primitives, archive hardening and an isolated-UID/seccomp feasibility probe exist in source. The probe now closes inherited socket descriptors and its instrumentation source asserts socket/connect/bind denial, but the production runtime is still shared-UID and Python/Node have not migrated into per-project cells. Chaquopy/Node app-private storage bootstrap and real Binder caller-UID authorization remain unresolved. No Android compile or API 26/33/35 adversarial acceptance is claimed.
+- Gate 3 remains **open and not implemented**. `docs/ASSAYFLUX_RELAY.md` is a specification; HTTP polling for remote management is not a Relay. No persistent device tunnel, visitor stream forwarding, hostname registry/certificate lifecycle or Android Relay Agent exists.
+- Gate 4 remains **open**. Remote control-plane user/device token lifecycle, immediate token rotation, role checks, transactional audit and 12-hour revocable admin sessions are implemented and covered by PostgreSQL CI. This does not yet implement passkey-first local Owner identity or independent Public/Private/Restricted visitor authorization with site-scoped tokens.
