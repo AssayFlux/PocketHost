@@ -124,13 +124,14 @@ class RuntimeWorkerService : Service() {
         // earlier entries during extraction.
         val archivePaths = HashMap<String, Boolean>()
         val portableNames = HashSet<String>()
+        val explicitEntries = HashSet<String>()
         try {
             ZipInputStream(FileInputStream(descriptor.fileDescriptor).buffered()).use { zip ->
                 while (true) {
                     val entry = zip.nextEntry ?: break
                     entries++
                     require(entries <= MAX_ARCHIVE_ENTRIES) { "Project archive contains too many entries." }
-                    val rawName = entry.name.replace('\\\\', '/')
+                    val rawName = entry.name.replace('\\', '/')
                     val isDirectory = entry.isDirectory || rawName.endsWith("/")
                     val name = rawName.trimEnd('/')
                     require(name.isNotBlank() && !name.startsWith("/") &&
@@ -147,8 +148,11 @@ class RuntimeWorkerService : Service() {
                         require(knownParent != false) { "Project archive has a file used as a directory." }
                         archivePaths.putIfAbsent(parent, true)
                     }
+                    require(explicitEntries.add(name)) { "Project archive contains duplicate paths." }
                     val previousType = archivePaths.putIfAbsent(name, isDirectory)
-                    require(previousType == null) { "Project archive contains duplicate or conflicting paths." }
+                    require(previousType == null || (previousType == true && isDirectory)) {
+                        "Project archive contains conflicting file and directory paths."
+                    }
                     require(portableNames.add(name.lowercase(java.util.Locale.ROOT))) {
                         "Project archive contains paths that differ only by letter case."
                     }
