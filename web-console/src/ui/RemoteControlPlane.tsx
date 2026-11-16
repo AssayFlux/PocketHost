@@ -20,6 +20,7 @@ const initialPayloads: Record<string, string> = {
 export function RemoteControlPlane() {
   const [endpoint, setEndpoint] = useState(() => localStorage.getItem("pockethost_control_endpoint") || "");
   const [adminToken, setAdminToken] = useState(() => sessionStorage.getItem("pockethost_control_admin") || "");
+  const [sessionToken, setSessionToken] = useState("");
   const [deviceName, setDeviceName] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
@@ -37,12 +38,13 @@ export function RemoteControlPlane() {
   const [busy, setBusy] = useState(false);
   const [archive, setArchive] = useState<File | null>(null);
 
-  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async function request<T>(path: string, init: RequestInit = {}, bearerToken = sessionToken): Promise<T> {
+    if (!bearerToken) throw new Error("Create an administrative session before using the Control Plane.");
     const response = await fetch(endpoint.replace(/\/$/, "") + path, {
       ...init,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${adminToken}`,
+        Authorization: `Bearer ${bearerToken}`,
         ...init.headers,
       },
       cache: "no-store",
@@ -61,15 +63,39 @@ export function RemoteControlPlane() {
     setBusy(true);
     try {
       if (!endpoint.startsWith("https://")) throw new Error("Use an HTTPS Control Plane URL.");
+      const sessionResponse = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${adminToken}` },
+        cache: "no-store",
+      });
+      const sessionBody = await sessionResponse.json() as { accessToken?: string; error?: string };
+      if (!sessionResponse.ok || !sessionBody.accessToken) {
+        throw new Error(sessionBody.error || `Control Plane session exchange failed (HTTP ${sessionResponse.status}).`);
+      }
+      const nextSession = sessionBody.accessToken;
+      setSessionToken(nextSession);
       localStorage.setItem("pockethost_control_endpoint", endpoint);
       sessionStorage.setItem("pockethost_control_admin", adminToken);
-      const next = await request<Device[]>("/v1/admin/devices");
+      const next = await request<Device[]>("/v1/admin/devices", {}, nextSession);
       setDevices(next);
-      setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit"));
-      setMessage(`Connected. ${next.length} registered device(s).`);
+      setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit", {}, nextSession));
+      setMessage(`Connected with a 12-hour administrative session. ${next.length} registered device(s).`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not connect to the Control Plane.");
     } finally { setBusy(false); }
+  }
+
+  async function disconnect() {
+    setBusy(true);
+    try {
+      await request<void>("/v1/admin/session", { method: "DELETE" });
+      setSessionToken("");
+      setDevices([]);
+      setUsers([]);
+      setSelected("");
+      setMessage("Administrative session revoked.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not revoke the session."); }
+    finally { setBusy(false); }
   }
 
   async function refreshDevices() {
@@ -201,18 +227,19 @@ export function RemoteControlPlane() {
     <div className="panel-heading"><h3>Remote Control Plane</h3><span className="muted-tag">INDEPENDENT BACKEND</span></div>
     <p>Manage registered PocketHost phones while their hosting services remain active. The backend queues typed commands; the phone initiates outbound HTTPS polling.</p>
     <div className="resource-panel">
-      <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => setEndpoint(event.target.value)} placeholder="https://control.example.com" /></label>
-      <label>Control Plane access token<input type="password" value={adminToken} onChange={event => setAdminToken(event.target.value)} placeholder="Owner, Editor or Viewer bearer token" /></label>
+      <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => { setEndpoint(event.target.value); setSessionToken(""); }} placeholder="https://control.example.com" /></label>
+      <label>API credential<input type="password" value={adminToken} onChange={event => { setAdminToken(event.target.value); setSessionToken(""); }} placeholder="Owner, Editor or Viewer credential" /><small>Used only to create a short-lived administrative session; it is not accepted by management endpoints.</small></label>
       <div className="site-actions">
-        <button disabled={busy || !endpoint.startsWith("https://") || adminToken.length < 32} onClick={connect}>Connect</button>
-        <button disabled={busy || !adminToken} onClick={refreshDevices}>Refresh devices</button>
+        <button disabled={busy || !endpoint.startsWith("https://") || adminToken.length < 32} onClick={connect}>Create session &amp; connect</button>
+        <button disabled={busy || !sessionToken} onClick={refreshDevices}>Refresh devices</button>
+        <button disabled={busy || !sessionToken} onClick={disconnect}>Disconnect</button>
       </div>
     </div>
     <p className="scope-note">{message}</p>
     <div className="section-heading"><div><span className="eyebrow">DEVICE REGISTRY</span><h2>Registered phones</h2></div><span className="muted-tag">{devices.length} DEVICES</span></div>
     <div className="resource-panel">
       <label>New device name<input value={deviceName} onChange={event => setDeviceName(event.target.value)} placeholder="e.g. PocketHost main phone" /></label>
-      <button disabled={busy || !adminToken || !deviceName.trim()} onClick={registerDevice}>Register device</button>
+      <button disabled={busy || !sessionToken || !deviceName.trim()} onClick={registerDevice}>Register device</button>
       {issuedToken && <div className="notice"><div><strong>One-time device token</strong><p>Copy this token into Advanced Mode on the target phone. It will not be shown again.</p><code>{issuedToken}</code><button onClick={() => void navigator.clipboard.writeText(issuedToken)}>Copy token</button></div></div>}
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
