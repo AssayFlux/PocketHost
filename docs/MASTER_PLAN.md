@@ -39,8 +39,8 @@ The owner already has a domain and Cloudflare Tunnel. Reuse the existing named t
 | Core engine | Rust, Tokio, Hyper | HTTP ingress, host routing, static serving, reverse proxy, request admission, metrics | Android permission/UI concerns |
 | JNI | Kotlin/C++/Rust boundary | Versioned coarse-grained start/stop/config/status | Per-request callbacks |
 | Local console | TypeScript, React, Vite | Owner-facing local management | Secret-bearing unauthenticated public endpoints |
-| Python | CPython 3.11 / Chaquopy | One WSGI application | Arbitrary untrusted multi-tenant code |
-| Node.js | Pinned Node 24 mobile SDK | One active embedded app in `:node` process | Desktop process manager assumptions |
+| Python | CPython 3.11 / Chaquopy in companion UID | WSGI applications with host routing; trusted code only | Arbitrary untrusted multi-tenant code |
+| Node.js | Pinned Node 24 mobile SDK in companion UID | One active embedded app in companion `:node` process | Desktop process manager assumptions |
 | Tunnel | cloudflared | Outbound Cloudflare connection | Visitor authorization or overload control |
 | Remote control plane | Rust/Axum + PostgreSQL | Optional remote device registry, command queue, roles and audit | Serving the user's website |
 | Resource Governor (planned) | Rust policy engine + Android telemetry | Safe admission budgets, throttling, queues and recovery | Claiming to reserve CPU or override Android |
@@ -82,21 +82,21 @@ The control plane is not required for local hosting or Cloudflare connectivity. 
 Rust serves GET/HEAD, streams files, supports ranges/MIME, canonicalizes paths, validates hosts and bounds connections. Static hosting must remain available when optional runtimes fail or are reconfigured.
 
 ### Python WSGI
-- CPython 3.11 via Chaquopy.
-- Root `wsgi.py` exports callable `application`.
-- One active application; bounded 2–16 worker threads.
-- No automatic pip install, ASGI/WebSockets or hard CPU/RAM quota.
-- Runs with PocketHost app UID: trusted code only; not a sandbox.
-- See [Python Runtime](PYTHON_RUNTIME.md).
+- CPython 3.11 via Chaquopy is packaged in `:runtime-worker`, not the host APK.
+- Host transfers a bounded project archive over signature-protected, versioned Binder IPC; companion extracts to its own private project directory.
+- Root `wsgi.py` exports callable `application`; multi-host routing supports up to 100 registered hostnames.
+- Bounded 2–16 worker threads; no automatic pip install, ASGI/WebSockets or hard CPU/RAM quota.
+- Executes under companion UID, distinct from host UID; projects still share that UID and outbound egress is not yet enforced. Trusted code only; not a complete sandbox.
+- See [Python Runtime](PYTHON_RUNTIME.md) and [Runtime Companion](RUNTIME_COMPANION.md).
 
 ### Node.js
-- Pinned `fogtape/nodejs-mobile` `v24.22.1-0`, upstream Node 24.22.1.
-- JNI `node::Start`; dedicated Android `:node` process.
+- Pinned `fogtape/nodejs-mobile` `v24.22.1-0`, upstream Node 24.22.1, packaged in companion APK.
+- JNI `node::Start`; dedicated companion `:node` process, same companion UID as Python.
 - One active app; dependencies prebundled; no normal npm install/PM2/cluster/desktop child process.
-- TCP loopback preload is not a complete network sandbox.
+- TCP loopback preload constrains listener exposure but is not a complete network sandbox.
 - V8 old-space 96–512 MiB is not a hard RSS/CPU quota.
-- Runs with PocketHost app UID: trusted code only; not a sandbox.
-- See [Node Runtime](NODE_RUNTIME.md).
+- Executes under companion UID, distinct from host UID; cross-project access and outbound egress remain unresolved. Trusted code only.
+- See [Node Runtime](NODE_RUNTIME.md) and [Runtime Companion](RUNTIME_COMPANION.md).
 
 ## 6. Adaptive hardware and capacity architecture (partially implemented)
 
@@ -127,7 +127,7 @@ Full requirements: [Adaptive Capacity, Security, Payments and Operations](ADAPTI
 - Pairing and session authorization for local management; route-level auth tests required.
 - Protect credentials with Android Keystore or a suitable remote secrets manager.
 - Validate imported archives, paths, sizes, counts and activation boundaries.
-- Python/Node are trusted-code only until distinct UID isolation, filesystem/network confinement and enforceable quotas are proven.
+- Python/Node execute in a separate-UID companion; they remain trusted-code only until per-project filesystem isolation, network-egress enforcement and adversarial review are complete.
 - Prevent runtime access to management endpoints, payment secrets, other projects and private network targets.
 - Do not expose LAN mode without an explicit owner decision and clear visitor-auth limitations.
 - Use a payment provider's hosted/tokenized checkout; never store PAN/CVV/PIN.
