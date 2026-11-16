@@ -9,7 +9,7 @@ const http = require('node:http');
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'pockethost-node-metrics-'));
 const metricsFile = path.join(directory, 'metrics.json');
 process.env.POCKETHOST_METRICS_FILE = metricsFile;
-require('../../app/src/main/assets/pockethost-node-metrics.cjs');
+require('../../runtime-worker/src/main/assets/pockethost-node-metrics.cjs');
 
 const server = http.createServer((_request, response) => response.end('ok'));
 server.listen(0, '0.0.0.0', () => {
