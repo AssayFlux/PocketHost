@@ -257,3 +257,5 @@ The Rust engine applies a streaming-response semaphore per distinct site target 
 
 - Rust admission regression coverage now also proves that a saturated target's semaphore does not consume a different target's response permit; the shared global connection budget remains independently bounded.
 
+- Startup recovery now reports an explicit recovery failure when an invalid active deployment exists but no safe release is available; the app records this condition instead of silently treating it as no-op. Symlink-root recovery is covered by instrumentation source.
+
