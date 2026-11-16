@@ -24,7 +24,7 @@
         on_demand
     }
     encode zstd gzip
-    reverse_proxy control-plane:8080
+    reverse_proxy control-plane:8081
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
