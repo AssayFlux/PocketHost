@@ -68,7 +68,7 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
     @Volatile private var acceptThread: Thread? = null
     @Volatile private var appContext: Context? = null
     @Volatile private var pending: Pairing? = null
-    private data class Session(val expiresAt: Long, val username: String, val role: String, val deviceApprovedPairing: Boolean = false, val recentAuthAt: Long = 0L)
+    private data class Session(val expiresAt: Long, val username: String, val role: String, val deviceApprovedPairing: Boolean = false, val recentAuthAt: Long = 0L, val trustedAutomation: Boolean = false)
     private val sessions = HashMap<String, Session>()
     private val pairingLock = Any()
     private val loginAttemptsLock = Any()
@@ -354,7 +354,7 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
             else { sessions.remove(tokenHash(raw)); null }
         } }
         if (session == null) return 401 to JSONObject().put("error", "unauthorized")
-        if (session.role == "OWNER" && isSensitiveOwnerMutation(method, path) &&
+        if (session.role == "OWNER" && !session.trustedAutomation && isSensitiveOwnerMutation(method, path) &&
             ownerReauthenticationRequired(session.role, session.recentAuthAt, Instant.now().epochSecond)) {
             return 428 to JSONObject().put("error", "owner_reauthentication_required")
                 .put("message", "Sign in again with the Owner credential before changing site access, visitor credentials, accounts, or hosting controls.")
@@ -746,7 +746,7 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
     fun executeRemoteCommand(context: Context, kind: String, payload: JSONObject): JSONObject {
         appContext = context.applicationContext
         val token = randomToken(32)
-        synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + 60, "remote-control", "OWNER") }
+        synchronized(sessions) { sessions[tokenHash(token)] = Session(Instant.now().epochSecond + 60, "remote-control", "OWNER", recentAuthAt = Instant.now().epochSecond, trustedAutomation = true) }
         try {
             val result = when (kind) {
                 "site_action" -> {
