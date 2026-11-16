@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <queries>
+        <package android:name="com.assayflux.pockethost.worker" />
+    </queries>
     <application android:networkSecurityConfig="@xml/network_security_config" android:allowBackup="false" android:label="AssayFlux Pocket Host" android:supportsRtl="true" android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity android:name=".BiometricHostActivity" android:exported="false" />
         <activity android:name=".SitePreviewActivity" android:exported="false" />
@@ -22,7 +25,4 @@
         </service>
         <service android:name=".runtime.RuntimeIsolationProbeService" android:exported="false" android:isolatedProcess="true" android:process=":runtime_probe" />
     </application>
-    <queries>
-        <package android:name="com.assayflux.pockethost.worker" />
-    </queries>
 </manifest>
