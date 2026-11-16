@@ -346,8 +346,10 @@ async fn put_config(
         .bind(Uuid::new_v4()).bind(id)
         .bind(json!({"version":next,"config":committed_config}))
         .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&role.name).bind("config.update").bind(id.to_string())
+        .bind(json!({"version":next})).execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, &role.name, "config.update", &id.to_string(), json!({"version":next})).await?;
     Ok(Json(ConfigView { version: row.get("version"), config: row.get("config"), updated_at: row.get("updated_at") }))
 }
 
@@ -363,10 +365,15 @@ async fn queue_command(
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "command_payload_too_large".into()));
     }
     let command_id = Uuid::new_v4();
+    let mut tx = s.db.begin().await.map_err(internal)?;
     let result = sqlx::query("INSERT INTO device_commands(id,device_id,kind,payload) SELECT $1,id,$2,$3 FROM devices WHERE id=$4")
-        .bind(command_id).bind(&input.kind).bind(input.payload).bind(id).execute(&s.db).await.map_err(internal)?;
+        .bind(command_id).bind(&input.kind).bind(input.payload).bind(id).execute(&mut *tx).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "device_not_found".into())); }
-    audit(&s, &role.name, "command.queue", &id.to_string(), json!({"commandId":command_id,"kind":input.kind})).await?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&role.name).bind("command.queue").bind(id.to_string())
+        .bind(json!({"commandId":command_id,"kind":input.kind}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
     Ok((StatusCode::ACCEPTED, Json(json!({"commandId":command_id,"state":"queued"}))))
 }
 
