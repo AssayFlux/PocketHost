@@ -335,6 +335,10 @@ object ApplicationBackupManager {
     private fun writeRestoreJournal(directory: File, journal: JSONObject) {
         val temporary = File(directory, RESTORE_JOURNAL + ".tmp")
         val file = File(directory, RESTORE_JOURNAL)
+        if (java.nio.file.Files.isSymbolicLink(temporary.toPath()) ||
+            java.nio.file.Files.isSymbolicLink(file.toPath())) {
+            throw IOException("Restore journal path cannot be a symbolic link.")
+        }
         java.io.FileOutputStream(temporary).use { output ->
             output.write(journal.toString().toByteArray(Charsets.UTF_8))
             output.fd.sync()
@@ -347,7 +351,11 @@ object ApplicationBackupManager {
 
     private fun markRestoreCommitted(directory: File) {
         val marker = File(directory, RESTORE_COMMITTED)
-        if (!marker.exists()) {
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
+        if (java.nio.file.Files.isSymbolicLink(marker.toPath())) {
+            throw IOException("Restore commit marker cannot be a symbolic link.")
+        }
+        if (!java.nio.file.Files.isRegularFile(marker.toPath(), noFollow)) {
             java.io.FileOutputStream(marker).use { output ->
                 output.write("committed".toByteArray(Charsets.US_ASCII))
                 output.fd.sync()
@@ -356,7 +364,8 @@ object ApplicationBackupManager {
     }
 
     private fun cleanupCommittedRestore(directory: File): Boolean {
-        if (!File(directory, RESTORE_COMMITTED).isFile) return false
+        if (!java.nio.file.Files.isRegularFile(File(directory, RESTORE_COMMITTED).toPath(),
+                java.nio.file.LinkOption.NOFOLLOW_LINKS)) return false
         val children = directory.listFiles() ?: return !directory.exists()
         for (child in children.filter { it.name != RESTORE_COMMITTED }) {
             val removed = if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
@@ -388,10 +397,14 @@ object ApplicationBackupManager {
     ) {
         val active = File(context.filesDir, activeName)
         val backup = File(backupDir, backupName)
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
         if (java.nio.file.Files.isSymbolicLink(backup.toPath())) {
             throw IOException("Interrupted restore backup contains an unexpected symbolic link.")
         }
-        if (backup.exists()) {
+        if (java.nio.file.Files.exists(backup.toPath(), noFollow)) {
+            if (!java.nio.file.Files.isDirectory(backup.toPath(), noFollow)) {
+                throw IOException("Interrupted restore backup directory is invalid.")
+            }
             deleteRestoreEntry(active)
             if (!backup.renameTo(active)) throw IOException("Could not restore previous ${active.name} after interrupted backup restore.")
         } else if (!hadPrevious) {
@@ -408,19 +421,27 @@ object ApplicationBackupManager {
      */
     @Synchronized
     fun recoverInterruptedRestore(context: Context): Boolean {
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
         val directories = context.filesDir.listFiles()
-            ?.filter { it.isDirectory && it.name.startsWith("pockethost-restore-previous-") &&
-                (File(it, RESTORE_JOURNAL).isFile || File(it, RESTORE_COMMITTED).isFile) }
+            ?.filter { directory ->
+                java.nio.file.Files.isDirectory(directory.toPath(), noFollow) &&
+                    directory.name.startsWith("pockethost-restore-previous-") &&
+                    (java.nio.file.Files.isRegularFile(File(directory, RESTORE_JOURNAL).toPath(), noFollow) ||
+                        java.nio.file.Files.isRegularFile(File(directory, RESTORE_COMMITTED).toPath(), noFollow))
+            }
             ?.sortedBy { it.name } ?: emptyList()
         var recovered = false
         for (directory in directories) {
-            if (File(directory, RESTORE_COMMITTED).isFile) {
+            if (java.nio.file.Files.isRegularFile(File(directory, RESTORE_COMMITTED).toPath(), noFollow)) {
                 if (!cleanupCommittedRestore(directory)) {
                     throw IOException("Could not clean up a committed backup restore transaction.")
                 }
                 continue
             }
             val journalFile = File(directory, RESTORE_JOURNAL)
+            if (!java.nio.file.Files.isRegularFile(journalFile.toPath(), noFollow)) {
+                throw IOException("Interrupted backup restore journal is not a regular file.")
+            }
             val journal = runCatching { JSONObject(journalFile.readText(Charsets.UTF_8)) }
                 .getOrElse { throw IOException("Interrupted backup restore journal is unreadable.", it) }
             if (journal.optInt("version") != 1) throw IOException("Unsupported interrupted backup restore journal.")
@@ -447,7 +468,11 @@ object ApplicationBackupManager {
                     throw IOException("Interrupted custom site backup contains a symbolic link.")
                 }
                 val hadPrevious = item.optBoolean("hadPrevious")
-                if (backup.exists()) {
+                if (java.nio.file.Files.exists(backup.toPath(), noFollow)) {
+                    if (!java.nio.file.Files.isDirectory(backup.toPath(), noFollow) ||
+                        !File(backup, "index.html").isFile) {
+                        throw IOException("Interrupted custom site backup is invalid.")
+                    }
                     deleteRestoreEntry(active)
                     if (!backup.renameTo(active)) throw IOException("Could not restore custom site root ${active.name}.")
                 } else if (!hadPrevious) {
