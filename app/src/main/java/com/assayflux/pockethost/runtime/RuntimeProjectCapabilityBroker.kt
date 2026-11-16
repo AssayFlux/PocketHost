@@ -31,12 +31,8 @@ class RuntimeProjectCapabilityBroker {
         grant(capability).let { RuntimeProjectFileBroker.openReadOnly(it.root, relativePath) }
 
     @Synchronized
-    fun openCreateOrTruncate(capability: String, relativePath: String): ParcelFileDescriptor =
-        grant(capability).let { RuntimeProjectFileBroker.openCreateOrTruncate(it.root, relativePath) }
-
-    @Synchronized
-    fun openAppendOnly(capability: String, relativePath: String): ParcelFileDescriptor =
-        grant(capability).let { RuntimeProjectFileBroker.openAppendOnly(it.root, relativePath) }
+    fun writeBytes(capability: String, relativePath: String, content: ByteArray, append: Boolean = false): Long =
+        grant(capability).let { RuntimeProjectFileBroker.writeBytes(it.root, relativePath, content, append) }
 
     @Synchronized
     fun revoke(capability: String): Boolean = grants.remove(capability) != null

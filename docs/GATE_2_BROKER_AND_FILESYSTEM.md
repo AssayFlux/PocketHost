@@ -24,7 +24,8 @@ These are broker primitives, not evidence that the existing runtime companion ha
 - The final component is opened with `O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK`.
 - Only regular files are eligible; symlinks, traversal, absolute paths and special files are rejected.
 - File size is bounded to 64 MiB.
-- Host writes can create/truncate or append only inside existing project directories; created files use owner read/write mode.
+- The capability broker writes through a bounded host-side operation (1 MiB per call, 64 MiB resulting file) and never gives project code a writable descriptor. Parent directories must already exist; created files use owner read/write mode.
+- The older raw writable-FD helper remains only for the existing isolated-process probe; it is not exposed by the project capability broker and must not be used for untrusted project code.
 - Parent-directory creation remains a trusted broker operation and must not be delegated to project code.
 
 ## Important limits and next integration work

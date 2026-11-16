@@ -45,6 +45,12 @@ class RuntimeBrokerSecurityTest {
             try {
                 assertEquals("project-a", input.fileDescriptor.let { java.io.FileInputStream(it).bufferedReader().readText() })
             } finally { input.close() }
+            val written = "broker-write-only".toByteArray()
+            assertEquals(written.size.toLong(), broker.writeBytes(token, "created.txt", written))
+            assertEquals("broker-write-only", File(a, "created.txt").readText())
+            assertThrows(IllegalArgumentException::class.java) {
+                broker.writeBytes(token, "oversized.bin", ByteArray(1024 * 1024 + 1))
+            }
             assertThrows(Exception::class.java) { broker.openReadOnly(token, "../b/secret.txt") }
             assertThrows(SecurityException::class.java) { broker.openReadOnly("0".repeat(64), "index.html") }
             assertTrue(broker.revoke(token))
