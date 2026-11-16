@@ -76,4 +76,5 @@ The companion UID differs from the host UID, but Python and Node projects share 
 - Control-plane administrative mutations now couple user/device lifecycle, device token rotation, configuration/command/deployment queueing and command acknowledgement with audit records in database transactions.
 - Deployment ZIP persistence now uses exclusive file creation and `fsync`; a pending-file guard removes the blob if database metadata/command/audit commit fails. A regression test covers failed-transaction cleanup, committed-file retention and refusal to overwrite.
 - Source commit: `dc18daa9855debdeb8fe7b5ed291b9ee8365bdcb`. CI run `43836611641` was still in progress at the time of this note; earlier six-job run `43836090906` passed on its own earlier SHA only.
+- Added Owner-only team-user token rotation across the control-plane API, PostgreSQL regression test, OpenAPI contract and web console. The prior credential is replaced immediately; the replacement is returned once and the audit record commits in the same transaction.
 - Gate 2 and Gate 4 remain open under the acceptance criteria in `docs/NORTH_STAR.md` and `docs/ROADMAP.md`.
