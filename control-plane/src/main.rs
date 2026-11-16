@@ -820,7 +820,7 @@ async fn relay_visitor(
     let secure_frontend = parts.headers.get("x-forwarded-proto").and_then(|value| value.to_str().ok())
         .map(|value| value.eq_ignore_ascii_case("https")).unwrap_or(false) ||
         parts.headers.get("cf-visitor").and_then(|value| value.to_str().ok())
-            .map(|value| value.contains("\\"scheme\\":\\"https\\"")).unwrap_or(false);
+            .map(|value| value.contains(r#""scheme":"https""#)).unwrap_or(false);
     if !secure_frontend {
         return Err((StatusCode::FORBIDDEN, "relay_requires_https".into()));
     }
