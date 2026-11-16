@@ -185,9 +185,10 @@ object RelayAgent {
         port: Int, localHostname: String, originalHostname: String, path: String, method: String,
         incomingHeaders: JSONObject, body: ByteArray
     ): LocalResponse {
-        val allowed = setOf("accept", "accept-encoding", "accept-language", "authorization",
-            "cache-control", "content-type", "cookie", "cf-connecting-ip", "if-match", "if-modified-since",
-            "if-none-match", "origin", "range", "referer", "user-agent")
+        val allowed = setOf("accept", "accept-encoding", "accept-language", "access-control-request-headers",
+            "access-control-request-method", "authorization", "cache-control", "content-type", "cookie",
+            "cf-connecting-ip", "if-match", "if-modified-since", "if-none-match", "origin", "range",
+            "referer", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
         Socket().use { socket ->
             socket.connect(InetSocketAddress("127.0.0.1", port), 5_000)
             socket.soTimeout = 35_000
