@@ -10,7 +10,7 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{fs, path::PathBuf};
+use std::{fs, io::Write, path::PathBuf};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -97,6 +97,37 @@ fn secure_equal(a: &str, b: &str) -> bool {
 
 fn role_can_write(role: &str) -> bool {
     matches!(role, "owner" | "editor")
+}
+
+struct PendingArtifactFile {
+    path: PathBuf,
+    committed: bool,
+}
+
+impl PendingArtifactFile {
+    fn create(path: PathBuf, bytes: &[u8]) -> std::io::Result<Self> {
+        // Never overwrite an existing artifact, even if the storage directory is reused.
+        let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&path)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        Ok(Self { path, committed: false })
+    }
+
+    fn commit(&mut self) {
+        self.committed = true;
+    }
+}
+
+impl Drop for PendingArtifactFile {
+    fn drop(&mut self) {
+        if !self.committed {
+            if let Err(error) = fs::remove_file(&self.path) {
+                if error.kind() != std::io::ErrorKind::NotFound {
+                    tracing::warn!(path = %self.path.display(), error = %error, "uncommitted artifact cleanup failed");
+                }
+            }
+        }
+    }
 }
 
 fn has_zip_signature(bytes: &[u8]) -> bool {
@@ -392,12 +423,11 @@ async fn upload_site_archive(
     let root = PathBuf::from(std::env::var("POCKETHOST_ARTIFACT_DIR").unwrap_or_else(|_| "./artifacts".into()));
     fs::create_dir_all(&root).map_err(internal)?;
     let path = root.join(format!("{artifact_id}.zip"));
-    fs::write(&path, &body).map_err(internal)?;
+    let mut artifact_file = PendingArtifactFile::create(path.clone(), &body).map_err(internal)?;
     let mut tx = s.db.begin().await.map_err(internal)?;
     let exists = sqlx::query("SELECT id FROM devices WHERE id=$1").bind(id)
         .fetch_optional(&mut *tx).await.map_err(internal)?;
     if exists.is_none() {
-        let _ = fs::remove_file(&path);
         return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
     }
     sqlx::query("INSERT INTO device_artifacts(id,device_id,sha256,byte_size,storage_path) VALUES($1,$2,$3,$4,$5)")
@@ -412,6 +442,8 @@ async fn upload_site_archive(
         .bind(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len()}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
+    // Keep the durable blob only after metadata, command and audit have committed.
+    artifact_file.commit();
     Ok((StatusCode::ACCEPTED, Json(json!({"artifactId":artifact_id,"sha256":sha,"byteSize":body.len(),"state":"queued"}))))
 }
 
