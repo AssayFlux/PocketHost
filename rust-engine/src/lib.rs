@@ -344,8 +344,10 @@ fn strip_hop_by_hop(headers: &mut hyper::HeaderMap) {
 async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let original_host = req.headers().get("x-pockethost-original-host").cloned()
         .or_else(|| req.headers().get(hyper::header::HOST).cloned());
-    let forwarded_proto = if req.headers().get("cf-visitor").and_then(|v| v.to_str().ok())
-        .map(|v| v.contains("\"scheme\":\"https\"")).unwrap_or(false) { "https" } else { "http" };
+    let forwarded_proto = if req.headers().get("x-forwarded-proto").and_then(|v| v.to_str().ok())
+        .map(|v| v.eq_ignore_ascii_case("https")).unwrap_or(false) ||
+        req.headers().get("cf-visitor").and_then(|v| v.to_str().ok())
+            .map(|v| v.contains("\"scheme\":\"https\"")).unwrap_or(false) { "https" } else { "http" };
     let path_and_query = req.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/");
     let uri = match format!("http://127.0.0.1:{port}{path_and_query}").parse() {
         Ok(uri) => uri,
@@ -436,6 +438,7 @@ async fn serve(
 
     if !peer.ip().is_loopback() {
         req.headers_mut().remove("x-pockethost-original-host");
+        req.headers_mut().remove("x-forwarded-proto");
     }
     let requested_host = req.headers().get(hyper::header::HOST)
         .and_then(|value| value.to_str().ok())
