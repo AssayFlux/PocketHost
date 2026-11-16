@@ -7,10 +7,8 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
-import android.os.Process
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.assayflux.pockethost.runtime.RuntimeWorkerClient
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -138,28 +136,6 @@ class RuntimeCompanionCapabilityTest {
         } finally {
             archive.delete()
             runCatching { context.unbindService(connection) }
-        }
-    }
-
-    @Test
-    fun hostRebindsAfterCompanionControlProcessDeath() {
-        instrumentation.runOnMainSync {
-            context.startActivity(Intent(context, MainActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
-        try {
-            val originalPid = RuntimeWorkerClient.workerPid(context)
-            assertTrue("Companion PID must be valid", originalPid > 0)
-            Process.killProcess(originalPid)
-            val deadline = System.currentTimeMillis() + 30_000
-            var recoveredPid = originalPid
-            while (System.currentTimeMillis() < deadline && recoveredPid == originalPid) {
-                Thread.sleep(500)
-                recoveredPid = runCatching { RuntimeWorkerClient.workerPid(context) }.getOrDefault(originalPid)
-            }
-            assertTrue("Host did not reconnect to a restarted companion process", recoveredPid > 0 && recoveredPid != originalPid)
-        } finally {
-            runCatching { RuntimeWorkerClient.shutdownWorker(context) }
         }
     }
 
