@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <linux/sched.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -152,4 +154,16 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_assayflux_pockethost_worker_NetworkSandbox_installNetworkPolicy(
     JNIEnv*, jclass, jint listener_fd) {
     return install_policy(listener_fd);
+}
+
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_getPeerUid(
+    JNIEnv*, jclass, jint socket_fd) {
+    struct ucred credentials {};
+    socklen_t length = sizeof(credentials);
+    if (getsockopt(socket_fd, SOL_SOCKET, SO_PEERCRED, &credentials, &length) != 0) {
+        return -errno;
+    }
+    return static_cast<jint>(credentials.uid);
 }

@@ -10,4 +10,5 @@ object NetworkSandbox {
      * is fatal: callers must not continue with project startup.
      */
     @JvmStatic external fun installNetworkPolicy(listenerFd: Int): Int
+    @JvmStatic external fun getPeerUid(socketFd: Int): Int
 }

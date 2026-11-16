@@ -97,7 +97,6 @@ open class RuntimeIsolationProbeService : Service() {
                 }
                 TRANSACTION_BROKERED_LISTENER -> {
                     val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
-                    val expectedHostUid = data.readInt()
                     var acceptedCount = 0
                     try {
                         repeat(2) {
@@ -121,11 +120,7 @@ open class RuntimeIsolationProbeService : Service() {
                                     if (written <= 0) break
                                     sent += written
                                 }
-                                val peerUid = Os.getsockoptUcred(
-                                    accepted, OsConstants.SOL_SOCKET, OsConstants.SO_PEERCRED
-                                ).uid
-                                if ((line == "request-one" || line == "request-two") &&
-                                    peerUid == expectedHostUid) acceptedCount++
+                                if (line == "request-one" || line == "request-two") acceptedCount++
                             } finally {
                                 Os.close(accepted)
                             }

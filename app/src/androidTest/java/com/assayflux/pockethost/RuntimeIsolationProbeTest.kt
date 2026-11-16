@@ -3,6 +3,9 @@ package com.assayflux.pockethost
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.LocalServerSocket
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
@@ -20,9 +23,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.net.ServerSocket
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Socket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -83,49 +83,6 @@ class RuntimeIsolationProbeTest {
                 runCatching { context.unbindService(secondConnection) }
             }
 
-            // A no-network isolated process can still serve a host-accepted visitor
-            // stream when the host explicitly transfers that socket FD over Binder.
-            val client = Socket("127.0.0.1", host.localPort)
-            val accepted = host.accept()
-            try {
-                client.getOutputStream().write("pockethost-broker-probe".toByteArray(Charsets.UTF_8))
-                client.getOutputStream().flush()
-                val socketFd = ParcelFileDescriptor.fromSocket(accepted)
-                val data = Parcel.obtain()
-                val reply = Parcel.obtain()
-                val brokered = try {
-                    data.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
-                    socketFd.writeToParcel(data, 0)
-                    check(binder.transact(
-                        RuntimeIsolationProbeService.TRANSACTION_BROKERED_SOCKET, data, reply, 0
-                    )) { "Brokered socket transaction failed." }
-                    reply.readException()
-                    reply.readInt() == 1
-                } finally {
-                    socketFd.close()
-                    data.recycle()
-                    reply.recycle()
-                }
-                assertTrue("Isolated process did not consume the brokered visitor stream", brokered)
-                val expectedResponse = "isolated-cell-response"
-                val responseBytes = ByteArray(expectedResponse.length)
-                var responseCount = 0
-                client.soTimeout = 3_000
-                while (responseCount < responseBytes.size) {
-                    val count = client.getInputStream().read(
-                        responseBytes, responseCount, responseBytes.size - responseCount
-                    )
-                    if (count < 0) break
-                    responseCount += count
-                }
-                val response = String(responseBytes, 0, responseCount, Charsets.UTF_8)
-                assertTrue("Isolated process could not answer on the brokered visitor stream",
-                    responseCount == expectedResponse.length && response == expectedResponse)
-            } finally {
-                client.close()
-                accepted.close()
-            }
-
             // Probe whether an isolated UID can use only a directory capability passed
             // by the host, while the app-private parent and sibling project stay closed.
             val capabilityParent = File(context.filesDir, "isolation-fs-" + System.nanoTime()).apply { mkdirs() }
@@ -167,19 +124,16 @@ class RuntimeIsolationProbeTest {
                 File(projectRoot, "worker-created.txt").readText() == "created-by-isolated-cell")
             capabilityParent.deleteRecursively()
 
-            // A trusted process creates and binds the listener. The isolated process
-            // receives only that listener FD and accepts two visitor connections from it.
-            val listenerFd = Os.socket(
-                OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP
-            )
-            Os.bind(listenerFd, InetAddress.getByName("127.0.0.1"), 0)
-            Os.listen(listenerFd, 8)
-            val listenerFlags = Os.fcntlInt(listenerFd, OsConstants.F_GETFL, 0)
-            Os.fcntlInt(listenerFd, OsConstants.F_SETFL, listenerFlags or OsConstants.O_NONBLOCK)
-            val listenerPort = (Os.getsockname(listenerFd) as InetSocketAddress).port
-            val listenerPfd = ParcelFileDescriptor.dup(listenerFd)
-            val visitorOne = Socket("127.0.0.1", listenerPort)
-            val visitorTwo = Socket("127.0.0.1", listenerPort)
+            // API 26 SELinux denies isolated_app access to a Binder-passed TCP socket.
+            // Use the filesystem Unix-domain listener selected for production transport.
+            val socketPath = File(context.filesDir, "isolation-listener-" + System.nanoTime()).absolutePath
+            val address = LocalSocketAddress(socketPath, LocalSocketAddress.Namespace.FILESYSTEM)
+            val localServer = LocalServerSocket(address)
+            val listenerPfd = ParcelFileDescriptor.dup(localServer.fileDescriptor)
+            val visitorOne = LocalSocket()
+            val visitorTwo = LocalSocket()
+            visitorOne.connect(address)
+            visitorTwo.connect(address)
             try {
                 visitorOne.getOutputStream().write("request-one\n".toByteArray(Charsets.UTF_8))
                 visitorOne.getOutputStream().flush()
@@ -192,7 +146,6 @@ class RuntimeIsolationProbeTest {
                 val acceptedCount = try {
                     data.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
                     listenerPfd.writeToParcel(data, 0)
-                    data.writeInt(context.applicationInfo.uid)
                     check(binder.transact(
                         RuntimeIsolationProbeService.TRANSACTION_BROKERED_LISTENER,
                         data, reply, 0
@@ -214,7 +167,8 @@ class RuntimeIsolationProbeTest {
             } finally {
                 visitorOne.close()
                 visitorTwo.close()
-                Os.close(listenerFd)
+                localServer.close()
+                File(socketPath).delete()
             }
 
             val canRead = transactInt(

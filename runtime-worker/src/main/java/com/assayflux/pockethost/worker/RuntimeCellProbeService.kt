@@ -45,9 +45,8 @@ class RuntimeCellProbeService : Service() {
                 }.exceptionOrNull()?.let { it is android.system.ErrnoException && it.errno == OsConstants.EPERM } ?: false
 
                 val accepted = Os.accept(listener.fileDescriptor, null)
-                val peerUid = Os.getsockoptUcred(
-                    accepted, OsConstants.SOL_SOCKET, OsConstants.SO_PEERCRED
-                ).uid
+                val acceptedPfd = ParcelFileDescriptor.dup(accepted)
+                val peerUid = try { NetworkSandbox.getPeerUid(acceptedPfd.fd) } finally { acceptedPfd.close() }
                 val request = ByteArray(5)
                 var count = 0
                 while (count < request.size) {
