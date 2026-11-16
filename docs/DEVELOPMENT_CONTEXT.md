@@ -74,6 +74,14 @@ The isolated-UID probe now closes inherited socket descriptors other than the ex
 - Gate 3 has a bounded HTTP Relay implementation: owner DNS TXT hostname proof, verified host/device/site registry, authenticated outbound Android SSE stream, bounded visitor request/response forwarding, exact enabled local site-ID resolution, correct local Host routing, preservation of multiple Set-Cookie values and WWW-Authenticate challenges, and immediate stream revocation on device token rotation/deletion. Per-site/client visitor authentication failures are throttled in Rust. DNSSEC, TLS/certificate lifecycle, streaming/WebSocket support and deployment/soak tests remain open. It supports 8 MiB request/response bodies, a 45-second request deadline and four local concurrent requests per device. It does not yet support WebSocket upgrades, streaming downloads/SSE or end-to-end HTTP/2 multiplexing; public DNS/TLS deployment and soak tests remain open.
 - Gate 4 remote admin uses 12-hour hashed server-side sessions; expiry, explicit revoke, user revoke and token-rotation revocation have PostgreSQL coverage. Local site modes Public/Private/Restricted now use one-time 256-bit visitor credentials stored as SHA-256 hashes, Owner invite/revoke API and Rust Basic-auth enforcement. Protected sites require HTTPS at a trusted loopback proxy; visitor credentials are removed before proxying to customer runtimes. Passkey-first Owner identity, fresh reauthentication for sensitive actions and executed Android/native integration tests remain open.
 
+## Latest non-Android verification — 2026-11-16
+
+- Quality workflow 43851733175 completed success on exact implementation SHA 06fa7dea1ed2481b30c680fd1a22ff083d48d203.
+- All six jobs passed: Rust, control-plane/PostgreSQL migrations, Python runtime, Node runtime, TypeScript console and Gradle wrapper.
+- Control-plane PostgreSQL tests cover admin sessions, user/device token rotation and revocation, Relay hostname registry state, bounded Relay pending quotas and DNS TXT parser behavior.
+- Rust tests cover visitor authentication throttling and site access behavior.
+- This workflow does not compile Android Kotlin/C++ or execute instrumentation. The owner-directed Gate 8 restriction remains active; do not build/test Android before Gates 0–7 implementation is complete.
+
 ## Build and test discipline
 
 - Use the checksum-verified Gradle 8.9 wrapper (`./gradlew`) and committed dependency lockfiles.
