@@ -31,13 +31,16 @@ class RuntimeCellCapabilityBroker(
     private val grants = HashMap<String, Grant>()
 
     /** Resolve the root from the lease's immutable project ID; callers cannot choose it. */
-    fun issue(leaseId: String): String = synchronized(lock) {
+    fun issue(leaseId: String, callerUid: Int): String = synchronized(lock) {
         val lease = leases.snapshot().singleOrNull { it.id == leaseId }
             ?: throw SecurityException("Unknown cell lease.")
         check(lease.state == RuntimeCellLeaseRegistry.State.ACTIVE) {
             "Filesystem access requires an active isolated cell."
         }
         val uid = requireNotNull(lease.isolatedUid) { "Active lease has no isolated UID." }
+        if (callerUid != uid) {
+            throw SecurityException("Only the isolated UID assigned to this lease may obtain its filesystem capability.")
+        }
         val root = requireNotNull(projectRootFor(lease.projectId)) {
             "No registered filesystem root exists for this project."
         }.canonicalFile
