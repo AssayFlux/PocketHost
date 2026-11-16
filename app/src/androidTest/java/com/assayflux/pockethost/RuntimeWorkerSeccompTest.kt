@@ -213,7 +213,27 @@ class RuntimeWorkerSeccompTest {
                 request.recycle()
                 response.recycle()
             }
-            assertEquals("Only the cell-issued file capability should be active.", 1, broker.activeGrantCount())
+            assertEquals("Only the cell-issued read capability should be active.", 1, broker.activeGrantCount())
+
+            val writeRequest = Parcel.obtain()
+            val writeResponse = Parcel.obtain()
+            val replacement = "written-through-binder".toByteArray(Charsets.UTF_8)
+            try {
+                writeRequest.writeInterfaceToken(DESCRIPTOR)
+                writeRequest.writeStrongBinder(hostBroker)
+                writeRequest.writeString(lease.id)
+                writeRequest.writeString("index.html")
+                writeRequest.writeByteArray(replacement)
+                check(cellBinder.transact(TRANSACTION_WRITE_PROJECT_FILE, writeRequest, writeResponse, 0))
+                writeResponse.readException()
+                assertEquals(replacement.size.toLong(), writeResponse.readLong())
+            } finally {
+                writeRequest.recycle()
+                writeResponse.recycle()
+            }
+            assertEquals("Cell writes must be mediated by the host rather than an escaped writable FD.",
+                String(replacement, Charsets.UTF_8), File(projectRoot, "index.html").readText())
+            assertEquals("Read and write capabilities are separately issued and bounded.", 2, broker.activeGrantCount())
         } finally {
             runCatching { context.unbindService(serviceConnection) }
             broker.revokeLease(lease.id)
@@ -225,5 +245,7 @@ class RuntimeWorkerSeccompTest {
         private const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_CELL_PROBE"
         private const val TRANSACTION_INSTALL_POLICY_AND_ACCEPT = IBinder.FIRST_CALL_TRANSACTION
         private const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION + 1
+        private const val TRANSACTION_READ_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 2
+        private const val TRANSACTION_WRITE_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 3
     }
 }
