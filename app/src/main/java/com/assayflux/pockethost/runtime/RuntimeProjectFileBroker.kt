@@ -62,7 +62,7 @@ object RuntimeProjectFileBroker {
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
         val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
-        try {
+        return try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
             for (segment in segments.dropLast(1)) {
                 val nextFd = openChildDirectory(directoryFd, segment, directoryFlags)
@@ -132,7 +132,11 @@ object RuntimeProjectFileBroker {
                     "Project file exceeds the broker transfer limit."
                 }
                 if (truncate) Os.ftruncate(fileFd, 0L)
-                return ParcelFileDescriptor.adoptFd(fileFd)
+                return try {
+                    ParcelFileDescriptor.dup(fileFd)
+                } finally {
+                    Os.close(fileFd)
+                }
             } catch (error: Throwable) {
                 runCatching { Os.close(fileFd) }
                 throw error
