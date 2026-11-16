@@ -69,13 +69,14 @@ class RuntimeCellCapabilityBrokerTest {
             displaced.deleteRecursively()
 
             leases.markProcessDied(lease.id)
+            // Death notification revokes grants synchronously, not lazily on next access.
+            assertEquals(0, broker.activeGrantCount())
             assertThrows(SecurityException::class.java) {
                 broker.openReadOnly(lease.id, token, uid, "index.html")
             }
-            assertEquals(0, broker.activeGrantCount())
             assertTrue(leases.release(lease.id))
         } finally {
-            broker.revokeLease(lease.id)
+            broker.close()
             projectA.deleteRecursively()
             projectB.deleteRecursively()
         }
@@ -96,7 +97,7 @@ class RuntimeCellCapabilityBrokerTest {
             assertEquals(RuntimeCellCapabilityBroker.MAX_GRANTS_PER_LEASE, broker.activeGrantCount())
             assertThrows(IllegalStateException::class.java) { broker.issue(lease.id, uid) }
         } finally {
-            broker.revokeLease(lease.id)
+            broker.close()
             leases.markProcessDied(lease.id)
             leases.release(lease.id)
             root.deleteRecursively()
@@ -116,6 +117,7 @@ class RuntimeCellCapabilityBrokerTest {
                 broker.issue(lease.id, hostUid + 10_002)
             }
         } finally {
+            broker.close()
             leases.markProcessDied(lease.id)
             leases.release(lease.id)
         }

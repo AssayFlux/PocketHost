@@ -18,7 +18,7 @@ import java.security.SecureRandom
 class RuntimeCellCapabilityBroker(
     private val leases: RuntimeCellLeaseRegistry,
     private val projectRootFor: (projectId: String) -> File?
-) {
+) : AutoCloseable {
     private data class Grant(
         val leaseId: String,
         val projectId: String,
@@ -31,6 +31,9 @@ class RuntimeCellCapabilityBroker(
     private val lock = Any()
     private val random = SecureRandom()
     private val grants = HashMap<String, Grant>()
+    private val leaseStateListener = leases.addStateListener { lease ->
+        if (lease.state == RuntimeCellLeaseRegistry.State.DEAD) revokeLease(lease.id)
+    }
 
     /** Resolve the root from the lease's immutable project ID; callers cannot choose it. */
     fun issue(leaseId: String, callerUid: Int): String = synchronized(lock) {
@@ -97,6 +100,11 @@ class RuntimeCellCapabilityBroker(
     }
 
     fun activeGrantCount(): Int = synchronized(lock) { purgeExpiredLocked(); grants.size }
+
+    override fun close() {
+        leaseStateListener.close()
+        synchronized(lock) { grants.clear() }
+    }
 
     private fun purgeExpiredLocked() {
         val now = SystemClock.elapsedRealtime()
