@@ -158,7 +158,7 @@ object RelayAgent {
                 connection.setRequestProperty("Connection", "close")
                 val incomingHeaders = message.optJSONObject("headers") ?: JSONObject()
                 val allowed = setOf(
-                    "accept", "accept-encoding", "accept-language", "authorization", "cache-control",
+                    "accept", "accept-encoding", "accept-language", "authorization", "cache-control", "cf-connecting-ip",
                     "content-type", "cookie", "if-match", "if-modified-since", "if-none-match",
                     "origin", "range", "referer", "user-agent"
                 )
