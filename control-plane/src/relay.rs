@@ -77,6 +77,12 @@ impl RelayHub {
         }
     }
 
+    pub fn revoke_device(&self, device_id: Uuid) {
+        self.sessions.lock().unwrap_or_else(|e| e.into_inner()).remove(&device_id);
+        self.pending.lock().unwrap_or_else(|e| e.into_inner())
+            .retain(|_, pending| pending.device_id != device_id);
+    }
+
     pub fn cancel_pending(&self, request_id: Uuid) {
         self.pending.lock().unwrap_or_else(|e| e.into_inner()).remove(&request_id);
     }
