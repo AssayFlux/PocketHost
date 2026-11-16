@@ -245,6 +245,17 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "204": { description: Hostname removed }
+  /v1/relay/tls-check:
+    get:
+      summary: Caddy on-demand TLS authorization for a DNS-verified Relay hostname
+      parameters:
+        - in: query
+          name: domain
+          required: true
+          schema: { type: string, maxLength: 253 }
+      responses:
+        "200": { description: Hostname is verified and enabled; certificate issuance may proceed }
+        "403": { description: Hostname is not verified or enabled }
   /v1/device/relay/stream:
     get:
       security:
