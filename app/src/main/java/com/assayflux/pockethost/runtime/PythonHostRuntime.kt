@@ -50,7 +50,7 @@ object PythonHostRuntime {
 
     @Synchronized
     fun status(context: Context): String =
-        runCatching { RuntimeWorkerClient.pythonStatus(context) }.getOrDefault("STOPPED")
+        runCatching { RuntimeWorkerClient.pythonStatus(context) }.getOrDefault("UNAVAILABLE")
 
     @Synchronized
     fun metrics(context: Context): JSONObject? =
