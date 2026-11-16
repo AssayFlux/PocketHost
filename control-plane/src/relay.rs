@@ -285,23 +285,24 @@ mod tests {
     #[test]
     fn pending_relay_requests_are_bounded_and_revoked_with_device() {
         let hub = RelayHub::default();
-        let device = Uuid::new_v4();
-        let other = Uuid::new_v4();
-        let mut receivers = Vec::new();
-        for _ in 0..8 {
-            receivers.push(hub.register_pending(Uuid::new_v4(), device).unwrap());
+        let devices = [Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4()];
+        let mut first_device_receivers = Vec::new();
+        for (index, device) in devices.iter().enumerate() {
+            for _ in 0..8 {
+                let receiver = hub.register_pending(Uuid::new_v4(), *device).unwrap();
+                if index == 0 { first_device_receivers.push(receiver); }
+            }
         }
-        assert!(hub.register_pending(Uuid::new_v4(), device).is_none());
-        for _ in 0..24 {
-            receivers.push(hub.register_pending(Uuid::new_v4(), other).unwrap());
-        }
-        assert!(hub.register_pending(Uuid::new_v4(), other).is_none());
-        assert_eq!(receivers.len(), 32);
-        hub.revoke_device(device);
-        assert!(receivers.drain(..8).all(|receiver| receiver.blocking_recv().is_err()));
-        assert!(hub.register_pending(Uuid::new_v4(), device).is_some());
+        assert_eq!(first_device_receivers.len(), 8);
+        assert!(hub.register_pending(Uuid::new_v4(), devices[0]).is_none(),
+            "per-device pending request quota must be enforced");
+        assert!(hub.register_pending(Uuid::new_v4(), Uuid::new_v4()).is_none(),
+            "global pending request quota must be enforced");
+        hub.revoke_device(devices[0]);
+        assert!(first_device_receivers.into_iter().all(|receiver| receiver.blocking_recv().is_err()));
+        assert!(hub.register_pending(Uuid::new_v4(), devices[0]).is_some(),
+            "device revocation must free its pending request quota");
     }
-
     #[test]
     fn dns_txt_parser_rejects_wrong_question_and_truncated_response() {
         let mut packet = vec![
