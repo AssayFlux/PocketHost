@@ -230,3 +230,5 @@ Update this file with exact evidence whenever the baseline changes.
 - Gate 7 source includes dedicated Dashboard/Sites/Activity/Learn screens, extracted device-preference and settings-section Compose components, and UIAutomator screenshot/hierarchy capture for all five destinations and four Settings sections. Human TalkBack, font scaling, contrast, compact/landscape and complete first-run UI publishing acceptance remain open.
 - Gates 5, 6 and 7 are therefore still open. Do not mark them complete until the recorded source tests execute successfully and the remaining device/production acceptance criteria are met.
 
+- a3cb89ce6cc42ee738360d1e0217a05424077e64 extends the API-matrix UI test to seed a temporary hostname route, exercise Private visitor credential issuance and revocation against SiteRegistry, and verify terminal-free folder/ZIP import and backup actions. It remains unexecuted.
+
