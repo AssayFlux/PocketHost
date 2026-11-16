@@ -149,7 +149,7 @@ fn new_token() -> String {
 struct AdminActor { session_id: Uuid, name: String, role: String }
 
 #[derive(Clone, Debug)]
-struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, bootstrap_hash: Option<String> }
+struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, bootstrap_hash: Option<String>, user_token_hash: Option<String> }
 
 const ADMIN_SESSION_TTL_HOURS: i64 = 12;
 
@@ -162,6 +162,7 @@ async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<Admin
             name: "Bootstrap Owner".into(),
             role: "owner".into(),
             bootstrap_hash: Some(token_hash(supplied)),
+            user_token_hash: None,
         });
     }
     let row = sqlx::query("SELECT id,name,role FROM control_users WHERE token_hash=$1 AND active=TRUE")
@@ -171,6 +172,7 @@ async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<Admin
         name: row.get("name"),
         role: row.get("role"),
         bootstrap_hash: None,
+        user_token_hash: Some(token_hash(supplied)),
     }).ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_credential".into()))
 }
 
@@ -182,9 +184,9 @@ async fn create_admin_session(
     let token = new_token();
     let expires_at = Utc::now() + chrono::Duration::hours(ADMIN_SESSION_TTL_HOURS);
     let mut tx = s.db.begin().await.map_err(internal)?;
-    sqlx::query("INSERT INTO control_sessions(id,user_id,name,role,token_hash,bootstrap_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7)")
+    sqlx::query("INSERT INTO control_sessions(id,user_id,name,role,token_hash,bootstrap_token_hash,user_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
         .bind(id).bind(credential.user_id).bind(&credential.name).bind(&credential.role)
-        .bind(token_hash(&token)).bind(&credential.bootstrap_hash).bind(expires_at)
+        .bind(token_hash(&token)).bind(&credential.bootstrap_hash).bind(&credential.user_token_hash).bind(expires_at)
         .execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'session.create',$2,$3)")
         .bind(&credential.name).bind(id.to_string())
@@ -207,8 +209,8 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
         "SELECT s.id,s.name,s.role FROM control_sessions s \
          LEFT JOIN control_users u ON u.id=s.user_id \
          WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() \
-         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2) OR \
-              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role))"
+         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL) OR \
+              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role AND u.token_hash=s.user_token_hash AND s.bootstrap_token_hash IS NULL))"
     )
         .bind(token_hash(supplied)).bind(token_hash(&state.admin_token))
         .fetch_optional(&state.db).await.map_err(internal)?;
