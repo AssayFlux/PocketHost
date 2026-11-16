@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
 import java.net.InetSocketAddress
+import java.io.ByteArrayOutputStream
 
 /**
  * CI-only isolated-UID proof service. It installs the exact native syscall
@@ -28,12 +29,14 @@ class RuntimeCellProbeService : Service() {
                 return true
             }
             if (code == TRANSACTION_READ_PROJECT_FILE) {
+                check(data.dataSize <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder probe limit." }
                 val content = readProjectFile(data)
                 reply?.writeNoException()
                 reply?.writeByteArray(content)
                 return true
             }
             if (code == TRANSACTION_WRITE_PROJECT_FILE) {
+                check(data.dataSize <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder probe limit." }
                 val written = writeProjectFile(data)
                 reply?.writeNoException()
                 reply?.writeLong(written)
@@ -149,7 +152,19 @@ class RuntimeCellProbeService : Service() {
             }
             openReply.readException()
             val descriptor = ParcelFileDescriptor.CREATOR.createFromParcel(openReply)
-            ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
+            ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(16 * 1024)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    require(total <= MAX_BINDER_FILE_BYTES) { "Probe file exceeds its bounded Binder transfer limit." }
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            }
         } finally {
             openData.recycle()
             openReply.recycle()
@@ -201,5 +216,7 @@ class RuntimeCellProbeService : Service() {
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_READ_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 2
         const val TRANSACTION_WRITE_PROJECT_FILE = IBinder.FIRST_CALL_TRANSACTION + 3
+        const val MAX_BINDER_REQUEST_BYTES = 512 * 1024
+        const val MAX_BINDER_FILE_BYTES = 256 * 1024
     }
 }
