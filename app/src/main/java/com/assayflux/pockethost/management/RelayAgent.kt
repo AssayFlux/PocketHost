@@ -182,6 +182,27 @@ object RelayAgent {
     }
 
 
+    internal data class ResponseFraming(val chunked: Boolean, val contentLength: Long?)
+
+    internal fun validateResponseFraming(transferEncodingInput: String?, contentLengthInput: String?): ResponseFraming {
+        val transferEncoding = transferEncodingInput?.trim()?.takeIf { it.isNotEmpty() }
+        val contentLengthHeader = contentLengthInput?.trim()
+        require(transferEncoding == null || contentLengthHeader == null) {
+            "Ambiguous local HTTP response framing (Transfer-Encoding and Content-Length)."
+        }
+        require(transferEncoding == null || transferEncoding.equals("chunked", ignoreCase = true)) {
+            "Unsupported local HTTP transfer encoding."
+        }
+        val contentLength = contentLengthHeader?.toLongOrNull()
+        require(contentLengthHeader == null || contentLength != null) {
+            "Invalid local HTTP Content-Length."
+        }
+        require(contentLength == null || contentLength in 0..MAX_BODY_BYTES.toLong()) {
+            "Local response body exceeds 8 MiB."
+        }
+        return ResponseFraming(transferEncoding != null, contentLength)
+    }
+
     private data class LocalResponse(val status: Int, val headers: JSONObject, val body: ByteArray, val setCookies: List<String>)
 
     /** Raw loopback HTTP preserves the visitor Host header; HttpURLConnection filters it. */
@@ -267,18 +288,7 @@ object RelayAgent {
                 if (name == "set-cookie" && value.length <= 8_192) setCookies.add(value)
                 if (name == "transfer-encoding" || name == "content-length") headers[name] = value
             }
-            val transferEncoding = headers["transfer-encoding"]?.trim()
-            val contentLengthHeader = headers["content-length"]?.trim()
-            require(transferEncoding.isNullOrEmpty() || contentLengthHeader == null) {
-                "Ambiguous local HTTP response framing (Transfer-Encoding and Content-Length)."
-            }
-            require(transferEncoding == null || transferEncoding.equals("chunked", ignoreCase = true)) {
-                "Unsupported local HTTP transfer encoding."
-            }
-            val contentLength = contentLengthHeader?.toLongOrNull()
-            require(contentLengthHeader == null || contentLength != null) {
-                "Invalid local HTTP Content-Length."
-            }
+            val framing = validateResponseFraming(headers["transfer-encoding"], headers["content-length"])
             val response = ByteArrayOutputStream()
             fun readExact(count: Int) {
                 require(count >= 0 && response.size().toLong() + count <= MAX_BODY_BYTES) {
@@ -295,7 +305,7 @@ object RelayAgent {
             }
             if (method != "HEAD" && status !in 100..199 && status != 204 && status != 304) {
                 when {
-                    transferEncoding != null -> {
+                    framing.chunked -> {
                         while (true) {
                             val size = readLine().substringBefore(';').trim().toLongOrNull(16)
                                 ?: throw IllegalStateException("Invalid chunk length.")
@@ -308,9 +318,8 @@ object RelayAgent {
                             require(input.read() == 13 && input.read() == 10) { "Malformed chunk terminator." }
                         }
                     }
-                    contentLength != null -> {
-                        require(contentLength in 0..MAX_BODY_BYTES.toLong()) { "Local response body exceeds 8 MiB." }
-                        readExact(contentLength.toInt())
+                    framing.contentLength != null -> {
+                        readExact(framing.contentLength.toInt())
                     }
                     else -> {
                         val buffer = ByteArray(16 * 1024)
