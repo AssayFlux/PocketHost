@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
 import java.net.InetSocketAddress
+import java.io.FileDescriptor
 import java.io.ByteArrayOutputStream
 
 /**
@@ -29,7 +30,7 @@ open class RuntimeCellProbeService : Service() {
                 return true
             }
             if (code == TRANSACTION_READ_PROJECT_FILE) {
-                check(data.dataSize <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder probe limit." }
+                check(data.dataSize() <= MAX_BINDER_REQUEST_BYTES) { "Capability request exceeds the Binder probe limit." }
                 val content = readProjectFile(data)
                 reply?.writeNoException()
                 reply?.writeByteArray(content)
@@ -60,7 +61,7 @@ open class RuntimeCellProbeService : Service() {
                     "Could not close inherited socket descriptors (errno=$cleanupResult); refusing to continue."
                 }
                 val inheritedSocketClosed = runCatching {
-                    Os.fstat(inheritedSocketFd)
+                    ParcelFileDescriptor.adoptFd(inheritedSocketFd).use { Os.fstat(it.fileDescriptor) }
                 }.exceptionOrNull()?.let {
                     it is android.system.ErrnoException && it.errno == OsConstants.EBADF
                 } ?: false
@@ -68,7 +69,7 @@ open class RuntimeCellProbeService : Service() {
                     "An inherited socket descriptor remained open; refusing to install the policy."
                 }
                 val standardSocketClosed = runCatching {
-                    Os.fstat(0)
+                    ParcelFileDescriptor.adoptFd(0).use { Os.fstat(it.fileDescriptor) }
                 }.exceptionOrNull()?.let {
                     it is android.system.ErrnoException && it.errno == OsConstants.EBADF
                 } ?: false
@@ -240,6 +241,7 @@ open class RuntimeCellProbeService : Service() {
     override fun onBind(intent: Intent?): IBinder = cellBinder
 
     companion object {
+        const val HOST_PACKAGE = "com.assayflux.pockethost"
         const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_CELL_PROBE"
         const val TRANSACTION_INSTALL_POLICY_AND_ACCEPT = IBinder.FIRST_CALL_TRANSACTION
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION + 1
