@@ -70,3 +70,10 @@ The companion UID differs from the host UID, but Python and Node projects share 
 8. Final Android build, API 26/33/35 matrix, ABI/signing, external tests and independent review.
 
 **Release decision:** not production-ready, not fully sandboxed, not signed and not externally verified.
+
+## Incremental implementation record — 2026-11-16
+
+- Control-plane administrative mutations now couple user/device lifecycle, device token rotation, configuration/command/deployment queueing and command acknowledgement with audit records in database transactions.
+- Deployment ZIP persistence now uses exclusive file creation and `fsync`; a pending-file guard removes the blob if database metadata/command/audit commit fails. A regression test covers failed-transaction cleanup, committed-file retention and refusal to overwrite.
+- Source commit: `f3ecb2be1bd80d0eac9adb9d68790608e581617e`. CI run `43836611641` was still in progress at the time of this note; earlier six-job run `43836090906` passed on its own earlier SHA only.
+- Gate 2 and Gate 4 remain open under the acceptance criteria in `docs/NORTH_STAR.md` and `docs/ROADMAP.md`.
