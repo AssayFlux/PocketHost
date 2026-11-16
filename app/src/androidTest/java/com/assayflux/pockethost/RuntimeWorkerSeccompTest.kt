@@ -327,6 +327,12 @@ class RuntimeWorkerSeccompTest {
             assertRejected("Opening a FIFO for reading") {
                 com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(root, "pipe").close()
             }
+            assertRejected("Traversing a FIFO as a directory") {
+                com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(root, "pipe/child").close()
+            }
+            assertRejected("Using a FIFO as the project root") {
+                com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(fifo, "child").close()
+            }
             assertRejected("Opening a symlinked file") {
                 com.assayflux.pockethost.runtime.RuntimeProjectFileBroker.openReadOnly(root, "linked-file").close()
             }
