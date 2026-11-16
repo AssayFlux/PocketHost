@@ -28,6 +28,10 @@ const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_CONNECTIONS: usize = 16;
 const MAX_QUEUED_CONNECTIONS: usize = 32;
 const MAX_PER_SITE_CONNECTIONS: usize = 12;
+const MAX_HTTP2_STREAMS_PER_CONNECTION: u32 = 8;
+const MAX_HTTP2_PENDING_RESET_STREAMS: usize = 16;
+const MAX_HTTP2_LOCAL_ERROR_RESETS: usize = 64;
+const MAX_HTTP_HEADER_LIST_BYTES: u32 = 16 * 1024;
 const QUEUE_WAIT: Duration = Duration::from_millis(200);
 const SHUTDOWN_DRAIN: Duration = Duration::from_secs(3);
 const RATE_LIMIT_BURST: f64 = 120.0;
@@ -736,7 +740,14 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                     drop(queued_guard);
                     drop(queue_permit);
                     let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), site_access.clone(), site_limiters.clone(), req, peer));
-                    let builder = Builder::new(TokioExecutor::new());
+                    let mut builder = Builder::new(TokioExecutor::new());
+                    // Bound multiplexed request fan-out independently of the
+                    // TCP connection cap. Hyper's default is 200 streams/socket.
+                    builder.http2()
+                        .max_concurrent_streams(MAX_HTTP2_STREAMS_PER_CONNECTION)
+                        .max_pending_accept_reset_streams(MAX_HTTP2_PENDING_RESET_STREAMS)
+                        .max_local_error_reset_streams(MAX_HTTP2_LOCAL_ERROR_RESETS)
+                        .max_header_list_size(MAX_HTTP_HEADER_LIST_BYTES);
                     let _ = builder.serve_connection(TokioIo::new(stream), service).await;
                 });
             }
@@ -1005,6 +1016,14 @@ mod tests {
         assert!(limiter.clone().try_acquire_owned().is_err());
         drop(permit);
         assert!(limiter.clone().try_acquire_owned().is_ok());
+    }
+
+    #[test]
+    fn multiplexed_http2_fanout_has_explicit_mobile_safe_bounds() {
+        assert_eq!(MAX_HTTP2_STREAMS_PER_CONNECTION, 8);
+        assert_eq!(MAX_HTTP2_PENDING_RESET_STREAMS, 16);
+        assert_eq!(MAX_HTTP2_LOCAL_ERROR_RESETS, 64);
+        assert_eq!(MAX_HTTP_HEADER_LIST_BYTES, 16 * 1024);
     }
 
     #[test]
