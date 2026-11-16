@@ -702,9 +702,11 @@ async fn create_relay_site(
     let id = Uuid::new_v4();
     let challenge = new_token();
     let mut tx = s.db.begin().await.map_err(internal)?;
-    sqlx::query("INSERT INTO relay_sites(id,device_id,hostname,site_id,verification_token_hash) VALUES($1,$2,$3,$4,$5)")
+    let verification_expires_at: DateTime<Utc> = sqlx::query_scalar(
+        "INSERT INTO relay_sites(id,device_id,hostname,site_id,verification_token_hash) VALUES($1,$2,$3,$4,$5) RETURNING verification_expires_at"
+    )
         .bind(id).bind(device).bind(&hostname).bind(&input.site_id).bind(token_hash(&challenge))
-        .execute(&mut *tx).await.map_err(internal)?;
+        .fetch_one(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.create',$2,$3)")
         .bind(&actor.name).bind(id.to_string())
         .bind(json!({"deviceId":device,"hostname":hostname.clone(),"siteId":input.site_id.clone()}))
@@ -714,7 +716,7 @@ async fn create_relay_site(
         "id":id,"deviceId":device,"hostname":hostname,"siteId":input.site_id,
         "verification":{"type":"TXT","name":format!("_pockethost-verification.{hostname}"),
             "value":format!("assayflux-pocket-host={challenge}")},
-        "verified":false,
+        "verified":false,"verificationExpiresAt":verification_expires_at,
         "warning":"The hostname will not receive traffic until its DNS TXT proof is verified."
     }))))
 }
@@ -740,13 +742,17 @@ async fn verify_relay_site(
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let actor = admin_write(&headers, &s).await?;
     if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
-    let row = sqlx::query("SELECT hostname,verification_token_hash,verified_at FROM relay_sites WHERE id=$1")
+    let row = sqlx::query("SELECT hostname,verification_token_hash,verification_expires_at,verified_at FROM relay_sites WHERE id=$1")
         .bind(id).fetch_optional(&s.db).await.map_err(internal)?
         .ok_or((StatusCode::NOT_FOUND, "relay_site_not_found".into()))?;
     let hostname: String = row.get("hostname");
     let expected_hash: String = row.get("verification_token_hash");
     if row.get::<Option<DateTime<Utc>>,_>("verified_at").is_some() {
         return Ok(Json(json!({"id":id,"hostname":hostname,"verified":true})));
+    }
+    let expires_at: DateTime<Utc> = row.get("verification_expires_at");
+    if expires_at <= Utc::now() {
+        return Err((StatusCode::GONE, "dns_txt_challenge_expired_remove_and_recreate_route".into()));
     }
     let record_name = format!("_pockethost-verification.{hostname}");
     let records = relay::dns_txt_records(record_name.clone()).await
