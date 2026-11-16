@@ -20,8 +20,7 @@ object RuntimeProjectFileBroker {
     const val MAX_BROKER_WRITE_BYTES = 1024 * 1024
 
     fun captureRootIdentity(projectRoot: File): RootIdentity {
-        val flags = OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or
-            OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val flags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
         val fd = Os.open(projectRoot.absoluteFile.toPath().normalize().toString(), flags, 0)
         try {
             val stat = Os.fstat(fd)
@@ -61,20 +60,16 @@ object RuntimeProjectFileBroker {
         require(content.size <= MAX_BROKER_WRITE_BYTES) { "Write chunk exceeds the broker limit." }
         val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
-        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or
-            OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
             for (segment in segments.dropLast(1)) {
-                val nextFd = Os.openat(directoryFd, segment, directoryFlags, 0)
+                val nextFd = openChildDirectory(directoryFd, segment, directoryFlags)
                 Os.close(directoryFd)
                 directoryFd = nextFd
             }
-            val fileFd = Os.openat(
-                directoryFd,
-                segments.last(),
-                OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_NOFOLLOW or
+            val fileFd = openChildFile(directoryFd, segments.last(), OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_NOFOLLOW or
                     OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK or
                     (if (append) OsConstants.O_APPEND else 0),
                 OsConstants.S_IRUSR or OsConstants.S_IWUSR
@@ -114,22 +109,18 @@ object RuntimeProjectFileBroker {
     ): ParcelFileDescriptor {
         val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
-        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or
-            OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
             for (segment in segments.dropLast(1)) {
-                val nextFd = Os.openat(directoryFd, segment, directoryFlags, 0)
+                val nextFd = openChildDirectory(directoryFd, segment, directoryFlags)
                 Os.close(directoryFd)
                 directoryFd = nextFd
             }
 
             val flags = accessMode or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
-            val fileFd = Os.openat(
-                directoryFd,
-                segments.last(),
-                flags,
+            val fileFd = openChildFile(directoryFd, segments.last(), flags,
                 OsConstants.S_IRUSR or OsConstants.S_IWUSR
             )
             try {
@@ -149,6 +140,33 @@ object RuntimeProjectFileBroker {
         } finally {
             Os.close(directoryFd)
         }
+    }
+
+    private fun openChildDirectory(
+        parentFd: java.io.FileDescriptor,
+        name: String,
+        flags: Int
+    ): java.io.FileDescriptor = ParcelFileDescriptor.dup(parentFd).use { parent ->
+        val child = Os.open("/proc/self/fd/${parent.fd}/${name}", flags, 0)
+        try {
+            val stat = Os.fstat(child)
+            require((stat.st_mode and OsConstants.S_IFMT) == OsConstants.S_IFDIR) {
+                "A project path component is not a directory."
+            }
+            child
+        } catch (error: Throwable) {
+            Os.close(child)
+            throw error
+        }
+    }
+
+    private fun openChildFile(
+        parentFd: java.io.FileDescriptor,
+        name: String,
+        flags: Int,
+        mode: Int
+    ): java.io.FileDescriptor = ParcelFileDescriptor.dup(parentFd).use { parent ->
+        Os.open("/proc/self/fd/${parent.fd}/${name}", flags, mode)
     }
 
     private fun verifyRootIdentity(stat: android.system.StructStat, expected: RootIdentity?) {
