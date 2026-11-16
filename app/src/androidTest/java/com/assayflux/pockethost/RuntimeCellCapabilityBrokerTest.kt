@@ -79,6 +79,28 @@ class RuntimeCellCapabilityBrokerTest {
     }
 
     @Test
+    fun capabilitiesAreBoundedPerLease() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val hostUid = context.applicationInfo.uid
+        val leases = RuntimeCellLeaseRegistry(hostUid, capacity = 1)
+        val lease = leases.reserve("quota-site")
+        val uid = hostUid + 10_003
+        leases.activate(lease.id, uid)
+        val root = File(context.cacheDir, "cell-capability-quota-${System.nanoTime()}").apply { mkdirs() }
+        val broker = RuntimeCellCapabilityBroker(leases) { root }
+        try {
+            repeat(RuntimeCellCapabilityBroker.MAX_GRANTS_PER_LEASE) { broker.issue(lease.id, uid) }
+            assertEquals(RuntimeCellCapabilityBroker.MAX_GRANTS_PER_LEASE, broker.activeGrantCount())
+            assertThrows(IllegalStateException::class.java) { broker.issue(lease.id, uid) }
+        } finally {
+            broker.revokeLease(lease.id)
+            leases.markProcessDied(lease.id)
+            leases.release(lease.id)
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun capabilityCannotBeIssuedWithoutRegisteredProjectRoot() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val hostUid = context.applicationInfo.uid
