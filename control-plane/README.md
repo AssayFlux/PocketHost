@@ -20,7 +20,7 @@ Only Caddy publishes ports in the default topology. PostgreSQL and the Axum serv
 
 ## Register and pair a phone
 
-Use the console's Remote Control Plane panel or call:
+Use the console's Remote Control Plane panel or call. The console exchanges the returned long-lived API credential for a 12-hour revocable administrative session; management endpoints reject raw API credentials.
 
 ```sh
 curl --fail-with-body -X POST "https://$CONTROL_PLANE_DOMAIN/v1/admin/devices" \
@@ -39,6 +39,7 @@ The returned device token is displayed once. Enter it in PocketHost → Advanced
 - Queue allowlisted site, tunnel, runtime and resource actions.
 - Upload a website ZIP (up to 50 MiB); the phone downloads it using its device token, checks SHA-256, validates it and activates a new release.
 - Create/revoke Editor and Viewer users; bootstrap token is Owner.
+- Exchange the bootstrap/team API credential for a 12-hour server-side administrative session; session tokens are stored hashed, expire, can be explicitly revoked, and are invalidated immediately when the underlying team account is revoked or its API token is rotated.
 - Rotate a team-user token immediately (Owner only); the previous token is invalidated in the same transaction as the audit event and the replacement is returned once.
 - Rotate a device token immediately; the previous credential is invalidated and the replacement is returned once.
 - Read latest 200 audit events.
@@ -47,12 +48,13 @@ Supported configuration keys include `pythonMaxWorkers` (2–16), `nodeHeapMb` (
 
 ## Security and delivery model
 
-- Admin and device APIs use bearer authentication.
+- Admin management routes require a short-lived server-side session bearer. Long-lived bootstrap/team API credentials are accepted only by the session-exchange endpoint. Device APIs continue to use device bearer tokens.
 - Device/user tokens are 256-bit random values; token hashes are stored in PostgreSQL.
 - Commands are allowlisted; no arbitrary shell or SQL endpoint is exposed.
 - Command delivery uses a lease and expiry. The phone persists command-start and final-result markers before acknowledgement. If the process is interrupted mid-action, the agent reports an interrupted result rather than blindly repeating the side effect.
-- Device and team-user token rotation invalidates the previous credential immediately; team-user rotation is Owner-only.
+- Device and team-user token rotation invalidates the previous credential immediately; team-user rotation is Owner-only. Team-user token rotation and revocation also revoke all of that user's active administrative sessions.
 - Device revocation invalidates subsequent device API calls and removes device-scoped queued data.
+- Administrative session creation and revocation are recorded in the same transaction as session state.
 - Administrative mutations (user/device lifecycle, configuration, command/deployment queueing, token rotation and command acknowledgement) commit with their audit event in the same database transaction.
 - Deployment ZIP blobs are created without overwrite, flushed to storage, and removed automatically if the database transaction fails; blob deletion after successful acknowledgement/revocation is post-commit.
 - CORS is restricted to the configured exact console origin.
