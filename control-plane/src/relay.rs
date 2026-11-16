@@ -62,11 +62,14 @@ impl RelayHub {
             .get(&device_id).map(|entry| entry.1.clone())
     }
 
-    pub fn register_pending(&self, request_id: Uuid, device_id: Uuid) -> oneshot::Receiver<RelayResponse> {
+    pub fn register_pending(&self, request_id: Uuid, device_id: Uuid) -> Option<oneshot::Receiver<RelayResponse>> {
+        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        let global_count = pending.len();
+        let device_count = pending.values().filter(|entry| entry.device_id == device_id).count();
+        if global_count >= 32 || device_count >= 8 { return None; }
         let (sender, receiver) = oneshot::channel();
-        self.pending.lock().unwrap_or_else(|e| e.into_inner())
-            .insert(request_id, PendingResponse { device_id, sender });
-        receiver
+        pending.insert(request_id, PendingResponse { device_id, sender });
+        Some(receiver)
     }
 
     pub fn complete(&self, device_id: Uuid, response: RelayResponse) -> bool {
@@ -220,14 +223,14 @@ mod tests {
         hub.disconnect(device, first);
         assert!(hub.sender(device).is_some(), "stale session teardown must not remove a newer connection");
         let request_id = Uuid::new_v4();
-        let response_rx = hub.register_pending(request_id, device);
+        let response_rx = hub.register_pending(request_id, device).unwrap();
         assert!(hub.complete(device, RelayResponse {
             id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new()
         }));
         assert_eq!(response_rx.blocking_recv().unwrap().status, 200);
         let other_device = Uuid::new_v4();
         let request_id = Uuid::new_v4();
-        let response_rx = hub.register_pending(request_id, device);
+        let response_rx = hub.register_pending(request_id, device).unwrap();
         assert!(!hub.complete(other_device, RelayResponse {
             id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new()
         }));
