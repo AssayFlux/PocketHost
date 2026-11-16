@@ -3,9 +3,12 @@ package com.assayflux.pockethost
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
+import android.Manifest
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import android.os.Build
 import org.json.JSONObject
 import com.assayflux.pockethost.diagnostics.CapacityController
 import com.assayflux.pockethost.diagnostics.CapacityLab
@@ -107,8 +113,7 @@ internal fun PocketHostDashboardScreen(
                                 if (state.hosting) {
                                     actions.onStopHosting()
                                     actions.onStatusChange("Stopping hosting service…")
-                                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                } else if (state.notificationPermissionRequired) {
                                     actions.onRequestNotificationPermission()
                                 } else {
                                     actions.onStartHosting()
@@ -190,11 +195,11 @@ internal fun PocketHostDashboardScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Column(Modifier.weight(1f)) {
                                 Text("Requests", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                Text(state.requests.function toString() { [native code] }(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text(state.requests.toString(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                             Column(Modifier.weight(1f)) {
                                 Text("Active", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                Text(state.activeConnections.function toString() { [native code] }(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text(state.activeConnections.toString(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                             Column(Modifier.weight(1f)) {
                                 Text("Transferred", color = palette.onSurfaceVariant, fontSize = 14.sp)
@@ -282,9 +287,9 @@ internal fun PocketHostDashboardScreen(
                                 ?: "Select a concurrency point to inspect its p95 latency. Bars show measured milliseconds; marker = 750 ms benchmark threshold.",
                                 color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
-                        Text("Device health · ${state.deviceTelemetry.optString("thermalLabel", "UNKNOWN")}  ·  ${state.deviceTelemetry.optString("networkTransport", "Network unknown")}  ·  ${if (state.deviceTelemetry.isNull("batteryPercent")) "Battery unknown" else state.deviceTelemetry.optInt("batteryPercent").function toString() { [native code] }() + "% battery"}", color = palette.onSurfaceVariant, fontSize = 13.sp)
+                        Text("Device health · ${state.deviceTelemetry.optString("thermalLabel", "UNKNOWN")}  ·  ${state.deviceTelemetry.optString("networkTransport", "Network unknown")}  ·  ${if (state.deviceTelemetry.isNull("batteryPercent")) "Battery unknown" else state.deviceTelemetry.optInt("batteryPercent").toString() + "% battery"}", color = palette.onSurfaceVariant, fontSize = 13.sp)
                         Text("App RAM ${formatBytes(state.deviceTelemetry.optLong("processPssKb") * 1024L)}  ·  Free storage ${formatBytes(state.deviceTelemetry.optLong("storageAvailableBytes"))}", color = palette.onSurfaceVariant, fontSize = 12.sp)
-                        OutlinedButton(onClick = { dailyReportExportPicker.launch("pockethost-daily-report.json") },
+                        OutlinedButton(onClick = { actions.onExportDailyReport() },
                             enabled = DailyOperationsReport.list(context).isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
                             Text("Export latest daily report")
                         }
