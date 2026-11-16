@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import urllib.request
 
-MODULE = pathlib.Path(__file__).parents[2] / "app" / "src" / "main" / "python" / "pockethost_runtime.py"
+MODULE = pathlib.Path(__file__).parents[2] / "runtime-worker" / "src" / "main" / "python" / "pockethost_runtime.py"
 SPEC = importlib.util.spec_from_file_location("pockethost_runtime_tested", MODULE)
 runtime = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runtime)
