@@ -86,13 +86,13 @@ Distinguish implemented, automated-tested, emulator-verified, device-verified, e
 
 **Date:** 2026-11-16
 
-**Context:** The initial Relay visitor gateway and remote control/device APIs share the Axum process and listener. A visitor can choose an arbitrary HTTP path on a verified hostname; relying only on bearer authentication would leave management routes exposed on website hostnames.
+**Context:** The initial Relay visitor gateway and remote control/device APIs were first implemented on one Axum listener. A visitor can choose an arbitrary HTTP path on a verified hostname; relying only on bearer authentication would leave management routes exposed on website hostnames.
 
-**Decision:** Production deployment requires POCKETHOST_CONTROL_API_HOST. Admin session/management routes and device control/Relay stream routes accept requests only when the Host authority matches that dedicated hostname. Other verified hostnames reach only the visitor gateway fallback. The deployment workflow derives this API host from the dedicated control-plane domain; the similarly named GitHub Actions POCKETHOST_CONTROL_HOST remains the SSH host/IP variable.
+**Decision:** Production deployment requires POCKETHOST_CONTROL_API_HOST. Admin session/management routes and device control/Relay stream routes run on the control listener (POCKETHOST_CONTROL_BIND, port 8080). The separate visitor listener (POCKETHOST_RELAY_BIND, port 8081) contains only the verified-host visitor gateway fallback. The control listener also accepts requests only when the Host authority matches the dedicated API hostname. Caddy routes the dedicated host to 8080 and verified visitor hosts to 8081, with strict SNI/Host matching; Cloudflare Tunnel ingress must use the same two-origin split. The deployment workflow derives this API host from the dedicated control-plane domain; the similarly named GitHub Actions POCKETHOST_CONTROL_HOST remains the SSH host/IP variable.
 
-**Alternatives:** Rely only on bearer authentication; run separate listener processes immediately; move to separate containers. Host authority guard was selected as an immediate defense-in-depth boundary while retaining the existing service topology.
+**Alternatives:** Rely only on bearer authentication; run separate listener processes immediately; move to separate containers. Separate listeners plus a Host authority guard were selected while retaining one control-plane process and shared in-memory Relay hub.
 
-**Consequences:** Cloudflare/Caddy ingress must route the dedicated management hostname and verified Relay visitor hostnames to the gateway. The visitor host cannot access /v1/admin or /v1/device paths. The dedicated management hostname remains a separately authenticated remote-control endpoint and should be protected by the chosen edge policy. Local development without the deployment environment variable retains an unguarded development mode; production Compose requires it.
+**Consequences:** Cloudflare/Caddy ingress must route the dedicated management hostname and verified Relay visitor hostnames to the gateway. The visitor listener has no /v1/admin or /v1/device routes at all. The dedicated management hostname remains a separately authenticated remote-control endpoint and should be protected by the chosen edge policy. Local development without the deployment environment variable retains an unguarded development mode; production Compose requires it.
 
 ## Changing a decision
 
