@@ -314,7 +314,7 @@ async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<AdminActor
         return Err((StatusCode::FORBIDDEN, "insufficient_role".into()));
     }
     let age = Utc::now().signed_duration_since(actor.authenticated_at);
-    if age.num_seconds() < 0 || age > chrono::Duration::minutes(5) {
+    if age < chrono::Duration::seconds(0) || age > chrono::Duration::minutes(5) {
         return Err((StatusCode::PRECONDITION_REQUIRED, "admin_reauthentication_required".into()));
     }
     Ok(actor)
