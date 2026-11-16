@@ -123,7 +123,7 @@ class RuntimeWorkerService : Service() {
         // contain duplicate names or file/directory collisions that otherwise overwrite
         // earlier entries during extraction.
         val archivePaths = HashMap<String, Boolean>()
-        val portableNames = HashSet<String>()
+        val portableNames = HashMap<String, String>()
         val explicitEntries = HashSet<String>()
         try {
             ZipInputStream(FileInputStream(descriptor.fileDescriptor).buffered()).use { zip ->
@@ -146,6 +146,11 @@ class RuntimeWorkerService : Service() {
                         parent = if (parent.isEmpty()) segment else "$parent/$segment"
                         val knownParent = archivePaths[parent]
                         require(knownParent != false) { "Project archive has a file used as a directory." }
+                        val portableParent = parent.lowercase(java.util.Locale.ROOT)
+                        val previousPortableParent = portableNames.putIfAbsent(portableParent, parent)
+                        require(previousPortableParent == null || previousPortableParent == parent) {
+                            "Project archive contains directory paths that differ only by letter case."
+                        }
                         archivePaths.putIfAbsent(parent, true)
                     }
                     require(explicitEntries.add(name)) { "Project archive contains duplicate paths." }
@@ -153,7 +158,9 @@ class RuntimeWorkerService : Service() {
                     require(previousType == null || (previousType == true && isDirectory)) {
                         "Project archive contains conflicting file and directory paths."
                     }
-                    require(portableNames.add(name.lowercase(java.util.Locale.ROOT))) {
+                    val portableName = name.lowercase(java.util.Locale.ROOT)
+                    val previousPortableName = portableNames.putIfAbsent(portableName, name)
+                    require(previousPortableName == null || previousPortableName == name) {
                         "Project archive contains paths that differ only by letter case."
                     }
                     val target = File(staging, name).canonicalFile
