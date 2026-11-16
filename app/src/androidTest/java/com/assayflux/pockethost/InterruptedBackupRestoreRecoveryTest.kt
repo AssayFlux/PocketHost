@@ -4,6 +4,8 @@ import android.content.ContextWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.storage.ApplicationBackupManager
+import com.assayflux.pockethost.engine.NativeEngine
+import java.net.ServerSocket
 import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,10 +34,16 @@ class InterruptedBackupRestoreRecoveryTest {
             File(transaction, "python-project").mkdirs()
             File(transaction, "python-project/old.txt").writeText("old-project")
             File(transaction, "restore-committed").writeText("committed")
-
-            assertFalse(ApplicationBackupManager.recoverInterruptedRestore(context))
-            assertEquals("committed-new-site", File(active, "index.html").readText())
-            assertFalse(transaction.exists())
+            val port = ServerSocket(0).use { it.localPort }
+            assertEquals("OK", NativeEngine.start(active.absolutePath, port, false))
+            try {
+                assertFalse(ApplicationBackupManager.recoverInterruptedRestore(context))
+                assertEquals("RUNNING", NativeEngine.status())
+                assertEquals("committed-new-site", File(active, "index.html").readText())
+                assertFalse(transaction.exists())
+            } finally {
+                NativeEngine.stop()
+            }
         } finally {
             root.deleteRecursively()
         }
