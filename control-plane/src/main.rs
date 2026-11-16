@@ -99,7 +99,7 @@ fn control_host_matches(headers: &HeaderMap, expected_host: &str) -> bool {
 }
 
 fn ensure_control_plane_host(headers: &HeaderMap) -> Result<(), (StatusCode, String)> {
-    match std::env::var("POCKETHOST_CONTROL_HOST") {
+    match std::env::var("POCKETHOST_CONTROL_API_HOST") {
         Ok(expected) if !expected.trim().is_empty() && control_host_matches(headers, &expected) => Ok(()),
         Ok(expected) if !expected.trim().is_empty() => Err((StatusCode::NOT_FOUND, "not_found".into())),
         _ => Ok(()), // Local development; the production Compose profile requires this value.
@@ -976,8 +976,8 @@ async fn main() -> anyhow::Result<()> {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
     let admin_token = std::env::var("POCKETHOST_CONTROL_ADMIN_TOKEN").expect("POCKETHOST_CONTROL_ADMIN_TOKEN is required");
     anyhow::ensure!(admin_token.len() >= 32, "admin token must contain at least 32 characters");
-    let control_host = std::env::var("POCKETHOST_CONTROL_HOST").expect("POCKETHOST_CONTROL_HOST must be the dedicated control-plane hostname");
-    anyhow::ensure!(normalize_relay_hostname(&control_host).is_ok(), "POCKETHOST_CONTROL_HOST must be a valid DNS hostname");
+    let control_host = std::env::var("POCKETHOST_CONTROL_API_HOST").expect("POCKETHOST_CONTROL_API_HOST must be the dedicated control-plane hostname");
+    anyhow::ensure!(normalize_relay_hostname(&control_host).is_ok(), "POCKETHOST_CONTROL_API_HOST must be a valid DNS hostname");
     let db = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
     sqlx::migrate!("./migrations").run(&db).await?;
     let state = AppState { db, admin_token, relay: relay::RelayHub::default() };
