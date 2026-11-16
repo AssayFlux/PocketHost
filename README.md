@@ -33,6 +33,8 @@
   <img src="https://img.shields.io/badge/EDGE-CLOUDFLARE%20TUNNEL-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Tunnel integration">
   <img src="https://img.shields.io/badge/CONTROL%20PLANE-AXUM%20%2B%20POSTGRES-416B83?style=flat-square&logo=postgresql&logoColor=white" alt="Axum and PostgreSQL">
   <img src="https://img.shields.io/badge/IDENTITY-DESIGNED%20BY%20ASSAYFLUX-800020?style=flat-square" alt="Designed by AssayFlux">
+  <img
+src="https://img.shields.io/badge/AUTHOR-WRITTEN%20BY%20MD%20SAFARUJJAMAN-800020?style=flat-square" alt="Designed by AssayFlux">
 </p>
 
 ---
