@@ -8,11 +8,15 @@ Affordable phone-first hosting that is transparent about capacity, automatically
 
 The phone is the website origin. No Termux, root, mandatory VPS or mandatory remote control plane. Android 8+ and low-cost 4 GB-class hardware are core constraints. See [NORTH_STAR.md](NORTH_STAR.md).
 
-## Current implementation checkpoint — 2026-11-15
+## Current implementation checkpoint — 2026-11-16
 
-The following foundation upgrades are now present in source: the Activity Result request-code crash correction, five-destination card-first Android navigation, grouped Settings, collapsed Learn guides, and encrypted full-app backup/restore for the active website plus supported Python/Node roots and hostname routes. The latest quality CI passed Android source compilation, and Android integration run 43720035704 produced verified ARM64, ARMv7 and x86_64 debug APKs (artifact 14164002620).
+The current `main` line includes the five-destination Compose UI, separate app chrome, extracted Activity and Sites screens, Rust hosting engine, Python/Node trusted-runtime integrations, Cloudflare connector build, local management API, optional remote control-plane source, capacity controls, backup/restore and operational diagnostics. The latest UI work adds an emulator-driven Dashboard screenshot test. The Android workflow now builds a separate signature-protected runtime-worker companion APK and installs it for capability testing.
 
-These changes do **not** close the remaining P0 gates: OS-backed Python/Node isolation and enforceable quotas; remote control-plane deployment and real-device pairing if that feature is included; payment-provider integration; independent security review; and physical Android 8/15 lifecycle, public HTTPS, thermal and battery acceptance. Release signing remains owner-controlled. Custom static roots outside the main website directory are not yet included in portable full backups.
+**Measured runtime-isolation result:** the `android:isolatedProcess` probe passed on API 26 and 33 for UID separation and host-private-file denial, but loopback TCP is blocked. It cannot host the Python/Node services behind the Rust router. A separate `:runtime-worker` application module is now a capability prototype with INTERNET permission and signature-protected Binder IPC; it is not yet a production runtime or sandbox. Python and Node remain trusted-code-only under the main app UID until the companion can safely load both native runtimes and accept narrowly scoped project data.
+
+**Latest confirmed emulator evidence before the companion prototype:** API 26 and API 33 each passed 29 instrumentation tests with zero failures. API 35 went offline before any tests started; resource/boot settings have been adjusted for rerun. The companion and dashboard screenshot tests have been added since that evidence and must pass on the exact current SHA.
+
+The remaining P0/P1 gates include companion runtime migration and adversarial isolation review, full Rust-native rate/fairness/queue governor and graceful drain, actual external Cloudflare HTTPS verification, physical Android 8+ lifecycle/thermal/battery acceptance, complete backup coverage for custom static roots, deployed remote control-plane pairing if included in release scope, signed production release, and independent security review. Payments remain deferred unless explicitly included in release scope.
 
 ## Priority legend
 
