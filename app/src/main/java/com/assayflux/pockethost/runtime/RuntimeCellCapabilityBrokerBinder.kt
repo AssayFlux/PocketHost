@@ -68,9 +68,11 @@ class RuntimeCellCapabilityBrokerBinder(
     }
 
     companion object {
-        const val DESCRIPTOR = RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR
-        const val TRANSACTION_ISSUE = TRANSACTION_ISSUE
-        const val TRANSACTION_OPEN_READ_ONLY = TRANSACTION_OPEN_READ_ONLY
-        const val TRANSACTION_WRITE_BYTES = TRANSACTION_WRITE_BYTES
+        // Must match runtime-worker's RuntimeCellCapabilityBrokerProtocol.
+        const val DESCRIPTOR = "com.assayflux.pockethost.RUNTIME_CELL_CAPABILITY_BROKER"
+        const val TRANSACTION_ISSUE = IBinder.FIRST_CALL_TRANSACTION
+        const val TRANSACTION_OPEN_READ_ONLY = IBinder.FIRST_CALL_TRANSACTION + 1
+        const val TRANSACTION_WRITE_BYTES = IBinder.FIRST_CALL_TRANSACTION + 2
+        const val MAX_RELATIVE_PATH_CHARS = 4096
     }
 }
