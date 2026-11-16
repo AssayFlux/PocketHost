@@ -38,7 +38,7 @@ object RuntimeProjectFileBroker {
         truncate: Boolean = false,
         append: Boolean = false
     ): ParcelFileDescriptor {
-        val normalized = relativePath.replace('\\\\', '/')
+        val normalized = relativePath.replace(92.toChar(), '/')
         require(normalized.isNotBlank() && !normalized.startsWith('/') && !File(normalized).isAbsolute) {
             "Absolute or empty project paths are not permitted."
         }
