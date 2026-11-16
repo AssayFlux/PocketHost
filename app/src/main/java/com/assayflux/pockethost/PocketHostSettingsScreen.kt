@@ -26,7 +26,6 @@ internal fun PocketHostSettingsSectionNavigation(
     selectedSection: String,
     onSectionSelected: (String) -> Unit
 ) {
-    val palette = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf("General", "Network", "Runtimes", "About").forEach { section ->
