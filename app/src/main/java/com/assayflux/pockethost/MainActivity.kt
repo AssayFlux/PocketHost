@@ -85,6 +85,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        runCatching { SiteImporter.recoverInterruptedActivation(this) }
+            .onSuccess { recovered ->
+                if (recovered) OperationalLog.record(this, "WARN", "SITE_ACTIVATION_RECOVERED",
+                    "The previous last-known-good website was restored after an interrupted deployment.")
+            }
+            .onFailure { error ->
+                OperationalLog.record(this, "ERROR", "SITE_ACTIVATION_RECOVERY_FAILED",
+                    error.message ?: "Could not recover the previous website deployment.")
+            }
         val enabled = getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getBoolean("biometric_unlock_enabled", false)
         unlocked = mutableStateOf(!enabled)
