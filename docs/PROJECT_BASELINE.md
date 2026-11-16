@@ -151,3 +151,10 @@ Update this file with exact evidence whenever the baseline changes.
 - Documentation updates: 1a7f13e6e964311e92bfe22634f8c07623e386ad, 13829144d6681afe1e82089e1ef82bcd2e5fc7e5, 389adde1713d52aee545bbd5e38ba8a3816a0710.
 - These commits add source and test definitions, not executed acceptance evidence. The Rust quality workflow and Android API 26/33/35 workflow must be checked on the resulting exact HEAD before any verification claim. Gates 5, 6 and 7 remain open.
 
+## 2026-11-16 interrupted deployment recovery source
+
+- 7bc5556d2bb5026244777419b27d57c7817347ec adds SiteImporter recovery of the newest retained valid release when the active site is missing or invalid.
+- 0a2909910f4c5a4d68f194337ccc5c40e075d2ad invokes that recovery before MainActivity renders and records a redacted operational event.
+- 4fc9582ebc78cf4d9860e76b3455a554b713b539 adds Android instrumentation source for recovery from a missing active site.
+- This covers interrupted static deployment activation only. Full application backup restore journaling, process-death recovery across all restore phases and Android lifecycle/device acceptance remain open.
+
