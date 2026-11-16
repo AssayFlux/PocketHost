@@ -413,7 +413,7 @@ async fn serve(
     host_roots: Arc<HashMap<String, SiteTarget>>,
     host_access: Arc<HashMap<String, SiteAccess>>,
     site_limits: Arc<HashMap<String, Arc<Semaphore>>>,
-    req: Request<Incoming>,
+    mut req: Request<Incoming>,
     peer: SocketAddr,
 ) -> Result<Response<ResponseBody>, std::convert::Infallible> {
     let close_http1 = req.version() != hyper::Version::HTTP_2;
@@ -456,6 +456,7 @@ async fn serve(
                 response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
                 return Ok(response);
             }
+            req.headers_mut().remove(hyper::header::AUTHORIZATION);
         }
     }
     let target = if host_roots.is_empty() {
