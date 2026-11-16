@@ -1,6 +1,6 @@
 # Security Gate 2 — Execution Plan and Technical Decision Record
 
-**Status:** implementation spike in CI; Gate 2 is not complete.  
+**Status:** native seccomp-BPF network-policy probe and isolated-UID instrumentation service are implemented in source; Gate 2 is not complete. Production Python/Node cell migration, FD-backed runtime storage, Unix-domain visitor transport, and full adversarial/API-matrix evidence remain open.  
 **Applies to:** Android API 26+, ARMv7/ARM64, no root, no Termux.  
 **Security objective:** execute each Python or Node site as hostile code inside an OS-enforced boundary while preserving Rust website ingress and static hosting.
 
@@ -46,7 +46,7 @@ The host app creates a filesystem Unix-domain listener under its private files d
 
 The isolated UID also has no Android permissions of its own. This is defense in depth; the seccomp boundary is what prevents native/JNI code, Python sockets, Node sockets, DNS, UDP, raw sockets and loopback management connections from opening or connecting other sockets. The process must not receive any other network socket FD. Close unexpected inherited AF_INET/AF_INET6 descriptors before project code starts.
 
-The current proof passes an accepted visitor socket FD and checks request/response bytes, and separately passes a host-created listener FD to verify that the isolated process can accept multiple connections. The production design uses the listener FD plus the syscall filter. The next acceptance tests must prove that the filter blocks socket creation/connect while allowing accept on only that exact listener FD, and that Rust can still connect to the broker-owned loopback port.
+The native policy implementation is wired into the runtime-worker native build as `libpockethost_sandbox`; `RuntimeCellProbeService` runs under `android:isolatedProcess=true`, installs the TSYNC filter before its probe, and the Android instrumentation test asserts that `socket()` and `connect()` return `EPERM` while `accept()` on the transferred Unix-domain listener still serves a visitor request. The probe also verifies `SO_PEERCRED` identifies the host UID. This is a policy proof only: the probe does not launch Python or Node. Production Python and Node runtime services do not yet call this policy or adopt the Unix-domain listener.
 
 The isolated cell must fail attempts using IPv4/IPv6 TCP, UDP, raw sockets, DNS resolvers, native/JNI calls, io_uring, loopback management endpoints, private/link-local/metadata targets and child processes. A passed listener FD is a one-way inbound capability, not general network permission.
 

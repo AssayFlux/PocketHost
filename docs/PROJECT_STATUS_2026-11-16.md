@@ -1,7 +1,7 @@
 # Pocket Host — Verified Project Status
 
 **Review date:** 2026-11-16  
-**Companion source integration:** `bd227b0e5564ad25c88064cfc36796469390b773`  
+**Latest baseline before the current security fixes:** `e06b23aae056383478b4b3c092887163859d3c8c`  
 **Previous verified readiness baseline:** **37%**  
 **Release decision:** not production approved.
 
@@ -32,9 +32,9 @@ The isolated-process probe showed that a distinct UID can deny host-private file
 
 Common credential files are filtered during project transfer, but this is not a complete secret scanner. Host management credentials and Cloudflare tokens must never be copied into runtime project roots. Python and Node remain owner-trusted-code-only. Do not call this a complete sandbox or expose arbitrary third-party code. Gate 2 is incomplete.
 
-## Security architecture proof spike — in progress
+## Security architecture proof spike — native policy probe added; API 26 failure under repair
 
-The main branch now includes instrumentation for: (1) two simultaneous isolated service processes reporting distinct UIDs; (2) a connected visitor socket passed by Binder; (3) a host-created listener FD passed to the isolated process, which must accept and answer two connections; and (4) a project directory FD that must allow project-local read/write while blocking sibling traversal. The first directory-FD test compile exposed two SDK-surface mistakes (`adoptFd` expected an integer and `O_DIRECTORY` was unavailable); the latest source fixes this by duplicating the `FileDescriptor` with `ParcelFileDescriptor.dup` and opening the directory with `O_RDONLY`. The rerun must compile and execute the probe before the result is accepted. No runtime migration or Gate 2 completion is claimed.
+The host-app instrumentation covers distinct isolated UIDs, project-directory read/write versus sibling traversal, and a host-owned filesystem Unix-domain listener FD. A runtime-worker isolated process now contains a native `libpockethost_sandbox` TSYNC seccomp-BPF probe intended to test socket creation denial, outbound connect denial, accept on the brokered listener and `SO_PEERCRED` host identity. The previous API 26 run on commit `e06b23a` failed: SELinux denied the Binder-passed TCP visitor socket, and Python status returned `UNAVAILABLE` after companion shutdown. The source is being corrected to use Unix-domain sockets and non-starting status queries. The new policy probe has not yet run in CI; no successful kernel-policy test or Gate 2 completion is claimed.
 
 The selected architecture and full implementation sequence are in [SECURITY_GATE_2_EXECUTION_PLAN.md](SECURITY_GATE_2_EXECUTION_PLAN.md).
 

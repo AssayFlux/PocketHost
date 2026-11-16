@@ -15,6 +15,12 @@
         android:label="Pocket Host Runtime Worker"
         android:supportsRtl="true">
         <service
+            android:name=".RuntimeCellProbeService"
+            android:exported="true"
+            android:permission="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
+            android:isolatedProcess="true"
+            android:process=":cell_probe" />
+        <service
             android:name=".RuntimeWorkerService"
             android:exported="true"
             android:permission="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"

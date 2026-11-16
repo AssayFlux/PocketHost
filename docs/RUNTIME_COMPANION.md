@@ -1,6 +1,6 @@
 # Runtime companion architecture
 
-**Source integration:** implemented on main at `bd227b0e5564ad25c88064cfc36796469390b773`.
+**Source integration:** companion code is present on main; current security probe work is being integrated. This document is not a production security approval.
 **Verification:** CI/build and Android API 26/33/35 instrumentation for this revision are pending. This is not a production security approval.
 
 ## Why a second Android application
@@ -61,7 +61,7 @@ The current companion UID prevents ordinary runtime code from directly reading h
 
 Python WSGI is pinned to `127.0.0.1`; Node's preload constrains ordinary TCP listener binds. These are listener controls only. They do not block outbound TCP/UDP/raw sockets, DNS bypasses, native networking, private/link-local/metadata destinations or loopback management access. The current companion manifest still grants Android `INTERNET`.
 
-The isolated-process probe previously showed a distinct UID and denied host-private file reads, but its loopback attempt failed. The new design does not ask an isolated cell to create or connect a loopback socket: a trusted broker creates the listener and passes its already-open file descriptor to the isolated cell. Instrumentation now probes simultaneous isolated UIDs, Binder-transferred sockets, and a project-directory FD with sibling traversal denial. The API 26/33/35 results are still pending; these probes are not yet proof of a completed sandbox.
+API 26 exposed a critical limitation: SELinux denied the isolated process access to a Binder-passed TCP visitor socket. The test transport is being changed to a host-owned filesystem Unix-domain listener. A native TSYNC seccomp-BPF policy and isolated runtime-worker probe service have been added to source; the probe must show `socket()` and `connect()` fail with `EPERM`, while `accept()` succeeds only on the transferred listener and `SO_PEERCRED` identifies the host UID. This probe is not yet a production Python/Node cell and its API 26/33/35 results are pending.
 
 **Security status: not a complete sandbox; Gate 2 remains open.** Python/Node are owner-trusted-code-only. Never run visitor-submitted, marketplace or other untrusted code. Do not put host credentials, Cloudflare tokens or other secrets in project roots.
 

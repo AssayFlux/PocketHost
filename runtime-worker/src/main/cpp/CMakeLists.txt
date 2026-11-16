@@ -18,3 +18,9 @@ target_include_directories(nodebridge PRIVATE
 find_library(log-lib log)
 find_library(android-lib android)
 target_link_libraries(nodebridge PRIVATE libnode ${log-lib} ${android-lib} dl)
+
+# Keep the security policy independent of libnode so Python-only cells do not
+# load the Node runtime just to install the kernel network boundary.
+add_library(pockethost_sandbox SHARED network_sandbox.cpp)
+target_compile_features(pockethost_sandbox PRIVATE cxx_std_17)
+target_link_libraries(pockethost_sandbox PRIVATE ${log-lib})

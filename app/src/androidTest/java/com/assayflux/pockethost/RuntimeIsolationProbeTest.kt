@@ -192,6 +192,7 @@ class RuntimeIsolationProbeTest {
                 val acceptedCount = try {
                     data.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
                     listenerPfd.writeToParcel(data, 0)
+                    data.writeInt(context.applicationInfo.uid)
                     check(binder.transact(
                         RuntimeIsolationProbeService.TRANSACTION_BROKERED_LISTENER,
                         data, reply, 0

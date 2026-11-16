@@ -305,7 +305,9 @@ object RuntimeWorkerClient {
         withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
 
     fun nodeStatus(context: Context): String {
-        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) return "STOPPED"
+        // A status query is observational: never start the foreground companion just to
+        // discover that no runtime is active or that the companion has been shut down.
+        if (cachedWorkerAvailable() == null) return "STOPPED"
         return withWorker(context) { transact(it, TRANSACTION_NODE_STATUS) as String }
     }
 
@@ -331,7 +333,9 @@ object RuntimeWorkerClient {
         withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
 
     fun pythonStatus(context: Context): String {
-        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) return "STOPPED"
+        // A status query is observational: never start the foreground companion just to
+        // discover that no runtime is active or that the companion has been shut down.
+        if (cachedWorkerAvailable() == null) return "STOPPED"
         return withWorker(context) { transact(it, TRANSACTION_PYTHON_STATUS) as String }
     }
 
