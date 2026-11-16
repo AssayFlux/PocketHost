@@ -3,7 +3,7 @@ package com.assayflux.pockethost
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
-private fun localLanAddress(): String? = runCatching {
+internal fun localLanAddress(): String? = runCatching {
     val interfaces = NetworkInterface.getNetworkInterfaces()
     val candidates = mutableListOf<String>()
     while (interfaces.hasMoreElements()) {
@@ -21,7 +21,7 @@ private fun localLanAddress(): String? = runCatching {
     candidates.firstOrNull { it.isNotBlank() }
 }.getOrNull()
 
-private fun formatUptime(totalSeconds: Long): String {
+internal fun formatUptime(totalSeconds: Long): String {
     val days = totalSeconds / 86_400
     val hours = (totalSeconds % 86_400) / 3_600
     val minutes = (totalSeconds % 3_600) / 60
@@ -34,7 +34,7 @@ private fun formatUptime(totalSeconds: Long): String {
     }
 }
 
-private fun formatBytes(value: Long): String = when {
+internal fun formatBytes(value: Long): String = when {
     value < 1024L -> "$value B"
     value < 1024L * 1024L -> "${value / 1024L} KB"
     value < 1024L * 1024L * 1024L -> "${value / (1024L * 1024L)} MB"
