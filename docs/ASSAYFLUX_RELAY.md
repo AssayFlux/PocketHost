@@ -16,7 +16,8 @@ The repository now contains an initial first-party HTTP Relay path:
 - The phone resolves the exact registered site ID to an enabled local SiteRegistry entry, forwards using that site's local hostname, and preserves the verified public hostname for runtime proxy metadata. Raw loopback HTTP is used because `HttpURLConnection` filters restricted `Host` headers.
 - Multiple `Set-Cookie` headers and `WWW-Authenticate` challenges are preserved through Relay responses; per-site/client visitor-auth failures are throttled in Rust.
 - The local Rust listener independently enforces site-scoped Public/Private/Restricted Basic visitor credentials, and requires HTTPS at the trusted proxy edge for protected sites.
-- Device token rotation and device deletion close the active Relay stream and pending requests are bounded globally and per device.
+- Device token rotation and device deletion close the active Relay stream and pending requests are bounded globally and per device. Replacing or disconnecting a device stream now cancels pending visitor work; request registration is atomically tied to the active session so a stale stream cannot strand or steal work.
+- The control plane trusts forwarded HTTPS/client-IP metadata only from loopback or exact IPs configured in `POCKETHOST_TRUSTED_PROXY_IPS`; arbitrary RFC1918/ULA peers are not trusted.
 
 This is a request/response HTTP Relay, not yet the full general-purpose streaming Relay originally specified. Request and response bodies are capped at 8 MiB; requests time out after 45 seconds; four local requests run concurrently per device. WebSocket upgrades, streaming downloads/SSE, end-to-end HTTP/2 multiplexing, and long-lived response streaming remain unimplemented. DNS TXT proof validates the resolver source, transaction ID, question and answer owner; DNSSEC validation is not implemented. Production DNS/TLS deployment and load/soak validation are not proven.
 
