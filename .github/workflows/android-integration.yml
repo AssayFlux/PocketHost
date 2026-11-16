@@ -117,6 +117,9 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           count=0
+          worker="app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk"
+          worker_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$worker" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+          test -n "$worker_cert"
           for apk in app/build/outputs/apk/debug/app-*-debug.apk; do
             count=$((count + 1))
             case "$apk" in
@@ -130,6 +133,8 @@ jobs:
             grep -Fxq "lib/$abi/libnodebridge.so" "$RUNNER_TEMP/apk-contents.txt"
             grep -Fxq "lib/$abi/libpockethost.so" "$RUNNER_TEMP/apk-contents.txt"
             grep -Fxq "lib/$abi/libcloudflared.so" "$RUNNER_TEMP/apk-contents.txt"
+            cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+            test "$cert" = "$worker_cert" || { echo "App and companion debug certificates differ."; exit 1; }
             sha256sum "$apk"
           done
           test "$count" -eq 3
@@ -192,7 +197,7 @@ jobs:
         run: |
           set +e
           mkdir -p "$RUNNER_TEMP/pockethost-ui"
-          adb wait-for-device
+          timeout 30s adb wait-for-device || { echo "Emulator unavailable; screenshot skipped."; exit 0; }
           adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots/dashboard.png "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
           file "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
       - name: Upload Android instrumentation reports

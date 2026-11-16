@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseKeystorePath = System.getenv("POCKETHOST_KEYSTORE_FILE")
+val releaseStorePassword = System.getenv("POCKETHOST_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("POCKETHOST_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("POCKETHOST_KEY_PASSWORD")
+val releaseSigningReady = listOf(releaseKeystorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+    .all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.assayflux.pockethost.worker"
     compileSdk = 35
@@ -16,6 +23,22 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (releaseSigningReady) signingConfig = signingConfigs.getByName("release")
+        }
     }
     kotlinOptions { jvmTarget = "17" }
 }

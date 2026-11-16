@@ -77,6 +77,8 @@ jobs:
           test -n "$POCKETHOST_KEY_PASSWORD"
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/pockethost-release-apks"
+          gradle :runtime-worker:assembleRelease
+          cp runtime-worker/build/outputs/apk/release/runtime-worker-release.apk "$RUNNER_TEMP/pockethost-release-apks/pockethost-runtime-worker-release.apk"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             gradle clean :app:assembleRelease -PpockethostAbi="$abi"
             cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/pockethost-release-apks/app-$abi-release.apk"
@@ -89,9 +91,14 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           apks=(app/build/outputs/apk/release/*.apk)
-          test ${#apks[@]} -eq 3
+          test ${#apks[@]} -eq 4
+          worker="app/build/outputs/apk/release/pockethost-runtime-worker-release.apk"
+          worker_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$worker" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+          test -n "$worker_cert"
           for apk in "${apks[@]}"; do
             "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
+            cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+            test "$cert" = "$worker_cert" || { echo "::error::All PocketHost packages must share one signing certificate."; exit 1; }
           done
           (cd app/build/outputs/apk/release && sha256sum ./*.apk > SHA256SUMS && sha256sum -c SHA256SUMS)
       - uses: actions/upload-artifact@v4
