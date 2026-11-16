@@ -25,7 +25,6 @@ import java.util.zip.ZipInputStream
  */
 class RuntimeWorkerService : Service() {
     @Volatile private var probeServer: java.net.ServerSocket? = null
-    private val runtimeLock = Any()
     private val projectsRoot by lazy { File(filesDir, "projects").apply { mkdirs() } }
 
     override fun onCreate() {
@@ -167,7 +166,7 @@ class RuntimeWorkerService : Service() {
         require(root.isDirectory && root.toPath().startsWith(projectsRoot.canonicalFile.toPath())) {
             "Transferred Python project was not found."
         }
-        synchronized(runtimeLock) {
+        synchronized(this) {
             return ensurePython().callAttr("start", root.absolutePath, port, false).toString()
         }
     }
@@ -288,7 +287,7 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_NODE_STATUS -> nodeStatus()
                     TRANSACTION_NODE_METRICS -> NodeRuntimeStateStore.metrics(this@RuntimeWorkerService)?.toString() ?: "{}"
                     TRANSACTION_SHUTDOWN -> {
-                        runCatching { pythonModule()?.callAttr("stop") }
+                        synchronized(this) { runCatching { pythonModule()?.callAttr("stop") } }
                         runCatching { stopService(Intent(this@RuntimeWorkerService, NodeHostingService::class.java)) }
                         stopSelf()
                         "STOPPING"
