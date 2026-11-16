@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class RuntimeCompanionCapabilityTest {
-    private val descriptor = "com.assayflux.pockethost.worker.RUNTIME_PROBE"
+    private val descriptor = "com.assayflux.pockethost.worker.RUNTIME_WORKER"
     private val transactionUid = IBinder.FIRST_CALL_TRANSACTION
     private val transactionCanRead = IBinder.FIRST_CALL_TRANSACTION + 1
     private val transactionLoopbackBind = IBinder.FIRST_CALL_TRANSACTION + 2
