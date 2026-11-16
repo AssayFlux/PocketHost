@@ -290,7 +290,7 @@ mod tests {
         let (second, _second_stream) = hub.connect(device);
         assert!(first_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_some());
-        let second_request = hub.register_pending(Uuid::new_v4(), device).unwrap().1;
+        let mut second_request = hub.register_pending(Uuid::new_v4(), device).unwrap().1;
         hub.disconnect(device, first);
         assert!(hub.sender(device).is_some(), "stale disconnect must not remove the replacement stream");
         assert!(matches!(second_request.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)), "stale disconnect must not cancel the replacement stream's work");
