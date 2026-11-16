@@ -174,10 +174,14 @@ async fn revoke_user(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let actor = admin(&headers, &s).await?;
     if actor.role != "owner" { return Err((StatusCode::FORBIDDEN, "owner_role_required".into())); }
-    let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1")
-        .bind(id).execute(&s.db).await.map_err(internal)?;
-    if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "user_not_found".into())); }
-    audit(&s, &actor.name, "user.revoke", &id.to_string(), json!({})).await?;
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1 AND active=TRUE")
+        .bind(id).execute(&mut *tx).await.map_err(internal)?;
+    if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "user_not_found_or_already_revoked".into())); }
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&actor.name).bind("user.revoke").bind(id.to_string()).bind(json!({}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
