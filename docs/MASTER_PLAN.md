@@ -114,6 +114,8 @@ The relay hides the phone's IP from ordinary visitors, not from the relay operat
 ### Owner / Operator
 Passkey-first identity, secure recovery, least-privilege roles, device approval, session expiry/revocation, fresh authorization for sensitive operations and audit.
 
+Remote control-plane administration now exchanges long-lived bootstrap/team API credentials for 12-hour server-side sessions. Session tokens are stored hashed, explicitly revocable, bound to the current team-user token version, and invalidated when the account is revoked or its token rotates. The browser keeps the long-lived credential out of browser storage and uses the session token only in memory. This is an incremental remote-control security improvement; it does not implement passkey-first local Owner identity or visitor authentication.
+
 ### Visitor
 Per-site Public, Private or Restricted mode. Use short-lived site-scoped tokens, rate limits, revocation and authorization before forwarding. Visitor identity must never authorize management operations.
 
