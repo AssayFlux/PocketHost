@@ -6,7 +6,7 @@
 ## Implemented source on main
 
 - `RuntimeCellLeaseRegistry` reserves a bounded slot for one project, rejects a second lease for the same project, records the isolated UID reported by the service, rejects duplicate active UIDs, and will not recycle an active slot until process death is observed.
-- `RuntimeCellCapabilityBroker` binds each random, process-local file capability to the exact lease, project ID and isolated UID. Each operation re-checks that the lease remains active and that the trusted IPC boundary supplied the caller UID observed from Binder. Lease revocation invalidates all grants.
+- `RuntimeCellCapabilityBroker` binds each random, process-local file capability to the exact lease, project ID and isolated UID. The caller can no longer supply a filesystem path: the broker resolves the root from the lease's project ID through a trusted host-owned resolver, canonicalizes it once, and stores that root in the grant. Each operation re-checks that the lease remains active and that the trusted IPC boundary supplied the caller UID observed from Binder. Lease revocation invalidates all grants.
 - `RuntimeProjectFileBroker` exposes read-only single-file descriptors and bounded broker-mediated writes. It rejects traversal and symlink components, checks regular-file type, and caps individual writes and resulting file size.
 - Writable file descriptors are explicitly legacy-probe-only and must not be passed to project code.
 
@@ -18,7 +18,7 @@ The classes above are not yet a complete broker service. The production host Bin
 2. Bind a declared isolated cell service and obtain its UID from a Binder transaction implemented inside that process.
 3. Reserve/activate a lease only after checking the observed UID; never trust a UID or project ID supplied by project code.
 4. Issue a project capability only for that active lease.
-5. Route each file read/write through the host broker, passing `Binder.getCallingUid()` obtained inside the transaction.
+5. Route each file read/write through the host broker, passing `Binder.getCallingUid()` obtained inside the transaction. The parcel must contain only the lease ID, capability token, relative path and bounded content; it must not contain a caller UID or absolute path.
 6. Revoke all grants on Binder death, service disconnect, explicit stop, project replacement and host recovery.
 7. Refuse allocation when the bounded cell pool is full; never fall back to the shared companion UID.
 
