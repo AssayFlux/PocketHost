@@ -236,3 +236,11 @@ The Rust engine applies a token-bucket request limit per client IP: 120-request 
 ## Per-site concurrency fairness (2026-11-15)
 
 The Rust engine applies a streaming-response semaphore per distinct site target (static canonical root or runtime loopback port). A single-site configuration can use the full 16-connection engine ceiling. With multiple targets, the per-target cap starts at 12 and decreases as the number of sites grows, reserving at least two active slots per other configured site where the 16-connection global budget allows. The permit remains held until the response body is consumed or dropped, including static file streams and runtime proxy responses. Requests above a site's cap receive HTTP 503 with Retry-After: 1; per-site rejections are counted and exposed in the Android dashboard and authenticated management API. This is a protective cap, not a strict weighted fair scheduler; the global 16-connection ceiling and bounded 32-socket queue still apply.
+
+## Bounded FIFO per-site admission — 2026-11-16
+
+- Per-site response permits now wait through Tokio's FIFO-fair semaphore rather than immediately rejecting every request when a site's active-response cap is momentarily full.
+- The wait is bounded by the existing 200 ms admission window. A timeout still returns HTTP 503 with Retry-After and no-store; the live connection/task budget remains bounded by the global 16 active plus 32 queued socket limits.
+- A Rust regression test covers timeout and subsequent permit recovery.
+- This improves fairness under short bursts; it is not yet a weighted scheduler across sites and does not establish safe operating envelopes. Capacity Lab remains a bounded static-origin microbenchmark; cached/uncached, payload-size, keep-alive, tunnel and trusted-runtime profiles plus sustained thermal/battery measurements remain open.
+
