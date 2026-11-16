@@ -23,6 +23,7 @@ export function RemoteControlPlane() {
   const [endpoint, setEndpoint] = useState(() => localStorage.getItem("pockethost_control_endpoint") || "");
   const [adminToken, setAdminToken] = useState("");
   const [sessionToken, setSessionToken] = useState("");
+  const [sessionRole, setSessionRole] = useState<"owner" | "editor" | "viewer" | "">("");
   const [deviceName, setDeviceName] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
@@ -74,12 +75,13 @@ export function RemoteControlPlane() {
         headers: { Authorization: `Bearer ${adminToken}` },
         cache: "no-store",
       });
-      const sessionBody = await sessionResponse.json() as { accessToken?: string; error?: string };
+      const sessionBody = await sessionResponse.json() as { accessToken?: string; role?: "owner" | "editor" | "viewer"; error?: string };
       if (!sessionResponse.ok || !sessionBody.accessToken) {
         throw new Error(sessionBody.error || `Control Plane session exchange failed (HTTP ${sessionResponse.status}).`);
       }
       const nextSession = sessionBody.accessToken;
       setSessionToken(nextSession);
+      setSessionRole(sessionBody.role || "");
       setAdminToken("");
       localStorage.setItem("pockethost_control_endpoint", endpoint);
       const next = await request<Device[]>("/v1/admin/devices", {}, nextSession);
@@ -96,6 +98,7 @@ export function RemoteControlPlane() {
     try {
       await request<void>("/v1/admin/session", { method: "DELETE" });
       setSessionToken("");
+      setSessionRole("");
       setDevices([]);
       setUsers([]);
       setSelected("");
@@ -129,6 +132,22 @@ export function RemoteControlPlane() {
       setMessage("Device registered. Copy its token now; it is only returned once.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Device registration failed."); }
     finally { setBusy(false); }
+  }
+
+  async function rotateDeviceToken(device: Device) {
+    if (!window.confirm("Rotate " + device.name + "'s device token? Its current token will stop working immediately. You must replace it in the phone's Advanced → Remote Control Plane settings.")) return;
+    setBusy(true);
+    setIssuedToken("");
+    try {
+      const result = await request<{ device_token: string }>(
+        "/v1/admin/devices/" + encodeURIComponent(device.id) + "/rotate-token",
+        { method: "POST" },
+      );
+      setIssuedToken(result.device_token);
+      setMessage("Token rotated for " + device.name + ". Copy the replacement and update the phone now; the old token is revoked.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Device token rotation failed.");
+    } finally { setBusy(false); }
   }
 
   async function loadRelaySites() {
@@ -301,7 +320,7 @@ export function RemoteControlPlane() {
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
       <span><strong>{device.name}</strong><small>{device.id} · Last seen: {device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</small></span>
-      <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy || !sessionToken} onClick={() => void loadConfig(device.id)}>Manage</button><button className="danger-button" disabled={busy || !sessionToken} onClick={() => void revokeDevice(device)}>Revoke</button></span>
+      <span className="site-actions"><strong>{device.last_seen && Date.now() - Date.parse(device.last_seen) < 90_000 ? "Online" : "Offline"}</strong><button disabled={busy || !sessionToken} onClick={() => void loadConfig(device.id)}>Manage</button>{sessionRole === "owner" && <button disabled={busy || !sessionToken} onClick={() => void rotateDeviceToken(device)}>Rotate token</button>}<button className="danger-button" disabled={busy || !sessionToken} onClick={() => void revokeDevice(device)}>Revoke</button></span>
     </div>)}
     {selected && <div className="lower-grid">
       <article className="panel">
