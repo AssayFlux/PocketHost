@@ -7,6 +7,9 @@
     <permission
         android:name="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
         android:protectionLevel="signature" />
+    <queries>
+        <package android:name="com.assayflux.pockethost" />
+    </queries>
     <application
         android:allowBackup="false"
         android:label="Pocket Host Runtime Worker"
