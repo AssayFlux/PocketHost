@@ -717,6 +717,7 @@ mod tests {
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap())]);
         assert_eq!(admin_credential(&credential_headers, &state).await.unwrap().role, "viewer");
+        assert!(admin(&credential_headers, &state).await.is_err(), "Long-lived credentials must not authorize management routes directly.");
         let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
         let session_token = session_body["accessToken"].as_str().unwrap();
         let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
@@ -740,6 +741,11 @@ mod tests {
         sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'rotation-test','editor',$2)")
             .bind(user_id).bind(token_hash(&old_token)).execute(&db).await.unwrap();
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
+        let (_, Json(old_session_body)) = create_admin_session(
+            State(state.clone()),
+            HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())])
+        ).await.unwrap();
+        let old_session_token = old_session_body["accessToken"].as_str().unwrap().to_owned();
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
         let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
         let session_token = session_body["accessToken"].as_str().unwrap();
@@ -750,6 +756,8 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         let replacement = body["token"].as_str().unwrap();
         assert_ne!(replacement, old_token);
+        assert!(admin(&HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_session_token}")).unwrap())]), &state).await.is_err(),
+            "Rotating a user's API credential must revoke all of that user's sessions.");
         assert!(admin_credential(&HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())]), &state).await.is_err());
         let (_, Json(replacement_session)) = create_admin_session(
             State(state.clone()),
