@@ -34,6 +34,7 @@ object RemoteControlAgent {
     private const val MAX_CONTROL_RESPONSE_BYTES = 10 * 1024 * 1024
     @Volatile private var worker: Thread? = null
     @Volatile private var running = false
+    @Volatile private var generation = 0L
 
     fun endpoint(context: Context): String = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("endpoint", "") ?: ""
 
