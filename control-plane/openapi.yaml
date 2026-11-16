@@ -2,17 +2,30 @@ openapi: 3.1.0
 info:
   title: AssayFlux PocketHost Remote Control Plane
   version: 1.0.0
-  description: Independent backend for device registration, desired configuration and typed remote commands. Android devices initiate outbound HTTPS polling.
+  description: Independent backend for device registration, desired configuration and typed remote commands. Long-lived administrator credentials exchange for 12-hour revocable sessions; Android devices use device tokens.
 servers:
   - url: https://control.example.com
 security:
-  - AdminBearer: []
+  - AdminSession: []
 paths:
   /health:
     get:
       security: []
       responses:
         "200": { description: Service healthy }
+  /v1/admin/session:
+    post:
+      security:
+        - AdminCredential: []
+      summary: Exchange a bootstrap or team-user API credential for a 12-hour administrative session
+      responses:
+        "201": { description: Short-lived session token issued once; long-lived credential is not accepted by management endpoints }
+        "401": { description: Invalid API credential }
+    delete:
+      summary: Revoke the current administrative session
+      responses:
+        "204": { description: Session revoked }
+        "401": { description: Invalid or expired session }
   /v1/admin/devices:
     get:
       summary: List registered devices and latest reported state
@@ -220,10 +233,16 @@ paths:
 
 components:
   securitySchemes:
-    AdminBearer:
+    AdminSession:
       type: http
       scheme: bearer
       bearerFormat: opaque
+      description: 12-hour revocable session token; required for every management operation.
+    AdminCredential:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Long-lived bootstrap or team-user API credential, accepted only by POST /v1/admin/session.
     DeviceBearer:
       type: http
       scheme: bearer
