@@ -42,6 +42,17 @@ paths:
       responses:
         "204": { description: Device revoked }
         "404": { description: Device not found }
+  /v1/admin/devices/{id}/rotate-token:
+    post:
+      summary: Immediately revoke the current device token and issue a replacement (shown once)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: New device token issued; previous token is invalid immediately }
+        "404": { description: Device not found }
   /v1/admin/devices/{id}/config:
     get:
       summary: Read desired device configuration and version
