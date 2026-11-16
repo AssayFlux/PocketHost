@@ -27,7 +27,7 @@ class RuntimeCellCapabilityBrokerTest {
         val projectB = File(context.cacheDir, "cell-capability-b-${System.nanoTime()}").apply { mkdirs() }
         File(projectA, "index.html").writeText("site-a")
         File(projectB, "index.html").writeText("site-b")
-        val roots = mapOf("site-a" to projectA, "site-b" to projectB)
+        val roots = mutableMapOf("site-a" to projectA, "site-b" to projectB)
         val broker = RuntimeCellCapabilityBroker(leases) { projectId -> roots[projectId] }
         val token = broker.issue(lease.id)
         try {
@@ -46,7 +46,6 @@ class RuntimeCellCapabilityBrokerTest {
             }
 
             // Changing the external registry mapping cannot retarget an already issued grant.
-            roots as MutableMap<String, File>
             roots["site-a"] = projectB
             val stillA = broker.openReadOnly(lease.id, token, uid, "index.html")
             try {
