@@ -25,7 +25,7 @@ Static hosting is the foundational capability and must remain independent of opt
 
 - **Local Network:** access from devices on the same trusted LAN; no public tunnel.
 - **Cloudflare Tunnel:** reuse the owner's existing named tunnel and route its Public Hostname to the Rust website listener.
-- **AssayFlux Relay:** planned first-party option. Phone will establish an outbound authenticated tunnel; visitors connect to relay, not phone. It is not currently available.
+- **AssayFlux Relay:** an initial bounded HTTP path exists in source, but it is not deployed or available as a production connector yet. It uses an outbound authenticated phone stream and verified hostnames; WebSocket/streaming and deployment validation remain open.
 - **Direct Hosting:** advanced owner-managed exposure; not a default recommendation.
 
 A tunnel process showing ready does not prove public website reachability. Test from a separate network. Never expose the management API through a public hostname.
