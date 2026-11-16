@@ -343,6 +343,150 @@ object ApplicationBackupManager {
         }
     }
 
+    private const val RESTORE_JOURNAL = "restore-journal.json"
+    private const val RESTORE_COMMITTED = "restore-committed"
+
+    private fun writeRestoreJournal(directory: File, journal: JSONObject) {
+        val file = File(directory, RESTORE_JOURNAL)
+        java.io.FileOutputStream(file).use { output ->
+            output.write(journal.toString().toByteArray(Charsets.UTF_8))
+            output.fd.sync()
+        }
+    }
+
+    private fun markRestoreCommitted(directory: File) {
+        val marker = File(directory, RESTORE_COMMITTED)
+        if (!marker.exists()) {
+            java.io.FileOutputStream(marker).use { output ->
+                output.write("committed".toByteArray(Charsets.US_ASCII))
+                output.fd.sync()
+            }
+        }
+    }
+
+    private fun cleanupCommittedRestore(directory: File): Boolean {
+        if (!File(directory, RESTORE_COMMITTED).isFile) return false
+        val children = directory.listFiles() ?: return !directory.exists()
+        for (child in children.filter { it.name != RESTORE_COMMITTED }) {
+            val removed = if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
+                runCatching { java.nio.file.Files.deleteIfExists(child.toPath()) }.getOrDefault(false)
+            } else child.deleteRecursively()
+            if (!removed && child.exists()) return false
+        }
+        val marker = File(directory, RESTORE_COMMITTED)
+        if (marker.exists() && !marker.delete()) return false
+        return !directory.exists() || directory.delete()
+    }
+
+    private fun deleteRestoreEntry(entry: File) {
+        if (java.nio.file.Files.isSymbolicLink(entry.toPath())) {
+            if (!java.nio.file.Files.deleteIfExists(entry.toPath())) {
+                throw IOException("Could not remove interrupted restore entry ${entry.name}.")
+            }
+        } else if (entry.exists() && !entry.deleteRecursively()) {
+            throw IOException("Could not remove interrupted restore entry ${entry.name}.")
+        }
+    }
+
+    private fun restoreJournalDirectory(
+        context: Context,
+        backupDir: File,
+        activeName: String,
+        backupName: String,
+        hadPrevious: Boolean
+    ) {
+        val active = File(context.filesDir, activeName)
+        val backup = File(backupDir, backupName)
+        if (java.nio.file.Files.isSymbolicLink(backup.toPath())) {
+            throw IOException("Interrupted restore backup contains an unexpected symbolic link.")
+        }
+        if (backup.exists()) {
+            deleteRestoreEntry(active)
+            if (!backup.renameTo(active)) throw IOException("Could not restore previous ${active.name} after interrupted backup restore.")
+        } else if (!hadPrevious) {
+            deleteRestoreEntry(active)
+        }
+        // If a previous directory existed but its backup is absent, the transaction
+        // had not moved it yet or it was already restored; leave the active copy intact.
+    }
+
+    /**
+     * Restores the pre-transaction state when Android kills the process during a
+     * full backup restore. A durable commit marker distinguishes completed restores
+     * from transactions that must be rolled back on the next app launch.
+     */
+    @Synchronized
+    fun recoverInterruptedRestore(context: Context): Boolean {
+        val directories = context.filesDir.listFiles()
+            ?.filter { it.isDirectory && it.name.startsWith("pockethost-restore-previous-") &&
+                (File(it, RESTORE_JOURNAL).isFile || File(it, RESTORE_COMMITTED).isFile) }
+            ?.sortedBy { it.name } ?: emptyList()
+        var recovered = false
+        for (directory in directories) {
+            if (File(directory, RESTORE_COMMITTED).isFile) {
+                if (!cleanupCommittedRestore(directory)) {
+                    throw IOException("Could not clean up a committed backup restore transaction.")
+                }
+                continue
+            }
+            val journalFile = File(directory, RESTORE_JOURNAL)
+            val journal = runCatching { JSONObject(journalFile.readText(Charsets.UTF_8)) }
+                .getOrElse { throw IOException("Interrupted backup restore journal is unreadable.", it) }
+            if (journal.optInt("version") != 1) throw IOException("Unsupported interrupted backup restore journal.")
+            restoreJournalDirectory(context, directory, "python-project", "python-project",
+                journal.optBoolean("hadPython"))
+            restoreJournalDirectory(context, directory, "node-project-default", "node-project-default",
+                journal.optBoolean("hadNode"))
+
+            val siteRoots = File(context.filesDir, "site-roots").absoluteFile.toPath().normalize()
+            val customRoots = journal.optJSONArray("customRoots") ?: JSONArray()
+            for (index in customRoots.length() - 1 downTo 0) {
+                val item = customRoots.getJSONObject(index)
+                val active = File(item.getString("activePath")).absoluteFile
+                val backup = File(item.getString("backupPath")).absoluteFile
+                val activePath = active.toPath().normalize()
+                val backupPath = backup.toPath().normalize()
+                val backupBase = File(directory, "custom-static").absoluteFile.toPath().normalize()
+                if (!activePath.startsWith(siteRoots) || !backupPath.startsWith(backupBase)) {
+                    throw IOException("Interrupted backup restore contains an unsafe custom site path.")
+                }
+                if (java.nio.file.Files.isSymbolicLink(backup.toPath())) {
+                    throw IOException("Interrupted custom site backup contains a symbolic link.")
+                }
+                val hadPrevious = item.optBoolean("hadPrevious")
+                if (backup.exists()) {
+                    deleteRestoreEntry(active)
+                    if (!backup.renameTo(active)) throw IOException("Could not restore custom site root ${active.name}.")
+                } else if (!hadPrevious) {
+                    deleteRestoreEntry(active)
+                }
+            }
+
+            if (journal.optBoolean("hadActiveSite")) {
+                val previousLatest = if (journal.isNull("previousLatestRelease")) null
+                    else journal.getString("previousLatestRelease")
+                SiteImporter.restoreLatestReleaseIfChanged(context, previousLatest)
+            } else {
+                deleteRestoreEntry(File(context.filesDir, "site"))
+            }
+
+            val registry = context.getSharedPreferences("pockethost_site_registry", Context.MODE_PRIVATE)
+            val registryRestored = registry.edit()
+                .putString("sites", journal.getString("previousSiteRegistry")).commit()
+            if (!registryRestored) throw IOException("Could not restore the previous site registry after interrupted backup restore.")
+            restoreCurrentSafeSettings(context, journal.getJSONObject("previousSettings"))
+
+            markRestoreCommitted(directory)
+            if (!cleanupCommittedRestore(directory)) {
+                throw IOException("Previous data was restored, but transaction cleanup is still pending.")
+            }
+            recovered = true
+            OperationalLog.record(context, "WARN", "BACKUP_RESTORE_RECOVERED",
+                "The previous app state was restored after an interrupted full backup restore.")
+        }
+        return recovered
+    }
+
     private fun requireAllRuntimesStopped(context: Context) {
         val nativeStatus = runCatching { NativeEngine.status() }
             .getOrElse { throw IOException("Could not verify static hosting status.", it) }
