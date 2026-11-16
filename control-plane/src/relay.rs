@@ -283,6 +283,39 @@ mod tests {
     }
 
     #[test]
+    fn pending_relay_requests_are_bounded_and_revoked_with_device() {
+        let hub = RelayHub::default();
+        let device = Uuid::new_v4();
+        let other = Uuid::new_v4();
+        let mut receivers = Vec::new();
+        for _ in 0..8 {
+            receivers.push(hub.register_pending(Uuid::new_v4(), device).unwrap());
+        }
+        assert!(hub.register_pending(Uuid::new_v4(), device).is_none());
+        for _ in 0..24 {
+            receivers.push(hub.register_pending(Uuid::new_v4(), other).unwrap());
+        }
+        assert!(hub.register_pending(Uuid::new_v4(), other).is_none());
+        assert_eq!(receivers.len(), 32);
+        hub.revoke_device(device);
+        assert!(receivers.drain(..8).all(|receiver| receiver.blocking_recv().is_err()));
+        assert!(hub.register_pending(Uuid::new_v4(), device).is_some());
+    }
+
+    #[test]
+    fn dns_txt_parser_rejects_wrong_question_and_truncated_response() {
+        let mut packet = vec![
+            0x12,0x34,0x81,0x80,0x00,0x01,0x00,0x01,0x00,0x00,0x00,0x00,
+            0x01,b'a',0x07,b'e',b'x',b'a',b'm',b'p',b'l',b'e',0x00,0x00,0x10,0x00,0x01,
+            0xc0,0x0c,0x00,0x10,0x00,0x01,0x00,0x00,0x00,0x3c,0x00,0x0a,0x09,
+            b'p',b'o',b'c',b'k',b'e',b't',b'h',b'o',b's',
+        ];
+        assert!(parse_dns_txt_answers(&packet, "other.example").is_empty());
+        packet[2] |= 0x02;
+        assert!(parse_dns_txt_answers(&packet, "a.example").is_empty());
+    }
+
+    #[test]
     fn relay_body_codec_round_trips_binary() {
         let bytes = [0, 1, 2, 127, 128, 255];
         assert_eq!(decode_body(&encode_body(&bytes)).unwrap(), bytes);
