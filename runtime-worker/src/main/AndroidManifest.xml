@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <permission
+        android:name="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
+        android:protectionLevel="signature" />
+    <application
+        android:allowBackup="false"
+        android:label="Pocket Host Runtime Worker"
+        android:supportsRtl="true">
+        <service
+            android:name=".RuntimeWorkerService"
+            android:exported="true"
+            android:permission="com.assayflux.pockethost.permission.BIND_RUNTIME_WORKER"
+            android:process=":runtime_worker" />
+    </application>
+</manifest>

@@ -104,7 +104,9 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/pockethost-debug-apks"
           for abi in arm64-v8a armeabi-v7a x86_64; do
-            gradle clean :app:assembleDebug -PpockethostAbi="$abi"
+            gradle :runtime-worker:assembleDebug
+          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$RUNNER_TEMP/pockethost-debug-apks/pockethost-runtime-worker-debug.apk"
+          gradle clean :app:assembleDebug -PpockethostAbi="$abi"
             cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/pockethost-debug-apks/app-$abi-debug.apk"
           done
           mkdir -p app/build/outputs/apk/debug
@@ -175,6 +177,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Build and install signature-matched runtime companion
+        run: |
+          gradle :runtime-worker:assembleDebug
+          adb install runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
