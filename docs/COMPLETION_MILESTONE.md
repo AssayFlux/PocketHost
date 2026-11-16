@@ -155,3 +155,16 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Do not claim universal visitor counts, complete sandboxing, payment compliance, deployed remote control, production readiness or a signed release without the corresponding evidence.
 
 **Release decision:** integrated development build; not production approved. This status changes only when the relevant code, tests, device/network evidence and security review are recorded against the exact release commit.
+
+
+## Evidence update — 2026-11-16
+
+Current reviewed main: `6a2a54d76e8ae71c8abc4cc9d5f6f0e20a03b34f`.
+
+- Quality workflow [43786695783](https://github.com/AssayFlux/PocketHost/actions/runs/43786695783) passed all six jobs.
+- Android integration [43786695821](https://github.com/AssayFlux/PocketHost/actions/runs/43786695821): cloudflared build and debug APK packaging passed. The package artifact contains three host ABI APKs and the companion probe APK; debug certificates match. At this evidence snapshot API 26 emulator instrumentation was still running, API 33 and API 35 were queued. No emulator pass is claimed for the current SHA until each job completes.
+- The companion module is a UID/filesystem/loopback capability prototype only. Python and Node have not migrated into it. The earlier isolated-process experiment blocked loopback TCP on API 26 and API 33.
+- Current status and exact outstanding work: [PROJECT_STATUS_2026-11-16.md](PROJECT_STATUS_2026-11-16.md).
+- Release signing documentation now describes the four-APK output and shared signing certificate. No signed release is claimed because production secrets and release execution have not been verified.
+
+**Release decision remains: integrated development build; not production approved.**

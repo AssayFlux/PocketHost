@@ -213,3 +213,8 @@ This snapshot is anchored to main commit `671f3f731f4bf093449a95e285327115f41bb7
 - Do not claim universal visitor counts, complete sandboxing, payment compliance, deployed remote control, production readiness or a signed release without the corresponding evidence.
 
 **Release decision:** integrated development build; not production approved. This status changes only when the relevant code, tests, device/network evidence and security review are recorded against the exact release commit.
+
+
+## Evidence update — 2026-11-16
+
+The exact main-branch review and current CI state are recorded in [PROJECT_STATUS_2026-11-16.md](PROJECT_STATUS_2026-11-16.md). In brief: quality CI passed all six jobs; Android cloudflared build and four-APK debug packaging passed; API 26 emulator validation was running and API 33/35 were queued at the review time. The companion is still a capability probe, not a Python/Node runtime host. The earlier isolated-process option is rejected for hosting because loopback TCP was blocked on API 26/33. No production readiness or signed release is claimed.
