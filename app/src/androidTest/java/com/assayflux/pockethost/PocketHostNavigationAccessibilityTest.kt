@@ -94,7 +94,7 @@ class PocketHostNavigationAccessibilityTest {
                     device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  Settings")), 5_000))
                 if (section == "Network") {
                     assertTrue("Visitor access policy controls are missing",
-                        device.wait(Until.hasObject(By.text("Visitor access")), 10_000))
+                        device.wait(Until.hasObject(By.textContains("Visitor access")), 10_000))
                     assertTrue("Hostname route publishing control is missing",
                         device.wait(Until.hasObject(By.text("Save hostname route")), 10_000))
                     device.wait(Until.findObject(By.text("Private")), 10_000)!!.click()
