@@ -21,7 +21,7 @@ Complete companion lifecycle, Binder death/rebind, version negotiation, bounded 
 
 ## Gate 2 — Per-project isolation and adversarial security (P0)
 
-**Current truth:** companion UID differs from host UID, but Python and Node projects share the companion UID and can potentially access sibling project data. Companion has INTERNET permission; loopback listener pinning is not outbound-egress denial. The isolated service/seccomp/Unix-socket work is a proof spike, not a production sandbox.
+**Current truth:** companion UID differs from host UID, but Python and Node projects share the companion UID and can potentially access sibling project data. Companion has INTERNET permission; loopback listener pinning is not outbound-egress denial. The isolated service/seccomp/Unix-socket work remains a proof spike, not a production sandbox. The probe now closes inherited socket descriptors before applying seccomp and its test source checks an inherited connected TCP socket plus socket/connect/bind denial. Chaquopy and Node currently rely on companion app-private storage, which an isolated UID cannot simply reuse; runtime bootstrap/storage adaptation and actual Binder caller authentication remain unsolved.
 
 **Implementation**
 1. Prove isolated service UID, project-only file capability, brokered Unix-domain listener and native policy on API 26/33/35.
@@ -38,7 +38,7 @@ Complete companion lifecycle, Binder death/rebind, version negotiation, bounded 
 
 ## Gate 3 — AssayFlux Relay and device identity (P0 new subsystem)
 
-Build a first-party, independently deployable relay so users can publish without Cloudflare and without exposing their phone IP to ordinary visitors.
+Build a first-party, independently deployable relay so users can publish without Cloudflare and without exposing their phone IP to ordinary visitors. Current repository truth: specification only. The HTTPS-polling RemoteControlAgent and remote control-plane are not a Relay gateway; no persistent device tunnel or visitor stream forwarding is implemented.
 
 **Components:** public gateway, Android outbound tunnel agent, device enrollment broker, authenticated multiplexed streams, hostname registry, certificate lifecycle, visitor access gateway, rate/abuse controls, metrics and operations.
 
@@ -93,5 +93,6 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 
 ### 2026-11-16 implementation evidence addendum
 
-- Gate 2: source primitives and probes are present, but production Python/Node per-project isolated execution and adversarial API 26/33/35 acceptance remain open. Trusted-code-only policy remains mandatory.
-- Gate 4: remote control-plane device and team-user token rotation (including an Owner-only console action), role enforcement and mutation-plus-audit transactions are implemented in source. Passkey-first identity and site-scoped visitor Public/Private/Restricted authorization remain unimplemented; the gate is therefore open.
+- Gate 2: isolated-UID and seccomp probe hardening includes inherited connected-socket closure and socket/connect/bind denial assertions. It is not production runtime confinement; Python/Node storage bootstrap, actual Binder UID authorization, per-project service allocation, strict policy and API 26/33/35 adversarial acceptance remain open. Trusted-code-only policy remains mandatory.
+- Gate 3: specification only. No Relay gateway, persistent device stream, visitor multiplexing, hostname registry/certificate lifecycle or Android Relay Agent exists. Keep Cloudflare Tunnel independent.
+- Gate 4: remote control-plane API credentials now exchange for 12-hour server-side sessions; sessions are hashed, expire, can be revoked and are invalidated on user token rotation/account revocation. Role enforcement, token rotation and audit transactions remain. Passkey-first local Owner identity and site-scoped visitor Public/Private/Restricted authorization remain unimplemented; the gate is therefore open.
