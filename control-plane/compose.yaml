@@ -28,6 +28,7 @@ services:
       POCKETHOST_CONTROL_ADMIN_TOKEN: ${POCKETHOST_CONTROL_ADMIN_TOKEN:?Set a long random administrator token}
       POCKETHOST_CONTROL_API_HOST: ${POCKETHOST_CONTROL_API_HOST:?Set the dedicated control-plane hostname}
       POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the exact HTTPS console origin}
+      POCKETHOST_TRUSTED_PROXY_IPS: ${POCKETHOST_TRUSTED_PROXY_IPS:-172.31.240.10,172.31.240.11}
       POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
       POCKETHOST_RELAY_BIND: 0.0.0.0:8081
       RUST_LOG: info
@@ -56,7 +57,9 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    networks: [private]
+    networks:
+      private:
+        ipv4_address: 172.31.240.10
 
   cloudflared:
     profiles: ["cloudflare"]
@@ -64,7 +67,9 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${POCKETHOST_CONTROL_TUNNEL_TOKEN:-}
     depends_on: [control-plane]
-    networks: [private]
+    networks:
+      private:
+        ipv4_address: 172.31.240.11
 
 volumes:
   pockethost-control-data:
@@ -75,3 +80,6 @@ volumes:
 networks:
   private:
     driver: bridge
+    ipam:
+      config:
+        - subnet: ${POCKETHOST_DOCKER_SUBNET:-172.31.240.0/24}
