@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-private fun BiometricUnlockScreen(onRetry: () -> Unit) {
+internal fun BiometricUnlockScreen(onRetry: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
         Column(
             modifier = Modifier.fillMaxSize().padding(28.dp),
