@@ -39,6 +39,8 @@ object RuntimeWorkerClient {
     private const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
     private const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
     private const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
+    private const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
+    private const val EXPECTED_PROTOCOL_VERSION = 1
     private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRIES = 10_000
 
@@ -96,6 +98,10 @@ object RuntimeWorkerClient {
                     }
                     failure?.let { throw it }
                     binder = checkNotNull(cachedBinder) { "Runtime companion did not provide a Binder." }
+                    val version = transact(binder!!, TRANSACTION_PROTOCOL_VERSION) as Int
+                    check(version == EXPECTED_PROTOCOL_VERSION) {
+                        "Runtime companion protocol mismatch. Update the host and companion APKs together."
+                    }
                 }
             }
         }
