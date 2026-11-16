@@ -164,3 +164,11 @@ Update this file with exact evidence whenever the baseline changes.
 - b36858a4581a69eebf428b4ec6d86d2c74f722d2 retains per-destination screenshots and accessibility hierarchy XML; 77f3cb655365cd29c01a88e5f664ce40bfd12b34 updates Android CI to collect them.
 - These artifacts have not yet been produced/inspected by a successful API 26/33/35 workflow. Human accessibility and responsive visual acceptance remain open.
 
+## 2026-11-16 latest Gate 5–7 source follow-up
+
+- Rust governor: 62c15054cf28474250bbc64110a0748df7146d24 clarifies the distinction between the bounded socket queue and protocol-bounded HTTP/2 request concurrency. FIFO per-site permit waiting remains bounded by 200 ms.
+- Gate 7: a27556e822f044fc9bcaaa046d721c19393d0865 and 2bc01c398741b9ccf9109f44b02195e85111fd8d align the Learn screen callback name with the actual Sites destination.
+- UI instrumentation and artifact collection remain in source at 7c55388f54313ae81cf3b5d644bf21f102615745, b36858a4581a69eebf428b4ec6d86d2c74f722d2 and 77f3cb655365cd29c01a88e5f664ce40bfd12b34.
+- GitHub combined commit-status lookup returned no status entries for the latest source commit at review time. This is not evidence of workflow success or failure; inspect Actions runs/artifacts before claiming Android or Rust verification.
+- Gates 5, 6 and 7 remain open pending weighted/global fairness and representative capacity evidence, full backup/lifecycle fault acceptance, and executed UI/accessibility/onboarding review.
+
