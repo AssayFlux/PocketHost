@@ -33,7 +33,7 @@ The create response returns the visitor password once. Browser navigation uses H
 ## Remaining work before Gate 4 closes
 
 1. Implement passkey-first Owner identity using a platform credential / WebAuthn-compatible flow with secure recovery; the existing password + device-approved recovery flow is not a passkey.
-2. Add visitor authentication throttling and abuse controls per site/IP, with bounded audit events and lockout behavior that does not allow trivial denial of service.
+2. Implemented source: Rust applies a bounded eight-failure/60-second lockout keyed by site and effective client IP, with bounded bucket storage. Add production telemetry/abuse review and adversarial load validation.
 3. Add explicit fresh Owner reauthentication for sensitive local management actions and test role separation across every mutation route.
 4. Verify TLS-proxy trust configuration cannot be forged by a non-loopback peer and test direct LAN rejection.
 5. Execute Android instrumentation tests for site mode changes, visitor creation/rotation/revocation, browser 401 challenge, cross-site credential isolation, runtime proxy stripping and backup secret exclusion.
