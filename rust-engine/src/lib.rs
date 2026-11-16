@@ -1027,7 +1027,7 @@ mod tests {
     }
 
     #[test]
-    fn multiplexed_http2_fanout_has_explicit_mobile_safe_bounds() {
+    fn http_protocol_fanout_and_header_bounds_are_explicitly_bounded() {
         assert_eq!(MAX_HTTP2_STREAMS_PER_CONNECTION, 8);
         assert_eq!(MAX_HTTP2_PENDING_RESET_STREAMS, 16);
         assert_eq!(MAX_HTTP2_LOCAL_ERROR_RESETS, 64);
