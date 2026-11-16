@@ -55,3 +55,10 @@ Credentials remain device-bound and must be configured independently on a replac
 - Custom static roots are restored to `files/site-roots/<site-id>`; the hostname registry is rebound to the restored path. Existing custom roots are preserved and rolled back if a later restore step fails.
 - Custom Python/Node route roots that differ from the configured Python/Node project roots are still rejected. The configured runtime project roots themselves are backed up and remapped to their standard restore locations.
 - Android instrumentation covers a successful custom-root round trip and a duplicate-host failure after staging, asserting that the prior custom root and default static site are restored. API 26/33/35 emulator execution is tracked in the backup regression workflow; do not claim it passed until that run completes.
+
+## Authenticated restore fault coverage — 2026-11-16
+
+- Android instrumentation source now explicitly checks that a wrong passphrase and a one-bit ciphertext modification both fail before changing the active static deployment.
+- Existing custom-root round-trip coverage also exercises duplicate-host validation failure and rollback of the previous custom root, default site and route registry.
+- These are test definitions only until the API 26/33/35 Android integration workflow executes successfully. Low-storage, interrupted I/O, process-death recovery and rollback-failure preservation still require dedicated fault injection and executed evidence.
+
