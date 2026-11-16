@@ -115,13 +115,21 @@ Update this file with exact evidence whenever the baseline changes.
 - Gate 2 remains open. The Binder capability adapter and isolated probe remain feasibility work; the production Python/Node runtime still shares the companion UID and app-private project/runtime storage. No production cell supervisor, runtime migration or Android API 26/33/35 test result is claimed.
 - Gate 3 source now routes an authenticated visitor request to the selected enabled local site ID, uses its configured local hostname for Rust routing, and preserves the verified public hostname for runtime X-Forwarded-Host. The Android agent uses bounded raw loopback HTTP to preserve Host; response cookies and browser Basic-auth challenges are retained. DNS TXT parsing checks response source, transaction ID, question and answer owner. DNSSEC is not validated. Streaming/WebSocket, TLS/certificate lifecycle, deployment, external visitor tests and soak evidence remain open.
 - Gate 4 now has per-site/effective-client-IP visitor-authentication throttling in Rust (8 failed attempts per 60-second window, then a 60-second cooldown, with a bounded bucket map). Remote 12-hour sessions, role enforcement, user/device token rotation, audit and site-scoped visitor credential revocation remain implemented in source. Passkeys and fresh reauthentication remain open.
-- Latest six-job quality workflow `43851733175` completed success on exact SHA `06fa7dea1ed2481b30c680fd1a22ff083d48d203`: Rust, control-plane/PostgreSQL migrations and Compose profiles, Python runtime, Node runtime, console and Gradle wrapper all passed. This workflow does not compile Android Kotlin/C++ or execute Android instrumentation. No Android build/device test was run, per the owner-directed Gate 8 sequencing.
+- Latest six-job quality workflow `43853226788` completed success on exact SHA `5a2eb78c624e122dbf38a91fcf49b1750c8599b1`: Rust, control-plane/PostgreSQL migrations and Compose profiles, Python runtime, Node runtime, console and Gradle wrapper all passed. This workflow does not compile Android Kotlin/C++ or execute Android instrumentation. No Android build/device test was run, per the owner-directed Gate 8 sequencing.
 
 
 ## Latest verified quality evidence — 2026-11-16
 
-- Repository HEAD at verification: 06fa7dea1ed2481b30c680fd1a22ff083d48d203.
-- Workflow: https://github.com/AssayFlux/PocketHost/actions/runs/43851733175 — completed success, all six jobs successful.
-- Control-plane tests ran against PostgreSQL 16, including migrations, remote session expiry/revocation, team-user token rotation, device token rotation, Relay hostname state, bounded pending-request quotas, DNS TXT parser validation and artifact transaction tests.
+- Repository HEAD at verification: 5a2eb78c624e122dbf38a91fcf49b1750c8599b1.
+- Workflow: https://github.com/AssayFlux/PocketHost/actions/runs/43853226788 — completed success, all six jobs successful.
+- Control-plane tests ran against PostgreSQL 16, including migrations, remote session expiry/revocation, team-user token rotation, device token rotation, Relay hostname state, bounded pending-request quotas, DNS TXT parser validation, dedicated control-host matching and artifact transaction tests. Caddy strict SNI validation and both Compose ingress profiles passed.
 - Rust engine tests passed, including per-site/client visitor-auth throttling tests. Python, Node, TypeScript console and Gradle-wrapper jobs passed.
 - The workflow does not compile Android app Kotlin, companion Kotlin, C++/JNI, nor execute Android instrumentation. Those remain intentionally deferred to Gate 8.
+
+
+## Relay ingress separation — 2026-11-16
+
+- The Axum control plane now binds two listeners in one process with shared state: the dedicated control/device API listener (POCKETHOST_CONTROL_BIND, port 8080) and the visitor-only Relay gateway listener (POCKETHOST_RELAY_BIND, port 8081).
+- The visitor listener has only the verified-host fallback; it does not register /v1/admin, /v1/device, health or management routes. The control listener carries admin/device routes and is guarded by POCKETHOST_CONTROL_API_HOST.
+- Caddy routes the dedicated control hostname to 8080 and other verified Relay visitor hostnames to 8081. strict_sni_host on is enabled to reject SNI/Host domain-fronting mismatches. The Cloudflare Tunnel profile must route the management hostname to 8080 and visitor hostnames to 8081.
+- This is source and CI-validated ingress separation; no live Caddy/Cloudflare deployment or external visitor acceptance is claimed.
