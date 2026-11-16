@@ -158,3 +158,9 @@ Update this file with exact evidence whenever the baseline changes.
 - 4fc9582ebc78cf4d9860e76b3455a554b713b539 adds Android instrumentation source for recovery from a missing active site.
 - This covers interrupted static deployment activation only. Full application backup restore journaling, process-death recovery across all restore phases and Android lifecycle/device acceptance remain open.
 
+## 2026-11-16 UI navigation instrumentation source
+
+- 7c55388f54313ae81cf3b5d644bf21f102615745 adds a UIAutomator instrumentation test for all five destinations and verifies destination-specific content.
+- b36858a4581a69eebf428b4ec6d86d2c74f722d2 retains per-destination screenshots and accessibility hierarchy XML; 77f3cb655365cd29c01a88e5f664ce40bfd12b34 updates Android CI to collect them.
+- These artifacts have not yet been produced/inspected by a successful API 26/33/35 workflow. Human accessibility and responsive visual acceptance remain open.
+
