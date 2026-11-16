@@ -15,7 +15,7 @@ import java.io.ByteArrayOutputStream
  * CI-only isolated-UID proof service. It installs the exact native syscall
  * policy before project code and proves a Unix-domain visitor capability works.
  */
-class RuntimeCellProbeService : Service() {
+open class RuntimeCellProbeService : Service() {
     private val cellBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code == INTERFACE_TRANSACTION) {
@@ -223,3 +223,6 @@ class RuntimeCellProbeService : Service() {
         const val MAX_BINDER_FILE_BYTES = 256 * 1024
     }
 }
+
+/** Second fixed isolated slot for API 26–28 multi-project UID feasibility tests. */
+class RuntimeCellProbeServiceTwo : RuntimeCellProbeService()
