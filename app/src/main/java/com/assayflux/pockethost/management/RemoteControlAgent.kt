@@ -52,7 +52,6 @@ object RemoteControlAgent {
     @Synchronized
     fun configure(context: Context, endpoint: String, token: String) {
         val restartAgent = running
-        if (restartAgent) stop()
         val uri = URI(endpoint.trim().trimEnd('/'))
         require(uri.scheme == "https" || (uri.scheme == "http" && uri.host in setOf("127.0.0.1", "localhost"))) {
             "Use HTTPS for remote control. HTTP is allowed only for localhost development."
@@ -65,6 +64,7 @@ object RemoteControlAgent {
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val encrypted = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
         val packed = cipher.iv + encrypted
+        if (restartAgent) stop()
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("endpoint", uri.toString())
             .putString("token", Base64.encodeToString(packed, Base64.NO_WRAP))
