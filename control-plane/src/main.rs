@@ -832,7 +832,11 @@ async fn relay_device_response(
     let device = device_id(&headers, &s).await?;
     if response.id != id { return Err((StatusCode::BAD_REQUEST, "relay_response_id_mismatch".into())); }
     if !(200..=599).contains(&response.status) { return Err((StatusCode::BAD_REQUEST, "invalid_relay_response_status".into())); }
-    if response.headers.len() > 64 || response.headers.iter().any(|(name, value)| name.len() > 64 || value.len() > 8_192) || response.body_base64.len() > 12 * 1024 * 1024 {
+    if response.headers.len() > 64 ||
+        response.headers.iter().any(|(name, value)| name.len() > 64 || value.len() > 8_192) ||
+        response.set_cookies.len() > 16 ||
+        response.set_cookies.iter().any(|value| value.len() > 8_192 || value.contains('\r') || value.contains('\n')) ||
+        response.body_base64.len() > 12 * 1024 * 1024 {
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into()));
     }
     let body = relay::decode_body(&response.body_base64).map_err(|_| (StatusCode::BAD_REQUEST, "invalid_relay_response_body".into()))?;
