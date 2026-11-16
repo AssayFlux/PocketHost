@@ -45,7 +45,7 @@ jobs:
         run: |
           docker run --rm -e CONTROL_PLANE_DOMAIN=relay.example.test \
             -v "$PWD/control-plane/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+            caddy:2 validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Validate public and Cloudflare Tunnel Compose profiles
         env:
           POSTGRES_PASSWORD: ci-only-postgres-password
