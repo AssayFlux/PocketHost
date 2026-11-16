@@ -203,3 +203,5 @@ Update this file with exact evidence whenever the baseline changes.
 - 91007e7d1c1266cba5a9653fd3a6bcb421dc8fe0, 25b5e0f5db84917b22712de9783f0fdcfc821c1f, 503153f63a1c5589dc50d1a57f4c63352418ded8 and 86212c0b2b21996551d057b1b982d5e74476b209 harden restore recovery against symlinked journal/commit metadata, unsafe rollback roots, and runtime activity during recovery.
 - 64607e8a3d159e1d0ff5b23db1f97a8fa5b2bf1b verifies committed transaction cleanup without reverting the new site. All these instrumentation cases still require execution.
 
+- 8c2a1a82a670ff307850ce4ac42b2e7e71438545 caps HTTP/2 concurrent streams at eight per TCP socket and bounds reset streams/header-list sizes; 407ec6e2c48aaac7ae27fffd03007b4378030751 clarifies the admission contract. This prevents the prior Hyper default of 200 multiplexed streams/socket from bypassing the mobile connection/task budget. Rust execution remains unverified.
+
