@@ -181,6 +181,30 @@ object SiteImporter {
         pruneReleases(releases)
     }
 
+    /**
+     * Recovers the last-known-good deployment if the process or device stopped
+     * between moving the active site aside and activating its replacement.
+     * Invalid active data is preserved in the release directory for diagnosis.
+     */
+    fun recoverInterruptedActivation(context: Context): Boolean {
+        val active = File(context.filesDir, "site")
+        if (active.isDirectory && File(active, "index.html").isFile) return false
+        val releases = File(context.filesDir, "site-releases")
+        val latest = releases.listFiles()
+            ?.filter { it.isDirectory && it.name.startsWith("release-") && File(it, "index.html").isFile }
+            ?.maxByOrNull { it.name }
+            ?: return false
+        val quarantined = if (active.exists()) {
+            File(releases, "recovery-invalid-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
+                .also { if (!active.renameTo(it)) throw IOException("Could not preserve the interrupted active deployment.") }
+        } else null
+        if (!latest.renameTo(active)) {
+            if (quarantined != null) quarantined.renameTo(active)
+            throw IOException("Could not recover the last-known-good website deployment.")
+        }
+        return true
+    }
+
     fun listReleases(context: Context): List<String> =
         File(context.filesDir, "site-releases").listFiles()
             ?.filter { it.isDirectory && it.name.startsWith("release-") }
