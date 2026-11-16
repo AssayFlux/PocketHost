@@ -21,6 +21,7 @@ export function App() {
   const [approvalCode, setApprovalCode] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [ownerReauthRequired, setOwnerReauthRequired] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [accountUsername, setAccountUsername] = useState("");
@@ -58,7 +59,12 @@ export function App() {
       try { data = JSON.parse(text) as { error?: string }; }
       catch { data = { error: text.slice(0, 240) }; }
     }
-    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : `Device API returned ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 428 && data.error === "owner_reauthentication_required") {
+        setOwnerReauthRequired(true);
+      }
+      throw new Error(typeof data.error === "string" ? data.error : `Device API returned ${response.status}`);
+    }
     return data as T;
   }, [apiBase, token]);
 
@@ -106,11 +112,21 @@ export function App() {
     setBusy(true);
     try {
       localStorage.setItem("pockethost_api_base", apiBase);
+      const previousToken = token;
       const result = await request<{ accessToken: string }>("/api/v1/auth/login", {
         method: "POST", body: JSON.stringify({ username: loginUsername, password: loginPassword }),
       });
+      if (previousToken) {
+        // A successful credential re-check replaces the old local session.
+        await fetch(apiBase.replace(/\/$/, "") + "/api/v1/session", {
+          method: "DELETE", headers: { Authorization: `Bearer ${previousToken}` }, cache: "no-store",
+        }).catch(() => undefined);
+      }
       sessionStorage.setItem("pockethost_device_token", result.accessToken);
-      setToken(result.accessToken); setLoginPassword(""); setMessage("Host account authenticated.");
+      setToken(result.accessToken);
+      setOwnerReauthRequired(false);
+      setLoginPassword("");
+      setMessage("Host account authenticated; the previous session was retired.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Login failed."); }
     finally { setBusy(false); }
   }
@@ -309,6 +325,13 @@ export function App() {
     <section className="main-panel" id="overview">
       <header className="topbar"><div><span className="eyebrow">ASSAYFLUX / CONTROL PLANE</span><h1>Device overview</h1><p>Live status from your PocketHost Android device.</p></div><span className="device-pill"><i /> {token ? "Session active" : "Not connected"}</span></header>
       <section className="notice"><div className="notice-icon">i</div><div><strong>Device connection</strong><p>{message}</p></div></section>
+      {token && ownerReauthRequired && <section className="panel" aria-live="polite">
+        <div className="panel-heading"><h3>Confirm Owner identity</h3><span className="muted-tag">FRESH AUTHORIZATION</span></div>
+        <p>This sensitive change needs a fresh Owner credential check. Sign in again to authorize it; your existing session remains active for read-only access.</p>
+        <label>Owner username<input autoComplete="username" value={loginUsername || hostIdentity?.username || ""} onChange={e => setLoginUsername(e.target.value)} /></label>
+        <label>Owner password<input type="password" autoComplete="current-password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} /></label>
+        <button disabled={busy || !loginUsername && !hostIdentity?.username || !loginPassword} onClick={login}>Reauthenticate Owner</button>
+      </section>}
       {!token && <section className="lower-grid" id="connection">
         <article className="panel">
           <div className="panel-heading"><h3>Host account login</h3><span className="muted-tag">OWNER / OPERATOR</span></div>
