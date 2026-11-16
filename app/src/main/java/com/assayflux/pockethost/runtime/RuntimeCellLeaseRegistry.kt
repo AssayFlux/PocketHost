@@ -1,6 +1,7 @@
 package com.assayflux.pockethost.runtime
 
 import java.security.SecureRandom
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Trusted host-side allocator for a bounded pool of isolated execution cells.
@@ -35,6 +36,7 @@ class RuntimeCellLeaseRegistry(
     private val lock = Any()
     private val random = SecureRandom()
     private val slots = arrayOfNulls<Entry>(capacity)
+    private val stateListeners = CopyOnWriteArrayList<(Lease) -> Unit>()
 
     init {
         require(hostUid > 0) { "Host UID must be positive." }
@@ -67,11 +69,22 @@ class RuntimeCellLeaseRegistry(
     }
 
     /** Called only from the bound service's Binder.DeathRecipient/disconnect recovery path. */
-    fun markProcessDied(leaseId: String): Lease = synchronized(lock) {
-        val entry = find(leaseId)
-        check(entry.state == State.ACTIVE) { "Only an active cell can be marked dead." }
-        entry.state = State.DEAD
-        entry.snapshot()
+    fun markProcessDied(leaseId: String): Lease {
+        val deadLease = synchronized(lock) {
+            val entry = find(leaseId)
+            check(entry.state == State.ACTIVE) { "Only an active cell can be marked dead." }
+            entry.state = State.DEAD
+            entry.snapshot()
+        }
+        // Notify outside the registry lock: listeners may consult other lease-owned state.
+        stateListeners.forEach { listener -> runCatching { listener(deadLease) } }
+        return deadLease
+    }
+
+    /** Register a trusted host listener for lease state transitions. */
+    fun addStateListener(listener: (Lease) -> Unit): AutoCloseable {
+        stateListeners.add(listener)
+        return AutoCloseable { stateListeners.remove(listener) }
     }
 
     /** Release a never-started reservation or a lease whose process death was observed. */
