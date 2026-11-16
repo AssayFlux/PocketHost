@@ -31,6 +31,9 @@ class RuntimeCellCapabilityBroker(
     private val lock = Any()
     private val random = SecureRandom()
     private val grants = HashMap<String, Grant>()
+    private val leaseStateListener = leases.addStateListener { lease ->
+        if (lease.state == RuntimeCellLeaseRegistry.State.DEAD) revokeLease(lease.id)
+    }
 
     /** Resolve the root from the lease's immutable project ID; callers cannot choose it. */
     fun issue(leaseId: String, callerUid: Int): String = synchronized(lock) {
