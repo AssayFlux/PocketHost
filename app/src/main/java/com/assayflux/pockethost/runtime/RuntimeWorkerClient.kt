@@ -64,7 +64,11 @@ object RuntimeWorkerClient {
                     cachedConnection?.let { previous -> runCatching { app.unbindService(previous) } }
                     cachedConnection = null
                     val intent = workerIntent()
-                    ContextCompat.startForegroundService(app, intent)
+                    try {
+                        ContextCompat.startForegroundService(app, intent)
+                    } catch (error: Throwable) {
+                        throw IllegalStateException("Runtime companion is not installed. Install the matching companion APK first.", error)
+                    }
                     val latch = CountDownLatch(1)
                     var failure: Throwable? = null
                     val connection = object : ServiceConnection {
@@ -87,20 +91,35 @@ object RuntimeWorkerClient {
                             latch.countDown()
                         }
                     }
-                    check(app.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
-                        "Could not bind to the installed runtime companion. Install the matching companion APK."
+                    if (!app.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
+                        runCatching { app.stopService(intent) }
+                        throw IllegalStateException("Could not bind to the runtime companion. Check that both APKs are installed and signed with the same certificate.")
                     }
                     cachedConnection = connection
-                    check(latch.await(20, TimeUnit.SECONDS)) {
+                    if (!latch.await(20, TimeUnit.SECONDS)) {
                         runCatching { app.unbindService(connection) }
+                        runCatching { app.stopService(intent) }
                         cachedConnection = null
-                        "Timed out waiting for the runtime companion."
+                        throw IllegalStateException("Timed out waiting for the runtime companion.")
                     }
-                    failure?.let { throw it }
+                    if (failure != null) {
+                        runCatching { app.unbindService(connection) }
+                        runCatching { app.stopService(intent) }
+                        cachedConnection = null
+                        throw failure!!
+                    }
                     binder = checkNotNull(cachedBinder) { "Runtime companion did not provide a Binder." }
-                    val version = transact(binder!!, TRANSACTION_PROTOCOL_VERSION) as Int
-                    check(version == EXPECTED_PROTOCOL_VERSION) {
-                        "Runtime companion protocol mismatch. Update the host and companion APKs together."
+                    try {
+                        val version = transact(binder!!, TRANSACTION_PROTOCOL_VERSION) as Int
+                        check(version == EXPECTED_PROTOCOL_VERSION) {
+                            "Runtime companion protocol mismatch. Update the host and companion APKs together."
+                        }
+                    } catch (error: Throwable) {
+                        cachedBinder = null
+                        cachedConnection = null
+                        runCatching { app.unbindService(connection) }
+                        runCatching { app.stopService(intent) }
+                        throw error
                     }
                 }
             }
