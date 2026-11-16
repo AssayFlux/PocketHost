@@ -804,7 +804,7 @@ async fn relay_device_response(
     let device = device_id(&headers, &s).await?;
     if response.id != id { return Err((StatusCode::BAD_REQUEST, "relay_response_id_mismatch".into())); }
     if !(200..=599).contains(&response.status) { return Err((StatusCode::BAD_REQUEST, "invalid_relay_response_status".into())); }
-    if response.headers.len() > 64 || response.body_base64.len() > 12 * 1024 * 1024 {
+    if response.headers.len() > 64 || response.headers.iter().any(|(name, value)| name.len() > 64 || value.len() > 8_192) || response.body_base64.len() > 12 * 1024 * 1024 {
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into()));
     }
     let body = relay::decode_body(&response.body_base64).map_err(|_| (StatusCode::BAD_REQUEST, "invalid_relay_response_body".into()))?;
@@ -890,8 +890,7 @@ async fn relay_visitor(
             ) { builder = builder.header(name, value); }
         }
     }
-    builder = builder.header("x-content-type-options", "nosniff")
-        .header("cache-control", "no-store");
+    builder = builder.header("x-content-type-options", "nosniff");
     builder.body(Body::from(response_body))
         .map_err(|_| (StatusCode::BAD_GATEWAY, "relay_response_build_failed".into()))
 }
