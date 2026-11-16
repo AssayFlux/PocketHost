@@ -29,11 +29,12 @@ services:
       POCKETHOST_CONTROL_API_HOST: ${POCKETHOST_CONTROL_API_HOST:?Set the dedicated control-plane hostname}
       POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the exact HTTPS console origin}
       POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
+      POCKETHOST_RELAY_BIND: 0.0.0.0:8081
       RUST_LOG: info
       POCKETHOST_ARTIFACT_DIR: /var/lib/pockethost/artifacts
     volumes:
       - pockethost-artifacts:/var/lib/pockethost/artifacts
-    expose: ["8080"]
+    expose: ["8080", "8081"]
     read_only: true
     tmpfs: ["/tmp"]
     security_opt: ["no-new-privileges:true"]
