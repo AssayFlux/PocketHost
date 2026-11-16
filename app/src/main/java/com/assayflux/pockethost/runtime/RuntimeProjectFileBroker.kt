@@ -162,6 +162,7 @@ object RuntimeProjectFileBroker {
 
     private fun safeSegments(relativePath: String): List<String> {
         val normalized = relativePath.replace(92.toChar(), '/')
+        require(!normalized.contains(0.toChar())) { "Project file path contains a NUL byte." }
         require(normalized.isNotBlank() && !normalized.startsWith('/') && !File(normalized).isAbsolute) {
             "Absolute or empty project paths are not permitted."
         }
