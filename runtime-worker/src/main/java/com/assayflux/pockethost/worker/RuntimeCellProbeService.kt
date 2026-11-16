@@ -8,7 +8,6 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
-import java.net.InetSocketAddress
 
 /**
  * CI-only isolated-UID proof service. It installs the exact native syscall
@@ -33,16 +32,33 @@ class RuntimeCellProbeService : Service() {
             val outbound = ParcelFileDescriptor.CREATOR.createFromParcel(data)
             val expectedHostUid = data.readInt()
             try {
+                // The broker transfers a listener plus an intentionally untrusted socket.
+                // Detach ownership before native cleanup so a later FD reuse cannot be
+                // accidentally closed by ParcelFileDescriptor.close().
+                val inheritedSocketFd = outbound.detachFd()
+                val cleanupResult = NetworkSandbox.closeInheritedSocketsExcept(listener.fd)
+                check(cleanupResult == 0) {
+                    "Could not close inherited socket descriptors (errno=$cleanupResult); refusing to continue."
+                }
+                val inheritedSocketClosed = runCatching {
+                    Os.fstat(inheritedSocketFd)
+                }.exceptionOrNull()?.let {
+                    it is android.system.ErrnoException && it.errno == OsConstants.EBADF
+                } ?: false
+                check(inheritedSocketClosed) {
+                    "An inherited socket descriptor remained open; refusing to install the policy."
+                }
+
                 val policyResult = NetworkSandbox.installNetworkPolicy(listener.fd)
                 check(policyResult == 0) { "Network syscall policy failed to install (errno=$policyResult)." }
 
                 val socketCreationDenied = runCatching {
-                    Os.socket(OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP)
-                }.exceptionOrNull()?.let { it is android.system.ErrnoException && it.errno == OsConstants.EPERM } ?: false
-
-                val connectDenied = runCatching {
-                    Os.connect(outbound.fileDescriptor, InetSocketAddress("127.0.0.1", 9))
-                }.exceptionOrNull()?.let { it is android.system.ErrnoException && it.errno == OsConstants.EPERM } ?: false
+                    val fd = Os.socket(OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP)
+                    Os.close(fd)
+                    false
+                }.exceptionOrNull()?.let {
+                    it is android.system.ErrnoException && it.errno == OsConstants.EPERM
+                } ?: false
 
                 val accepted = Os.accept(listener.fileDescriptor, null)
                 val acceptedPfd = ParcelFileDescriptor.dup(accepted)
@@ -65,13 +81,13 @@ class RuntimeCellProbeService : Service() {
 
                 reply?.writeNoException()
                 reply?.writeInt(if (socketCreationDenied) 1 else 0)
-                reply?.writeInt(if (connectDenied) 1 else 0)
+                reply?.writeInt(if (inheritedSocketClosed) 1 else 0)
                 reply?.writeInt(if (String(request, 0, count, Charsets.UTF_8) == "probe") 1 else 0)
                 reply?.writeInt(if (peerUid == expectedHostUid) 1 else 0)
                 return true
             } finally {
                 listener.close()
-                outbound.close()
+                runCatching { outbound.close() }
             }
         }
     }
