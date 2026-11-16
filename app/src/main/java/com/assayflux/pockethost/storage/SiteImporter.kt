@@ -238,10 +238,20 @@ object SiteImporter {
             ?.filter { it.name.startsWith("release-") && isSafeRecoveryRelease(it) }
             ?.maxByOrNull { it.name } ?: throw IOException("There is no safe previous deployment to restore.")
         val active = File(context.filesDir, "site")
-        val displaced = File(releases, "release-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}")
-        if (!active.exists() || !active.renameTo(displaced)) throw IOException("Could not preserve the current deployment.")
+        val noFollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
+        val activeExists = java.nio.file.Files.exists(active.toPath(), noFollow)
+        val displaced = if (activeExists) {
+            val name = if (isSafeRecoveryRelease(active)) {
+                "release-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}"
+            } else {
+                "recovery-invalid-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}"
+            }
+            File(releases, name).also {
+                if (!active.renameTo(it)) throw IOException("Could not preserve the current deployment.")
+            }
+        } else null
         if (!latest.renameTo(active)) {
-            displaced.renameTo(active)
+            if (displaced != null) displaced.renameTo(active)
             throw IOException("Rollback failed. The current deployment was restored.")
         }
         pruneReleases(releases)
@@ -272,7 +282,8 @@ object SiteImporter {
     }
 
     private fun pruneReleases(directory: File) {
-        directory.listFiles()?.filter { it.isDirectory && it.name.startsWith("release-") }
+        directory.listFiles()
+            ?.filter { it.name.startsWith("release-") && isSafeRecoveryRelease(it) }
             ?.sortedByDescending { it.name }
             ?.drop(5)?.forEach { it.deleteRecursively() }
     }
