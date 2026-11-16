@@ -64,9 +64,39 @@ open class RuntimeIsolationProbeService : Service() {
                 }
                 TRANSACTION_PROJECT_DIRECTORY -> {
                     val directory = ParcelFileDescriptor.CREATOR.createFromParcel(data)
-                    val base = "/proc/self/fd/${directory.fd}"
+                    // Use openat relative to the passed directory descriptor. Do not
+                    // resolve /proc/self/fd/<n>/...: isolated_app SELinux policy may
+                    // deny procfs traversal even when the broker intentionally passed
+                    // an already-open directory capability.
+                    fun openBeneath(relative: String, flags: Int, mode: Int): java.io.FileDescriptor? {
+                        val segments = relative.split('/')
+                        if (segments.isEmpty() || segments.any { it.isBlank() || it == "." || it == ".." }) return null
+                        var parent = ParcelFileDescriptor.dup(directory.fileDescriptor)
+                        try {
+                            for (segment in segments.dropLast(1)) {
+                                val next = Os.openat(
+                                    parent.fileDescriptor,
+                                    segment,
+                                    OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC,
+                                    0
+                                )
+                                val nextPfd = ParcelFileDescriptor.dup(next)
+                                Os.close(next)
+                                parent.close()
+                                parent = nextPfd
+                            }
+                            return Os.openat(
+                                parent.fileDescriptor,
+                                segments.last(),
+                                flags or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC,
+                                mode
+                            )
+                        } finally {
+                            parent.close()
+                        }
+                    }
                     fun canRead(relative: String): Boolean = runCatching {
-                        val fd = Os.open("$base/$relative", OsConstants.O_RDONLY, 0)
+                        val fd = openBeneath(relative, OsConstants.O_RDONLY, 0) ?: return@runCatching false
                         try {
                             val buffer = ByteArray(64)
                             Os.read(fd, buffer, 0, buffer.size) > 0
@@ -77,11 +107,11 @@ open class RuntimeIsolationProbeService : Service() {
                     val ownFileReadable = canRead("marker.txt")
                     val siblingFileReadable = canRead("../sibling/secret.txt")
                     val created = runCatching {
-                        val fd = Os.open(
-                            "$base/worker-created.txt",
+                        val fd = openBeneath(
+                            "worker-created.txt",
                             OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_EXCL,
                             0x1A4
-                        )
+                        ) ?: return@runCatching false
                         try {
                             Os.fchmod(fd, 0x1A4)
                             val bytes = "created-by-isolated-cell".toByteArray(Charsets.UTF_8)
