@@ -124,7 +124,9 @@ class RuntimeCellCapabilityBroker(
             throw SecurityException("Execution cell is no longer authorized.")
         }
         return grant
-    }    companion object {
+    }
+
+    companion object {
         const val MAX_GRANTS_PER_LEASE = 8
         const val GRANT_TTL_MS = 15 * 60 * 1000L
     }
