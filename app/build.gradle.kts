@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.chaquo.python")
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
@@ -88,9 +87,3 @@ dependencies {
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }
 
-chaquopy {
-    defaultConfig {
-        // Python 3.11 is the newest Chaquopy line retaining 32-bit ARM support.
-        version = "3.11"
-    }
-}
