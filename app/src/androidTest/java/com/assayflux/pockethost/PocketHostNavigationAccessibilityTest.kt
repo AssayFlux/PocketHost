@@ -43,6 +43,14 @@ class PocketHostNavigationAccessibilityTest {
                     device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  $destinationName")), 15_000))
                 assertTrue("$destinationName screen did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 15_000))
+                if (destinationName == "Sites") {
+                    assertTrue("Folder publishing action is missing",
+                        device.wait(Until.hasObject(By.text("Choose website folder")), 10_000))
+                    assertTrue("ZIP publishing action is missing",
+                        device.wait(Until.hasObject(By.text("Import website ZIP")), 10_000))
+                    assertTrue("Encrypted backup export action is missing",
+                        device.wait(Until.hasObject(By.text("Export encrypted full app backup")), 10_000))
+                }
                 assertTrue("Could not capture $destinationName screenshot",
                     device.takeScreenshot(File(screenshotDir, "navigation-${destinationName.lowercase()}.png")))
                 device.dumpWindowHierarchy(File(screenshotDir, "navigation-${destinationName.lowercase()}-hierarchy.xml"))
@@ -61,6 +69,12 @@ class PocketHostNavigationAccessibilityTest {
                     device.wait(Until.hasObject(By.text(expectedText)), 10_000))
                 assertTrue("Settings header changed while selecting $section",
                     device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  Settings")), 5_000))
+                if (section == "Network") {
+                    assertTrue("Visitor access policy controls are missing",
+                        device.wait(Until.hasObject(By.text("Visitor access")), 10_000))
+                    assertTrue("Hostname route publishing control is missing",
+                        device.wait(Until.hasObject(By.text("Save hostname route")), 10_000))
+                }
                 assertTrue("Could not capture Settings/$section screenshot",
                     device.takeScreenshot(File(screenshotDir, "settings-${section.lowercase()}.png")))
                 device.dumpWindowHierarchy(File(screenshotDir, "settings-${section.lowercase()}-hierarchy.xml"))
