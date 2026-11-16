@@ -65,7 +65,7 @@ The North Star defines each gate's full exit criteria. Do not reorder security-d
 
 ## 2026-11-16 active Gate 2 implementation note
 
-The isolated-UID probe now closes inherited socket descriptors other than the explicitly brokered visitor listener before applying seccomp. Native setup also rejects any listener which is not an already-listening AF_UNIX SOCK_STREAM socket. The source-level regression test passes an already-connected loopback TCP socket and expects the isolated process to close it. This closes identified egress paths in the probe only; it does not make the probe a production runtime cell. The seccomp policy is still a denylist with an allow fallback, and Python/Node remain in the shared companion UID until their runtimes and storage are migrated.
+The isolated-UID probe now closes inherited socket descriptors other than the explicitly brokered visitor listener before applying seccomp, including a socket deliberately duplicated onto standard input. Native setup also rejects any listener which is not an already-listening AF_UNIX SOCK_STREAM socket and lowers NOFILE/NPROC/FSIZE limits while disabling core dumps. Source instrumentation asserts these values. This closes identified egress/resource paths in the probe only; it does not make the probe a production runtime cell. The seccomp policy is still a denylist with an allow fallback, and Python/Node remain in the shared companion UID until their runtimes and storage are migrated.
 
 ## 2026-11-16 active Gate 2–4 source status
 
