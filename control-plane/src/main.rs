@@ -1300,7 +1300,7 @@ mod tests {
         )]);
         let (_, Json(session_body)) = create_admin_session(
             State(state.clone()), credentials.clone(),
-            ConnectInfo("127.0.0.1:40002".parse().unwrap()),
+            ConnectInfo("198.51.100.222:40002".parse().unwrap()),
         ).await.unwrap();
         let old_session = session_body["accessToken"].as_str().unwrap();
         let old_headers = HeaderMap::from_iter([(
@@ -1314,7 +1314,7 @@ mod tests {
 
         let (_, Json(fresh_body)) = create_admin_session(
             State(state.clone()), credentials,
-            ConnectInfo("127.0.0.1:40002".parse().unwrap()),
+            ConnectInfo("198.51.100.222:40002".parse().unwrap()),
         ).await.unwrap();
         let fresh_session = fresh_body["accessToken"].as_str().unwrap();
         let fresh_headers = HeaderMap::from_iter([(
