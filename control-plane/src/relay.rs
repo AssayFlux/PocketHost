@@ -47,25 +47,19 @@ impl RelayHub {
     pub fn connect(&self, device_id: Uuid) -> (Uuid, mpsc::Receiver<RelayRequest>) {
         let session_id = Uuid::new_v4();
         let (sender, receiver) = mpsc::channel(64);
-        self.sessions.lock().unwrap_or_else(|e| e.into_inner())
-            .insert(device_id, (session_id, sender));
-        // A replacement stream cannot inherit requests queued for its predecessor.
+        let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+        sessions.insert(device_id, (session_id, sender));
+        // Keep the lock order (sessions -> pending) consistent with registration
+        // and teardown so no request can be attached to a stream being replaced.
         self.pending.lock().unwrap_or_else(|e| e.into_inner())
             .retain(|_, pending| pending.device_id != device_id);
         (session_id, receiver)
     }
 
     pub fn disconnect(&self, device_id: Uuid, session_id: Uuid) {
-        let removed = {
-            let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-            if sessions.get(&device_id).map(|entry| entry.0) == Some(session_id) {
-                sessions.remove(&device_id);
-                true
-            } else {
-                false
-            }
-        };
-        if removed {
+        let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+        if sessions.get(&device_id).map(|entry| entry.0) == Some(session_id) {
+            sessions.remove(&device_id);
             // Dropping pending senders releases every visitor waiting on this stream.
             self.pending.lock().unwrap_or_else(|e| e.into_inner())
                 .retain(|_, pending| pending.device_id != device_id);
@@ -77,14 +71,18 @@ impl RelayHub {
             .get(&device_id).map(|entry| entry.1.clone())
     }
 
-    pub fn register_pending(&self, request_id: Uuid, device_id: Uuid) -> Option<oneshot::Receiver<RelayResponse>> {
+    pub fn register_pending(
+        &self, request_id: Uuid, device_id: Uuid
+    ) -> Option<(mpsc::Sender<RelayRequest>, oneshot::Receiver<RelayResponse>)> {
+        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+        let request_sender = sessions.get(&device_id)?.1.clone();
         let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
         let global_count = pending.len();
         let device_count = pending.values().filter(|entry| entry.device_id == device_id).count();
-        if global_count >= 32 || device_count >= 8 { return None; }
+        if global_count >= 32 || device_count >= 8 || pending.contains_key(&request_id) { return None; }
         let (sender, receiver) = oneshot::channel();
         pending.insert(request_id, PendingResponse { device_id, sender });
-        Some(receiver)
+        Some((request_sender, receiver))
     }
 
     pub fn complete(&self, device_id: Uuid, response: RelayResponse) -> bool {
@@ -99,7 +97,8 @@ impl RelayHub {
     }
 
     pub fn revoke_device(&self, device_id: Uuid) {
-        self.sessions.lock().unwrap_or_else(|e| e.into_inner()).remove(&device_id);
+        let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+        sessions.remove(&device_id);
         self.pending.lock().unwrap_or_else(|e| e.into_inner())
             .retain(|_, pending| pending.device_id != device_id);
     }
@@ -265,14 +264,14 @@ mod tests {
         hub.disconnect(device, first);
         assert!(hub.sender(device).is_some(), "stale session teardown must not remove a newer connection");
         let request_id = Uuid::new_v4();
-        let response_rx = hub.register_pending(request_id, device).unwrap();
+        let response_rx = hub.register_pending(request_id, device).unwrap().1;
         assert!(hub.complete(device, RelayResponse {
             id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
         assert_eq!(response_rx.blocking_recv().unwrap().status, 200);
         let other_device = Uuid::new_v4();
         let request_id = Uuid::new_v4();
-        let response_rx = hub.register_pending(request_id, device).unwrap();
+        let response_rx = hub.register_pending(request_id, device).unwrap().1;
         assert!(!hub.complete(other_device, RelayResponse {
             id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
@@ -287,14 +286,14 @@ mod tests {
         let hub = RelayHub::default();
         let device = Uuid::new_v4();
         let (first, _first_stream) = hub.connect(device);
-        let first_request = hub.register_pending(Uuid::new_v4(), device).unwrap();
+        let first_request = hub.register_pending(Uuid::new_v4(), device).unwrap().1;
         let (second, _second_stream) = hub.connect(device);
         assert!(first_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_some());
-        let second_request = hub.register_pending(Uuid::new_v4(), device).unwrap();
+        let second_request = hub.register_pending(Uuid::new_v4(), device).unwrap().1;
         hub.disconnect(device, first);
         assert!(hub.sender(device).is_some(), "stale disconnect must not remove the replacement stream");
-        assert!(second_request.try_recv().is_err(), "stale disconnect must not cancel the replacement stream's work");
+        assert!(matches!(second_request.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)), "stale disconnect must not cancel the replacement stream's work");
         hub.disconnect(device, second);
         assert!(second_request.blocking_recv().is_err());
         assert!(hub.sender(device).is_none());
