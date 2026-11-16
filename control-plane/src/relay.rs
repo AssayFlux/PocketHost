@@ -28,6 +28,8 @@ pub struct RelayResponse {
     pub headers: HashMap<String, String>,
     #[serde(default)]
     pub body_base64: String,
+    #[serde(default)]
+    pub set_cookies: Vec<String>,
 }
 
 struct PendingResponse {
@@ -252,7 +254,7 @@ mod tests {
         let request_id = Uuid::new_v4();
         let response_rx = hub.register_pending(request_id, device).unwrap();
         assert!(hub.complete(device, RelayResponse {
-            id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new()
+            id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
         assert_eq!(response_rx.blocking_recv().unwrap().status, 200);
         let other_device = Uuid::new_v4();
