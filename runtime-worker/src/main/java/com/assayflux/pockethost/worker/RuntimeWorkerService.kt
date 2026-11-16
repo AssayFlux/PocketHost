@@ -247,6 +247,7 @@ class RuntimeWorkerService : Service() {
             data.enforceInterface(DESCRIPTOR)
             try {
                 val result: Any? = when (code) {
+                    TRANSACTION_PROTOCOL_VERSION -> PROTOCOL_VERSION
                     TRANSACTION_UID -> Process.myUid()
                     TRANSACTION_CAN_READ -> {
                         val path = data.readString().orEmpty()
@@ -331,6 +332,7 @@ class RuntimeWorkerService : Service() {
 
     companion object {
         const val DESCRIPTOR = "com.assayflux.pockethost.worker.RUNTIME_WORKER"
+        const val PROTOCOL_VERSION = 1
         const val TRANSACTION_UID = IBinder.FIRST_CALL_TRANSACTION
         const val TRANSACTION_CAN_READ = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_LOOPBACK_BIND = IBinder.FIRST_CALL_TRANSACTION + 2
@@ -347,6 +349,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
         const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
         const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
+        const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
