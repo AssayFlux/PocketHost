@@ -1,7 +1,7 @@
 # ASSAYFLUX POCKET HOST — CANONICAL PROJECT BASELINE
 
 **Baseline review:** 2026-11-16  
-**Source reviewed:** `4357e06ef696e348ef6fe18f35840ae2b2a2f754` (latest six-job quality run; subsequent commits update documentation only)  
+**Source reviewed:** `e9d7c9a95304ac16e55f988f509ef0f44383034a` (latest six-job quality run; subsequent commits update documentation only)  
 **Release:** 0.1.0 target · **Status:** pre-release · **Production approval:** no.
 
 This is the current evidence baseline. Source implementation is unchanged since the wrapper/dependency freeze; this commit records the six-job exact-SHA quality result.
@@ -102,10 +102,10 @@ Update this file with exact evidence whenever the baseline changes.
 
 ## 2026-11-16 Gate 2–4 implementation evidence
 
-- Latest six-job quality run: `43840365268`, completed success on `4357e06ef696e348ef6fe18f35840ae2b2a2f754` (Rust, control-plane/PostgreSQL migrations, Python, Node, console and Gradle wrapper).
-- Gate 2 source: inherited socket descriptors are closed before seccomp installation in the isolated-UID probe; instrumentation source checks an inherited connected TCP socket is closed and `socket`, `connect`, `bind` are denied while the brokered Unix listener remains usable. This is not production Python/Node confinement. Android C++/Kotlin instrumentation was not compiled or run; no API 26/33/35 evidence is claimed.
+- Latest six-job quality run: `43841652274`, completed success on `e9d7c9a95304ac16e55f988f509ef0f44383034a` (Rust, control-plane/PostgreSQL migrations, Python, Node, console and Gradle wrapper).
+- Gate 2 source: inherited socket descriptors are closed before seccomp installation in the isolated-UID probe; instrumentation source checks an inherited connected TCP socket is closed and `socket`, `connect`, `bind` are denied while the brokered Unix listener remains usable. A host-side Binder adapter obtains `Binder.getCallingUid()` at transaction receipt and mediates read-only PFD opens and bounded writes; the isolated probe calls it, and instrumentation source checks host-UID spoof rejection and project-file read/write. This is not production Python/Node confinement. Android C++/Kotlin instrumentation was not compiled or run; no API 26/33/35 evidence is claimed.
 - Gate 2 architecture research: `android:isolatedProcess` services have no permissions; `bindIsolatedService` multi-instance binding begins at API 29, requiring fixed service slots on API 26–28. Chaquopy and the current Node worker use app-private runtime/project/cache paths; they need descriptor-rooted storage and runtime-specific bootstrap adaptation before isolated execution can be enabled.
 - Gate 3 remains specification-only. HTTP polling in `RemoteControlAgent` is not a Relay. No gateway, persistent tunnel, visitor stream multiplexer, hostname/certificate registry or Android Relay Agent is implemented.
 - Gate 4 source: long-lived bootstrap/team API credentials are accepted only by `POST /v1/admin/session`; management routes require a 12-hour hashed server-side session. Sessions are explicitly revocable and are invalidated by user token rotation/revocation; session creation/revocation is audited. The console holds the session in memory and does not persist the long-lived credential. PostgreSQL regression tests cover viewer authorization, expiry, explicit revoke, user revoke, and token-rotation revocation. Latest six-job CI pass covers these changes.
 - Gate 4 remains open: passkey-first local Owner identity and site-scoped visitor Public/Private/Restricted authorization are not implemented.
-- Android build/device validation and external Relay deployment remain deferred/unverified. No production-ready claim is made.
+- The new Android Binder/seccomp instrumentation source has not been compiled or executed; the six-job CI workflow does not build the Android app/native worker. Android build/device validation and external Relay deployment remain deferred/unverified. No production-ready claim is made.
