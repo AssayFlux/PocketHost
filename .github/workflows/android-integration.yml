@@ -183,15 +183,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -memory 2048 -cores 2
           emulator-boot-timeout: 1200
           script: gradle clean :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
-      - name: Capture rendered dashboard
+      - name: Collect rendered dashboard from UI instrumentation
         if: always()
         run: |
           set +e
           mkdir -p "$RUNNER_TEMP/pockethost-ui"
           adb wait-for-device
-          adb shell monkey -p com.assayflux.pockethost 1
-          sleep 5
-          adb exec-out screencap -p > "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
+          adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots/dashboard.png "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
           file "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
       - name: Upload Android instrumentation reports
         if: always()
