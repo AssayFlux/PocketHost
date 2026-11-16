@@ -270,12 +270,12 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_PYTHON_CONFIGURE -> {
                         val workers = data.readInt()
                         require(workers in 2..16) { "Python worker limit must be between 2 and 16." }
-                        synchronized(this) { ensurePython().callAttr("configure", workers) }
+                        synchronized(this@RuntimeWorkerService) { ensurePython().callAttr("configure", workers) }
                         "CONFIGURED"
                     }
                     TRANSACTION_PYTHON_START -> startPython(data.readString().orEmpty(), data.readInt())
                     TRANSACTION_PYTHON_START_SITES -> startPythonSites(data.readString().orEmpty(), data.readInt())
-                    TRANSACTION_PYTHON_STOP -> synchronized(this) {
+                    TRANSACTION_PYTHON_STOP -> synchronized(this@RuntimeWorkerService) {
                         pythonModule()?.callAttr("stop")?.toString() ?: "STOPPED"
                     }
                     TRANSACTION_PYTHON_STATUS -> pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
@@ -287,7 +287,7 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_NODE_STATUS -> nodeStatus()
                     TRANSACTION_NODE_METRICS -> NodeRuntimeStateStore.metrics(this@RuntimeWorkerService)?.toString() ?: "{}"
                     TRANSACTION_SHUTDOWN -> {
-                        synchronized(this) { runCatching { pythonModule()?.callAttr("stop") } }
+                        synchronized(this@RuntimeWorkerService) { runCatching { pythonModule()?.callAttr("stop") } }
                         runCatching { stopService(Intent(this@RuntimeWorkerService, NodeHostingService::class.java)) }
                         stopSelf()
                         "STOPPING"
