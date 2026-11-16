@@ -127,12 +127,21 @@ object RuntimeWorkerClient {
                     }
                     cachedConnection = connection
                     if (!latch.await(60, TimeUnit.SECONDS)) {
+                        cachedBinder?.let { lateBinder ->
+                            cachedDeathRecipient?.let { recipient ->
+                                runCatching { lateBinder.unlinkToDeath(recipient, 0) }
+                            }
+                        }
+                        cachedBinder = null
+                        cachedDeathRecipient = null
                         runCatching { app.unbindService(connection) }
                         runCatching { app.stopService(intent) }
                         cachedConnection = null
                         throw IllegalStateException("Timed out waiting for the runtime companion.")
                     }
                     if (failure.get() != null) {
+                        cachedBinder = null
+                        cachedDeathRecipient = null
                         runCatching { app.unbindService(connection) }
                         runCatching { app.stopService(intent) }
                         cachedConnection = null
@@ -145,6 +154,11 @@ object RuntimeWorkerClient {
                             "Runtime companion protocol mismatch. Update the host and companion APKs together."
                         }
                     } catch (error: Throwable) {
+                        cachedBinder?.let { failedBinder ->
+                            cachedDeathRecipient?.let { recipient ->
+                                runCatching { failedBinder.unlinkToDeath(recipient, 0) }
+                            }
+                        }
                         cachedBinder = null
                         cachedDeathRecipient = null
                         cachedConnection = null

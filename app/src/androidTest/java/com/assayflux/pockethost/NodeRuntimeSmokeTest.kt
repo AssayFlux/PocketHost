@@ -44,7 +44,7 @@ class NodeRuntimeSmokeTest {
             "const http=require('node:http');\n" +
                 "http.createServer((req,res)=>{const body='node-smoke:'+process.version+':uid='+process.getuid();" +
                 "res.writeHead(200,{'Content-Length':Buffer.byteLength(body)});res.end(body);})" +
-                ".listen(Number(process.env.PORT),'0.0.0.0');\n"
+                ".listen(Number(process.env.PORT),'127.0.0.1');\n"
         )
 
         context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
@@ -57,8 +57,12 @@ class NodeRuntimeSmokeTest {
         assertEquals("RUNNING", NodeHostRuntime.status(context))
 
         val siteRoot = File(context.filesDir, "node-proxy-smoke").apply { mkdirs() }
-        val routes = JSONObject().put("node-smoke.local",
-            JSONObject().put("runtime", "node").put("port", 3000)).toString()
+        val staticRoot = File(context.cacheDir, "node-static-fallback-${System.nanoTime()}").apply { mkdirs() }
+        File(staticRoot, "index.html").writeText("Static origin survives Node runtime failure.")
+        val routes = JSONObject()
+            .put("node-smoke.local", JSONObject().put("runtime", "node").put("port", 3000))
+            .put("static-smoke.local", JSONObject().put("runtime", "static").put("root", staticRoot.absolutePath))
+            .toString()
         assertEquals("OK", NativeEngine.startMultiSite(siteRoot.absolutePath, routes, 18080, false))
 
         val body = java.net.Socket("127.0.0.1", 18080).use { socket ->
@@ -75,7 +79,27 @@ class NodeRuntimeSmokeTest {
             ?: error("Node response did not include its process UID: $body")
         assertNotEquals("Node must execute under companion UID, not host UID", context.applicationInfo.uid, runtimeUid)
 
-        assertEquals("OK", NativeEngine.stop())
+        // Stop the application runtime while Rust remains online. Static hosting must
+        // continue to serve its independent origin route.
         NodeHostRuntime.stop(context)
+        val stoppedDeadline = System.currentTimeMillis() + 15_000
+        while (System.currentTimeMillis() < stoppedDeadline && NodeHostRuntime.status(context) != "STOPPED") {
+            Thread.sleep(250)
+        }
+        assertEquals("STOPPED", NodeHostRuntime.status(context))
+        val staticResponse = java.net.Socket("127.0.0.1", 18080).use { socket ->
+            socket.soTimeout = 5_000
+            socket.getOutputStream().write(
+                "GET / HTTP/1.1\\r\\nHost: static-smoke.local\\r\\nConnection: close\\r\\n\\r\\n"
+                    .toByteArray(Charsets.ISO_8859_1)
+            )
+            socket.getOutputStream().flush()
+            socket.getInputStream().bufferedReader().readText()
+        }
+        assertTrue("Static origin stopped with the Node runtime: $staticResponse",
+            staticResponse.startsWith("HTTP/1.1 200") &&
+                staticResponse.contains("Static origin survives Node runtime failure."))
+        assertEquals("OK", NativeEngine.stop())
+        staticRoot.deleteRecursively()
     }
 }
