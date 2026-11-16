@@ -1,8 +1,12 @@
-# PocketHost — Completion and production-readiness milestone
-
-**Purpose:** single actionable definition of completion. Source presence, documentation or a green compile is not production approval. Every gate must be marked PASS, FAIL or NOT TESTED with commit-specific evidence.
-
-> **Implementation snapshot — 2026-11-16:** work continues directly on `main`. The current engineering pass adds an isolated-process probe (UID/file/loopback capability measurement only), extracts shared Compose app chrome plus the Activity and Sites destinations, and makes the API 26/33/35 emulator matrix run on every Android/native push and pull request. The first instrumentation compile caught stale `Process.myUid()` references; these were corrected and the current HEAD must pass fresh CI before validation is recorded. Python and Node still run under the app UID and remain trusted-code-only. No production sandbox, deployed remote control plane, signed production release or physical-device acceptance is claimed.
+> **Current reconciliation — 2026-11-16**
+>
+> - Quality workflow on the latest source passed all six jobs: Android source compilation, Rust, Python, Node, control-plane and console.
+> - Android integration on the latest source passed cloudflared Android native build, all three ABI debug APKs, API 26 instrumentation and API 33 instrumentation.
+> - API 35 did not execute tests: the emulator went offline and the runner reported an instrumentation process crash with 0 tests started. This is recorded as an emulator infrastructure failure, not a passing API 35 test or a confirmed app defect. Emulator guest RAM/CPU settings have been reduced and boot timeout extended for the next run.
+> - The isolated-process service is a capability probe only. It is not used to execute customer code. Python and Node remain trusted-code-only under the app UID until the runtime migration is designed and validated.
+> - The Compose top app chrome, Activity destination and Sites destination have been extracted from MainActivity. Dashboard, Learn and Settings still need further decomposition and rendered screenshot review.
+> - Remote control-plane deployment, signed production release and physical-device acceptance remain open release gates.
+> - **Release state:** integrated development build; not production approved.
 
 ## Product baseline
 

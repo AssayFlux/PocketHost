@@ -1,14 +1,11 @@
 > **Current reconciliation — 2026-11-16**
 >
-> - **Main:** development continues directly on `main`. Latest work adds the isolated-process probe service/test, extracts the top app bar/navigation and Activity Compose destination, and corrects the probe test's host UID lookup after CI caught the compile error.
-> - **Quality CI:** the first probe build failed only in `RuntimeIsolationProbeTest` because two references to `Process.myUid()` remained after an import change. The test now uses the target application's UID from `context.applicationInfo.uid`; the follow-up run must pass before this change is considered validated.
-> - **Android integration:** cloudflared native build and three-ABI APK build were verified on the preceding source revision. The API 26/33/35 matrix is now configured to run on every Android/native push and pull request. Do not use a result from an older commit as proof for the current HEAD.
-> - **Runtime isolation:** `RuntimeIsolationProbeService` runs no customer code. It measures distinct UID, host-private-file access and loopback TCP reachability. It is not a runtime migration or a production sandbox. Python and Node remain trusted-code-only under the app UID until a tested architecture is implemented.
-> - **UI engineering:** top-level app chrome and Activity are extracted into dedicated Compose files. Dashboard, Sites and Settings still need incremental decomposition; no rendered UI acceptance is claimed until current emulator screenshots are reviewed.
-> - **Existing product gates:** static hosting, Python/Node runtime integration, capacity recovery, backup/restore, Cloudflare tunnel and authenticated management APIs remain implemented in source, with their individual limitations described below.
-> - **Remote control:** no production control-plane host is deployed or paired. Deployment requires the owner's Linux host and secrets; no secrets should be sent through chat.
-> - **Release:** no signed production APK has been built; owner-controlled signing secrets are required.
-> - **Device acceptance:** physical installation, Android lifecycle, public HTTPS, thermal, battery and OEM/Doze behavior remain owner-run acceptance tasks.
+> - Quality workflow on the latest source passed all six jobs: Android source compilation, Rust, Python, Node, control-plane and console.
+> - Android integration on the latest source passed cloudflared Android native build, all three ABI debug APKs, API 26 instrumentation and API 33 instrumentation.
+> - API 35 did not execute tests: the emulator went offline and the runner reported an instrumentation process crash with 0 tests started. This is recorded as an emulator infrastructure failure, not a passing API 35 test or a confirmed app defect. Emulator guest RAM/CPU settings have been reduced and boot timeout extended for the next run.
+> - The isolated-process service is a capability probe only. It is not used to execute customer code. Python and Node remain trusted-code-only under the app UID until the runtime migration is designed and validated.
+> - The Compose top app chrome, Activity destination and Sites destination have been extracted from MainActivity. Dashboard, Learn and Settings still need further decomposition and rendered screenshot review.
+> - Remote control-plane deployment, signed production release and physical-device acceptance remain open release gates.
 > - **Release state:** integrated development build; not production approved.
 
 ## Product and deployment model
