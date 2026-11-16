@@ -9,7 +9,7 @@ import java.io.IOException
 import java.nio.channels.FileLockInterruptionException
 import java.nio.channels.OverlappingFileLockException
 
-/** File-backed IPC state shared safely between the main process and the isolated :node process. */
+/** File-backed IPC state shared by the companion control process and its :node process (same companion UID). */
 object NodeRuntimeStateStore {
     private const val LOCK_WAIT_NANOS = 5_000_000_000L
 
