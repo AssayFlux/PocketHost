@@ -519,33 +519,19 @@ private fun PocketHostDashboard() {
                     }
                 }
                 if (selectedTab == "Settings" && settingsSection == "General") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Dark theme", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Use the darker Pocket Host appearance.", color = palette.onSurfaceVariant)
-                            }
-                            Switch(checked = darkTheme, onCheckedChange = { enabled ->
+                    PocketHostSettingsScreen(
+                        state = PocketHostGeneralSettingsState(
+                            darkTheme = darkTheme,
+                            biometricUnlockEnabled = biometricUnlockEnabled,
+                            autoStartOnBoot = autoStartOnBoot
+                        ),
+                        actions = PocketHostGeneralSettingsActions(
+                            onDarkThemeChange = { enabled ->
                                 darkTheme = enabled
-                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("dark_theme", enabled).apply()
-                            })
-                        }
-                    }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Biometric app unlock", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Require a strong biometric when Pocket Host is opened; Android 11+ can also use a secure device credential. This protects the local app UI, not Owner/Operator API authentication.", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                            }
-                            Switch(checked = biometricUnlockEnabled, onCheckedChange = { enabled ->
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                    .putBoolean("dark_theme", enabled).apply()
+                            },
+                            onBiometricUnlockChange = { enabled ->
                                 if (!enabled) {
                                     biometricUnlockEnabled = false
                                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
@@ -568,33 +554,20 @@ private fun PocketHostDashboard() {
                                         }
                                     }
                                 }
-                            })
-                        }
-                    }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Auto-start hosting on boot", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                    Text("Starts the local hosting service after device restart when Android permits it.", color = palette.onSurfaceVariant)
-                                }
-                                Switch(checked = autoStartOnBoot, onCheckedChange = { enabled ->
-                                    autoStartOnBoot = enabled
-                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                        .putBoolean("auto_start_on_boot", enabled).apply()
-                                })
-                            }
-                            OutlinedButton(onClick = {
+                            },
+                            onAutoStartOnBootChange = { enabled ->
+                                autoStartOnBoot = enabled
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                    .putBoolean("auto_start_on_boot", enabled).apply()
+                            },
+                            onBatteryOptimizationSettings = {
                                 runCatching {
                                     context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                                 }.onFailure { status = it.message ?: "Could not open battery optimization settings." }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Battery optimization settings") }
-                        }
-                    }
+                            }
+                        )
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
                     FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
