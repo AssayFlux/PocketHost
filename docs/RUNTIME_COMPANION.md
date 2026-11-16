@@ -88,7 +88,7 @@ The Android instrumentation suite includes:
 - Node HTTP service routed through the Rust reverse proxy.
 - Companion clean shutdown followed by a fresh Binder connection and protocol negotiation.
 
-These are source-level test definitions until the final Android build and API 26/33/35 instrumentation gate is run. Per-project isolation is not provided by this shared-UID companion; Python and Node remain trusted-code-only.
+These are source-level test definitions until the Android build and API 26/33/35 instrumentation runs required during Gates 2–4 complete successfully on the same SHA. Per-project isolation is not provided by this shared-UID companion; Python and Node remain trusted-code-only.
 
 
 ## Gate 1 source implementation update
@@ -97,4 +97,4 @@ The host client now registers an `IBinder.DeathRecipient`, invalidates dead conn
 
 Orderly broker shutdown stops the Node service in its separate process and stops Python. Project replacement recovers interrupted previous-project backups before accepting another transfer, and failed activation restores the previous project when possible.
 
-Source-level instrumentation now covers Python through Rust, Node through Rust, static-origin continuity after Node stops, and clean companion shutdown/rebind. These Android tests are not run during Gates 0–7; execution is reserved for Gate 8 per owner instruction. Shared companion UID remains a non-sandbox; Python/Node are trusted-code-only.
+Source-level instrumentation now covers Python through Rust, Node through Rust, static-origin continuity after Node stops, and clean companion shutdown/rebind. These Android tests must be executed during Gates 2–4 under the Owner's revised sequence; Gate 8 retains physical-device and release acceptance. Shared companion UID remains a non-sandbox; Python/Node are trusted-code-only.
