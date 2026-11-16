@@ -252,6 +252,7 @@ class HostingService : Service() {
         nodeSupervisorThread?.interrupt()
         runCatching { NodeHostRuntime.stop(this) }
         runCatching { PythonHostRuntime.stop(this) }
+        runCatching { com.assayflux.pockethost.runtime.RuntimeWorkerClient.shutdownWorker(this) }
         runCatching { NativeEngine.stop() }
         releaseWakeLock()
         statePreferences.edit().remove("hosting_started_elapsed_ms").apply()
