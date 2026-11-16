@@ -169,6 +169,49 @@ class RuntimeWorkerService : Service() {
         }
     }
 
+    private fun startNode(siteId: String, entryRelative: String, port: Int, heapLimitMb: Int): String {
+        require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid Node project identifier." }
+        require(port in 1024..65535 && heapLimitMb in 96..512) { "Invalid Node runtime limits." }
+        val root = File(projectsRoot, siteId).canonicalFile
+        require(root.isDirectory && root.toPath().startsWith(projectsRoot.canonicalFile.toPath())) {
+            "Transferred Node project was not found."
+        }
+        val entry = File(root, entryRelative).canonicalFile
+        require(entry.toPath().startsWith(root.toPath()) && entry.isFile) {
+            "Node entry file is outside the transferred project or missing."
+        }
+        val current = NodeRuntimeStateStore.state(this)
+        require(current !in setOf("RUNNING", "STARTING")) { "Only one Node.js application can run at a time." }
+        NodeRuntimeStateStore.update(this, state = "STARTING", detail = "Node.js startup requested.")
+        val intent = Intent(this, NodeHostingService::class.java)
+            .putExtra(NodeHostingService.EXTRA_ROOT, siteId)
+            .putExtra(NodeHostingService.EXTRA_ENTRY, entryRelative)
+            .putExtra(NodeHostingService.EXTRA_PORT, port)
+            .putExtra(NodeHostingService.EXTRA_HEAP_MB, heapLimitMb)
+        if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        return "STARTING"
+    }
+
+    private fun stopNode(): String {
+        NodeRuntimeStateStore.update(this, state = "STOPPING", detail = "Node.js shutdown requested.")
+        stopService(Intent(this, NodeHostingService::class.java))
+        return "STOPPING"
+    }
+
+    private fun nodeStatus(): String {
+        val state = NodeRuntimeStateStore.state(this)
+        val alive = runCatching {
+            getSystemService(android.app.ActivityManager::class.java).getRunningServices(Int.MAX_VALUE)
+                .any { it.service.className == NodeHostingService::class.java.name }
+        }.getOrDefault(false)
+        if (alive && state in setOf("ERROR", "STOPPED")) return "STARTING"
+        if (!alive && state in setOf("RUNNING", "STARTING", "STOPPING")) {
+            NodeRuntimeStateStore.update(this, state = "STOPPED", detail = "Node.js worker is no longer running.")
+            return "STOPPED"
+        }
+        return state
+    }
+
     private val workerBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code == INTERFACE_TRANSACTION) {
@@ -204,6 +247,12 @@ class RuntimeWorkerService : Service() {
                     }
                     TRANSACTION_PYTHON_STATUS -> pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
                     TRANSACTION_PYTHON_METRICS -> pythonModule()?.callAttr("metrics_json")?.toString() ?: "{}"
+                    TRANSACTION_NODE_START -> startNode(
+                        data.readString().orEmpty(), data.readString().orEmpty(), data.readInt(), data.readInt()
+                    )
+                    TRANSACTION_NODE_STOP -> stopNode()
+                    TRANSACTION_NODE_STATUS -> nodeStatus()
+                    TRANSACTION_NODE_METRICS -> NodeRuntimeStateStore.metrics(this@RuntimeWorkerService)?.toString() ?: "{}"
                     else -> return super.onTransact(code, data, reply, flags)
                 }
                 reply?.writeNoException()
@@ -255,6 +304,10 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_PYTHON_STOP = IBinder.FIRST_CALL_TRANSACTION + 7
         const val TRANSACTION_PYTHON_STATUS = IBinder.FIRST_CALL_TRANSACTION + 8
         const val TRANSACTION_PYTHON_METRICS = IBinder.FIRST_CALL_TRANSACTION + 9
+        const val TRANSACTION_NODE_START = IBinder.FIRST_CALL_TRANSACTION + 10
+        const val TRANSACTION_NODE_STOP = IBinder.FIRST_CALL_TRANSACTION + 11
+        const val TRANSACTION_NODE_STATUS = IBinder.FIRST_CALL_TRANSACTION + 12
+        const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
