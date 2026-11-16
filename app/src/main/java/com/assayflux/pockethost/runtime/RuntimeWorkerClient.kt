@@ -40,6 +40,7 @@ object RuntimeWorkerClient {
     private const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
     private const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
     private const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
+    private const val TRANSACTION_PID = IBinder.FIRST_CALL_TRANSACTION + 17
     private const val EXPECTED_PROTOCOL_VERSION = 1
     private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRIES = 10_000
@@ -251,6 +252,9 @@ object RuntimeWorkerClient {
             reply.recycle()
         }
     }
+
+    fun workerPid(context: Context): Int =
+        withWorker(context) { transact(it, TRANSACTION_PID) as Int }
 
     fun configurePython(context: Context, workers: Int): String =
         withWorker(context) { transact(it, TRANSACTION_PYTHON_CONFIGURE) { parcel -> parcel.writeInt(workers) } as String }
