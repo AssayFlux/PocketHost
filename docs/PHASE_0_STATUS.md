@@ -54,10 +54,10 @@ The companion UID differs from the host UID, but Python and Node projects share 
 
 ## CI evidence
 
-- Quality `43827669251`: all six jobs passed on `a48485469aef7b0099f158dc4ebb80cdcc19b949`, including Gradle wrapper validation.
+- Quality `43827669251`: all six jobs passed on `9f249f0faf3f103bcee9aaa763adf3c275211951`, including Gradle wrapper validation.
 - Dependency-lock workflow `43826809601`: succeeded; Gradle wrapper and dependency locks generated.
-- No Android build or instrumentation result is claimed for the current baseline.
-- Legacy Android run `43824043298` was queued on an older SHA before the manual-only policy; it is not evidence for the current baseline.
+- No successful Android APK artifact or accepted API 26/33/35 result is claimed for the current baseline.
+- Legacy Android run `43824043298` on older SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` was cancelled after its APK job failed, API 26/33 jobs failed and API 35 was cancelled. The replacement no-op run `43828040040` skipped every Android job.
 
 ## Remaining North Star gates
 

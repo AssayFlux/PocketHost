@@ -45,13 +45,13 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 - Quality workflow: Rust, control plane/database migrations, Python, Node, console and Gradle wrapper validation. It does not compile Android or package APKs.
 - Android integration and signed-release workflows are manual-only.
 - Owner instruction: no Android APK build, emulator run or device test during Gates 0–7. All Android build/ABI/API 26/33/35 validation is deferred to Gate 8.
-- A legacy Android integration run `43824043298` for older SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` was already queued before the manual-only trigger change; it is not current-head evidence.
+- A legacy Android integration run `43824043298` on SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` started before the manual-only change and is now cancelled. Its cloudflared job succeeded, APK job failed, API 26/33 emulator jobs failed, and API 35 was cancelled. It produced no accepted APK or API-matrix result. The replacement push-triggered run `43828040040` skipped all Android jobs.
 
 ## Verification evidence
 
-- Quality run `43827669251`: all six jobs passed on `a48485469aef7b0099f158dc4ebb80cdcc19b949` (Rust 1.88 locked tests, control-plane migrations and Compose profiles, Python, Node, `npm ci`, Gradle wrapper validation).
+- Quality run `43827669251`: all six jobs passed on `9f249f0faf3f103bcee9aaa763adf3c275211951` (Rust 1.88 locked tests, control-plane migrations and Compose profiles, Python, Node, `npm ci`, Gradle wrapper validation).
 - Dependency-lock workflow `43826809601`: completed successfully; generated Cargo/npm/Gradle locks and the checksum-verified Gradle wrapper.
-- No Android source compile, APK packaging, emulator instrumentation or physical-device test is claimed on this baseline.
+- No successful Android APK artifact, accepted API matrix or physical-device result is claimed on this baseline.
 
 ## Gate status
 
