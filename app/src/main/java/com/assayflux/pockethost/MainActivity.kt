@@ -457,6 +457,207 @@ private fun PocketHostDashboard() {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenFiles = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
                 if (selectedTab == "Dashboard") {
+                if (pendingPairingCode != null) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("CONSOLE PAIRING REQUEST", color = palette.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Code: $pendingPairingCode", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Only approve this if you initiated pairing from your own trusted browser.", color = palette.onSurfaceVariant)
+                            Button(onClick = {
+                                val approved = ManagementApiServer.approvePairing(pendingPairingCode.orEmpty())
+                                if (approved) { status = "Management console pairing approved."; pendingPairingCode = null }
+                                else status = "Pairing request expired. Start pairing again."
+                            }) { Text("Approve console pairing") }
+                        }
+                    }
+                }
+                }
+                if (selectedTab == "Settings") {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("General", "Network", "Runtimes", "About").forEach { section ->
+                            FilterChip(
+                                selected = settingsSection == section,
+                                onClick = { settingsSection = section },
+                                label = { Text(section, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+                }
+                if (selectedTab == "Settings" && settingsSection == "General") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Dark theme", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Use the darker Pocket Host appearance.", color = palette.onSurfaceVariant)
+                            }
+                            Switch(checked = darkTheme, onCheckedChange = { enabled ->
+                                darkTheme = enabled
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("dark_theme", enabled).apply()
+                            })
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Biometric app unlock", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Require a strong biometric when Pocket Host is opened; Android 11+ can also use a secure device credential. This protects the local app UI, not Owner/Operator API authentication.", color = palette.onSurfaceVariant, fontSize = 13.sp)
+                            }
+                            Switch(checked = biometricUnlockEnabled, onCheckedChange = { enabled ->
+                                if (!enabled) {
+                                    biometricUnlockEnabled = false
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("biometric_unlock_enabled", false).apply()
+                                    status = "Biometric app unlock disabled."
+                                } else {
+                                    val activity = context as? MainActivity
+                                    if (activity == null) {
+                                        status = "Could not open biometric confirmation."
+                                    } else {
+                                        activity.confirmBiometricUnlock { success ->
+                                            if (success) {
+                                                biometricUnlockEnabled = true
+                                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                                    .putBoolean("biometric_unlock_enabled", true).apply()
+                                                status = "Biometric app unlock enabled for the next app launch."
+                                            } else {
+                                                status = "Biometric confirmation was not completed; the setting remains off."
+                                            }
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Auto-start hosting on boot", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                    Text("Starts the local hosting service after device restart when Android permits it.", color = palette.onSurfaceVariant)
+                                }
+                                Switch(checked = autoStartOnBoot, onCheckedChange = { enabled ->
+                                    autoStartOnBoot = enabled
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("auto_start_on_boot", enabled).apply()
+                                })
+                            }
+                            OutlinedButton(onClick = {
+                                runCatching {
+                                    context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                                }.onFailure { status = it.message ?: "Could not open battery optimization settings." }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Battery optimization settings") }
+                        }
+                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
+                    FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
+                }
+                if (advancedMode) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVER CONFIGURATION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            OutlinedTextField(
+                                value = portText,
+                                onValueChange = { value -> if (value.length <= 5 && value.all(Char::isDigit)) portText = value },
+                                label = { Text("HTTP port") },
+                                enabled = !hosting,
+                                singleLine = true
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    val port = portText.toIntOrNull()
+                                    if (port == null || port !in 1024..65535) {
+                                        status = "Choose a port between 1024 and 65535."
+                                    } else {
+                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                            .putInt("port", port).apply()
+                                        status = "Server port saved. Start hosting to apply it."
+                                    }
+                                },
+                                enabled = !hosting
+                            ) { Text("Save server settings") }
+                            Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Keep CPU awake while hosting", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                    Text("Optional screen-off reliability aid. Uses more battery and cannot override every OEM network policy.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                                }
+                                Switch(
+                                    checked = keepAwake,
+                                    onCheckedChange = { enabled ->
+                                        keepAwake = enabled
+                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                            .putBoolean("keep_awake", enabled).apply()
+                                        status = if (enabled) "CPU wake lock will be used the next time hosting starts." else "CPU wake lock disabled for the next hosting session."
+                                    },
+                                    enabled = !hosting
+                                )
+                            }
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("REMOTE CONTROL PLANE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this phone to your independently hosted PocketHost backend.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            OutlinedTextField(
+                                value = controlPlaneEndpoint,
+                                onValueChange = { controlPlaneEndpoint = it },
+                                label = { Text("Control-plane HTTPS URL") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = controlPlaneToken,
+                                onValueChange = { controlPlaneToken = it },
+                                label = { Text("One-time device token") },
+                                visualTransformation = PasswordVisualTransformation(),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    runCatching {
+                                        RemoteControlAgent.configure(context, controlPlaneEndpoint, controlPlaneToken)
+                                        remoteControlConfigured = true
+                                        controlPlaneToken = ""
+                                        if (hosting) RemoteControlAgent.start(context)
+                                        status = if (hosting) "Remote control connected. This phone will poll the backend while hosting is active." else "Remote connection saved securely. The agent starts when hosting starts."
+                                    }.onFailure { status = it.message ?: "Could not configure remote control." }
+                                }, enabled = controlPlaneEndpoint.isNotBlank() && controlPlaneToken.length >= 32) {
+                                    Text("Save remote connection")
+                                }
+                                OutlinedButton(onClick = {
+                                    RemoteControlAgent.clear(context)
+                                    remoteControlConfigured = false
+                                    controlPlaneToken = ""
+                                    status = "Remote control credentials removed from this device."
+                                }, enabled = remoteControlConfigured) { Text("Disconnect") }
+                            }
+                            Text("The device makes outbound HTTPS requests only. The backend cannot open inbound ports or execute arbitrary shell commands on this phone.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        }
+                    }
+                }
+
+                }
+                if (selectedTab == "Dashboard") {
                     PocketHostDashboardScreen(
                         context = context,
                         state = PocketHostDashboardState(
