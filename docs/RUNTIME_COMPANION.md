@@ -62,7 +62,7 @@ Full sequence and adversarial tests: `docs/SECURITY_GATE_2_EXECUTION_PLAN.md`. R
 
 The isolated-UID feasibility probe now closes inherited socket descriptors other than the broker-created visitor listener before installing seccomp. Cleanup failure is fail-closed, and the instrumentation source supplies an already-connected TCP socket to verify that the descriptor is closed before the policy is applied. This addresses the generic `read`/`write` egress path for inherited sockets in the probe.
 
-This is **not** production per-project confinement: the probe is not the runtime launcher, the denylist still has an allow fallback, and Python/Node have not been migrated into isolated services. No Android instrumentation run is claimed; the test source is reserved for Gate 8.
+This is **not** production per-project confinement: the probe is not the runtime launcher, the denylist still has an allow fallback, and Python/Node have not been migrated into isolated services. Android API 26/33/35 instrumentation is now required during Gates 2–4; source-only tests are not acceptance.
 
 ## 7. Acceptance
 
