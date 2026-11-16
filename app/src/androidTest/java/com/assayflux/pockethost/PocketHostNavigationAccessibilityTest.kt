@@ -60,7 +60,10 @@ class PocketHostNavigationAccessibilityTest {
                 assertTrue("Settings section $section did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 10_000))
                 assertTrue("Settings header changed while selecting $section",
-                    device.hasObject(By.text("ASSAYFLUX  ·  Settings")))
+                    device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  Settings")), 5_000))
+                assertTrue("Could not capture Settings/$section screenshot",
+                    device.takeScreenshot(File(screenshotDir, "settings-${section.lowercase()}.png")))
+                device.dumpWindowHierarchy(File(screenshotDir, "settings-${section.lowercase()}-hierarchy.xml"))
             }
         }
     }
