@@ -186,7 +186,7 @@ object RelayAgent {
         incomingHeaders: JSONObject, body: ByteArray
     ): LocalResponse {
         val allowed = setOf("accept", "accept-encoding", "accept-language", "authorization",
-            "cache-control", "content-type", "cookie", "if-match", "if-modified-since",
+            "cache-control", "content-type", "cookie", "cf-connecting-ip", "if-match", "if-modified-since",
             "if-none-match", "origin", "range", "referer", "user-agent")
         Socket().use { socket ->
             socket.connect(InetSocketAddress("127.0.0.1", port), 5_000)
