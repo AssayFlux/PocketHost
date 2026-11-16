@@ -49,7 +49,6 @@ object RemoteControlAgent {
     }
 
     @Synchronized
-    @Synchronized
     fun configure(context: Context, endpoint: String, token: String) {
         val restartAgent = running
         val uri = URI(endpoint.trim().trimEnd('/'))
