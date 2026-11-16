@@ -98,7 +98,6 @@ class RuntimeWorkerSeccompTest {
                     data.writeInterfaceToken(DESCRIPTOR)
                     listenerPfd.writeToParcel(data, 0)
                     outboundPfd.writeToParcel(data, 0)
-                    data.writeInt(context.applicationInfo.uid)
                     check(binder.transact(TRANSACTION_INSTALL_POLICY_AND_ACCEPT, data, reply, 0)) {
                         "Isolated cell Binder transaction failed before returning a policy result."
                     }
