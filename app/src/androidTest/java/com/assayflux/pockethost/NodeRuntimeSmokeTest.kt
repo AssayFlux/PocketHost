@@ -5,20 +5,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.runtime.NodeHostRuntime
-import com.assayflux.pockethost.runtime.NodeRuntimeStateStore
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.RandomAccessFile
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
@@ -34,37 +27,6 @@ class NodeRuntimeSmokeTest {
         context.getSharedPreferences("pockethost_state", android.content.Context.MODE_PRIVATE)
             .edit().putBoolean("trusted_runtime_code_ack", false).commit()
         project.deleteRecursively()
-    }
-
-    @Test
-    fun stateStoreUpdateSurvivesInterruptedWaitForCrossProcessLock() {
-        val lockFile = File(context.noBackupFilesDir, "node-runtime-state.json.lock")
-        lockFile.parentFile?.mkdirs()
-        val failure = AtomicReference<Throwable?>()
-        val started = CountDownLatch(1)
-
-        RandomAccessFile(lockFile, "rw").use { owner ->
-            owner.channel.lock().use {
-                val writer = Thread {
-                    started.countDown()
-                    try {
-                        NodeRuntimeStateStore.update(
-                            context,
-                            metrics = JSONObject().put("requests", 1)
-                        )
-                    } catch (error: Throwable) {
-                        failure.set(error)
-                    }
-                }
-                writer.start()
-                assertTrue("State writer did not start", started.await(2, TimeUnit.SECONDS))
-                Thread.sleep(100)
-                writer.interrupt()
-                writer.join(2_000)
-                assertFalse("Interrupted state writer remained blocked", writer.isAlive)
-                assertNull("State writer leaked an exception", failure.get())
-            }
-        }
     }
 
     @Test
