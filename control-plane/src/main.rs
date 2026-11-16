@@ -1187,7 +1187,7 @@ mod tests {
         assert_eq!(read_count, 1);
 
         let owner_credential = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
-        let (_, Json(owner_session)) = create_admin_session(State(state.clone()), owner_credential).await.unwrap();
+        let (_, Json(owner_session)) = create_admin_session(State(state.clone()), owner_credential, ConnectInfo("127.0.0.1:40000".parse().unwrap())).await.unwrap();
         let owner_token = owner_session["accessToken"].as_str().unwrap();
         let owner_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {owner_token}")).unwrap())]);
         assert_eq!(revoke_user(State(state.clone()), owner_headers, Path(id)).await.unwrap(), StatusCode::NO_CONTENT);
@@ -1210,11 +1210,12 @@ mod tests {
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let (_, Json(old_session_body)) = create_admin_session(
             State(state.clone()),
-            HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())])
+            HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())]),
+            ConnectInfo("127.0.0.1:40000".parse().unwrap())
         ).await.unwrap();
         let old_session_token = old_session_body["accessToken"].as_str().unwrap().to_owned();
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
-        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers, ConnectInfo("127.0.0.1:40000".parse().unwrap())).await.unwrap();
         let session_token = session_body["accessToken"].as_str().unwrap();
         let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
         let (status, Json(body)) = rotate_user_token(
@@ -1228,7 +1229,8 @@ mod tests {
         assert!(admin_credential(&HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())]), &state).await.is_err());
         let (_, Json(replacement_session)) = create_admin_session(
             State(state.clone()),
-            HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement}")).unwrap())])
+            HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement}")).unwrap())]),
+            ConnectInfo("127.0.0.1:40000".parse().unwrap())
         ).await.unwrap();
         let replacement_session_token = replacement_session["accessToken"].as_str().unwrap();
         let replacement_actor = admin(
@@ -1253,7 +1255,7 @@ mod tests {
             .bind(device).bind(token_hash(&old_token)).execute(&db).await.unwrap();
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
-        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers, ConnectInfo("127.0.0.1:40000".parse().unwrap())).await.unwrap();
         let session_token = session_body["accessToken"].as_str().unwrap();
         let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
         let (status, Json(body)) = rotate_device_token(
@@ -1284,7 +1286,7 @@ mod tests {
         sqlx::migrate!("./migrations").run(&db).await.unwrap();
         let state = AppState { db: db.clone(), admin_token: "owner-session-test-token-0123456789abcdef".into(), relay: relay::RelayHub::default() };
         let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
-        let (_, Json(first_session)) = create_admin_session(State(state.clone()), credential_headers.clone()).await.unwrap();
+        let (_, Json(first_session)) = create_admin_session(State(state.clone()), credential_headers.clone(), ConnectInfo("127.0.0.1:40000".parse().unwrap())).await.unwrap();
         let first_token = first_session["accessToken"].as_str().unwrap();
         let first_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {first_token}")).unwrap())]);
         let first_id: Uuid = sqlx::query_scalar("SELECT id FROM control_sessions WHERE token_hash=$1")
@@ -1293,7 +1295,7 @@ mod tests {
             .bind(first_id).execute(&db).await.unwrap();
         assert!(admin(&first_headers, &state).await.is_err(), "Expired sessions must be rejected.");
 
-        let (_, Json(second_session)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let (_, Json(second_session)) = create_admin_session(State(state.clone()), credential_headers, ConnectInfo("127.0.0.1:40000".parse().unwrap())).await.unwrap();
         let second_token = second_session["accessToken"].as_str().unwrap();
         let second_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {second_token}")).unwrap())]);
         assert_eq!(revoke_admin_session(State(state.clone()), second_headers.clone()).await.unwrap(), StatusCode::NO_CONTENT);
