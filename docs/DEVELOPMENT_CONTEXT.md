@@ -1,57 +1,82 @@
-# Pocket Host — Development Context
+# ASSAYFLUX POCKET HOST — DEVELOPMENT CONTEXT
 
-**Baseline:** 2026-11-16 · companion source integration `bd227b0e5564ad25c88064cfc36796469390b773`  
-**Canonical status:** [PROJECT_BASELINE.md](PROJECT_BASELINE.md)
+**Purpose:** mandatory handoff for every engineering session.  
+**Product authority:** `docs/NORTH_STAR.md`  
+**Evidence authority:** `docs/PROJECT_BASELINE.md` and the dated project status.
 
-## Product contract
+## Identity and target
 
-- App: AssayFlux Pocket Host.
+- App: AssayFlux Pocket Host; developer: Designed by AssayFlux.
+- Host package: `com.assayflux.pockethost`.
+- Runtime companion: `com.assayflux.pockethost.worker`.
+- Initial version target: 0.1.0.
 - Native Kotlin + Jetpack Compose.
-- Host application ID: `com.assayflux.pockethost`.
-- Companion application ID: `com.assayflux.pockethost.worker`.
-- Rust/Tokio/Hyper is the public website HTTP origin.
-- TypeScript/React management console.
-- Chaquopy CPython 3.11 and Node.js mobile 24.22.1 are packaged in the separate-UID runtime companion; migration build/CI verification is pending.
-- Android 8/API 26+, ARMv7/ARM64 device target; x86_64 for emulator.
+- Rust/Tokio/Hyper website engine.
+- TypeScript + React + Vite management console.
+- CPython 3.11 / Chaquopy and Node mobile 24.22.1 in companion package.
+- Android 8 / API 26 minimum; ARMv7/ARM64 target; x86_64 emulator.
 - No Termux, root, mandatory VPS or mandatory remote management.
-- Reuse existing Cloudflare Tunnel; never expose management API through public ingress.
-- Static hosting continues when optional runtimes or remote services are stopped.
+
+## Product requirements
+
+1. The phone is the website origin.
+2. Static hosting is the core baseline and remains independent of optional runtimes and external networking.
+3. Simple and Advanced modes; five destinations: Dashboard, Sites, Activity, Learn, Settings.
+4. Reuse the owner's existing named Cloudflare Tunnel; never create a duplicate.
+5. Add AssayFlux Relay as a first-party planned alternative, not as an implemented feature until verified.
+6. Local Network mode remains available; direct port forwarding is not the default.
+7. Keep website visitor authentication separate from Owner/Operator management authentication.
+8. Never expose the management API through website ingress.
+9. Python/Node remain trusted owner-controlled code until per-project OS isolation and outbound denial pass adversarial acceptance.
+10. No fake live values, unverified capacity claims or unsupported security statements.
 
 ## UI contract
 
-Five destinations: Dashboard, Sites, Activity, Learn and Settings. Card-first layout, clear hierarchy, restrained navy/neutral identity, light default with optional dark. No gradients, neon or glass effects. Preserve existing visual language. Settings extraction and responsive/accessibility visual acceptance remain unfinished.
+Classic, clean and timeless. Navy identity, neutral surfaces, monochrome icon style, card-based information hierarchy, light default and optional dark. No gradients, neon or glass. Preserve existing visual language and screen scope. Every control must reflect a real implemented backend state. Accessibility, responsive layout and screenshot review are release evidence.
 
 ## Architecture boundaries
 
-**Website path:** visitor → Cloudflare edge → existing outbound tunnel → Rust listener → static site or runtime upstream.
+- Kotlin: Android UI, foreground service, permissions, SAF, lifecycle and telemetry.
+- Rust: website ingress, static serving, hostname routing, reverse proxy, admission and engine metrics.
+- Companion broker: signature-protected versioned Binder, project transfer and runtime supervision; must not execute project code in target architecture.
+- Isolated cells: one project per OS identity; planned until production migration and proof complete.
+- Console: TypeScript/React client; no duplicate routing or secret-bearing public API.
+- Cloudflare: optional outbound connector reusing existing named tunnel.
+- AssayFlux Relay: planned independent gateway and Android outbound agent.
+- Control plane: optional remote management only, never website origin.
 
-**Management path:** owner/operator → authenticated local management API → app services and TypeScript/React console. This path is not part of public visitor origin.
+## Current security truth
 
-**Current runtime trust:** Python and Node still run in the shared companion UID, distinct from the host UID. Binder IPC is signature-protected and project transfer is bounded. Python loopback binding and Node listener pinning are not outbound-egress controls. Projects are still mutually accessible within the companion.
+The runtime companion has a UID separate from the host app. Python and Node projects still share the companion UID and project storage. Companion INTERNET permission and language-level listener restrictions do not enforce outbound egress denial. The isolated UID, Unix socket and seccomp work is a feasibility probe. Do not describe it as a production sandbox. Do not run untrusted visitor-submitted code.
 
-**Gate 2 target:** one Android isolated service process/UID per project, with no permissions. The companion becomes a trusted broker and passes only a project directory/runtime FD plus a host-created Unix-domain listener FD. The Rust engine connects through the host-private socket path; the cell verifies `SO_PEERCRED` against the host UID. A TSYNC seccomp-BPF filter denies socket creation/connect/bind and permits accept only on that listener FD. Filter failure prevents project startup. Instrumentation now probes simultaneous isolated UIDs, directory-FD isolation and listener-FD acceptance. Results must pass API 26/33/35 before Python/Node migration begins. Follow [Security Gate 2 Execution Plan](SECURITY_GATE_2_EXECUTION_PLAN.md).
+## Primary implementation sequence
 
-Never call the current companion a sandbox, run untrusted visitor code, claim egress enforcement, or place host credentials in project roots.
+0. Repository truth, architecture freeze and documentation reconciliation.
+1. Complete Python/Node companion lifecycle and Rust end-to-end routing.
+2. Implement per-project OS isolation, descriptor-only storage/network capabilities and adversarial tests.
+3. Build AssayFlux Relay: gateway, enrollment, outbound agent, multiplexed streams, hostname routing and reconnect.
+4. Separate Owner/Operator and visitor authentication, passkeys, site policy and revocation.
+5. Complete Rust fairness, Resource Governor and Capacity Lab.
+6. Fault-test backup, restore, logs, lifecycle and recovery.
+7. Complete onboarding, Dashboard, Sites, Activity, Learn and Settings.
+8. Exact-SHA API 26/33/35, ABI builds, signing, external tests and independent review.
 
-## Engineering sequence
-
-1. Companion runtime migration.
-2. Filesystem/network isolation and adversarial tests.
-3. Rust fairness and Capacity Lab evidence.
-4. Backup/operations/Settings hardening.
-5. Exact-SHA API 26/33/35 CI and APK matrix.
-6. Signed release, existing-tunnel HTTPS and independent review.
+The North Star defines each gate's full exit criteria. Do not reorder security-dependent work or represent proposals as complete.
 
 ## Build and test discipline
 
-- Use repository Gradle wrapper and declared SDK/NDK/toolchain.
-- CI is authoritative for reproducible quality/emulator evidence.
-- Test reports must identify exact SHA, API, test count, failures and skips.
-- Test harness changes must preserve the security property under test.
-- Physical device acceptance is separate from emulator CI.
-- Do not call an APK verified unless downloaded and checked for valid APK structure, package metadata and signature.
-- Do not weaken production security to make tests pass.
+- Use the Gradle wrapper and versions pinned in repository configuration.
+- Inspect manifests, permissions and ABI filters before changing packaging.
+- Quality CI and Android integration CI are separate evidence sources.
+- Every result is tied to exact SHA, workflow, API level, test counts, failures and skips.
+- A compile pass is not runtime acceptance; emulator pass is not physical-device acceptance.
+- Never weaken production policy to satisfy a test harness.
+- Do not claim an APK is valid unless its exact artifact is downloaded and inspected for package metadata, ABI and signature.
 
-## Security and release
+## Secrets and release
 
-Never commit keystores, passwords, private keys or Cloudflare tokens. Management API remains loopback-only and authenticated. Backup excludes device-bound credentials, but secrets embedded in ordinary project files may not be detected. Do not claim hard CPU quotas for ordinary Android processes. Keep runtime code trusted-only until independent security approval. Release signing uses [RELEASE_SIGNING.md](RELEASE_SIGNING.md).
+Never commit keystores, passwords, tokens, private keys or tunnel credentials. Use Android Keystore for device-bound secrets where supported. Logs and support bundles must redact secrets. Backups exclude device-bound credentials. Release host and companion APKs must share the signer certificate because the Binder permission is signature-protected.
+
+## Handoff rule
+
+Before each task: inspect current `main`, recent commits, relevant source, workflow and docs. Implement on the authorized branch, add regression tests, update docs in the same change set, run relevant checks, then report exactly what changed and what remains. Never ask the owner to perform device tests while source/build/CI work remains incomplete; physical-device acceptance belongs at the appropriate release gate.
