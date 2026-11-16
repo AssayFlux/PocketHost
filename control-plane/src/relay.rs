@@ -120,7 +120,7 @@ fn skip_dns_name(packet: &[u8], offset: &mut usize) -> Option<()> {
         *offset += 1;
         if length == 0 { return Some(()); }
         if length & 0xc0 != 0 || length > 63 { return None; }
-        let end = offset.checked_add(length as usize)?;
+        let end = (*offset).checked_add(length as usize)?;
         packet.get(*offset..end)?;
         *offset = end;
     }
@@ -170,7 +170,8 @@ pub fn parse_dns_txt_answers(packet: &[u8]) -> Vec<String> {
 pub async fn dns_txt_records(name: String) -> anyhow::Result<Vec<String>> {
     tokio::task::spawn_blocking(move || {
         let mut query = Vec::with_capacity(512);
-        let id = u16::from_be_bytes([Uuid::new_v4().as_bytes()[0], Uuid::new_v4().as_bytes()[1]]);
+        let id_bytes = Uuid::new_v4();
+        let id = u16::from_be_bytes([id_bytes.as_bytes()[0], id_bytes.as_bytes()[1]]);
         query.extend_from_slice(&id.to_be_bytes());
         query.extend_from_slice(&[0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         for label in name.trim_end_matches('.').split('.') {
