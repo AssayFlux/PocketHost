@@ -131,6 +131,21 @@ object RuntimeWorkerClient {
         return "site_" + digest.take(12).joinToString("") { "%02x".format(it) }
     }
 
+    private fun isSensitiveProjectPath(relativePath: String): Boolean {
+        val normalized = relativePath.lowercase()
+        val segments = normalized.split('/')
+        val name = segments.lastOrNull().orEmpty()
+        if (segments.any { it in setOf(".ssh", ".aws", ".azure", ".gnupg", ".pki") }) return true
+        if (segments.size >= 2 && segments.takeLast(2) == listOf(".docker", "config.json")) return true
+        if (name.startsWith(".env") || name in setOf(
+                ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials",
+                "credentials.json", "secrets", "secrets.json", "service-account.json",
+                "id_rsa", "id_ed25519", "known_hosts", "kubeconfig"
+            )) return true
+        return listOf(".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".mobileprovision")
+            .any { name.endsWith(it) }
+    }
+
     private fun createProjectArchive(context: Context, root: File): File {
         val canonicalRoot = root.canonicalFile
         require(canonicalRoot.isDirectory) { "Runtime project directory does not exist." }
@@ -145,7 +160,7 @@ object RuntimeWorkerClient {
                         val relative = canonicalRoot.toPath().relativize(path).toString().replace(File.separatorChar, '/')
                         if (relative == ".git" || relative.startsWith(".git/") ||
                             relative == "__pycache__" || relative.startsWith("__pycache__/") ||
-                            relative.startsWith(".pockethost/")) return@forEach
+                            relative.startsWith(".pockethost/") || isSensitiveProjectPath(relative)) return@forEach
                         require(!Files.isSymbolicLink(path)) { "Runtime project contains a symbolic link; remove it before transfer." }
                         entries++
                         require(entries <= MAX_ARCHIVE_ENTRIES) { "Runtime project contains too many files." }
