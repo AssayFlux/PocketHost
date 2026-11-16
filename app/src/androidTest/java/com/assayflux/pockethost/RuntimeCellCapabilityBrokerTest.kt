@@ -29,7 +29,8 @@ class RuntimeCellCapabilityBrokerTest {
         File(projectB, "index.html").writeText("site-b")
         val roots = mutableMapOf("site-a" to projectA, "site-b" to projectB)
         val broker = RuntimeCellCapabilityBroker(leases) { projectId -> roots[projectId] }
-        val token = broker.issue(lease.id)
+        assertThrows(SecurityException::class.java) { broker.issue(lease.id, uid + 1) }
+        val token = broker.issue(lease.id, uid)
         try {
             val descriptor = broker.openReadOnly(lease.id, token, uid, "index.html")
             try {
@@ -87,7 +88,7 @@ class RuntimeCellCapabilityBrokerTest {
         val broker = RuntimeCellCapabilityBroker(leases) { null }
         try {
             assertThrows(IllegalArgumentException::class.java) {
-                broker.issue(lease.id)
+                broker.issue(lease.id, hostUid + 10_002)
             }
         } finally {
             leases.markProcessDied(lease.id)
