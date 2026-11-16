@@ -43,3 +43,10 @@ Before marking step 2 complete, wire lease allocation to real isolated service b
 ## Verification policy
 
 No Android build or instrumentation run is performed before Gate 8, per the owner's sequencing instruction. Source presence is not runtime verification. The Gate 2 acceptance matrix remains open until API 26, 33 and 35 tests pass on one exact source SHA and independent security review is complete.
+
+
+## Additional network-policy hardening (source only)
+
+The native seccomp filter now also denies `sendto`, `sendmsg`, `sendmmsg`, `recvfrom`, `recvmsg`, `recvmmsg`, and `shutdown` where the target ABI exposes those syscalls. This closes several socket-I/O and ancillary-FD-transfer paths omitted by the earlier denylist.
+
+This is not yet a complete egress proof: generic `read`/`write` remain available for runtime compatibility, so an inherited connected socket descriptor could still be abused through those calls. The cell launcher must therefore close every non-capability descriptor before loading project code and validate the exact descriptor set; the final design should prefer a strict syscall allowlist plus FD-scoped I/O mediation. The current probe does not prove that descriptor hygiene, and no Android ABI build or adversarial instrumentation has been run.
