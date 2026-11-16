@@ -17,7 +17,7 @@ Audit manifests, permissions, source modules, native ABIs, dependency pins, work
 
 Complete companion lifecycle, Binder death/rebind, version negotiation, bounded transfer, crash-recoverable project replacement, process supervision and coordinated shutdown. Route real Python WSGI and Node HTTP requests through Rust. Preserve static-origin service through application-runtime failure. Keep runtime execution trusted-code-only until Gate 2.
 
-**Exit during implementation:** source integration and regression-test definitions are complete. By owner instruction, APK builds, ABI packaging tests and API 26/33/35 emulator/device execution are deferred to Gate 8; do not run intermediate Android builds.
+**Exit during implementation:** source integration and regression-test definitions are complete. The Owner revised the sequence on 2026-11-16 and explicitly authorized intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation during Gates 2–4. Gate 8 remains responsible for final release packaging, physical-device acceptance and independent review.
 
 ## Gate 2 — Per-project isolation and adversarial security (P0)
 
