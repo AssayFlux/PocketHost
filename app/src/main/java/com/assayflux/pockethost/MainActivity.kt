@@ -189,6 +189,8 @@ private fun PocketHostDashboard() {
     var trustedRuntimeCodeAck by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("trusted_runtime_code_ack", false)) }
     var hostnameText by remember { mutableStateOf("") }
     var hostnameRuntime by remember { mutableStateOf("static") }
+    var visitorUsername by remember { mutableStateOf("") }
+    var issuedVisitorCredential by remember { mutableStateOf<Pair<String, String>?>(null) }
     var cloudflareTokenText by remember { mutableStateOf("") }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
@@ -216,6 +218,30 @@ private fun PocketHostDashboard() {
             status = it.message ?: "Could not start hosting service."
         }
     }
+    val reloadSiteRoutes: () -> Unit = {
+        val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+        if (preferences.getBoolean("python_enabled", false)) {
+            runCatching { PythonHostRuntime.stop(context) }
+            val pythonHosts = SiteRegistry.pythonHostnameMap(context)
+            val pythonRoot = preferences.getString("python_project_root", File(context.filesDir, "python-project").absolutePath)
+                ?: File(context.filesDir, "python-project").absolutePath
+            runCatching {
+                if (pythonHosts.length() > 0) PythonHostRuntime.startSites(context, pythonHosts.toString(), preferences.getInt("python_port", 8081))
+                else PythonHostRuntime.start(context, pythonRoot, preferences.getInt("python_port", 8081))
+            }.onFailure { OperationalLog.record(context, "ERROR", "PYTHON_ROUTE_RELOAD_FAILED", it.message ?: "Python route reload failed.") }
+        }
+        if (NativeEngine.status() == "RUNNING") {
+            MetricsStore.recordSample(context, NativeEngine.requestCount(), NativeEngine.bytesServed())
+            NativeEngine.stop()
+            val routes = SiteRegistry.hostRoutingJson(context, preferences.getInt("python_port", 8081), preferences.getInt("node_port", 3000))
+            val result = if (routes.length() == 0) NativeEngine.start(File(context.filesDir, "site").absolutePath,
+                preferences.getInt("port", 8080), preferences.getBoolean("allow_lan", false))
+            else NativeEngine.startMultiSite(File(context.filesDir, "site").absolutePath, routes.toString(),
+                preferences.getInt("port", 8080), preferences.getBoolean("allow_lan", false))
+            check(result == "OK") { result }
+        }
+    }
+
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -1024,7 +1050,67 @@ private fun PocketHostDashboard() {
                             }.onFailure { status = it.message ?: "Could not save hostname route." }
                         }, enabled = hostnameText.isNotBlank() && !importing) { Text("Save hostname route") }
                         SiteRegistry.list(context).filter { it.hostnames.isNotEmpty() }.forEach { site ->
-                            Text(site.name + " · " + site.hostnames.joinToString(), color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            Column(Modifier.fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Text(site.name + " · " + site.hostnames.joinToString(), color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Visitor access · " + site.accessMode.uppercase(), color = palette.onSurfaceVariant, fontSize = 12.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("public", "private", "restricted").forEach { mode ->
+                                        FilterChip(selected = site.accessMode == mode, onClick = {
+                                            runCatching {
+                                                SiteRegistry.setAccessMode(context, site.id, mode)
+                                                reloadSiteRoutes()
+                                                issuedVisitorCredential = null
+                                                status = "Visitor access for " + site.name + " changed to " + mode + "."
+                                            }.onFailure { status = it.message ?: "Could not update visitor access." }
+                                        }, label = { Text(mode.replaceFirstChar { it.uppercase() }) })
+                                    }
+                                }
+                                if (site.accessMode != "public") {
+                                    if (site.accessMode == "restricted") {
+                                        OutlinedTextField(value = visitorUsername, onValueChange = { visitorUsername = it.take(64) },
+                                            label = { Text("Invited visitor name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                                    } else {
+                                        Text("Private mode uses one shared visitor credential.", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                                    }
+                                    Button(onClick = {
+                                        runCatching {
+                                            val username = if (site.accessMode == "private") "visitor" else visitorUsername.trim()
+                                            val token = SiteRegistry.issueVisitor(context, site.id, username)
+                                            issuedVisitorCredential = site.id to token
+                                            visitorUsername = ""
+                                            reloadSiteRoutes()
+                                            status = "Visitor credential issued. Copy it now; it is shown only once."
+                                        }.onFailure { status = it.message ?: "Could not issue visitor credential." }
+                                    }, enabled = site.accessMode == "private" || visitorUsername.isNotBlank()) {
+                                        Text(if (site.accessMode == "private") "Create / rotate shared credential" else "Invite visitor")
+                                    }
+                                    site.visitorCredentials.keys.sorted().forEach { username ->
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                            Text(username, color = palette.onSurfaceVariant, fontSize = 13.sp)
+                                            TextButton(onClick = {
+                                                runCatching {
+                                                    SiteRegistry.revokeVisitor(context, site.id, username)
+                                                    if (issuedVisitorCredential?.first == site.id) issuedVisitorCredential = null
+                                                    reloadSiteRoutes()
+                                                    status = "Visitor " + username + " revoked from " + site.name + "."
+                                                }.onFailure { status = it.message ?: "Could not revoke visitor." }
+                                            }) { Text("Revoke") }
+                                        }
+                                    }
+                                    issuedVisitorCredential?.takeIf { it.first == site.id }?.let { (_, token) ->
+                                        Text("One-time visitor password. Username: " + if (site.accessMode == "private") "visitor" else "the invited visitor name",
+                                            color = palette.onSurfaceVariant, fontSize = 12.sp)
+                                        Text(token, color = palette.onSurface, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                                        OutlinedButton(onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("Pocket Host visitor credential", token))
+                                            status = "Visitor credential copied."
+                                        }) { Text("Copy credential") }
+                                    }
+                                }
+                            }
+                            Divider(color = palette.outline)
                         }
                     }
                 }
