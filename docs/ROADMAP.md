@@ -104,3 +104,8 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - Gate 7: the five destination screens and navigation source already exist; Learn onboarding copy now consistently directs users to Sites rather than the obsolete Files label. Settings remains embedded in the main activity. Terminal-free first-publication execution, Settings extraction, accessibility/TalkBack, compact-screen and visual screenshot acceptance remain open.
 - All Android test additions above are source definitions only until the API 26/33/35 Android integration workflow reports successful execution and its artifacts are reviewed. Gates 5, 6 and 7 remain open.
 
+## 2026-11-16 deployment recovery increment
+
+- Gate 6: static deployment activation now has a startup recovery path. If Pocket Host starts and the active site is missing or lacks its entry page, it restores the newest retained release containing a valid index.html; invalid active data is preserved in the release directory for diagnosis. MainActivity invokes this before rendering the app and records recovery/failure events.
+- Android instrumentation source covers recovery of a missing active site from the newest valid release. This does not yet provide crash journaling/recovery for every full-application backup phase or prove reboot/Doze/network/service-death behavior. API 26/33/35 execution remains unverified; Gate 6 remains open.
+
