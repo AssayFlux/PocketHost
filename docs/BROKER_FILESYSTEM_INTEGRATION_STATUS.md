@@ -7,7 +7,7 @@
 
 - `RuntimeCellLeaseRegistry` reserves a bounded slot for one project, rejects a second lease for the same project, records the isolated UID reported by the service, rejects duplicate active UIDs, and will not recycle an active slot until process death is observed.
 - `RuntimeCellCapabilityBroker` binds each random, process-local file capability to the exact lease, project ID and isolated UID. The caller can no longer supply a filesystem path: the broker resolves the root from the lease's project ID through a trusted host-owned resolver, canonicalizes it once, and stores that root in the grant. Each operation re-checks that the lease remains active and that the trusted IPC boundary supplied the caller UID observed from Binder. Lease revocation invalidates all grants.
-- `RuntimeProjectFileBroker` exposes read-only single-file descriptors and bounded broker-mediated writes. It rejects traversal and symlink components, checks regular-file type, and caps individual writes and resulting file size.
+- `RuntimeProjectFileBroker` exposes read-only single-file descriptors and bounded broker-mediated writes. It rejects traversal and symlink components, checks regular-file type, and caps individual writes and resulting file size. Cell grants now capture the project root's device/inode identity; each broker operation checks the identity of the root directory descriptor it actually opened. Replacing the directory at the same pathname therefore invalidates the old grant instead of silently redirecting it.
 - Writable file descriptors are explicitly legacy-probe-only and must not be passed to project code.
 
 ## Required host integration
