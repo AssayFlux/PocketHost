@@ -315,6 +315,55 @@ Java_com_assayflux_pockethost_worker_NetworkSandbox_closeInheritedSocketsExcept(
     return close_inherited_sockets_except(listener_fd);
 }
 
+/**
+ * Exercise the socket I/O syscalls which must remain denied even when a caller
+ * already owns the broker listener FD. The filter must return EPERM before the
+ * kernel validates the operation or touches the supplied message buffers.
+ *
+ * Bit assignments: sendto=0, sendmsg=1, sendmmsg=2, recvfrom=3,
+ * recvmsg=4, recvmmsg=5, shutdown=6.
+ */
+static bool probe_seccomp_errno(long result) {
+    return result < 0 && errno == EPERM;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_probeDeniedNetworkIo(
+    JNIEnv*, jclass, jint listener_fd) {
+    int denied_mask = 0;
+    unsigned char byte = 0;
+    alignas(8) unsigned char message[256] = {};
+#ifdef __NR_sendto
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_sendto, listener_fd, &byte, sizeof(byte), 0, nullptr, 0))) denied_mask |= 1 << 0;
+#endif
+#ifdef __NR_sendmsg
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_sendmsg, listener_fd, message, 0))) denied_mask |= 1 << 1;
+#endif
+#ifdef __NR_sendmmsg
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_sendmmsg, listener_fd, message, 1, 0))) denied_mask |= 1 << 2;
+#endif
+#ifdef __NR_recvfrom
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_recvfrom, listener_fd, &byte, sizeof(byte), 0, nullptr, nullptr))) denied_mask |= 1 << 3;
+#endif
+#ifdef __NR_recvmsg
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_recvmsg, listener_fd, message, 0))) denied_mask |= 1 << 4;
+#endif
+#ifdef __NR_recvmmsg
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_recvmmsg, listener_fd, message, 1, 0, nullptr))) denied_mask |= 1 << 5;
+#endif
+#ifdef __NR_shutdown
+    errno = 0;
+    if (probe_seccomp_errno(syscall(__NR_shutdown, listener_fd, SHUT_RDWR))) denied_mask |= 1 << 6;
+#endif
+    return denied_mask;
+}
+
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_assayflux_pockethost_worker_NetworkSandbox_isDescriptorClosed(
