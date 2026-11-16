@@ -23,7 +23,7 @@
 2. Static hosting is the core baseline and remains independent of optional runtimes and external networking.
 3. Simple and Advanced modes; five destinations: Dashboard, Sites, Activity, Learn, Settings.
 4. Reuse the owner's existing named Cloudflare Tunnel; never create a duplicate.
-5. Add AssayFlux Relay as a first-party planned alternative, not as an implemented feature until verified.
+5. Maintain the initial bounded AssayFlux Relay source path as a separate first-party alternative; it is not production-available until DNS/TLS deployment, Android validation and external acceptance pass.
 6. Local Network mode remains available; direct port forwarding is not the default.
 7. Keep website visitor authentication separate from Owner/Operator management authentication.
 8. Never expose the management API through website ingress.
