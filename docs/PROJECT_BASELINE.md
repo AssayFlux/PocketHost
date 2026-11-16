@@ -186,3 +186,5 @@ Update this file with exact evidence whenever the baseline changes.
 - Source tests include terminal-free archive activation while Rust static hosting remains online, backup authentication/tamper failure, operational storage bounds, and settings navigation. They remain unexecuted until successful Android workflow evidence is reviewed.
 - Gates 5–7 remain open pending actual CI/device evidence, additional capacity workload profiles and lifecycle fault injection.
 
+- adb58da6fbdbc5b1bbb19f04ed5b6820879cada1 adds a Rust regression test for independent per-target response permits under saturation. The Rust test suite has not yet been run in the current environment.
+
