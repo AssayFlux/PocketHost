@@ -312,3 +312,13 @@ Java_com_assayflux_pockethost_worker_NetworkSandbox_closeInheritedSocketsExcept(
     JNIEnv*, jclass, jint listener_fd) {
     return close_inherited_sockets_except(listener_fd);
 }
+
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_isDescriptorClosed(
+    JNIEnv*, jclass, jint fd) {
+    errno = 0;
+    if (fcntl(fd, F_GETFD) >= 0) return 0;
+    if (errno == EBADF) return 1;
+    return -(errno == 0 ? EIO : errno);
+}
