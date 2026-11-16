@@ -78,3 +78,5 @@ Recovery also verifies all hosting runtimes are stopped before touching transact
 
 Recovery runs before both Activity startup and the HostingService ingress startup. This also covers Android boot auto-start and sticky foreground-service restart paths, so a service cannot begin serving a partially restored website before the recovery journal has been resolved.
 
+The recovery journal is capped at 1 MB, the previous route-registry snapshot at 256 KB, and custom-root rollback records at 100. Journal writes are fsynced to a temporary file and atomically renamed before restore mutations begin.
+
