@@ -213,3 +213,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 0ef2a01392d5f1c7f20b8cef7b7800db97f52409 caps the fsynced recovery journal at 1 MB, prior route-registry snapshot at 256 KB and custom-root records at 100.
 
+- 83bbe93a6a24ccd1958fee9c7dd5ed2ab0c5cf70 makes manual rollback handle a missing active site and quarantine invalid/symlinked active trees; pruning only removes verified safe releases.
+
