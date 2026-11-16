@@ -457,406 +457,48 @@ private fun PocketHostDashboard() {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenFiles = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
                 if (selectedTab == "Dashboard") {
-                if (pendingPairingCode != null) {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("CONSOLE PAIRING REQUEST", color = palette.onSurface, fontWeight = FontWeight.Bold)
-                            Text("Code: $pendingPairingCode", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                            Text("Only approve this if you initiated pairing from your own trusted browser.", color = palette.onSurfaceVariant)
-                            Button(onClick = {
-                                val approved = ManagementApiServer.approvePairing(pendingPairingCode.orEmpty())
-                                if (approved) { status = "Management console pairing approved."; pendingPairingCode = null }
-                                else status = "Pairing request expired. Start pairing again."
-                            }) { Text("Approve console pairing") }
-                        }
-                    }
-                }
-                }
-                if (selectedTab == "Settings") {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("General", "Network", "Runtimes", "About").forEach { section ->
-                            FilterChip(
-                                selected = settingsSection == section,
-                                onClick = { settingsSection = section },
-                                label = { Text(section, fontSize = 12.sp) }
-                            )
-                        }
-                    }
-                }
-                if (selectedTab == "Settings" && settingsSection == "General") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Dark theme", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Use the darker Pocket Host appearance.", color = palette.onSurfaceVariant)
-                            }
-                            Switch(checked = darkTheme, onCheckedChange = { enabled ->
-                                darkTheme = enabled
-                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putBoolean("dark_theme", enabled).apply()
-                            })
-                        }
-                    }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Biometric app unlock", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Require a strong biometric when Pocket Host is opened; Android 11+ can also use a secure device credential. This protects the local app UI, not Owner/Operator API authentication.", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                            }
-                            Switch(checked = biometricUnlockEnabled, onCheckedChange = { enabled ->
-                                if (!enabled) {
-                                    biometricUnlockEnabled = false
-                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                        .putBoolean("biometric_unlock_enabled", false).apply()
-                                    status = "Biometric app unlock disabled."
-                                } else {
-                                    val activity = context as? MainActivity
-                                    if (activity == null) {
-                                        status = "Could not open biometric confirmation."
-                                    } else {
-                                        activity.confirmBiometricUnlock { success ->
-                                            if (success) {
-                                                biometricUnlockEnabled = true
-                                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                                    .putBoolean("biometric_unlock_enabled", true).apply()
-                                                status = "Biometric app unlock enabled for the next app launch."
-                                            } else {
-                                                status = "Biometric confirmation was not completed; the setting remains off."
-                                            }
-                                        }
-                                    }
-                                }
-                            })
-                        }
-                    }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Auto-start hosting on boot", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                    Text("Starts the local hosting service after device restart when Android permits it.", color = palette.onSurfaceVariant)
-                                }
-                                Switch(checked = autoStartOnBoot, onCheckedChange = { enabled ->
-                                    autoStartOnBoot = enabled
-                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                        .putBoolean("auto_start_on_boot", enabled).apply()
-                                })
-                            }
-                            OutlinedButton(onClick = {
-                                runCatching {
-                                    context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                                }.onFailure { status = it.message ?: "Could not open battery optimization settings." }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Battery optimization settings") }
-                        }
-                    }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
-                    FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
-                }
-                if (advancedMode) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("SERVER CONFIGURATION", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            OutlinedTextField(
-                                value = portText,
-                                onValueChange = { value -> if (value.length <= 5 && value.all(Char::isDigit)) portText = value },
-                                label = { Text("HTTP port") },
-                                enabled = !hosting,
-                                singleLine = true
-                            )
-                            OutlinedButton(
-                                onClick = {
-                                    val port = portText.toIntOrNull()
-                                    if (port == null || port !in 1024..65535) {
-                                        status = "Choose a port between 1024 and 65535."
-                                    } else {
-                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                            .putInt("port", port).apply()
-                                        status = "Server port saved. Start hosting to apply it."
-                                    }
-                                },
-                                enabled = !hosting
-                            ) { Text("Save server settings") }
-                            Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Keep CPU awake while hosting", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                    Text("Optional screen-off reliability aid. Uses more battery and cannot override every OEM network policy.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                }
-                                Switch(
-                                    checked = keepAwake,
-                                    onCheckedChange = { enabled ->
-                                        keepAwake = enabled
-                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                            .putBoolean("keep_awake", enabled).apply()
-                                        status = if (enabled) "CPU wake lock will be used the next time hosting starts." else "CPU wake lock disabled for the next hosting session."
-                                    },
-                                    enabled = !hosting
-                                )
-                            }
-                        }
-                    }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("REMOTE CONTROL PLANE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this phone to your independently hosted PocketHost backend.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                            OutlinedTextField(
-                                value = controlPlaneEndpoint,
-                                onValueChange = { controlPlaneEndpoint = it },
-                                label = { Text("Control-plane HTTPS URL") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            OutlinedTextField(
-                                value = controlPlaneToken,
-                                onValueChange = { controlPlaneToken = it },
-                                label = { Text("One-time device token") },
-                                visualTransformation = PasswordVisualTransformation(),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = {
-                                    runCatching {
-                                        RemoteControlAgent.configure(context, controlPlaneEndpoint, controlPlaneToken)
-                                        remoteControlConfigured = true
-                                        controlPlaneToken = ""
-                                        if (hosting) RemoteControlAgent.start(context)
-                                        status = if (hosting) "Remote control connected. This phone will poll the backend while hosting is active." else "Remote connection saved securely. The agent starts when hosting starts."
-                                    }.onFailure { status = it.message ?: "Could not configure remote control." }
-                                }, enabled = controlPlaneEndpoint.isNotBlank() && controlPlaneToken.length >= 32) {
-                                    Text("Save remote connection")
-                                }
-                                OutlinedButton(onClick = {
-                                    RemoteControlAgent.clear(context)
-                                    remoteControlConfigured = false
-                                    controlPlaneToken = ""
-                                    status = "Remote control credentials removed from this device."
-                                }, enabled = remoteControlConfigured) { Text("Disconnect") }
-                            }
-                            Text("The device makes outbound HTTPS requests only. The backend cannot open inbound ports or execute arbitrary shell commands on this phone.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        }
-                    }
-                }
-
-                }
-                if (selectedTab == "Dashboard") {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.primary)
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("HOSTING STATUS", color = palette.onPrimary.copy(alpha = 0.78f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text(if (hosting) "Local hosting active" else "Stopped", color = palette.onPrimary, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (status.length > 90) status.take(87) + "…" else status, color = palette.onPrimary.copy(alpha = 0.82f), fontSize = 13.sp)
-                        Button(
-                            onClick = {
-                                if (hosting) {
-                                    context.stopService(Intent(context, HostingService::class.java))
-                                    status = "Stopping hosting service…"
-                                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                } else {
-                                    startHosting(false)
-                                }
-                            },
-                            enabled = hosting || !importing,
-                            colors = ButtonDefaults.buttonColors(containerColor = palette.surface, contentColor = palette.primary),
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (hosting) "Stop hosting" else "Start hosting") }
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.surface)
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text("Your website", color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-                                Text(if (importedSummary.isBlank()) "No website deployed yet" else importedSummary,
-                                    color = palette.onSurfaceVariant, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            Text(if (hosting) "LIVE" else "OFFLINE",
-                                color = if (hosting) Color(0xFF2E7D32) else palette.onSurfaceVariant,
-                                fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                        val websitePort = portText.toIntOrNull() ?: 8080
-                        val websiteUrl = if (allowLan && !lanAddress.isNullOrBlank())
-                            "http://$lanAddress:$websitePort" else "http://127.0.0.1:$websitePort"
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp),
-                            color = palette.background
-                        ) {
-                            Text(websiteUrl, modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
-                                color = palette.onSurface, fontFamily = FontFamily.Monospace, fontSize = 13.sp,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = {
-                                    runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(websiteUrl)))
-                                    }.onFailure { status = it.message ?: "Could not open the website preview." }
-                                },
-                                enabled = hosting,
-                                modifier = Modifier.weight(1f)
-                            ) { Text("Open preview") }
-                            OutlinedButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Pocket Host website URL", websiteUrl))
-                                    status = "Website address copied."
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) { Text("Copy address") }
-                        }
-                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Box(Modifier.size(7.dp).clip(CircleShape)
-                                .background(if (tunnelStatus == "CONNECTED") Color(0xFF2E7D32) else palette.outline))
-                            Spacer(Modifier.width(7.dp))
-                            Text(if (tunnelStatus == "CONNECTED") "Cloudflare tunnel connected" else "Cloudflare tunnel not connected",
-                                color = palette.onSurfaceVariant, fontSize = 12.sp)
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { selectedTab = "Sites" }) { Text("Manage site") }
-                        }
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.surface)
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Traffic", color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Requests", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                Text(requests.toString(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Column(Modifier.weight(1f)) {
-                                Text("Active", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                Text(activeConnections.toString(), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Column(Modifier.weight(1f)) {
-                                Text("Transferred", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                Text(formatBytes(bytesServed), color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Text("Uptime $uptimeText  ·  Today $todayRequests requests  ·  ${formatBytes(todayBytes)}", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                        Text("Static website traffic only", color = palette.onSurfaceVariant, fontSize = 12.sp)
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.surface)
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Capacity", color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-                        Text("Safe limit ${capacityInfo.optInt("safeConcurrency", 16)}  ·  Active ${capacityInfo.optLong("activeConnections")}  ·  Queued ${capacityInfo.optLong("queuedConnections")}", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                        TextButton(onClick = { capacityDetailsExpanded = !capacityDetailsExpanded }, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (capacityDetailsExpanded) "Hide capacity controls" else "Show capacity controls and benchmark")
-                        }
-                        if (capacityDetailsExpanded) {
-                        Text("Admission budget: ${capacityInfo.optInt("effectiveConcurrencyLimit", 16)} active connections · ${capacityInfo.optInt("percent", 100)}% of ${if (capacityInfo.optLong("calibratedAt") > 0L) "measured" else "provisional"} concurrency ceiling",
-                            color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        Slider(value = capacityPercent, onValueChange = { capacityPercent = it }, valueRange = 1f..100f)
-                        Text("${capacityPercent.toInt()}% capacity profile", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        OutlinedButton(onClick = {
-                            runCatching { CapacityController.setPercent(context, capacityPercent.toInt()) }
-                                .onSuccess { capacityInfo = CapacityController.snapshot(context); status = "Capacity profile applied." }
-                                .onFailure { status = it.message ?: "Capacity profile rejected." }
-                        }, modifier = Modifier.fillMaxWidth()) { Text("Apply capacity profile") }
-                        OutlinedTextField(value = capacityDuration, onValueChange = { capacityDuration = it.filter(Char::isDigit).take(4) },
-                            label = { Text("Schedule duration in minutes (max 1440)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedButton(onClick = {
-                            runCatching { CapacityController.schedule(context, 30, capacityDuration.toInt()) }
-                                .onSuccess { capacityInfo = it; status = "30% capacity schedule started." }
-                                .onFailure { status = it.message ?: "Capacity schedule rejected." }
-                        }, modifier = Modifier.fillMaxWidth()) { Text("Schedule 30% capacity") }
-                        OutlinedButton(onClick = {
-                            runCatching { CapacityController.schedule(context, capacityPercent.toInt(), capacityDuration.toInt()) }
-                                .onSuccess { capacityInfo = it; status = "Selected capacity profile scheduled." }
-                                .onFailure { status = it.message ?: "Capacity schedule rejected." }
-                        }, modifier = Modifier.fillMaxWidth()) { Text("Schedule selected profile") }
-                        Button(onClick = {
-                            runCatching { capacityBenchmark = CapacityLab.start(context, portText.toIntOrNull() ?: 8080) }
-                                .onFailure { status = it.message ?: "Benchmark could not start." }
-                        }, enabled = hosting && capacityBenchmark.optString("state") != "RUNNING",
-                            modifier = Modifier.fillMaxWidth()) { Text(if (capacityBenchmark.optString("state") == "RUNNING") "Benchmark running…" else "Measure safe capacity") }
-                        if (capacityBenchmark.optString("state") == "RUNNING" || capacityBenchmark.optString("state") == "CANCELLING") {
-                            OutlinedButton(onClick = {
-                                capacityBenchmark = CapacityLab.cancel()
-                                status = "Stopping the capacity benchmark safely…"
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancel benchmark") }
-                        }
-                        Text("Benchmark: ${capacityBenchmark.optString("state", "NOT_RUN")} · safe ceiling ${capacityInfo.optInt("safeConcurrency", 16)} · active ${capacityInfo.optLong("activeConnections")} · queued ${capacityInfo.optLong("queuedConnections")} · rate-limited ${capacityInfo.optLong("rateLimitedRequests")} · site-cap rejected ${capacityInfo.optLong("siteLimitRejections")} · rejected ${capacityInfo.optLong("rejectedConnections")}",
-                            color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        val benchmarkLevels = capacityBenchmark.optJSONArray("levels")
-                        val chartRows = (0 until (benchmarkLevels?.length() ?: 0)).mapNotNull { index ->
-                            benchmarkLevels?.optJSONObject(index)?.let { it.optInt("concurrency") to it.optLong("p95LatencyMs") }
-                        }
-                        if (chartRows.isNotEmpty()) {
-                            Text("P95 response latency by concurrency", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Canvas(Modifier.fillMaxWidth().height(112.dp)) {
-                                val maxLatency = maxOf(750L, chartRows.maxOf { it.second }).toFloat()
-                                val rowHeight = size.height / chartRows.size
-                                chartRows.forEachIndexed { index, row ->
-                                    val top = index * rowHeight + rowHeight * 0.2f
-                                    val barWidth = size.width * (row.second.toFloat() / maxLatency).coerceIn(0f, 1f)
-                                    drawRect(color = palette.primary, topLeft = Offset(0f, top), size = Size(barWidth, rowHeight * 0.48f))
-                                    drawLine(color = palette.onSurface.copy(alpha = 0.55f),
-                                        start = Offset(size.width * (750f / maxLatency), top - 2f),
-                                        end = Offset(size.width * (750f / maxLatency), top + rowHeight * 0.7f), strokeWidth = 2f)
-                                }
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                chartRows.forEach { row ->
-                                    FilterChip(selected = selectedCapacityConcurrency == row.first,
-                                        onClick = { selectedCapacityConcurrency = if (selectedCapacityConcurrency == row.first) -1 else row.first },
-                                        label = { Text("${row.first}x", fontSize = 12.sp) })
-                                }
-                            }
-                            val selectedPoint = chartRows.firstOrNull { it.first == selectedCapacityConcurrency }
-                            Text(selectedPoint?.let { "Concurrency ${it.first} · p95 latency ${it.second} ms" }
-                                ?: "Select a concurrency point to inspect its p95 latency. Bars show measured milliseconds; marker = 750 ms benchmark threshold.",
-                                color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        }
-                        Text("Device health · ${deviceTelemetry.optString("thermalLabel", "UNKNOWN")}  ·  ${deviceTelemetry.optString("networkTransport", "Network unknown")}  ·  ${if (deviceTelemetry.isNull("batteryPercent")) "Battery unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "% battery"}", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                        Text("App RAM ${formatBytes(deviceTelemetry.optLong("processPssKb") * 1024L)}  ·  Free storage ${formatBytes(deviceTelemetry.optLong("storageAvailableBytes"))}", color = palette.onSurfaceVariant, fontSize = 12.sp)
-                        OutlinedButton(onClick = { dailyReportExportPicker.launch("pockethost-daily-report.json") },
-                            enabled = DailyOperationsReport.list(context).isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                            Text("Export latest daily report")
-                        }
-                        }
-                    }
-                }
-
+                    PocketHostDashboardScreen(
+                        context = context,
+                        state = PocketHostDashboardState(
+                            hosting = hosting,
+                            importing = importing,
+                            status = status,
+                            importedSummary = importedSummary,
+                            allowLan = allowLan,
+                            lanAddress = lanAddress,
+                            portText = portText,
+                            tunnelStatus = tunnelStatus,
+                            requests = requests,
+                            activeConnections = activeConnections,
+                            bytesServed = bytesServed,
+                            uptimeText = uptimeText,
+                            todayRequests = todayRequests,
+                            todayBytes = todayBytes,
+                            capacityInfo = capacityInfo,
+                            capacityDetailsExpanded = capacityDetailsExpanded,
+                            capacityPercent = capacityPercent,
+                            capacityDuration = capacityDuration,
+                            capacityBenchmark = capacityBenchmark,
+                            deviceTelemetry = deviceTelemetry,
+                            selectedCapacityConcurrency = selectedCapacityConcurrency,
+                            notificationPermissionRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ),
+                        actions = PocketHostDashboardActions(
+                            onStopHosting = { context.stopService(Intent(context, HostingService::class.java)) },
+                            onStartHosting = { startHosting(false) },
+                            onRequestNotificationPermission = { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                            onStatusChange = { status = it },
+                            onOpenSites = { selectedTab = "Sites" },
+                            onCapacityDetailsExpandedChange = { capacityDetailsExpanded = it },
+                            onCapacityPercentChange = { capacityPercent = it },
+                            onCapacityDurationChange = { capacityDuration = it },
+                            onCapacityInfoChange = { capacityInfo = it },
+                            onCapacityBenchmarkChange = { capacityBenchmark = it },
+                            onSelectedCapacityConcurrencyChange = { selectedCapacityConcurrency = it },
+                            onExportDailyReport = { dailyReportExportPicker.launch("pockethost-daily-report.json") }
+                        )
+                    )
                 }
                 if (selectedTab == "Activity") {
                     PocketHostActivityScreen(
