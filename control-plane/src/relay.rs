@@ -38,7 +38,6 @@ struct PendingResponse {
     sender: oneshot::Sender<RelayResponse>,
 }
 
-#[derive(Clone, Default)]
 pub struct PendingRequestGuard<'a> {
     hub: &'a RelayHub,
     request_id: Uuid,
@@ -57,6 +56,7 @@ impl Drop for PendingRequestGuard<'_> {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct RelayHub {
     sessions: Arc<Mutex<HashMap<Uuid, (Uuid, mpsc::Sender<RelayRequest>)>>>,
     pending: Arc<Mutex<HashMap<Uuid, PendingResponse>>>,
