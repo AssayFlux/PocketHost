@@ -42,11 +42,11 @@ Put these only in GitHub Actions secrets/variables. Never paste private keys, to
 
 1. Review `control-plane/compose.yaml` and `.github/workflows/deploy-control-plane.yml`.
 2. Populate the required host, SSH, database and Owner-token variables/secrets.
-3. Configure the exact allowed console origin.
-4. For Cloudflare mode, add a distinct Public Hostname in the named tunnel with service `http://control-plane:8080`, then add `POCKETHOST_CONTROL_TUNNEL_TOKEN` as a GitHub Actions secret. The phone's website hostname must continue to target the phone's Rust listener, not this service.
+3. Configure the exact allowed console origin. The deployment workflow writes POCKETHOST_CONTROL_API_HOST from POCKETHOST_CONTROL_DOMAIN; this is the dedicated API hostname and is distinct from POCKETHOST_CONTROL_HOST, which is the SSH host/IP.
+4. For Cloudflare mode, route the dedicated management hostname to `http://control-plane:8080`. For each verified Relay visitor hostname, route it to the same gateway listener; the gateway's Host guard permits admin/device API routes only on POCKETHOST_CONTROL_API_HOST and sends other verified hosts through the visitor gateway. Add POCKETHOST_CONTROL_TUNNEL_TOKEN as a GitHub Actions secret. The phone's independent Cloudflare website hostname must continue to target the phone's Rust listener, not this service.
 5. If the optional tunnel secret is absent, the workflow uses the Caddy public-TLS profile and requires inbound TCP 80/443.
 6. Run **Actions → Deploy PocketHost Control Plane → Run workflow**.
-7. Confirm `https://<control-plane-domain>/health` returns HTTP 200, CORS preflight succeeds for the console origin and no unintended ports are reachable.
+7. Confirm `https://<control-plane-domain>/health` returns HTTP 200, admin/device API calls work only on the dedicated management hostname, a Relay visitor hostname cannot access `/v1/admin` or `/v1/device` endpoints, CORS preflight succeeds for the console origin and no unintended ports are reachable.
 8. Register a device and pair it in PocketHost → Advanced → Remote Control Plane.
 9. Verify heartbeat, live configuration, command queue/acknowledgement, device revocation and audit events.
 
