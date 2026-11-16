@@ -817,6 +817,13 @@ async fn relay_visitor(
     State(s): State<AppState>, request: Request<Body>,
 ) -> Result<Response<Body>, (StatusCode, String)> {
     let (parts, body) = request.into_parts();
+    let secure_frontend = parts.headers.get("x-forwarded-proto").and_then(|value| value.to_str().ok())
+        .map(|value| value.eq_ignore_ascii_case("https")).unwrap_or(false) ||
+        parts.headers.get("cf-visitor").and_then(|value| value.to_str().ok())
+            .map(|value| value.contains("\\"scheme\\":\\"https\\"")).unwrap_or(false);
+    if !secure_frontend {
+        return Err((StatusCode::FORBIDDEN, "relay_requires_https".into()));
+    }
     let host_value = parts.headers.get(axum::http::header::HOST)
         .and_then(|value| value.to_str().ok()).ok_or((StatusCode::BAD_REQUEST, "host_header_required".into()))?;
     let authority = host_value.parse::<axum::http::uri::Authority>()
