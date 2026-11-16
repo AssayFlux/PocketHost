@@ -209,8 +209,12 @@ object SiteImporter {
                             false
                         } else {
                             files++
-                            bytes += java.nio.file.Files.size(path)
-                            files <= MAX_FILES && bytes <= MAX_BYTES
+                            val size = java.nio.file.Files.size(path)
+                            if (size > MAX_BYTES - bytes) false
+                            else {
+                                bytes += size
+                                files <= MAX_FILES
+                            }
                         }
                     } else false
                 }
