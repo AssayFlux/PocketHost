@@ -142,3 +142,12 @@ Update this file with exact evidence whenever the baseline changes.
 - Gate 2 source hardening after the earlier snapshot: root and intermediate directory opens now use `O_NONBLOCK`; Android instrumentation source rejects FIFO roots, FIFO path components, symlinked files and symlinked directories. The duplicate `O_NONBLOCK` flag in root identity capture was removed. The production Python/Node launcher still does not use per-project isolated UIDs or the Binder capability broker, so Gate 2 remains open.
 - Gate 4 instrumentation source now qualifies the Owner step-up policy helper through `ManagementApiServer`, fixing unresolved test references found during review. This is a source correction, not a test result.
 - Source changes are on `main` through `2357ed5301617ae0b63b35915779d4f4b44b44ad`. No Android compile, emulator result, external Relay deployment, physical-device test or independent security review is claimed. Gates 2, 3 and 4 remain open.
+
+## 2026-11-16 Gate 5–7 source increments
+
+- Gate 5 Rust change: 8fc83afdb30a6a6b59ccc972e1c924873fc3aaac adds a bounded FIFO per-site response-permit wait and a timeout/recovery test. This is not weighted cross-site scheduling or workload capacity proof.
+- Gate 6 source: ec933ba91d4718c91b0265189a83d2bffb87742b adds Android instrumentation for wrong passphrases and modified AES-GCM ciphertext failing before active-site mutation. 1817a33957804d18d797dbe5b90a28939ed07150 and 478bf1bc26e797ffceaabd138b0cd67d44510352 prevent operational logs and telemetry from growing without bound when rotation fails. 1b964419e9419c7ae113170d8472dfac175671d8 adds instrumentation coverage for log redaction and normal bounded rotation.
+- Gate 7 source: 714fede2e30862455cc6c8c945b98a42102d8747 aligns Learn onboarding labels with the actual Sites navigation destination. Dedicated Dashboard, Sites, Activity and Learn Compose files already exist; Settings is still embedded in the main activity.
+- Documentation updates: 1a7f13e6e964311e92bfe22634f8c07623e386ad, 13829144d6681afe1e82089e1ef82bcd2e5fc7e5, 389adde1713d52aee545bbd5e38ba8a3816a0710.
+- These commits add source and test definitions, not executed acceptance evidence. The Rust quality workflow and Android API 26/33/35 workflow must be checked on the resulting exact HEAD before any verification claim. Gates 5, 6 and 7 remain open.
+
