@@ -81,12 +81,14 @@ object RemoteControlAgent {
     @Synchronized
     fun start(context: Context) {
         if (running || !isConfigured(context)) return
+        generation += 1
+        val runGeneration = generation
         running = true
         val app = context.applicationContext
         RelayAgent.start(app)
         worker = Thread({
             var retryDelay = POLL_INTERVAL_MS
-            while (running && !Thread.currentThread().isInterrupted) {
+            while (running && generation == runGeneration && !Thread.currentThread().isInterrupted) {
                 var succeeded = false
                 try {
                     pollOnce(app)
@@ -102,14 +104,17 @@ object RemoteControlAgent {
                 val waitMs = (delay - jitter + java.util.concurrent.ThreadLocalRandom.current().nextLong((jitter * 2 + 1).coerceAtLeast(1))).coerceAtLeast(1)
                 try { Thread.sleep(waitMs) } catch (_: InterruptedException) { break }
             }
-            running = false
-            worker = null
+            if (generation == runGeneration) {
+                running = false
+                if (worker === Thread.currentThread()) worker = null
+            }
         }, "PocketHost-Remote-Control").apply { isDaemon = true; start() }
     }
 
     @Synchronized
     fun stop() {
         RelayAgent.stop()
+        generation += 1
         running = false
         worker?.interrupt()
         worker = null
