@@ -22,7 +22,8 @@ class RuntimeCellCapabilityBroker(
         val leaseId: String,
         val projectId: String,
         val isolatedUid: Int,
-        val root: File
+        val root: File,
+        val rootIdentity: RuntimeProjectFileBroker.RootIdentity
     )
 
     private val lock = Any()
@@ -41,9 +42,10 @@ class RuntimeCellCapabilityBroker(
             "No registered filesystem root exists for this project."
         }.canonicalFile
         require(root.isDirectory) { "Registered project root must exist and be a directory." }
+        val rootIdentity = RuntimeProjectFileBroker.captureRootIdentity(root)
         val token = ByteArray(32).also(random::nextBytes)
             .joinToString("") { "%02x".format(it) }
-        grants[token] = Grant(lease.id, lease.projectId, uid, root)
+        grants[token] = Grant(lease.id, lease.projectId, uid, root, rootIdentity)
         token
     }
 
@@ -58,7 +60,7 @@ class RuntimeCellCapabilityBroker(
         relativePath: String
     ): ParcelFileDescriptor = synchronized(lock) {
         val grant = authorize(leaseId, capability, callerUid)
-        RuntimeProjectFileBroker.openReadOnly(grant.root, relativePath)
+        RuntimeProjectFileBroker.openReadOnly(grant.root, relativePath, grant.rootIdentity)
     }
 
     /** Bounded write routed through the trusted host process; no writable FD escapes. */
@@ -71,7 +73,7 @@ class RuntimeCellCapabilityBroker(
         append: Boolean = false
     ): Long = synchronized(lock) {
         val grant = authorize(leaseId, capability, callerUid)
-        RuntimeProjectFileBroker.writeBytes(grant.root, relativePath, content, append)
+        RuntimeProjectFileBroker.writeBytes(grant.root, relativePath, content, append, grant.rootIdentity)
     }
 
     /** Revoke every outstanding capability when the cell dies or its lease is released. */
