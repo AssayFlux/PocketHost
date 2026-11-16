@@ -23,6 +23,7 @@ import java.util.zip.ZipInputStream
  * Project archives are unpacked into this package's private files directory; customer code
  * executes only under this companion application's Android UID.
  */
+// CI checkpoint: keep host/companion protocol and runtime wiring under the Android matrix.
 class RuntimeWorkerService : Service() {
     @Volatile private var probeServer: java.net.ServerSocket? = null
     private val projectsRoot by lazy { File(filesDir, "projects").apply { mkdirs() } }
