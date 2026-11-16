@@ -253,18 +253,30 @@ async fn delete_device(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let role = admin_write(&headers, &s).await?;
+    // Revocation, cascading credential/command removal, and its audit record are one
+    // database transaction. A failed audit insert must never leave a revoked device
+    // reported as an unsuccessful operation (or vice versa).
+    let mut tx = s.db.begin().await.map_err(internal)?;
     let artifacts = sqlx::query("SELECT storage_path FROM device_artifacts WHERE device_id=$1")
-        .bind(id).fetch_all(&s.db).await.map_err(internal)?;
+        .bind(id).fetch_all(&mut *tx).await.map_err(internal)?;
     let result = sqlx::query("DELETE FROM devices WHERE id=$1")
-        .bind(id).execute(&s.db).await.map_err(internal)?;
+        .bind(id).execute(&mut *tx).await.map_err(internal)?;
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
     }
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&role.name).bind("device.revoke").bind(id.to_string()).bind(json!({}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+
+    // Blob deletion is deliberately post-commit: database revocation remains durable
+    // even if storage cleanup is temporarily unavailable.
     for row in artifacts {
         let path: String = row.get("storage_path");
-        let _ = fs::remove_file(path);
+        if let Err(error) = fs::remove_file(&path) {
+            tracing::warn!(path = %path, error = %error, "revoked device artifact cleanup failed");
+        }
     }
-    audit(&s, &role.name, "device.revoke", &id.to_string(), json!({})).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
