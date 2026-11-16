@@ -4,10 +4,11 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.security.MessageDigest
 
 /** Persistent hostname-to-project mapping used by the Rust static server. */
 object SiteRegistry {
-    data class Site(val id: String, val name: String, val runtime: String, val root: String, val hostnames: List<String>, val enabled: Boolean)
+    data class Site(val id: String, val name: String, val runtime: String, val root: String, val hostnames: List<String>, val enabled: Boolean, val accessMode: String = "public", val visitorCredentials: Map<String, String> = emptyMap())
 
     private const val PREFS = "pockethost_site_registry"
     private const val KEY = "sites"
@@ -21,7 +22,10 @@ object SiteRegistry {
             Site(item.optString("id"), item.optString("name"), item.optString("runtime", "static"),
                 item.optString("root"), (item.optJSONArray("hostnames") ?: JSONArray()).let { hosts ->
                     (0 until hosts.length()).map { hosts.optString(it) }
-                }, item.optBoolean("enabled", true))
+                }, item.optBoolean("enabled", true), item.optString("accessMode", "public"),
+                item.optJSONObject("visitorCredentials")?.let { credentials ->
+                    buildMap { val names = credentials.keys(); while (names.hasNext()) { val name = names.next(); put(name, credentials.optString(name)) } }
+                } ?: emptyMap())
         }
     }
 
@@ -29,6 +33,14 @@ object SiteRegistry {
         require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
         require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
         require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
+            require(site.accessMode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
+            require(site.visitorCredentials.size <= 100 && site.visitorCredentials.all { (name, hash) -> name.matches(Regex("[A-Za-z0-9_.@-]{1,64}")) && hash.matches(Regex("[0-9a-f]{64}")) }) { "Invalid visitor credential registry." }
+            require(site.accessMode != "private" || site.visitorCredentials.size <= 1) { "Private mode supports one shared visitor credential." }
+            require(site.accessMode != "restricted" || site.visitorCredentials.isNotEmpty()) { "Restricted mode requires at least one invited visitor." }
+        require(site.accessMode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
+        require(site.visitorCredentials.size <= 100 && site.visitorCredentials.all { (name, hash) -> name.matches(Regex("[A-Za-z0-9_.@-]{1,64}")) && hash.matches(Regex("[0-9a-f]{64}")) }) { "Invalid visitor credential registry." }
+        require(site.accessMode != "private" || site.visitorCredentials.size <= 1) { "Private mode supports one shared visitor credential." }
+        require(site.accessMode != "restricted" || site.visitorCredentials.isNotEmpty()) { "Restricted mode requires at least one invited visitor." }
         val root = File(site.root).canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
         require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
@@ -52,7 +64,11 @@ object SiteRegistry {
                 "Only one Node.js project can be active in the embedded Node process; map additional hostnames to the same project."
             }
         }
-        val updated = existing + site.copy(root = root.absolutePath, hostnames = normalizedHosts)
+        val previous = existingAll.firstOrNull { it.id == site.id }
+        val preserved = if (site.accessMode == "public" && site.visitorCredentials.isEmpty() && previous != null) {
+            site.copy(accessMode = previous.accessMode, visitorCredentials = previous.visitorCredentials)
+        } else site
+        val updated = existing + preserved.copy(root = root.absolutePath, hostnames = normalizedHosts)
         save(context, updated)
     }
 
@@ -94,6 +110,57 @@ object SiteRegistry {
         save(context, normalized)
     }
 
+    @Synchronized fun setAccessMode(context: Context, siteId: String, mode: String) {
+        require(mode in setOf("public", "private", "restricted")) { "Unsupported visitor access mode." }
+        val sites = list(context).toMutableList()
+        val index = sites.indexOfFirst { it.id == siteId }
+        require(index >= 0) { "Site not found." }
+        val current = sites[index]
+        val credentials = if (mode == "public") emptyMap() else current.visitorCredentials
+        require(mode != "private" || credentials.size <= 1) { "Private mode supports one shared visitor credential." }
+        require(mode != "restricted" || credentials.isNotEmpty()) { "Restricted mode requires at least one invited visitor." }
+        sites[index] = current.copy(accessMode = mode, visitorCredentials = credentials)
+        save(context, sites)
+    }
+
+    @Synchronized fun addVisitor(context: Context, siteId: String, username: String, token: String) {
+        require(username.matches(Regex("[A-Za-z0-9_.@-]{1,64}"))) { "Visitor name must be 1–64 safe characters." }
+        require(token.length in 32..256) { "Visitor token length is invalid." }
+        val sites = list(context).toMutableList()
+        val index = sites.indexOfFirst { it.id == siteId }
+        require(index >= 0) { "Site not found." }
+        val current = sites[index]
+        require(current.accessMode != "public") { "Set the site to Private or Restricted before issuing visitor credentials." }
+        if (current.accessMode == "private") require(username == "visitor" || current.visitorCredentials.isEmpty()) {
+            "Private mode allows only one shared visitor credential named visitor."
+        }
+        require(current.visitorCredentials.size < 100 || username in current.visitorCredentials) { "Visitor limit reached." }
+        val updated = current.visitorCredentials.toMutableMap()
+        updated[if (current.accessMode == "private") "visitor" else username] = sha256(token)
+        sites[index] = current.copy(visitorCredentials = updated)
+        save(context, sites)
+    }
+
+    @Synchronized fun revokeVisitor(context: Context, siteId: String, username: String) {
+        val sites = list(context).toMutableList()
+        val index = sites.indexOfFirst { it.id == siteId }
+        require(index >= 0) { "Site not found." }
+        val current = sites[index]
+        val updated = current.visitorCredentials.toMutableMap()
+        require(updated.remove(username) != null) { "Visitor not found." }
+        require(current.accessMode != "restricted" || updated.isNotEmpty()) {
+            "Restricted mode must retain at least one invited visitor; switch to Public or Private first."
+        }
+        sites[index] = current.copy(visitorCredentials = updated)
+        save(context, sites)
+    }
+
+    fun visitorNames(context: Context, siteId: String): List<String> =
+        list(context).firstOrNull { it.id == siteId }?.visitorCredentials?.keys?.sorted() ?: emptyList()
+
+    private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+
     fun staticHostnameMap(context: Context): JSONObject {
         val map = JSONObject()
         list(context).filter { it.enabled && it.runtime == "static" }.forEach { site ->
@@ -134,7 +201,12 @@ object SiteRegistry {
                 "node" -> JSONObject().put("runtime", "node").put("port", nodePort)
                 else -> return@forEach
             }
-            site.hostnames.forEach { hostname -> routes.put(hostname, target) }
+            site.hostnames.forEach { hostname ->
+                val credentials = JSONObject()
+                site.visitorCredentials.forEach { (name, hash) -> credentials.put(name, hash) }
+                target.put("access", JSONObject().put("mode", site.accessMode).put("credentials", credentials))
+                routes.put(hostname, target)
+            }
         }
         return routes
     }
@@ -146,7 +218,8 @@ object SiteRegistry {
             site.hostnames.forEach(hosts::put)
             array.put(JSONObject().put("id", site.id).put("name", site.name)
                 .put("runtime", site.runtime).put("root", site.root)
-                .put("hostnames", hosts).put("enabled", site.enabled))
+                .put("hostnames", hosts).put("enabled", site.enabled)
+                .put("accessMode", site.accessMode).put("visitorCredentials", JSONObject().apply { site.visitorCredentials.forEach { (name, hash) -> put(name, hash) } }))
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, array.toString()).apply()
     }
