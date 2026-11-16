@@ -7,6 +7,8 @@ import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.BufferedReader
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -140,16 +142,15 @@ object RelayAgent {
             val hostname = message.getString("hostname")
             require(hostname.length in 1..253 && hostname.none { it.isWhitespace() }) { "Invalid Relay hostname." }
             val siteId = message.getString("site_id")
-            require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}")) && SiteRegistry.isEnabledSite(context, siteId)) {
-                "Relay route does not identify an enabled local site."
-            }
+            val localHostname = SiteRegistry.localHostnameForRelay(context, siteId)
+                ?: throw SecurityException("Relay route does not identify an enabled local site with a hostname.")
             val path = message.getString("path")
             require(path.startsWith("/") && path.length <= 8_192 && !path.startsWith("//")) { "Invalid Relay path." }
             val body = Base64.decode(message.optString("body_base64", ""), Base64.DEFAULT)
             require(body.size <= MAX_BODY_BYTES) { "Relay request body exceeds 8 MiB." }
             val port = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080)
             val localResponse = forwardLocalRequest(
-                port, hostname, path, method, message.optJSONObject("headers") ?: JSONObject(), body
+                port, localHostname, hostname, path, method, message.optJSONObject("headers") ?: JSONObject(), body
             )
             postResponse(endpoint, token, id, JSONObject()
                 .put("id", id)
@@ -179,7 +180,7 @@ object RelayAgent {
 
     /** Raw loopback HTTP preserves the visitor Host header; HttpURLConnection filters it. */
     private fun forwardLocalRequest(
-        port: Int, hostname: String, path: String, method: String,
+        port: Int, localHostname: String, originalHostname: String, path: String, method: String,
         incomingHeaders: JSONObject, body: ByteArray
     ): LocalResponse {
         val allowed = setOf("accept", "accept-encoding", "accept-language", "authorization",
@@ -195,7 +196,8 @@ object RelayAgent {
                 output.write(byteArrayOf(13, 10))
             }
             writeLine("$method $path HTTP/1.1")
-            writeLine("Host: $hostname")
+            writeLine("Host: $localHostname")
+            writeLine("X-PocketHost-Original-Host: $originalHostname")
             writeLine("Connection: close")
             writeLine("X-Forwarded-Proto: https")
             val keys = incomingHeaders.keys()
