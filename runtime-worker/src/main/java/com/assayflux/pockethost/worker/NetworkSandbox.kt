@@ -9,6 +9,9 @@ object NetworkSandbox {
      * Must be called before loading or executing project code. A non-zero result
      * is fatal: callers must not continue with project startup.
      */
+    /** Close inherited socket FDs before project code can use generic read/write syscalls. */
+    @JvmStatic external fun closeInheritedSocketsExcept(listenerFd: Int): Int
+
     @JvmStatic external fun installNetworkPolicy(listenerFd: Int): Int
     @JvmStatic external fun getPeerUid(socketFd: Int): Int
 }
