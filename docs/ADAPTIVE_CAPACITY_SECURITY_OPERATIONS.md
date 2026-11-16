@@ -264,3 +264,5 @@ The Rust engine applies a streaming-response semaphore per distinct site target 
 - Rust ingress now explicitly caps each HTTP/2 socket at eight concurrent streams instead of Hyper's 200-stream default, limits pending reset streams to 16 and local error resets to 64, and caps the HTTP/2 header list at 16 KiB.
 - With the existing 16 global TCP connection ceiling, multiplexed visitor request fan-out is now bounded independently of the per-target FIFO semaphore and 32-connection socket queue. This is a resource bound, not a measured safe visitor capacity.
 
+- HTTP/1 ingress now uses a Tokio timer with a 10-second request-header read deadline, at most 64 headers and a 16 KiB connection buffer. This prevents slow header senders from holding scarce phone-side connection slots indefinitely. These settings are source-configured; slowloris and mixed-protocol load tests remain to be executed.
+
