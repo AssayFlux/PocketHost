@@ -1,106 +1,75 @@
-# AssayFlux Pocket Host — Project Baseline
+# ASSAYFLUX POCKET HOST — CANONICAL PROJECT BASELINE
 
-**Baseline date:** 2026-11-16 · **companion source integration:** `bd227b0e5564ad25c88064cfc36796469390b773`  
-**Status:** integrated development software; not production approved.
+**Baseline review:** 2026-11-16  
+**Source reviewed:** `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade`  
+**Release:** 0.1.0 target · **Status:** pre-release · **Production approval:** no.
 
-This is the canonical current baseline. Superseded progress snapshots belong in Git history, not active project documentation.
+This document records what is evidenced at the reviewed source head. A later commit or workflow must not be silently treated as covered by this baseline.
 
 ## Product contract
 
-Native Android phone-hosted website origin; Android 8/API 26+, ARMv7/ARM64; no Termux or root; Rust public HTTP origin; static hosting independent of optional runtimes and remote services; reuse existing Cloudflare Tunnel; never expose management API; Python/Node trusted owner-installed code only until a genuine security boundary is proven.
+Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root; Rust/Tokio/Hyper request engine; static hosting independent of optional services; TypeScript/React console; existing Cloudflare Tunnel reused; AssayFlux Relay planned as an alternative; management API never public; Python/Node trusted code only until per-project OS isolation is proven.
 
-## Current architecture and limits
+## Current implementation truth
 
-| Layer | Current implementation | Remaining limit |
+| Subsystem | Source-level position | Verification / limitation |
 |---|---|---|
-| Android | Kotlin/Compose, foreground service | Physical/OEM acceptance |
-| HTTP | Rust/Tokio/Hyper, static serving, host routing, runtime proxy | Full fairness/fault acceptance |
-| Python | Chaquopy CPython 3.11 / WSGI in companion package | Build/API-matrix verification pending; trusted code only |
-| Node | Node.js mobile 24.22.1, companion `:node` process | Shares companion UID; build/API-matrix verification pending |
-| Companion | Separate package/UID, versioned signature Binder IPC, bounded project transfer, Python/Node source integration | Build, API 26/33/35 and lifecycle verification pending |
-| Management | Authenticated loopback API, TypeScript/React | External deployment not proven |
-| Edge | cloudflared Android connector | Existing tunnel/public HTTPS not verified |
-| Backup | Encrypted backup/restore | Full interruption/rollback/storage-pressure matrix open |
-| Capacity | Rust admission controls, initial static GET benchmark | Representative workload/fairness evidence incomplete |
+| Android host | Kotlin/Compose app, five destinations, foreground hosting service | Physical device and full visual acceptance remain |
+| Rust engine | Tokio async runtime, Hyper HTTP, static files, hostname routing, reverse proxy, bounded admission | Fairness and sustained-load evidence remain |
+| Python | CPython 3.11/Chaquopy moved into companion package | Real end-to-end and per-project isolated execution not proven |
+| Node | Node mobile 24.22.1 native runtime moved into companion package | Real end-to-end and per-project isolated execution not proven |
+| Companion | Separate package/UID, signature Binder permission, caller checks, versioned IPC, bounded archive transfer | Companion lifecycle/API matrix still requires exact-head proof |
+| Isolation | Isolated-service, Unix-domain and native seccomp probe source exists | Probe/runtime results are not accepted as production sandbox evidence |
+| Management | Authenticated loopback API and TypeScript/React console | External deployment and full security acceptance remain |
+| Cloudflare | Android cloudflared build integration; owner has existing named tunnel | External hostname/TLS verification remains |
+| AssayFlux Relay | Defined in North Star | Not implemented; no gateway or agent availability claim |
+| Capacity | Device telemetry, first Capacity Lab and admission derating foundations | Fair governor, workload coverage and safe-envelope evidence remain |
+| Backup | Encrypted .afbackup and staged restore foundations | Full fault matrix remains |
+| Control plane | Axum/PostgreSQL source and deployment workflow | Deployment and device E2E not proven |
+| Release | Debug packaging workflow | No verified signed production APK pair |
 
-## Weighted readiness: 37%
+## CI evidence at reviewed head
 
-This is the last verified weighted estimate from before the companion runtime migration source changes. It is retained at 37% until the new companion build and instrumentation evidence are available. It is a judgement-based estimate against six release gates, not code volume, test coverage or a claim that 37% of features are usable.
+- Source head: `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade`.
+- Quality run `43813160835`: completed success.
+- Android integration run `43813160678`: queued when this baseline was reviewed; therefore no API 26/33/35 pass is claimed from that run.
+- Previous API 26 failures on earlier commits are historical evidence and remain relevant until the corrected exact-head run passes.
+- Do not infer Android emulator success from quality CI or APK packaging.
 
-| Gate | Weight | Estimated completion | Contribution |
-|---|---:|---:|---:|
-| Companion runtime migration | 25 | 15 | 3.75 |
-| Isolation and adversarial security | 20 | 25 | 5.00 |
-| Rust governor and Capacity Lab | 15 | 60 | 9.00 |
-| Backup, operations and Settings | 15 | 65 | 9.75 |
-| Full API matrix, CI and APK evidence | 15 | 55 | 8.25 |
-| Signing, external HTTPS and independent review | 10 | 15 | 1.50 |
-| **Total** | **100** | | **37.25 → 37%** |
+Recheck the live workflow state before using this as a current release report.
 
-## Gate 1 — Companion runtime migration (25%)
+## Weighted readiness
 
-Present in source: CPython/Chaquopy and Node/V8 are packaged in the companion; host-side Binder client negotiates protocol version 1; signature permission and caller package/signature checks protect control calls; bounded ZIP/file-descriptor transfer extracts into companion-owned storage; Python and Node lifecycle/status/metrics operations route through the companion; Rust remains the loopback reverse-proxy front door.
+The previous estimate of 37% predates the latest runtime/security source changes. It is retained as a historical baseline only; it is not recalculated here because current gate completion evidence is incomplete and the new Relay scope has not been implemented. Do not present 37% as a current audited readiness score.
 
-Required: successful native/Chaquopy build; API 26/33/35 runtime tests; robust worker process-death/rebind/update rollback; end-to-end Rust upstream tests; prove static-origin continuity under runtime failure. The separate UID protects host-private files but all companion projects still share one UID, and network egress is not yet enforced.
+Use the following release gates as the denominator for a future re-score:
+1. Runtime migration and lifecycle.
+2. Per-project isolation and adversarial security.
+3. AssayFlux Relay and device identity.
+4. Owner/visitor authentication.
+5. Rust governor and Capacity Lab.
+6. Backup, operations and lifecycle recovery.
+7. Product UX and onboarding.
+8. Exact-SHA CI, release signing, external and physical-device acceptance.
 
-Exit: Python WSGI and Node HTTP end-to-end through Rust on API 26/33/35; host-private file denial, transfer bounds, lifecycle recovery and documented limitations demonstrated. Cross-project isolation and egress enforcement remain security gates.
+## Non-negotiable security limitations
 
-## Gate 2 — Isolation and adversarial security (20%)
+- Companion UID separation is host-vs-companion only; it is not per-project isolation.
+- Python/Node share companion UID and storage.
+- Outbound egress is not OS-enforced.
+- Seccomp/isolated UID/Unix-domain probes are not proof of production runtime confinement.
+- Keep runtimes limited to owner-controlled trusted code.
+- Relay must not expose management API and must disclose that gateway-terminated TLS allows relay inspection.
+- A relay hides the phone's IP from ordinary visitors, not from relay infrastructure or carrier.
 
-Present: host-vs-companion UID separation, signature-protected Binder service, bounded project archive transfer, canonical path checks, Python loopback-only listener and an isolated-process architecture probe. These controls do **not** isolate projects from one another today.
+## Evidence vocabulary
 
-Verified current gap: Python multi-site projects share one interpreter/process; all Python/Node projects share one companion UID and files directory; the companion package grants `INTERNET`; listener pinning does not block outbound TCP/UDP/raw sockets, DNS bypasses or loopback management access.
+- **Source present:** code exists.
+- **Compiled:** relevant target compiled.
+- **Automated tested:** named tests passed on exact SHA.
+- **Emulator verified:** Android instrumentation passed on named API level.
+- **Device verified:** physical-device test evidence exists.
+- **Externally verified:** real public DNS/TLS/request tested outside the device network.
+- **Production approved:** all release gates and independent review accepted.
 
-Chosen target: one Android `isolatedProcess=true` service process/UID per hosted project. The normal companion becomes a trusted broker only. It passes one project directory/runtime descriptor and a host-created Unix-domain listener descriptor to each isolated cell. The host app's Rust engine connects to the private socket path; the cell verifies `SO_PEERCRED` is the host UID. Before project code executes, a TSYNC seccomp-BPF filter denies socket creation/connect/bind and io_uring socket paths, permitting listen/accept only on the passed listener FD. Rust remains the sole public ingress. A descriptor-only VFS is the fallback if SELinux blocks directory-FD traversal. The implementation sequence and acceptance tests are in [SECURITY_GATE_2_EXECUTION_PLAN.md](SECURITY_GATE_2_EXECUTION_PLAN.md).
-
-Current implementation evidence: instrumentation has been added for two simultaneous isolated UIDs, Binder socket transfer, a host-created listener FD accepting two requests, and project-directory FD read/write with sibling traversal denial. The first compile attempt found two Android test SDK mistakes; fixes are now in the latest source commit and the rerun is pending. Do not count this as an accepted security boundary yet.
-
-Required: pass the UID, directory-FD and listener-FD proofs on API 26/33/35; build the cell manager; move archive extraction, CPython and Node execution into cells; deny all new outbound IPv4/IPv6 TCP/UDP/raw sockets and DNS/native/child-process bypasses; test host/sibling files, management services, private/link-local/metadata targets, descriptor revocation, process cleanup, resource exhaustion and restart; obtain independent security review.
-
-Exit: two live projects have distinct OS-enforced identities and private storage; project code cannot read or interfere with another project or host data; project code cannot create outbound network connections; Rust can still serve real Python and Node visitor traffic through the brokered listener; API 26/33/35 tests and independent review pass. A separate process or path validation alone is not sandboxing.
-
-## Gate 3 — Rust governor and Capacity Lab (15%)
-
-Present: bounded connection admission/queue, per-client rate controls, per-site concurrency caps, overload responses, drain logic and initial static GET sweep with thermal/memory aborts.
-
-Required: prove fair scheduling and static-origin reserve; test saturation, cancellation, slow clients, upstream failure and drain; benchmark cached/uncached assets, payload sizes and optional trusted runtimes; record throughput, p50/p95/p99, errors, CPU/PSS, temperature/battery and queue pressure; repeat and invalidate stale benchmarks.
-
-Exit: repeatable representative safe-envelope report; no universal visitor-count claim; static origin survives overload.
-
-## Gate 4 — Backup, operations and Settings (15%)
-
-Present: encrypted backup/restore, selected project/configuration coverage, bounded logs/metrics, device sampler/report foundation; Dashboard/Sites/Activity/Learn screen decomposition.
-
-Required: restore fault matrix for wrong passphrase, corruption, interruption, low storage, custom roots and rollback; prove safe staging/recovery; secret redaction and bounded retention; durable reports; Settings extraction and responsive/accessibility/screenshot review.
-
-Exit: restore cannot destroy last known-good site; diagnostics redact secrets; Settings acceptance passes.
-
-## Gate 5 — Full CI matrix and APK evidence (15%)
-
-Present: quality workflow 43789396734 passed six jobs; Android workflow 43789396568 API 26 passed 31 tests with zero failures; APK packaging and cloudflared build passed.
-
-Required: API 26/33/35 on same candidate SHA; host/companion ABI packaging; reports/screenshots/provenance/checksums; download and validate artifacts.
-
-Exit: all jobs green on one exact SHA and artifacts parse/signature checks pass.
-
-## Gate 6 — Release preparation (10%)
-
-Present: debug APK packaging and signing documentation.
-
-Required: owner-controlled signing secrets; signed host/companion APKs and checksums; external HTTPS through existing Cloudflare Tunnel; public hostname maps only to Rust listener; management API unreachable publicly; physical-device acceptance; independent security review and disposition.
-
-Exit: owner approval, signed artifacts, external HTTPS/device evidence and independent review.
-
-## CI snapshot
-
-- Quality [43789396734](https://github.com/AssayFlux/PocketHost/actions/runs/43789396734): six jobs passed.
-- Android [43789396568](https://github.com/AssayFlux/PocketHost/actions/runs/43789396568): API 26 31/31 passed; API 33 in progress and API 35 queued at last observation.
-- Prior APK artifact download was truncated and is not a valid deliverable.
-
-## Explicit non-claims
-
-No verified companion runtime build yet for this source snapshot; no per-project sandbox, completed egress enforcement, hard CPU quota, representative sustained-capacity certification, fully fault-hardened backup, external HTTPS verification, signed production release, independent security approval or physical-device certification.
-
-## Baseline maintenance
-
-Any code change updates tests, exact-SHA CI, this gate assessment, README and active docs. Documentation-only changes do not increase implementation readiness. Keep superseded snapshots in Git history only.
+These terms are not interchangeable. Update this file with exact evidence whenever the baseline changes.
