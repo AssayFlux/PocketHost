@@ -114,7 +114,7 @@ export function App() {
       localStorage.setItem("pockethost_api_base", apiBase);
       const previousToken = token;
       const result = await request<{ accessToken: string }>("/api/v1/auth/login", {
-        method: "POST", body: JSON.stringify({ username: loginUsername, password: loginPassword }),
+        method: "POST", body: JSON.stringify({ username: loginUsername || hostIdentity?.username || "", password: loginPassword }),
       });
       if (previousToken) {
         // A successful credential re-check replaces the old local session.
