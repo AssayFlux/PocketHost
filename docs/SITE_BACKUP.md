@@ -84,3 +84,5 @@ Manual release rollback also handles a missing active site and quarantines an in
 
 A candidate release or custom static rollback root must also pass the same import limits (5,000 files, 10,000 total entries, 50 MiB and depth 32), contain no symbolic links or special files, and contain no blocked secret-bearing names. Recovery therefore does not reactivate an oversized or unsafe historical tree.
 
+Committed transactions are cleanup-only and may be pruned while hosting is active; only an uncommitted rollback requires every runtime to be stopped. This avoids a sticky-service restart being blocked merely because a successfully committed transaction still has old rollback files awaiting cleanup.
+
