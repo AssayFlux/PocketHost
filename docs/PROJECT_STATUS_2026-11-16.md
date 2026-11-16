@@ -1,80 +1,122 @@
-# ASSAYFLUX POCKET HOST — HISTORICAL PROJECT STATUS
+# AssayFlux Pocket Host — Engineering Status
+**Snapshot date:** 2026-11-16  
+**Product:** AssayFlux Pocket Host · **Developer:** Designed by AssayFlux  
+**Status:** pre-release; not production-approved.
 
-**Review timestamp:** 2026-11-16  
-**Reviewed source baseline:** `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade`  
-**Documentation refresh:** in progress on main after this baseline; refresh commit SHAs must not be confused with source verification.  
-**Release:** 0.1.0 target · **Decision:** not production approved.
+This report is an evidence-based snapshot, not a readiness percentage. Source implementation, automated tests, Android compilation, device acceptance, external deployment and production approval are separate states.
 
-> Historical snapshot from the earlier source baseline. It is retained for audit history and is superseded by `docs/PHASE_0_STATUS.md` and `docs/PROJECT_BASELINE.md`. Do not use its CI IDs or implementation state as current evidence.
+## 1. Repository and verification
 
-## 1. What this report means
-
-This is an evidence-oriented status snapshot, not a claim that every feature is complete. Source presence, compilation, automated tests, emulator execution, physical-device tests, external connectivity and production approval are separate states.
-
-The latest source baseline checked for this documentation refresh was `6c1ba2f`. Quality workflow `43813160835` completed successfully. Android integration workflow `43813160678` was queued when inspected. Therefore this report does not claim API 26/33/35 runtime success on that head. Recheck Actions before treating the state as current.
+- Repository: https://github.com/AssayFlux/PocketHost
+- Branch: main
+- Implementation source SHA reviewed: 06fa7dea1ed2481b30c680fd1a22ff083d48d203
+- Quality workflow: https://github.com/AssayFlux/PocketHost/actions/runs/43851733175
+- Result: completed success on that exact SHA; all six jobs passed: Rust, control-plane/PostgreSQL migrations, Python runtime, Node runtime, TypeScript console and Gradle wrapper.
+- The quality workflow does not compile Android Kotlin, C++/JNI or package APKs. It does not run Android instrumentation.
+- Owner sequencing remains in force: no APK build, Android compilation, emulator or device test during Gates 0–7. Those checks belong to Gate 8.
 
 ## 2. Implemented source foundations
 
-- Native Kotlin/Jetpack Compose host app with Dashboard, Sites, Activity, Learn and Settings destinations.
-- Rust/Tokio/Hyper website engine with static serving, hostname routing, reverse proxy and bounded admission foundations.
-- TypeScript/React/Vite local management console.
-- Authenticated loopback management API and pairing/session foundations.
-- CPython 3.11 / Chaquopy and Node mobile 24.22.1 source moved into a separate companion package.
-- Signature-protected, versioned Binder IPC, caller checks and bounded archive transfer.
-- Android cloudflared build integration for supported native ABIs; owner has an existing named Cloudflare Tunnel.
-- Encrypted .afbackup and staged restore foundations.
-- Initial device telemetry, Capacity Lab and health-based admission derating.
-- Optional Axum/PostgreSQL remote-management source and deployment workflow.
-- Isolated UID, Unix-domain listener and native seccomp proof code exists in source.
+- Kotlin/Jetpack Compose host app and separate runtime companion package.
+- Rust/Tokio/Hyper website engine with static serving, hostname routing, reverse proxy, admission limits and site access enforcement.
+- TypeScript/React/Vite remote console.
+- Versioned signature-protected Binder IPC and bounded project archive transfer.
+- CPython 3.11 / Chaquopy and Node mobile runtime source in the companion package.
+- Owner-approved trusted-code gate for Python/Node.
+- Archive extraction hardening, including traversal, duplicate, case-collision, file/directory collision and bounded-size checks.
+- Isolated-UID/seccomp feasibility probe, inherited socket cleanup, Binder capability adapter using actual Binder.getCallingUid(), and Android instrumentation source for probe behavior.
+- Remote control-plane device enrollment, user/device token rotation, 12-hour server-side admin sessions, role checks and transactional audit.
+- Site-scoped Public/Private/Restricted visitor access, one-time 256-bit visitor credentials stored as SHA-256 hashes, Owner invite/revoke and Rust Basic-auth enforcement.
+- Encrypted backup/restore foundations, telemetry and Capacity Lab foundations.
+- Initial bounded HTTP AssayFlux Relay source implementation described below.
 
-## 3. Critical limitations
+## 3. Gate-by-gate status
 
-### Runtime migration
-Companion source integration does not prove Python/Node startup, visitor routing, lifecycle recovery or ABI packaging on the final source head. End-to-end API 26/33/35 evidence remains required.
+### Gate 0 — Repository truth and architecture freeze
+**Complete.** Canonical docs and implementation boundaries are established.
 
-### Security Gate 2
-The companion UID is separate from the host UID, but projects share the companion UID and private storage. Python multi-site code shares a worker process; Node shares companion identity. Outbound network access is not OS-enforced. The isolated service/seccomp/Unix socket code is a proof spike, not a production sandbox. Keep Python/Node owner-trusted-code-only.
+### Gate 1 — Runtime migration
+**Source implementation complete; Android verification deferred.** Python and Node are moved into the companion package. The source workflow is not proof of runtime startup or API/ABI acceptance.
 
-### AssayFlux Relay
-First-party relay is now a product requirement and architecture plan. Gateway, Android agent, device enrollment, multiplexed transport, hostname registry, certificates and visitor access gateway are not implemented. Cloudflare remains the available external tunnel integration; reuse the existing named tunnel.
+### Gate 2 — Per-project security isolation
+**Open. Do not treat the probe as production isolation.**
 
-### Capacity
-Telemetry and a first static Capacity Lab exist in source. Full fair scheduling, representative workload benchmarking, long-duration evidence, per-site fairness and measured safe operating envelopes remain open. No visitor-count guarantee.
+Implemented source:
+- Lease registry and project-bound capability broker.
+- Host Binder adapter obtains Binder.getCallingUid() at transaction receipt; UID is never accepted from a parcel.
+- Read-only file descriptor and bounded write operations with per-lease grant limits and expiry.
+- Isolated UID and Unix listener probe.
+- Native probe closes inherited socket descriptors before seccomp, then tests denial of socket/connect/bind and brokered listener operation.
 
-### Operations
-Encrypted backup and restore foundations exist; interruption, corruption, low-storage, wrong-passphrase and rollback fault coverage remains open. Settings and visual/accessibility acceptance need review.
+Still missing:
+- Production cell supervisor and bounded per-project service allocation/death/revocation.
+- Actual Python and Node execution in distinct isolated UIDs.
+- Descriptor-rooted project/scratch storage and runtime-specific bootstrap/module/file adapters.
+- Strict fail-closed syscall policy; current probe policy is denylist-based with an ALLOW fallback.
+- Real visitor socket integration through production runtime cells.
+- API 26/33/35 adversarial instrumentation and independent security review.
 
-### Release
-No production-approved signed APK pair, external connectivity evidence, physical-device acceptance or independent security review is recorded here.
+The production Python and Node workers still share the companion UID and app-private storage. Keep both owner-trusted-code-only. Do not weaken SELinux or claim hostile-code safety.
 
-## 4. Primary-version gates
+### Gate 3 — AssayFlux Relay
+**Partial bounded HTTP implementation in source; not deployed or production-approved.**
 
-1. Finish companion Python/Node lifecycle and Rust end-to-end routing.
-2. Complete per-project OS isolation and adversarial security.
-3. Build AssayFlux Relay and device enrollment.
-4. Complete separate Owner/Operator and visitor authentication.
-5. Complete Rust governor and Capacity Lab.
-6. Complete backup, operations and lifecycle recovery.
-7. Complete product UX and onboarding.
-8. Pass exact-SHA API 26/33/35, ABI builds, signing, external tests and independent review.
+Implemented source:
+- Owner-only hostname registration and one-time DNS TXT ownership challenge; only the challenge hash is stored.
+- DNS response checks for resolver source, transaction ID, question and answer owner. DNSSEC validation is not implemented.
+- Verified hostname-to-device/site registry.
+- Authenticated outbound Android SSE stream using the device bearer token.
+- Bounded request/response forwarding: 8 MiB body cap, 45-second gateway deadline, bounded pending requests and four local request workers per device.
+- Android agent resolves the exact site ID to an enabled local SiteRegistry entry and uses its local hostname for Rust routing. The verified public hostname is preserved as Host/X-Forwarded-Host for proxied applications.
+- Raw loopback HTTP preserves Host semantics; Set-Cookie multiplicity, WWW-Authenticate, CORS and selected security headers are forwarded.
+- Device token rotation/deletion revokes the in-memory Relay stream and pending requests.
+- Visitor Basic-auth and per-site/effective-client-IP throttling are enforced by Rust on the phone after the request is relayed.
 
-See `docs/NORTH_STAR.md` for detailed tasks and objective exit criteria; `docs/ROADMAP.md` is the execution sequence.
+Still missing:
+- WebSocket upgrades, streaming downloads/SSE and end-to-end HTTP/2 multiplexing.
+- TLS/certificate lifecycle managed by AssayFlux and DNSSEC.
+- Public Relay deployment, external DNS/TLS tests, network-transition tests and load/soak evidence.
+- End-to-end validation with a real Android device and real visitor traffic.
 
-## 5. Readiness
+The existing Cloudflare Tunnel remains independent. Do not describe this bounded HTTP path as arbitrary TCP or production-ready general Relay.
 
-The earlier 37% estimate is historical and predates the latest runtime/security and Relay scope changes. It is not a current audited readiness score. Do not publish a replacement percentage until every gate is re-scored against exact evidence and the added Relay/authentication scope is included.
+### Gate 4 — Owner/operator and visitor authentication
+**Partially implemented; gate remains open.**
 
-## 6. Verification ledger
+Implemented source:
+- Remote admin credentials exchanged for 12-hour hashed server-side sessions.
+- Session expiry, explicit revocation, user revocation and token-rotation invalidation.
+- Owner/editor/viewer authorization and transactional audit.
+- Owner-only team-user and device token rotation; old tokens are invalidated immediately.
+- Local Public/Private/Restricted site access.
+- One-time 256-bit visitor credentials stored as SHA-256 hashes; Owner invite/rotate/revoke.
+- Rust constant-time Basic-auth comparison, HTTPS-only protected-site proxy enforcement and stripping of visitor Authorization before customer runtimes.
+- Per-site/effective-client-IP visitor-authentication throttle: eight failures per 60-second window, then a 60-second cooldown; bounded bucket map.
 
-| Evidence | Result at review |
-|---|---|
-| Source SHA | `6c1ba2fe2274b3137dc7e0b62bdb1f50f151bade` |
-| Quality workflow | `43813160835` completed success |
-| Android integration | `43813160678` queued at review; no pass claimed |
-| API 26/33/35 matrix | Not accepted on this baseline |
-| Physical ARMv7/ARM64 device | Not recorded |
-| External Cloudflare HTTPS | Not recorded |
-| AssayFlux Relay | Planned; not implemented |
-| Independent security review | Not recorded |
+Still missing:
+- Passkey-first Owner identity and secure passkey recovery.
+- Fresh reauthentication for sensitive actions.
+- Full adversarial role and cross-site token testing on Android/native server.
+- Executed Android instrumentation and physical-device acceptance.
 
-Update this ledger only with observed results. Historical failed or cancelled runs should be retained as history, not misrepresented as current failures or passes.
+## 4. Critical security and release limitations
+
+- Companion UID separation is not per-project isolation.
+- Python and Node still share companion identity and storage.
+- Outbound egress is not OS-enforced per project in production.
+- The isolated UID/seccomp/Binder path is probe-only and Android C++/Kotlin has not been compiled or executed.
+- Relay is source-only; no public deployment or external visitor acceptance is claimed.
+- No production-approved signed host/companion APK pair, physical-device acceptance, independent security review or release approval is recorded.
+- No universal visitor count or uptime guarantee is made.
+
+## 5. Required implementation order
+
+1. Complete Gate 2 runtime-specific isolation design and production cell supervisor; migrate Python and Node only after descriptor-rooted runtime proofs.
+2. Complete Gate 3 general Relay requirements, deployment, external acceptance and reliability evidence while preserving Cloudflare/LAN independence.
+3. Complete Gate 4 passkey-first identity, fresh reauthentication and executed adversarial tests.
+4. Continue Gates 5–7: governor/capacity, backup/operations and product UX.
+5. At Gate 8 only: exact-SHA Android builds for declared ABIs, API 26/33/35 instrumentation, signed APK pair, physical device and external connectivity acceptance.
+
+See docs/NORTH_STAR.md, docs/PROJECT_BASELINE.md, docs/ROADMAP.md, docs/MASTER_PLAN.md, docs/DEVELOPMENT_CONTEXT.md, docs/DECISIONS.md and the Gate 2/Gate 4 execution plans for detailed contracts and exit criteria.
+
+**Designed by AssayFlux · AssayFlux Scientific Systems**
