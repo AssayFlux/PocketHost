@@ -88,6 +88,24 @@ struct CommandAck {
     result: Value,
 }
 
+fn control_host_matches(headers: &HeaderMap, expected_host: &str) -> bool {
+    let expected = expected_host.trim().trim_end_matches('.').to_ascii_lowercase();
+    if expected.is_empty() { return false; }
+    headers.get(axum::http::header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<axum::http::uri::Authority>().ok())
+        .map(|authority| authority.host().trim_end_matches('.').eq_ignore_ascii_case(&expected))
+        .unwrap_or(false)
+}
+
+fn ensure_control_plane_host(headers: &HeaderMap) -> Result<(), (StatusCode, String)> {
+    match std::env::var("POCKETHOST_CONTROL_HOST") {
+        Ok(expected) if !expected.trim().is_empty() && control_host_matches(headers, &expected) => Ok(()),
+        Ok(expected) if !expected.trim().is_empty() => Err((StatusCode::NOT_FOUND, "not_found".into())),
+        _ => Ok(()), // Local development; the production Compose profile requires this value.
+    }
+}
+
 fn bearer(headers: &HeaderMap) -> Option<&str> {
     headers.get(axum::http::header::AUTHORIZATION)?.to_str().ok()?.strip_prefix("Bearer ")
 }
@@ -160,6 +178,7 @@ const ADMIN_SESSION_TTL_HOURS: i64 = 12;
 
 /// Long-lived API credentials are accepted only at the session-exchange endpoint.
 async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<AdminCredential, (StatusCode, String)> {
+    ensure_control_plane_host(headers)?;
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_credential_required".into()))?;
     if secure_equal(supplied, &state.admin_token) {
         return Ok(AdminCredential {
@@ -209,6 +228,7 @@ async fn create_admin_session(
 /// Every management operation requires a short-lived server-side session.
 /// A user session is invalidated immediately when its account is revoked or token rotated.
 async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
+    ensure_control_plane_host(headers)?;
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_session_required".into()))?;
     let row = sqlx::query(
         "SELECT s.id,s.name,s.role FROM control_sessions s \
@@ -338,6 +358,7 @@ async fn rotate_user_token(
 }
 
 async fn device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (StatusCode, String)> {
+    ensure_control_plane_host(headers)?;
     let token = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "device_auth_required".into()))?;
     let row = sqlx::query("SELECT id FROM devices WHERE token_hash = $1")
         .bind(token_hash(token)).fetch_optional(&state.db).await
@@ -955,6 +976,8 @@ async fn main() -> anyhow::Result<()> {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
     let admin_token = std::env::var("POCKETHOST_CONTROL_ADMIN_TOKEN").expect("POCKETHOST_CONTROL_ADMIN_TOKEN is required");
     anyhow::ensure!(admin_token.len() >= 32, "admin token must contain at least 32 characters");
+    let control_host = std::env::var("POCKETHOST_CONTROL_HOST").expect("POCKETHOST_CONTROL_HOST must be the dedicated control-plane hostname");
+    anyhow::ensure!(normalize_relay_hostname(&control_host).is_ok(), "POCKETHOST_CONTROL_HOST must be a valid DNS hostname");
     let db = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
     sqlx::migrate!("./migrations").run(&db).await?;
     let state = AppState { db, admin_token, relay: relay::RelayHub::default() };
@@ -1003,6 +1026,17 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn control_plane_host_guard_rejects_relay_site_hosts() {
+        let mut headers = HeaderMap::new();
+        headers.insert(axum::http::header::HOST, HeaderValue::from_static("control.example.test:443"));
+        assert!(control_host_matches(&headers, "control.example.test"));
+        headers.insert(axum::http::header::HOST, HeaderValue::from_static("site.example.test"));
+        assert!(!control_host_matches(&headers, "control.example.test"));
+        headers.insert(axum::http::header::HOST, HeaderValue::from_static("CONTROL.EXAMPLE.TEST."));
+        assert!(control_host_matches(&headers, "control.example.test"));
+    }
 
     #[tokio::test]
     async fn relay_hostname_is_inactive_until_dns_verification_and_cascades_on_device_delete() {
