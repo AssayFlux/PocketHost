@@ -148,10 +148,15 @@ async fn create_user(
     }
     let id = Uuid::new_v4();
     let token = new_token();
+    let mut tx = s.db.begin().await.map_err(internal)?;
     sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,$2,$3,$4)")
         .bind(id).bind(name).bind(&input.role).bind(token_hash(&token))
-        .execute(&s.db).await.map_err(internal)?;
-    audit(&s, &actor.name, "user.create", &id.to_string(), json!({"name":name,"role":input.role})).await?;
+        .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&actor.name).bind("user.create").bind(id.to_string())
+        .bind(json!({"name":name,"role":input.role}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
     Ok((StatusCode::CREATED, Json(UserCreated { id, name:name.into(), role:input.role, token })))
 }
 
@@ -233,8 +238,10 @@ async fn register_device(
         .bind(id).bind(name).bind(token_hash(&token)).execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO device_configs(device_id,config) VALUES($1,'{}'::jsonb)")
         .bind(id).execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&role.name).bind("device.register").bind(id.to_string())
+        .bind(json!({"name":name})).execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    audit(&s, &role.name, "device.register", &id.to_string(), json!({"name":name})).await?;
     Ok((StatusCode::CREATED, Json(RegisteredDevice {
         id, name: name.to_owned(), device_token: token,
         warning: "Store this token securely. It is shown only once.",
