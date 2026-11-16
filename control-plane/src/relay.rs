@@ -137,7 +137,7 @@ fn read_dns_name(packet: &[u8], offset: &mut usize) -> Option<String> {
         let begin = cursor + 1;
         let finish = begin.checked_add(length as usize)?;
         let label = std::str::from_utf8(packet.get(begin..finish)?).ok()?;
-        if !label.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-') { return None; }
+        if !label.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_') { return None; }
         labels.push(label.to_ascii_lowercase());
         cursor = finish;
         if !jumped { *offset = cursor; }
@@ -200,6 +200,7 @@ pub async fn dns_txt_records(name: String) -> anyhow::Result<Vec<String>> {
         let id = u16::from_be_bytes([id_bytes.as_bytes()[0], id_bytes.as_bytes()[1]]);
         query.extend_from_slice(&id.to_be_bytes());
         query.extend_from_slice(&[0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        anyhow::ensure!(name.len() <= 253, "DNS TXT name is too long");
         for label in name.trim_end_matches('.').split('.') {
             anyhow::ensure!(!label.is_empty() && label.len() <= 63, "invalid DNS TXT name");
             query.push(label.len() as u8);
@@ -211,7 +212,8 @@ pub async fn dns_txt_records(name: String) -> anyhow::Result<Vec<String>> {
 
         let resolver: SocketAddr = std::env::var("POCKETHOST_DNS_RESOLVER")
             .unwrap_or_else(|_| "1.1.1.1:53".into()).parse()?;
-        let socket = UdpSocket::bind("0.0.0.0:0")?;
+        let bind_address = if resolver.is_ipv4() { "0.0.0.0:0" } else { "[::]:0" };
+        let socket = UdpSocket::bind(bind_address)?;
         socket.set_read_timeout(Some(Duration::from_secs(3)))?;
         socket.set_write_timeout(Some(Duration::from_secs(3)))?;
         socket.send_to(&query, resolver)?;
