@@ -862,7 +862,8 @@ async fn relay_visitor(
         body_base64: relay::encode_body(&bytes),
     };
     let sender = s.relay.sender(device).ok_or((StatusCode::SERVICE_UNAVAILABLE, "relay_device_offline".into()))?;
-    let response_rx = s.relay.register_pending(request_id, device);
+    let response_rx = s.relay.register_pending(request_id, device)
+        .ok_or((StatusCode::SERVICE_UNAVAILABLE, "relay_device_capacity_reached".into()))?;
     if sender.send(message).await.is_err() {
         s.relay.cancel_pending(request_id);
         return Err((StatusCode::SERVICE_UNAVAILABLE, "relay_device_disconnected".into()));
