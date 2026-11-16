@@ -21,7 +21,7 @@ The companion Gradle build verifies the archive digest and builds `libnodebridge
 - `NodeHostingService` runs in the companion app's `:node` process.
 - Node runs under the companion application's Android UID, which differs from the main Pocket Host UID.
 - Project data is transferred to companion-owned storage before launch.
-- The Rust engine remains the public/LAN-facing HTTP listener and reverse-proxies to Node's loopback port.
+- The Rust engine remains the public/LAN-facing HTTP listener and reverse-proxies to Node's loopback port. The preload's listener guard applies to TCP APIs; it does not enforce UDP egress or general outbound-network policy.
 - A foreground service, readiness monitor, metrics sampler and bounded host restart supervisor manage lifecycle.
 
 The `:node` process is a separate process, **not a separate Android UID from the Python worker**. Both share the companion package identity.
