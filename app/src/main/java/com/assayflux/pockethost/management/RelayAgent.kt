@@ -58,7 +58,9 @@ object RelayAgent {
                             error.message?.take(160) ?: "Relay connection disconnected."
                         )
                     }
-                    try { Thread.sleep(retry) } catch (_: InterruptedException) { break }
+                    val jitter = (retry * 0.2).toLong()
+                    val delay = retry - jitter + java.util.concurrent.ThreadLocalRandom.current().nextLong((jitter * 2 + 1).coerceAtLeast(1))
+                    try { Thread.sleep(delay) } catch (_: InterruptedException) { break }
                     retry = (retry * 2).coerceAtMost(60_000L)
                 }
             }
