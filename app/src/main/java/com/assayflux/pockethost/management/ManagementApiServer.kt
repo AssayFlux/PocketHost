@@ -428,6 +428,42 @@ object ManagementApiServer {
         if (session.role == "OPERATOR" && !operatorAllowed(method, path))
             return 403 to JSONObject().put("error", "owner_required")
         val context = appContext ?: return 503 to JSONObject().put("error", "service_unavailable")
+        if (method == "PUT" && path.matches(Regex("/api/v1/sites/[A-Za-z0-9_-]{1,64}/access"))) {
+            if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
+            val siteId = path.removePrefix("/api/v1/sites/").removeSuffix("/access")
+            return runCatching {
+                val mode = body.getString("mode").lowercase()
+                SiteRegistry.setAccessMode(context, siteId, mode)
+                restartEngineRoutes(context)
+                200 to JSONObject().put("siteId", siteId).put("mode", mode)
+                    .put("visitors", org.json.JSONArray(SiteRegistry.visitorNames(context, siteId)))
+            }.getOrElse { 400 to JSONObject().put("error", it.message ?: "invalid_access_policy") }
+        }
+        if (method == "POST" && path.matches(Regex("/api/v1/sites/[A-Za-z0-9_-]{1,64}/visitors"))) {
+            if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
+            val siteId = path.removePrefix("/api/v1/sites/").removeSuffix("/visitors")
+            return runCatching {
+                val username = if (SiteRegistry.list(context).firstOrNull { it.id == siteId }?.accessMode == "private")
+                    "visitor" else body.getString("username").trim()
+                val token = randomToken(32)
+                SiteRegistry.addVisitor(context, siteId, username, token)
+                restartEngineRoutes(context)
+                201 to JSONObject().put("siteId", siteId).put("username", username)
+                    .put("token", token)
+                    .put("warning", "Copy this site-scoped visitor credential now. It is stored only as a SHA-256 hash and shown once.")
+            }.getOrElse { 400 to JSONObject().put("error", it.message ?: "invalid_visitor") }
+        }
+        if (method == "DELETE" && path.matches(Regex("/api/v1/sites/[A-Za-z0-9_-]{1,64}/visitors/[A-Za-z0-9_.@-]{1,64}"))) {
+            if (session.role != "OWNER") return 403 to JSONObject().put("error", "owner_required")
+            val parts = path.split("/")
+            val siteId = parts[4]
+            val username = parts[6]
+            return runCatching {
+                SiteRegistry.revokeVisitor(context, siteId, username)
+                restartEngineRoutes(context)
+                204 to JSONObject()
+            }.getOrElse { 404 to JSONObject().put("error", it.message ?: "visitor_not_found") }
+        }
         if (method == "GET" && path == "/api/v1/sites") {
             val items = org.json.JSONArray()
             SiteRegistry.list(context).forEach { site ->
@@ -435,6 +471,8 @@ object ManagementApiServer {
                 site.hostnames.forEach(hosts::put)
                 items.put(JSONObject().put("id", site.id).put("name", site.name)
                     .put("runtime", site.runtime).put("hostnames", hosts)
+                    .put("accessMode", site.accessMode)
+                    .put("visitors", org.json.JSONArray(SiteRegistry.visitorNames(context, site.id)))
                     .put("state", when {
                         !site.enabled -> "DISABLED"
                         site.runtime == "static" -> if (NativeEngine.status() == "RUNNING") "RUNNING" else "STOPPED"
