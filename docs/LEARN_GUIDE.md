@@ -1,68 +1,63 @@
-# Pocket Host — Learn and Quick Start
+# POCKET HOST — LEARN GUIDE
 
-This guide is also available inside the Android app under **Learn**. It describes the current implementation and calls out limitations rather than promising unsupported behavior.
+This guide explains the product as it exists and clearly labels planned capabilities. Read `docs/NORTH_STAR.md` for the full primary-version sequence.
 
-## Quick start
-1. Open **Files** and import a static website folder or ZIP archive.
-2. Confirm that the site contains an entry page such as `index.html`.
-3. Open **Dashboard** and start hosting.
-4. Use **Preview site** to verify the local website.
-5. Configure the existing Cloudflare Tunnel and Public Hostname to reach the Rust website listener when public access is required.
+## 1. What Pocket Host does
 
-## Local, LAN and public access
-- Loopback access is available only on the phone.
-- LAN access requires enabling the LAN option and restarting hosting after changing it. Devices must be on a reachable local network.
-- Public access uses the owner's existing Cloudflare Tunnel and hostname. The hostname must route to the Rust website listener, never the management API.
-- Cloudflare edge HTTPS does not itself authenticate website visitors. Use Cloudflare Access for private sites.
+Pocket Host runs a website engine on your Android phone. Rust serves static website files and routes configured hostnames. Optional Python and Node runtimes can host small applications. The phone is the website origin; an external tunnel is only a way for visitors to reach it.
 
-## Dashboard and capacity
-The dashboard reports current hosting state, static-engine traffic totals, uptime, device telemetry and admission budget. Metrics are not necessarily inclusive of Python, Node or tunnel traffic.
+Pocket Host does not require root or Termux. Android power, thermal, memory, carrier-network and OEM background restrictions still apply.
 
-Capacity Lab performs a bounded local static GET sweep. Run it on a cool, adequately charged phone. Its safe concurrency ceiling is workload/device-specific. A percentage profile controls admission concurrency, not CPU use or a guaranteed visitor count.
+## 2. Static website publishing
 
-## Website frameworks and languages
+1. Build your website using its usual tools.
+2. Find the production output folder containing root `index.html`.
+3. Open Sites and import the folder or a ZIP.
+4. Let Pocket Host validate file paths, size and site structure.
+5. Preview locally.
+6. Configure hostname and publish.
+7. If public, choose a configured tunnel and verify HTTPS from another network.
+8. Back up before replacing a working deployment.
 
-Pocket Host can host built static output from HTML/CSS/JavaScript, TypeScript and frontend frameworks such as React, Vue, Svelte and Angular. For build steps, Next.js static export boundaries, and current Python/Node runtime requirements, see the [Website Deployment Guide](WEBSITE_DEPLOYMENT.md).
+Static hosting is the foundational capability and must remain independent of optional runtimes and remote services.
 
-## Python and Node runtimes
-These runtimes are for trusted owner-controlled code only. CPython 3.11 / WSGI and Node.js 24 are now packaged in the separate-UID runtime companion in source. They run under the companion package UID, which differs from the host app UID, but both runtime processes share that companion UID. Per-project filesystem isolation and enforceable outbound network restrictions are not complete; this is not a hostile-code sandbox. Python supports WSGI (not ASGI/WebSockets) and Node supports one active prebundled application. The migrated build and API 26/33/35 tests remain verification gates.
+## 3. Networking choices
 
-## Activity and diagnostics
-Use Activity to inspect operational events, filter errors, search and export redacted logs or diagnostics. Review exports before sharing and remove private information that should not leave the device.
+- **Local Network:** access from devices on the same trusted LAN; no public tunnel.
+- **Cloudflare Tunnel:** reuse the owner's existing named tunnel and route its Public Hostname to the Rust website listener.
+- **AssayFlux Relay:** planned first-party option. Phone will establish an outbound authenticated tunnel; visitors connect to relay, not phone. It is not currently available.
+- **Direct Hosting:** advanced owner-managed exposure; not a default recommendation.
 
-## Backup and restore
-The encrypted `.afbackup` includes static website content, optional Python/Node project directories, hostname routes and an allowlist of non-secret settings. It excludes Cloudflare/remote credentials, accounts, session tokens and device-bound keys. Restored runtimes do not start automatically; review and re-enable trusted code deliberately. Keep the passphrase separately; it cannot be recovered. See [Site Backup](SITE_BACKUP.md) for format and limits.
+A tunnel process showing ready does not prove public website reachability. Test from a separate network. Never expose the management API through a public hostname.
 
-## Device safety and availability
-Keep the phone ventilated, monitor battery/temperature/storage and use conservative capacity settings. Android Doze, OEM power policies, process termination and network changes can interrupt hosting. Pocket Host does not guarantee 24/7 uptime or unlimited traffic.
+## 4. Python and Node
 
-## Known product limitations
-- Built-in visitor password protection is not currently implemented.
-- Python/Node hostile-code isolation is not implemented.
-- Full configuration and runtime backup is not implemented.
-- Local management sessions are not a replacement for Owner/Operator account management.
-- Physical-device, screen-size, large-font and keyboard acceptance must be completed before a production release.
+Python expects root `wsgi.py` with callable `application`. Node expects a self-contained project with prebundled dependencies and a server entry. Automatic pip/npm installation and arbitrary shell workflows are not provided.
 
+**Important security limitation:** Python and Node currently share the companion app UID. Per-project OS isolation and outbound egress denial are not yet accepted. Run only code you own and trust. Do not run visitor-submitted or arbitrary third-party code.
 
-## Host Owner and Operator accounts
+## 5. Owner versus visitor authentication
 
-1. Pair a browser with the phone only when you can approve the six-digit request in the Android app.
-2. Use the first approved Owner session to create the Owner username and a unique password of at least 12 characters.
-3. Use the Owner credentials for subsequent sign-ins.
-4. From the Owner session, create or revoke Operator accounts.
-5. Operators can inspect data, operate sites and adjust capacity. Owner-only settings and account administration are rejected by the device API.
+Management authentication controls who can change Pocket Host settings, sites, devices and tunnels. Visitor authentication controls who can see a website. These must remain separate.
 
-Password verifiers use PBKDF2-HMAC-SHA256; the account registry is encrypted with Android Keystore AES-GCM. Browser tokens are tab-scoped; device sessions expire after 12 hours and are revocable.
+Future visitor modes are Public, Private and Restricted. They must not be presented as available until gateway/site policy enforcement is implemented.
 
-The management console supports changing your current password. A successful change revokes all other sessions for that account and returns a replacement session for the current browser. If the Owner password is lost, request a fresh pairing challenge and approve it directly in the Android app; the device-approved pairing session can reset the Owner password and invalidates all prior Owner/pairing sessions. Ordinary logged-in Owner sessions cannot invoke this recovery route.
+## 6. Capacity and device health
 
-Native biometric app-launch unlock is a separate local UI gate. It does not replace Owner/Operator API authentication or protect against a compromised Android operating system. Never expose the management API through the public website hostname.
+A phone's capacity depends on device model, response sizes, route mix, network, heat, battery and background policy. No universal visitor count is promised. Capacity Lab is an initial local benchmark, not a production guarantee. Sustainable capacity requires repeated tests with latency, errors, throughput, memory and thermal evidence.
 
+## 7. Backup and recovery
 
-## Latest implementation note — 2026-11-15
+Encrypted .afbackup files contain supported website/runtime project data, routes and selected non-secret settings. Device-bound credentials, sessions, tunnel tokens and Keystore keys are excluded. Keep backup and passphrase separately. Review executable project contents before sharing a backup.
 
-The website file manager now supports individual file upload (50 MiB maximum), file/folder rename, text-file editing and deletion. The Rust static server falls back to root `index.html` for extensionless client-side routes; missing asset paths with extensions remain 404. Read the [Website Deployment Guide](WEBSITE_DEPLOYMENT.md) before choosing a framework or backend runtime.
+## 8. Troubleshooting principles
 
-The management console supports changing an Owner or Operator password. Owner recovery requires approving a fresh pairing challenge on the Android phone. Biometric app-launch unlock is optional and remains separate from management API authentication.
+- Website local works, public fails: inspect tunnel route, DNS, TLS and external verification.
+- Connector ready, hostname fails: local health is not public proof; test from another network.
+- Runtime fails, static works: inspect runtime logs without exposing secrets; static origin should remain available.
+- Device overheats or memory is low: reduce workload and allow governor to degrade service.
+- Restore fails: preserve original backup and last-known-good site; do not repeatedly overwrite recovery data.
 
-Historical CI runs cited above predate the current companion migration. Use [Project Status](PROJECT_STATUS_2026-11-16.md) for the current source snapshot and exact verification gates. The companion migration, per-project isolation, network egress, physical-device/network acceptance and production release must not be treated as complete until tested.
+## 9. Security vocabulary
+
+Source present, compiled, automated-tested, emulator-verified, device-verified, externally-verified and production-approved are different states. A separate companion UID is not a per-project sandbox. A design document is not implementation evidence.
