@@ -6,7 +6,7 @@
 
 ## 1. System definition
 
-Pocket Host is a native Android website-origin platform. The phone runs Rust/Tokio/Hyper and serves static sites or proxies to optional application runtimes. Public connectivity is optional and can use the owner's existing Cloudflare Tunnel or the planned first-party AssayFlux Relay. Local hosting must work without either. The optional Axum/PostgreSQL control plane manages devices; it never serves the user's website.
+Pocket Host is a native Android website-origin platform. The phone runs Rust/Tokio/Hyper and serves static sites or proxies to optional application runtimes. Public connectivity is optional and can use the owner's existing Cloudflare Tunnel or the initial bounded HTTP AssayFlux Relay path implemented in source (not yet deployed or production-approved). Local hosting must work without either. The optional Axum/PostgreSQL control plane manages devices; it never serves the user's website.
 
 ## 2. Supported product workflows
 
@@ -23,7 +23,7 @@ Pocket Host is a native Android website-origin platform. The phone runs Rust/Tok
 - Python WSGI and Node apps for owner-trusted code only until Gate 2 passes.
 - Per-site request/concurrency budgets and Capacity Lab.
 - Device health, metrics, logs, alerts and recovery.
-- Cloudflare or future AssayFlux Relay configuration.
+- Cloudflare configuration and initial bounded AssayFlux Relay source path; Relay deployment and general streaming remain open.
 - Separate Owner/Operator and visitor authorization.
 - Optional remote management.
 
@@ -41,7 +41,7 @@ Pocket Host is a native Android website-origin platform. The phone runs Rust/Tok
 | Node | Node mobile 24.22.1 | Embedded Node HTTP app within accepted cell | Desktop process manager assumptions |
 | Console | TypeScript / React / Vite | Owner/operator client | Public management ingress |
 | Cloudflare | cloudflared | Optional outbound edge tunnel | Visitor identity or capacity governance |
-| AssayFlux Relay | Rust gateway + outbound agent (planned) | First-party public gateway and encrypted device streams | Management API exposure or arbitrary remote shell |
+| AssayFlux Relay | Rust/Axum gateway + Android outbound SSE agent (partial source implementation) | DNS TXT hostname proof, device/site routing, bounded HTTP request-response forwarding | General TCP/WebSocket streaming, management API exposure or arbitrary remote shell |
 | Identity | Auth/device registry (planned) | Owner, device and visitor authorization | Shared privilege between visitors and operators |
 | Control plane | Rust/Axum + PostgreSQL | Optional remote device registry and leased commands | Website origin |
 | Resource governor | Rust policy + Android telemetry | Safe admission, fairness and degradation | Hard CPU quota or Android process immortality |
@@ -86,15 +86,17 @@ Signature-level permission, caller package/signature validation, protocol versio
 ### Gate 2 execution-cell target
 One Android isolated service process/UID per project. Trusted broker passes only project/scratch directory capabilities and a host-created Unix-domain visitor listener. Native policy installs before project code and fails closed. Rust remains ingress. This target is not complete until real Python and Node code runs inside cells and adversarial tests pass API 26/33/35.
 
-## 6. AssayFlux Relay architecture (planned)
+## 6. AssayFlux Relay architecture (partial source implementation)
 
-### Data path
-1. Visitor connects to a public relay hostname over TLS.
-2. Gateway validates hostname, site policy, rate and visitor identity.
-3. Gateway selects an enrolled device and active tunnel session.
-4. Gateway opens a bounded multiplexed stream over the phone-initiated authenticated tunnel.
-5. Android agent forwards the stream to the phone's Rust website listener.
-6. Rust routes to static site or isolated application cell; response returns through the stream.
+### Implemented bounded HTTP path (source only)
+1. Owner registers a hostname against a device and site ID; the control plane returns a one-time DNS TXT proof challenge and stores only its hash.
+2. Owner verifies the TXT record. The gateway validates the resolver source, DNS transaction ID, question and answer owner before activating the hostname. DNSSEC is not currently validated.
+3. The Android agent opens an authenticated outbound Server-Sent Events stream using the device bearer token. Device-token rotation/deletion revokes the in-memory stream and pending requests.
+4. A verified visitor hostname routes to the registered device/site. Request bodies and responses are capped at 8 MiB; per-device pending requests are bounded; the gateway deadline is 45 seconds.
+5. The Android agent resolves the exact site ID to an enabled local SiteRegistry entry, uses that site's configured local hostname for Rust routing, and preserves the verified public hostname for upstream X-Forwarded-Host. A bounded raw loopback HTTP socket is used to preserve Host semantics.
+6. Multiple Set-Cookie values and WWW-Authenticate challenges are retained. Rust enforces Public/Private/Restricted visitor policy and per-site/effective-client-IP authentication throttling before proxying to customer runtimes.
+
+This is bounded HTTP request/response forwarding, not a general-purpose streaming tunnel. Visitor authentication is currently enforced by the phone's Rust listener after the gateway forwards the request, not at the public gateway.
 
 ### Components
 - Public gateway and TLS/certificate manager.
@@ -107,7 +109,7 @@ One Android isolated service process/UID per project. Trusted broker passes only
 
 Start with a mature TLS-protected HTTP/2 stream transport or reviewed reverse-tunnel implementation. WebSocket/TLS may be a compatibility fallback. QUIC is a later optimization. Do not invent cryptography. Commands are typed, scoped, expiring and replay-resistant. Standard relay TLS termination means the gateway can inspect HTTP content and must disclose that. End-to-end TLS pass-through is a later advanced mode.
 
-The relay hides the phone's IP from ordinary visitors, not from the relay operator or carrier. It must never expose management endpoints.
+The relay hides the phone's IP from ordinary visitors, not from the relay operator or carrier. It must never expose management endpoints. The current implementation does not yet provide WebSocket upgrades, streaming downloads/SSE, end-to-end HTTP/2 multiplexing, certificate lifecycle, DNSSEC, external deployment or load/soak evidence. Cloudflare Tunnel remains independent.
 
 ## 7. Authentication contracts
 
@@ -117,7 +119,7 @@ Passkey-first identity, secure recovery, least-privilege roles, device approval,
 Remote control-plane administration now exchanges long-lived bootstrap/team API credentials for 12-hour server-side sessions. Session tokens are stored hashed, explicitly revocable, bound to the current team-user token version, and invalidated when the account is revoked or its token rotates. The browser keeps the long-lived credential out of browser storage and uses the session token only in memory. This is an incremental remote-control security improvement; it does not implement passkey-first local Owner identity or visitor authentication.
 
 ### Visitor
-Per-site Public, Private or Restricted mode. Use short-lived site-scoped tokens, rate limits, revocation and authorization before forwarding. Visitor identity must never authorize management operations.
+Per-site Public, Private or Restricted mode. Current source uses one-time 256-bit visitor credentials stored as SHA-256 hashes, browser Basic authentication, per-site/effective-client-IP failure throttling and immediate credential revocation. Visitor identity never authorizes management operations. Short-lived visitor tokens and public-gateway pre-forward authorization remain future work.
 
 ## 8. Adaptive capacity and safety
 
