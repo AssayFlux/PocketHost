@@ -733,6 +733,30 @@ mod tests {
     }
 
     #[test]
+    fn uncommitted_artifact_files_are_removed_and_committed_files_are_retained() {
+        let directory = std::env::temp_dir().join(format!("pockethost-artifact-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).unwrap();
+        let abandoned = directory.join("abandoned.zip");
+        {
+            let _pending = PendingArtifactFile::create(abandoned.clone(), b"zip-data").unwrap();
+            assert_eq!(fs::read(&abandoned).unwrap(), b"zip-data");
+        }
+        assert!(!abandoned.exists(), "a failed DB transaction must not leave an orphan blob");
+
+        let committed = directory.join("committed.zip");
+        {
+            let mut pending = PendingArtifactFile::create(committed.clone(), b"zip-data").unwrap();
+            pending.commit();
+        }
+        assert_eq!(fs::read(&committed).unwrap(), b"zip-data");
+
+        assert!(PendingArtifactFile::create(committed.clone(), b"overwrite").is_err(),
+            "artifact creation must never overwrite an existing file");
+        assert_eq!(fs::read(&committed).unwrap(), b"zip-data");
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
     fn command_result_payload_is_bounded() {
         let small = json!({"status":200,"message":"ok"});
         assert!(serde_json::to_vec(&small).unwrap().len() <= 64 * 1024);
