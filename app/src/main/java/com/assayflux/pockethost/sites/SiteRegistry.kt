@@ -83,6 +83,9 @@ object SiteRegistry {
     @Synchronized fun isEnabledSite(context: Context, siteId: String): Boolean =
         list(context).any { it.id == siteId && it.enabled }
 
+    @Synchronized fun localHostnameForRelay(context: Context, siteId: String): String? =
+        list(context).firstOrNull { it.id == siteId && it.enabled }?.hostnames?.firstOrNull()
+
     @Synchronized fun remove(context: Context, siteId: String) {
         save(context, list(context).filterNot { it.id == siteId })
     }
