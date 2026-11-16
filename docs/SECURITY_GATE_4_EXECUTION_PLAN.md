@@ -11,6 +11,7 @@
 - Sensitive team-user/device lifecycle changes and audit records commit transactionally.
 - The web console keeps the long-lived credential out of persistent browser storage and holds the session in memory.
 - PostgreSQL CI covers viewer authorization, session expiry/revocation, account revocation and token-rotation invalidation.
+- Device credential rotation is Owner-only; the role predicate rejects Editor and Viewer.
 
 ### Site visitor access
 - Each local site has a separate `accessMode`: `public`, `private` or `restricted`.
