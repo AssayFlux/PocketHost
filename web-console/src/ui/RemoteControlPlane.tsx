@@ -19,7 +19,7 @@ const initialPayloads: Record<string, string> = {
 
 export function RemoteControlPlane() {
   const [endpoint, setEndpoint] = useState(() => localStorage.getItem("pockethost_control_endpoint") || "");
-  const [adminToken, setAdminToken] = useState(() => sessionStorage.getItem("pockethost_control_admin") || "");
+  const [adminToken, setAdminToken] = useState("");
   const [sessionToken, setSessionToken] = useState("");
   const [deviceName, setDeviceName] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
@@ -74,8 +74,8 @@ export function RemoteControlPlane() {
       }
       const nextSession = sessionBody.accessToken;
       setSessionToken(nextSession);
+      setAdminToken("");
       localStorage.setItem("pockethost_control_endpoint", endpoint);
-      sessionStorage.setItem("pockethost_control_admin", adminToken);
       const next = await request<Device[]>("/v1/admin/devices", {}, nextSession);
       setDevices(next);
       setAuditEntries(await request<AuditEntry[]>("/v1/admin/audit", {}, nextSession));
