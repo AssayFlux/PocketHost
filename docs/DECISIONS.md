@@ -58,6 +58,30 @@ Distinguish implemented, automated-tested, emulator-verified, device-verified, e
 
 **Consequences:** Management clients must exchange credentials before API use and reconnect after session expiry. Device bearer credentials remain a separate device-authentication plane. Passkey-first Owner identity and site-scoped visitor authentication remain separate Gate 4 requirements.
 
+### ADR-016 — First Relay delivery is bounded HTTP, not arbitrary TCP
+
+**Date:** 2026-11-16
+
+**Context:** The first production-shaped Relay path needs to prove device authentication, hostname ownership, routing, request bounds and revocation without prematurely shipping a general-purpose tunnel protocol.
+
+**Decision:** Implement an initial authenticated outbound SSE request/response transport with strict request/response limits, per-device pending quotas, a 45-second deadline, DNS TXT hostname proof and device/site routing. Preserve the existing Cloudflare Tunnel as an independent option. Do not describe this HTTP path as arbitrary TCP, WebSocket or streaming Relay. Public TLS/certificate lifecycle, DNSSEC, WebSocket/streaming and external soak evidence remain separate acceptance requirements.
+
+**Alternatives:** Keep Relay entirely planned; build a custom multiplexed TCP protocol immediately; use an unreviewed generic reverse tunnel. The bounded HTTP path was chosen as an incremental, explicitly limited foundation.
+
+**Consequences:** The current implementation buffers each request/response up to 8 MiB and visitor authorization is enforced by the phone's Rust site policy after forwarding. It is source implementation only until external deployment and Android/native validation pass.
+
+### ADR-017 — Do not move Chaquopy or Node into isolated UIDs without descriptor-rooted runtime proof
+
+**Date:** 2026-11-16
+
+**Context:** Android isolated services have distinct UIDs and no app permissions, while the current Python and Node workers depend on companion app-private project, HOME, cache and runtime paths. Android API 29 adds dynamic isolated-service binding; API 26–28 require fixed declared service slots for multiple simultaneous cells.
+
+**Decision:** Keep Python/Node restricted to owner-trusted code while Gate 2 remains open. A per-project cell is not accepted until actual Python and Node apps run under distinct isolated UIDs with only project-scoped descriptor/broker access, listener-only network capabilities and verified egress denial on API 26/33/35. Do not weaken SELinux, grant app-data access or label a probe as production isolation.
+
+**Alternatives:** Keep the shared companion UID permanently; assume isolated services can access companion files; replace runtimes with a limited WASM subset. None satisfies the current product contract without further proof.
+
+**Consequences:** Gate 2 remains open. The current Binder/seccomp probe is feasibility evidence only. The Chaquopy AndroidPlatform uses Application context and app-private storage conventions; Node also uses companion private storage. Runtime-specific bootstrap and module/file access adapters are still required.
+
 ## Changing a decision
 
 Submit a PR updating this file, North Star, Master Plan and affected implementation docs. Explain why the old decision no longer serves the product, migration/security impact and acceptance tests. User-confirmed product intent takes precedence over contributor assumptions.
