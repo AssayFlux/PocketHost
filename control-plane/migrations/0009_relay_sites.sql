@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS relay_sites (
     hostname TEXT NOT NULL UNIQUE,
     site_id TEXT NOT NULL CHECK (site_id ~ '^[A-Za-z0-9_-]{1,64}$'),
     verification_token_hash CHAR(64) NOT NULL,
+    verification_expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '24 hours'),
     verified_at TIMESTAMPTZ,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
