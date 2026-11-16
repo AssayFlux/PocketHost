@@ -21,6 +21,13 @@ Treat every hosted application as potentially compromised by a malicious request
 
 Until this gate passes, Python/Node are owner-trusted-code-only. Do not run visitor-submitted or arbitrary third-party code.
 
+## Android/runtime constraints verified during implementation research
+
+- Android documents `android:isolatedProcess="true"` as a process with no permissions of its own; communication is through the Service API. `Context.bindIsolatedService` can create multiple instances of one isolated service component from API 29. API 26–28 therefore need a fixed manifest-declared slot pool; do not assume dynamic instance names exist on the minimum supported OS. Do not use shared-isolated-process binding for project cells because it co-locates services.
+- Chaquopy's Android platform initializes from the Application context, extracts bootstrap assets under `getFilesDir()/chaquopy`, and configures Python's `HOME` and temporary directory from app-private files/cache paths. The current Node service similarly reads projects from companion `filesDir/projects` and writes runtime state/cache under `noBackupFilesDir`. Those paths cannot simply be reused from a no-permissions isolated UID.
+- The viable direction to prove is a trusted host-side broker passing per-cell project and scratch directory descriptors, with a runtime-specific bootstrap adapter that uses only those descriptors. Chaquopy's importer currently canonicalizes its asset root with `realpath`, so a `/proc/self/fd/N` path must be tested rather than assumed to work. Node's cwd/cache path handling must be tested the same way. If either runtime cannot be made descriptor-rooted without weakening the boundary, replace that runtime integration strategy rather than granting the cell companion app-data access.
+- The current `RuntimeCellCapabilityBroker.issue(..., callerUid)` still accepts a parameter. It is not an authorization boundary until a real host-side Binder callback obtains `Binder.getCallingUid()` at transaction receipt and binds the UID to an active lease. Never trust a parcelled UID.
+
 ## 3. Security invariants
 
 1. One active project per isolated UID/process; no shared interpreter or writable project state.
@@ -61,11 +68,11 @@ Android process isolation is not a hard CPU quota. Implement explicit admission,
 
 ## 5. Implementation sequence
 
-1. Build a minimal isolated-cell proof app and run API 26/33/35.
+1. Build a minimal isolated-cell proof app and run API 26/33/35; use fixed declared service slots on API 26–28 and API-29+ isolated binding only where available.
 2. Verify distinct simultaneous UIDs, file descriptor ownership and Unix listener peer identity.
 3. Validate seccomp policy behavior, inherited connected-socket closure, and TSYNC failure handling with adversarial native test code.
 4. Build broker slot manager, per-project allocation, identity binding and cleanup.
-5. Implement per-cell project transfer and descriptor-backed storage.
+5. Implement per-cell project transfer and descriptor-backed storage; adapt Chaquopy's AndroidPlatform/importer and Node runtime cache/cwd to the brokered roots.
 6. Migrate Python to one interpreter per cell; prove WSGI through Rust.
 7. Migrate Node to one environment per cell; prove HTTP through Rust.
 8. Implement process/resource limits, restart policy, update rollback and descriptor revocation.
