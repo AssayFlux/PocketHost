@@ -38,10 +38,10 @@ class ManagementApiSecurityTest {
     @Test
     fun sensitiveOwnerMutationsRequireAuthenticationWithinFiveMinutes() {
         assertFalse(ManagementApiServer.ownerReauthenticationRequired("OWNER", 1_000L, 1_300L))
-        assertTrue(ownerReauthenticationRequired("OWNER", 1_000L, 1_301L))
-        assertTrue(ownerReauthenticationRequired("OWNER", 1_301L, 1_300L))
-        assertTrue(ownerReauthenticationRequired("OWNER", 0L, 1_300L))
-        assertFalse(ownerReauthenticationRequired("OPERATOR", 0L, 1_300L))
+        assertTrue(ManagementApiServer.ownerReauthenticationRequired("OWNER", 1_000L, 1_301L))
+        assertTrue(ManagementApiServer.ownerReauthenticationRequired("OWNER", 1_301L, 1_300L))
+        assertTrue(ManagementApiServer.ownerReauthenticationRequired("OWNER", 0L, 1_300L))
+        assertFalse(ManagementApiServer.ownerReauthenticationRequired("OPERATOR", 0L, 1_300L))
     }
 
     @Test
