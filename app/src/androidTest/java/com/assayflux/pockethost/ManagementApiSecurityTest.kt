@@ -3,7 +3,6 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.management.ManagementApiServer
-import com.assayflux.pockethost.management.ownerReauthenticationRequired
 import com.assayflux.pockethost.engine.NativeEngine
 import org.json.JSONObject
 import org.junit.After
@@ -38,7 +37,7 @@ class ManagementApiSecurityTest {
 
     @Test
     fun sensitiveOwnerMutationsRequireAuthenticationWithinFiveMinutes() {
-        assertFalse(ownerReauthenticationRequired("OWNER", 1_000L, 1_300L))
+        assertFalse(ManagementApiServer.ownerReauthenticationRequired("OWNER", 1_000L, 1_300L))
         assertTrue(ownerReauthenticationRequired("OWNER", 1_000L, 1_301L))
         assertTrue(ownerReauthenticationRequired("OWNER", 1_301L, 1_300L))
         assertTrue(ownerReauthenticationRequired("OWNER", 0L, 1_300L))
