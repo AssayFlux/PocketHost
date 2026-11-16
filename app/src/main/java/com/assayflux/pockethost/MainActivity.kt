@@ -879,230 +879,50 @@ private fun PocketHostDashboard() {
                     )
                 }
                 if (selectedTab == "Sites") {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.surface)
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("WEBSITE", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
-                        Text(importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        val siteRoot = File(context.filesDir, "site")
-                        val siteFiles = remember(importedSummary, siteFileRefresh) { SiteFileManager.list(context) }
-                        Text("Site files and folders", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        OutlinedButton(onClick = { showCreateSiteFile = true }, enabled = !hosting && !importing,
-                            modifier = Modifier.fillMaxWidth()) { Text("New text file") }
-                        OutlinedButton(onClick = { singleFilePicker.launch(arrayOf("*/*")) }, enabled = !hosting && !importing,
-                            modifier = Modifier.fillMaxWidth()) { Text("Upload individual file") }
-                        if (siteFiles.isEmpty()) {
-                            Text("No imported site files yet. Choose a folder or ZIP to deploy your website.", color = palette.onSurfaceVariant)
-                        } else {
-                            siteFiles.forEach { entry ->
-                                Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                        Text(if (entry.isDirectory) "▣" else "▤", Modifier.padding(end = 8.dp), color = palette.onSurfaceVariant)
-                                        Text(entry.relativePath, Modifier.weight(1f), color = palette.onSurface,
-                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(if (entry.isDirectory) "Folder" else formatBytes(entry.size), color = palette.onSurfaceVariant)
-                                    }
-                                    if (!entry.isDirectory) {
-                                        Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(entry.lastModified)),
-                                            color = palette.onSurfaceVariant)
-                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            OutlinedButton(onClick = {
-                                                renamingSiteFilePath = entry.relativePath
-                                                renamedSiteFilePath = entry.relativePath
-                                            }, enabled = !hosting) { Text("Rename") }
-                                            OutlinedButton(onClick = {
-                                                runCatching { SiteFileManager.readText(context, entry.relativePath) }
-                                                    .onSuccess { editingSiteFilePath = entry.relativePath; editingSiteFileContent = it }
-                                                    .onFailure { status = it.message ?: "This file cannot be edited as text." }
-                                            }, enabled = !hosting && entry.isEditable) { Text("Edit") }
-                                            if (entry.relativePath.endsWith(".html", true) || entry.relativePath.endsWith(".htm", true)) {
-                                                OutlinedButton(onClick = { pendingIndexSiteFile = entry.relativePath },
-                                                    enabled = !hosting) { Text("Set as index") }
-                                            }
-                                            OutlinedButton(onClick = { pendingDeleteSiteFile = entry.relativePath },
-                                                enabled = !hosting) { Text("Delete") }
-                                        }
-                                    } else {
-                                        OutlinedButton(onClick = {
-                                            renamingSiteFilePath = entry.relativePath
-                                            renamedSiteFilePath = entry.relativePath
-                                        }, enabled = !hosting) { Text("Rename folder") }
-                                    }
-                                }
-                                Divider(color = palette.outline)
-                            }
-                        }
-                        Text(if (SiteFileManager.hasIndex(context)) "Entry page: index.html" else "No index.html found at the site root yet.", color = palette.onSurfaceVariant)
-                        OutlinedButton(
-                            onClick = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },
-                            enabled = hosting,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Preview site") }
-                        Button(
-                            onClick = { folderPicker.launch(null) },
-                            enabled = !hosting && !importing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (importing) "Importing website…" else "Choose website folder") }
-                        OutlinedButton(
-                            onClick = { zipPicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
-                            enabled = !hosting && !importing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Import website ZIP") }
-                        Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        OutlinedTextField(
-                            value = backupPassphrase,
-                            onValueChange = { if (it.length <= 128) backupPassphrase = it },
-                            label = { Text("Backup passphrase (12+ characters)") },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true,
-                            enabled = !hosting && !pythonHosting && !nodeHosting && !importing,
-                            modifier = Modifier.fillMaxWidth()
+                    PocketHostSitesScreen(
+                        context = context,
+                        state = PocketHostSitesState(
+                            importedSummary = importedSummary,
+                            siteFiles = remember(importedSummary, siteFileRefresh) { SiteFileManager.list(context) },
+                            hosting = hosting,
+                            importing = importing,
+                            showCreateSiteFile = showCreateSiteFile,
+                            newSiteFilePath = newSiteFilePath,
+                            newSiteFileContent = newSiteFileContent,
+                            renamingSiteFilePath = renamingSiteFilePath,
+                            renamedSiteFilePath = renamedSiteFilePath,
+                            editingSiteFilePath = editingSiteFilePath,
+                            editingSiteFileContent = editingSiteFileContent,
+                            pendingDeleteSiteFile = pendingDeleteSiteFile,
+                            pendingIndexSiteFile = pendingIndexSiteFile,
+                            backupPassphrase = backupPassphrase,
+                            pythonHosting = pythonHosting,
+                            nodeHosting = nodeHosting,
+                            previousReleases = previousReleases
+                        ),
+                        actions = PocketHostSitesActions(
+                            onShowCreateSiteFileChange = { showCreateSiteFile = it },
+                            onNewSiteFilePathChange = { newSiteFilePath = it },
+                            onNewSiteFileContentChange = { newSiteFileContent = it },
+                            onRenamingSiteFilePathChange = { renamingSiteFilePath = it },
+                            onRenamedSiteFilePathChange = { renamedSiteFilePath = it },
+                            onEditingSiteFilePathChange = { editingSiteFilePath = it },
+                            onEditingSiteFileContentChange = { editingSiteFileContent = it },
+                            onPendingDeleteSiteFileChange = { pendingDeleteSiteFile = it },
+                            onPendingIndexSiteFileChange = { pendingIndexSiteFile = it },
+                            onBackupPassphraseChange = { backupPassphrase = it },
+                            onUploadIndividualFile = { singleFilePicker.launch(arrayOf("*/*")) },
+                            onImportFolder = { folderPicker.launch(null) },
+                            onImportZip = { zipPicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+                            onExportBackup = { backupExportPicker.launch("pockethost-app.afbackup") },
+                            onRestoreBackup = { backupRestorePicker.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
+                            onPreviewSite = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },
+                            onFilesChanged = { siteFileRefresh++ },
+                            onStatusChange = { status = it },
+                            onImportedSummaryChange = { importedSummary = it },
+                            onPreviousReleasesChange = { previousReleases = it }
                         )
-                        OutlinedButton(
-                            onClick = { backupExportPicker.launch("pockethost-app.afbackup") },
-                            enabled = !hosting && !pythonHosting && !nodeHosting && !importing && backupPassphrase.length >= 12,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Export encrypted full app backup") }
-                        OutlinedButton(
-                            onClick = { backupRestorePicker.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
-                            enabled = !hosting && !pythonHosting && !nodeHosting && !importing && backupPassphrase.length >= 12,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Restore encrypted full app backup") }
-                        Text("Includes website files, optional Python/Node projects, hostname routes and safe port settings. Device credentials and common secret files are excluded. Review source for embedded secrets before sharing. Restored runtimes stay stopped until you approve trusted code.", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                        if (previousReleases.isNotEmpty()) {
-                            OutlinedButton(
-                                onClick = {
-                                    val result = runCatching { SiteImporter.rollbackLatest(context) }
-                                    result.onSuccess {
-                                        previousReleases = SiteImporter.listReleases(context)
-                                        importedSummary = "Restored previous deployment"
-                                        status = "Rollback completed. Restart hosting to load the restored site."
-                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                            .putString("site_summary", importedSummary).apply()
-                                    }.onFailure { status = it.message ?: "Rollback failed." }
-                                },
-                                enabled = !hosting && !importing,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Rollback previous deployment") }
-                            Text("${previousReleases.size} previous release(s) retained · latest first", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        }
-                    }
-                }
-
-                    if (showCreateSiteFile) {
-                        AlertDialog(
-                            onDismissRequest = { showCreateSiteFile = false },
-                            title = { Text("Create text file") },
-                            text = {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    OutlinedTextField(value = newSiteFilePath, onValueChange = { newSiteFilePath = it },
-                                        label = { Text("Relative file path") }, singleLine = true)
-                                    OutlinedTextField(value = newSiteFileContent, onValueChange = { newSiteFileContent = it },
-                                        label = { Text("File contents") }, minLines = 4, maxLines = 8)
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    runCatching { SiteFileManager.createText(context, newSiteFilePath, newSiteFileContent) }
-                                        .onSuccess {
-                                            siteFileRefresh++
-                                            newSiteFilePath = "new-page.html"
-                                            newSiteFileContent = ""
-                                            status = "Text file created."
-                                        }
-                                        .onFailure { status = it.message ?: "Could not create the file." }
-                                    showCreateSiteFile = false
-                                }) { Text("Create") }
-                            },
-                            dismissButton = { TextButton(onClick = { showCreateSiteFile = false }) { Text("Cancel") } }
-                        )
-                    }
-                    renamingSiteFilePath?.let { sourcePath ->
-                        AlertDialog(
-                            onDismissRequest = { renamingSiteFilePath = null },
-                            title = { Text("Rename website entry") },
-                            text = {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text("Enter the new relative path. The destination must be inside an existing website folder and cannot overwrite another entry.")
-                                    OutlinedTextField(
-                                        value = renamedSiteFilePath,
-                                        onValueChange = { renamedSiteFilePath = it },
-                                        label = { Text("New relative path") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    runCatching { SiteFileManager.renameEntry(context, sourcePath, renamedSiteFilePath) }
-                                        .onSuccess {
-                                            siteFileRefresh++
-                                            status = "Website entry renamed."
-                                        }
-                                        .onFailure { status = it.message ?: "Could not rename the website entry." }
-                                    renamingSiteFilePath = null
-                                }, enabled = renamedSiteFilePath.isNotBlank() && renamedSiteFilePath != sourcePath) { Text("Rename") }
-                            },
-                            dismissButton = { TextButton(onClick = { renamingSiteFilePath = null }) { Text("Cancel") } }
-                        )
-                    }
-                    editingSiteFilePath?.let { path ->
-                        AlertDialog(
-                            onDismissRequest = { editingSiteFilePath = null },
-                            title = { Text("Edit $path") },
-                            text = {
-                                OutlinedTextField(value = editingSiteFileContent, onValueChange = { editingSiteFileContent = it },
-                                    modifier = Modifier.fillMaxWidth(), minLines = 6, maxLines = 12)
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    runCatching { SiteFileManager.writeText(context, path, editingSiteFileContent) }
-                                        .onSuccess { siteFileRefresh++; status = "File saved." }
-                                        .onFailure { status = it.message ?: "Could not save the file." }
-                                    editingSiteFilePath = null
-                                }) { Text("Save") }
-                            },
-                            dismissButton = { TextButton(onClick = { editingSiteFilePath = null }) { Text("Cancel") } }
-                        )
-                    }
-                    pendingDeleteSiteFile?.let { path ->
-                        AlertDialog(
-                            onDismissRequest = { pendingDeleteSiteFile = null },
-                            title = { Text("Delete file?") },
-                            text = { Text("Delete $path permanently from the imported website?") },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    runCatching { SiteFileManager.deleteFile(context, path) }
-                                        .onSuccess { siteFileRefresh++; status = "File deleted." }
-                                        .onFailure { status = it.message ?: "Could not delete the file." }
-                                    pendingDeleteSiteFile = null
-                                }) { Text("Delete") }
-                            },
-                            dismissButton = { TextButton(onClick = { pendingDeleteSiteFile = null }) { Text("Cancel") } }
-                        )
-                    }
-                    pendingIndexSiteFile?.let { path ->
-                        AlertDialog(
-                            onDismissRequest = { pendingIndexSiteFile = null },
-                            title = { Text("Set website entry page?") },
-                            text = { Text("Copy $path to the website root as index.html? An existing index.html will be replaced.") },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    runCatching { SiteFileManager.setIndex(context, path) }
-                                        .onSuccess { siteFileRefresh++; status = "Website entry page updated to index.html." }
-                                        .onFailure { status = it.message ?: "Could not set the entry page." }
-                                    pendingIndexSiteFile = null
-                                }) { Text("Set index.html") }
-                            },
-                            dismissButton = { TextButton(onClick = { pendingIndexSiteFile = null }) { Text("Cancel") } }
-                        )
-                    }
-
+                    )
                 }
                 if (selectedTab == "Settings") {
                 if (settingsSection == "Network") {
