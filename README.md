@@ -3,9 +3,8 @@
 <p align="center">
   <img src="Assets/Logo.png" alt="AssayFlux Pocket Host logo" width="250">
 </p>
-<h1 align="center">ASSAYFLUX POCKET HOST</h1>
 <p align="center"><strong>Your website. Your device. Your control.</strong></p>
-<p align="center">Turn an ordinary Android phone into the origin server for your website — without root, Termux or a mandatory VPS.</p>
+<p align="center">Turn An Ordinary Android Phone Into The Origin Server For Your Website Without Roor - Termux - Mandatory VPS</p>
 <p align="center">
   <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&weight=600&size=16&pause=1600&color=B18B5E&center=true&vCenter=true&width=900&height=32&lines=PHONE-FIRST+WEBSITE+HOSTING;STATIC+SITES+AND+TRUSTED+APPLICATIONS;RUST+REQUEST+ENGINE;ANDROID-NATIVE+OPERATIONS;IMPORT+%E2%86%92+PUBLISH+%E2%86%92+OBSERVE+%E2%86%92+RECOVER" alt="Pocket Host product principles">
 </p>
@@ -72,7 +71,7 @@ The product is designed for people who want to publish a website from hardware t
 | Runtime companion package | <code>com.assayflux.pockethost.worker</code> |
 | Minimum Android target | Android 8.0 · API 26 |
 | Device architecture targets | ARMv7 and ARM64; x86_64 for emulator coverage |
-| Operating model | Native Android · no root · no Termux |
+| Operating model | Native Android · No Root · No Termux |
 | Release position | Pre-release engineering · not production approved |
 
 ## PRODUCT CAPABILITIES
@@ -407,9 +406,5 @@ Read the project in this order:
 The repository is distributed under the Apache License 2.0. Third-party runtimes, native libraries, build tools and assets may have separate licenses and redistribution conditions. Review the relevant upstream notices and repository third-party inventory before bundling or redistributing components.
 
 ---
-
-<p align="center">
-  <img src="https://img.shields.io/badge/ASSAYFLUX-SCIENTIFIC%20SYSTEMS-800020?style=for-the-badge&labelColor=172A3A" alt="AssayFlux Scientific Systems">
-</p>
 <p align="center"><strong>Designed by AssayFlux</strong></p>
-<p align="center"><sub>Build deliberately. Host responsibly. Verify everything.</sub></p>
+<p align="center"><sub>Build Deliberately - Host Responsibly - Verify Everything</sub></p>
