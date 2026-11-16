@@ -219,6 +219,15 @@ object CapacityController {
 
 /** A bounded local HTTP workload sweep. It never runs while hosting is stopped. */
 object CapacityLab {
+    /** Nearest-rank percentile; never under-reports a small-sample tail. */
+    internal fun nearestRankPercentile(values: List<Long>, percentile: Int): Long {
+        require(percentile in 1..100) { "Percentile must be between 1 and 100." }
+        if (values.isEmpty()) return 0L
+        val ordered = values.sorted()
+        val rank = ((percentile.toLong() * ordered.size + 99L) / 100L).toInt()
+        return ordered[(rank - 1).coerceIn(0, ordered.lastIndex)]
+    }
+
     @Volatile private var running = false
     @Volatile private var cancelRequested = false
     @Volatile private var latest = JSONObject().put("state", "NOT_RUN")
@@ -308,12 +317,9 @@ object CapacityLab {
                         executor.shutdownNow()
                     }
                     val ordered = latencies.sorted()
-                    val percentile = { p: Int ->
-                        if (ordered.isEmpty()) 0L else ordered[((ordered.size - 1) * p) / 100]
-                    }
-                    val p50 = percentile(50)
-                    val p95 = percentile(95)
-                    val p99 = percentile(99)
+                    val p50 = nearestRankPercentile(ordered, 50)
+                    val p95 = nearestRankPercentile(ordered, 95)
+                    val p99 = nearestRankPercentile(ordered, 99)
                     val maxLatency = ordered.lastOrNull() ?: 0L
                     val elapsed = ((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(1L)
                     val throughputBytesPerSecond = bytesServed.get() * 1_000L / elapsed
