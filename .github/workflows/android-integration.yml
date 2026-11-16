@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "runtime-worker/**"
       - "rust-engine/**"
       - "scripts/**"
       - "build.gradle.kts"
@@ -17,6 +18,7 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "runtime-worker/**"
       - "rust-engine/**"
       - "scripts/**"
       - "build.gradle.kts"
@@ -88,7 +90,7 @@ jobs:
           python-version: "3.11"
       - uses: android-actions/setup-android@v3
         with:
-          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018"
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
       - name: Configure NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
@@ -174,7 +176,7 @@ jobs:
           python-version: "3.11"
       - uses: android-actions/setup-android@v3
         with:
-          packages: "platform-tools platforms;android-35 build-tools;35.0.0 emulator ndk;27.2.12479018 system-images;android-26;default;x86_64 system-images;android-33;default;x86_64 system-images;android-35;default;x86_64"
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 emulator ndk;27.2.12479018 cmake;3.22.1 system-images;android-26;default;x86_64 system-images;android-33;default;x86_64 system-images;android-35;default;x86_64"
       - name: Configure NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
