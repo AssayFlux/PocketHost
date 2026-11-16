@@ -62,68 +62,36 @@ open class RuntimeIsolationProbeService : Service() {
                     }
                     reply?.writeInt(if (acceptedRequest) 1 else 0)
                 }
-                TRANSACTION_PROJECT_DIRECTORY -> {
-                    val directory = ParcelFileDescriptor.CREATOR.createFromParcel(data)
-                    // Use openat relative to the passed directory descriptor. Do not
-                    // resolve /proc/self/fd/<n>/...: isolated_app SELinux policy may
-                    // deny procfs traversal even when the broker intentionally passed
-                    // an already-open directory capability.
-                    fun openBeneath(relative: String, flags: Int, mode: Int): java.io.FileDescriptor? {
-                        val segments = relative.split('/')
-                        if (segments.isEmpty() || segments.any { it.isBlank() || it == "." || it == ".." }) return null
-                        var parent = ParcelFileDescriptor.dup(directory.fileDescriptor)
-                        try {
-                            for (segment in segments.dropLast(1)) {
-                                val next = Os.openat(
-                                    parent.fileDescriptor,
-                                    segment,
-                                    OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC,
-                                    0
-                                )
-                                val nextPfd = ParcelFileDescriptor.dup(next)
-                                Os.close(next)
-                                parent.close()
-                                parent = nextPfd
-                            }
-                            return Os.openat(
-                                parent.fileDescriptor,
-                                segments.last(),
-                                flags or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC,
-                                mode
-                            )
-                        } finally {
-                            parent.close()
+                TRANSACTION_PROJECT_FILES -> {
+                    // The host broker opens only individually validated project files.
+                    // Android API 26 SELinux does not reliably permit directory-FD
+                    // traversal from isolated_app, so never pass a project directory FD.
+                    val input = ParcelFileDescriptor.CREATOR.createFromParcel(data)
+                    val output = ParcelFileDescriptor.CREATOR.createFromParcel(data)
+                    val expectedHostUid = data.readInt()
+                    try {
+                        val buffer = ByteArray(256)
+                        var count = 0
+                        while (count < buffer.size) {
+                            val read = Os.read(input.fileDescriptor, buffer, count, buffer.size - count)
+                            if (read <= 0) break
+                            count += read
                         }
+                        val received = String(buffer, 0, count, Charsets.UTF_8)
+                        val payload = "created-by-isolated-cell".toByteArray(Charsets.UTF_8)
+                        var sent = 0
+                        while (sent < payload.size) {
+                            val written = Os.write(output.fileDescriptor, payload, sent, payload.size - sent)
+                            if (written <= 0) break
+                            sent += written
+                        }
+                        reply?.writeInt(if (received == "project-a-only") 1 else 0)
+                        reply?.writeInt(if (sent == payload.size) 1 else 0)
+                        reply?.writeInt(expectedHostUid)
+                    } finally {
+                        input.close()
+                        output.close()
                     }
-                    fun canRead(relative: String): Boolean = runCatching {
-                        val fd = openBeneath(relative, OsConstants.O_RDONLY, 0) ?: return@runCatching false
-                        try {
-                            val buffer = ByteArray(64)
-                            Os.read(fd, buffer, 0, buffer.size) > 0
-                        } finally {
-                            Os.close(fd)
-                        }
-                    }.getOrDefault(false)
-                    val ownFileReadable = canRead("marker.txt")
-                    val siblingFileReadable = canRead("../sibling/secret.txt")
-                    val created = runCatching {
-                        val fd = openBeneath(
-                            "worker-created.txt",
-                            OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_EXCL,
-                            0x1A4
-                        ) ?: return@runCatching false
-                        try {
-                            Os.fchmod(fd, 0x1A4)
-                            val bytes = "created-by-isolated-cell".toByteArray(Charsets.UTF_8)
-                            Os.write(fd, bytes, 0, bytes.size)
-                        } finally {
-                            Os.close(fd)
-                        }
-                        true
-                    }.getOrDefault(false)
-                    directory.close()
-                    reply?.writeInt((if (ownFileReadable) 1 else 0) or
-                        (if (siblingFileReadable) 2 else 0) or (if (created) 4 else 0))
                 }
                 TRANSACTION_BROKERED_LISTENER -> {
                     val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
@@ -174,7 +142,7 @@ open class RuntimeIsolationProbeService : Service() {
         const val TRANSACTION_CAN_READ = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_LOOPBACK = IBinder.FIRST_CALL_TRANSACTION + 2
         const val TRANSACTION_BROKERED_SOCKET = IBinder.FIRST_CALL_TRANSACTION + 3
-        const val TRANSACTION_PROJECT_DIRECTORY = IBinder.FIRST_CALL_TRANSACTION + 4
+        const val TRANSACTION_PROJECT_FILES = IBinder.FIRST_CALL_TRANSACTION + 4
         const val TRANSACTION_BROKERED_LISTENER = IBinder.FIRST_CALL_TRANSACTION + 5
     }
 }
