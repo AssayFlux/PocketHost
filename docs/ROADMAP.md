@@ -130,3 +130,5 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - Gate 6: full app restore now persists a fsynced transaction journal before destructive renames and a separate commit marker only after site, routes and safe settings are committed. Startup recovery restores previous Python/Node projects, custom static roots, the previous static release, route registry and non-secret settings when a process dies mid-restore. Failed recovery preserves its remaining rollback material.
 - Android instrumentation simulates a killed restore after partial static/Python/custom-root and preference mutation and verifies the prior state is restored. This source test remains unexecuted pending API 26/33/35 workflow evidence.
 
+- Gate 5 additional resource bound: HTTP/2 connections now admit at most eight concurrent streams, with explicit pending-reset, local-error-reset and 16 KiB header-list limits. Regression coverage asserts the configured bounds; live multiplexed load and phone measurements remain open.
+
