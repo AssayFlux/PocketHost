@@ -8,16 +8,38 @@ import java.io.File
 /**
  * Host-side, descriptor-only project filesystem broker.
  *
- * The cell receives a descriptor for one regular file at a time, never a directory
- * descriptor or a host path. Every component is resolved relative to an open directory
- * using O_NOFOLLOW, so a project cannot swap a symlink between validation and open.
+ * Each path component is resolved relative to an open directory with O_NOFOLLOW.
+ * When a capability is used, the root directory's device/inode identity is checked
+ * against the identity captured at grant issuance, preventing path replacement from
+ * silently retargeting an existing capability to a different directory.
  */
 object RuntimeProjectFileBroker {
+    data class RootIdentity internal constructor(val device: Long, val inode: Long)
+
     const val MAX_BROKERED_FILE_BYTES = 64L * 1024L * 1024L
     const val MAX_BROKER_WRITE_BYTES = 1024 * 1024
 
-    fun openReadOnly(projectRoot: File, relativePath: String): ParcelFileDescriptor =
-        openRegularFile(projectRoot, relativePath, OsConstants.O_RDONLY)
+    fun captureRootIdentity(projectRoot: File): RootIdentity {
+        val flags = OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or
+            OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
+        val fd = Os.open(projectRoot.absoluteFile.toPath().normalize().toString(), flags, 0)
+        try {
+            val stat = Os.fstat(fd)
+            require((stat.st_mode and OsConstants.S_IFMT) == OsConstants.S_IFDIR) {
+                "Project root is not a directory."
+            }
+            return RootIdentity(stat.st_dev, stat.st_ino)
+        } finally {
+            Os.close(fd)
+        }
+    }
+
+    fun openReadOnly(
+        projectRoot: File,
+        relativePath: String,
+        expectedRootIdentity: RootIdentity? = null
+    ): ParcelFileDescriptor =
+        openRegularFile(projectRoot, relativePath, OsConstants.O_RDONLY, expectedRootIdentity = expectedRootIdentity)
 
     /**
      * Legacy probe-only writable descriptor. Never pass this to project code: descriptor
@@ -27,33 +49,23 @@ object RuntimeProjectFileBroker {
     fun openWriteOnly(projectRoot: File, relativePath: String): ParcelFileDescriptor =
         openRegularFile(projectRoot, relativePath, OsConstants.O_WRONLY, truncate = true)
 
-
-    /**
-     * Bounded broker-mediated write. Unlike handing an untrusted cell a writable FD,
-     * this enforces both a per-call byte cap and the resulting project-file size cap.
-     * Parent directories must already exist.
-     */
+    /** Bounded broker-mediated write. Parent directories must already exist. */
     @Synchronized
     fun writeBytes(
         projectRoot: File,
         relativePath: String,
         content: ByteArray,
-        append: Boolean = false
+        append: Boolean = false,
+        expectedRootIdentity: RootIdentity? = null
     ): Long {
         require(content.size <= MAX_BROKER_WRITE_BYTES) { "Write chunk exceeds the broker limit." }
-        val normalized = relativePath.replace(92.toChar(), '/')
-        require(normalized.isNotBlank() && !normalized.startsWith('/') && !File(normalized).isAbsolute) {
-            "Absolute or empty project paths are not permitted."
-        }
-        val segments = normalized.split('/')
-        require(segments.none { it.isBlank() || it == "." || it == ".." }) {
-            "Project file path contains traversal or empty segments."
-        }
+        val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
         val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or
             OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
+            verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
             for (segment in segments.dropLast(1)) {
                 val nextFd = Os.openat(directoryFd, segment, directoryFlags, 0)
                 Os.close(directoryFd)
@@ -97,27 +109,16 @@ object RuntimeProjectFileBroker {
         projectRoot: File,
         relativePath: String,
         accessMode: Int,
-        truncate: Boolean = false
+        truncate: Boolean = false,
+        expectedRootIdentity: RootIdentity? = null
     ): ParcelFileDescriptor {
-        val normalized = relativePath.replace(92.toChar(), '/')
-        require(normalized.isNotBlank() && !normalized.startsWith('/') && !File(normalized).isAbsolute) {
-            "Absolute or empty project paths are not permitted."
-        }
-        val segments = normalized.split('/')
-        require(segments.none { it.isBlank() || it == "." || it == ".." }) {
-            "Project file path contains traversal or empty segments."
-        }
-
-        // Do not canonicalize the root: that would silently follow a root symlink.
+        val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
         val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_DIRECTORY or
             OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
-            val rootMetadata = Os.fstat(directoryFd)
-            require((rootMetadata.st_mode and OsConstants.S_IFMT) == OsConstants.S_IFDIR) {
-                "Project root is not a directory."
-            }
+            verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
             for (segment in segments.dropLast(1)) {
                 val nextFd = Os.openat(directoryFd, segment, directoryFlags, 0)
                 Os.close(directoryFd)
@@ -148,5 +149,26 @@ object RuntimeProjectFileBroker {
         } finally {
             Os.close(directoryFd)
         }
+    }
+
+    private fun verifyRootIdentity(stat: android.system.StructStat, expected: RootIdentity?) {
+        require((stat.st_mode and OsConstants.S_IFMT) == OsConstants.S_IFDIR) {
+            "Project root is not a directory."
+        }
+        if (expected != null && (stat.st_dev != expected.device || stat.st_ino != expected.inode)) {
+            throw SecurityException("Project root changed after its filesystem capability was issued.")
+        }
+    }
+
+    private fun safeSegments(relativePath: String): List<String> {
+        val normalized = relativePath.replace(92.toChar(), '/')
+        require(normalized.isNotBlank() && !normalized.startsWith('/') && !File(normalized).isAbsolute) {
+            "Absolute or empty project paths are not permitted."
+        }
+        val segments = normalized.split('/')
+        require(segments.none { it.isBlank() || it == "." || it == ".." }) {
+            "Project file path contains traversal or empty segments."
+        }
+        return segments
     }
 }
