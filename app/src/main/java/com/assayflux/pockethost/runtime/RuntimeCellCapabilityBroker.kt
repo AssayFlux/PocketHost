@@ -1,6 +1,7 @@
 package com.assayflux.pockethost.runtime
 
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import java.io.File
 import java.security.SecureRandom
 
@@ -23,7 +24,8 @@ class RuntimeCellCapabilityBroker(
         val projectId: String,
         val isolatedUid: Int,
         val root: File,
-        val rootIdentity: RuntimeProjectFileBroker.RootIdentity
+        val rootIdentity: RuntimeProjectFileBroker.RootIdentity,
+        val expiresAtElapsedMs: Long
     )
 
     private val lock = Any()
@@ -41,6 +43,10 @@ class RuntimeCellCapabilityBroker(
         if (callerUid != uid) {
             throw SecurityException("Only the isolated UID assigned to this lease may obtain its filesystem capability.")
         }
+        purgeExpiredLocked()
+        check(grants.values.count { it.leaseId == leaseId } < MAX_GRANTS_PER_LEASE) {
+            "This execution cell has reached its filesystem capability limit."
+        }
         val root = requireNotNull(projectRootFor(lease.projectId)) {
             "No registered filesystem root exists for this project."
         }.canonicalFile
@@ -48,7 +54,7 @@ class RuntimeCellCapabilityBroker(
         val rootIdentity = RuntimeProjectFileBroker.captureRootIdentity(root)
         val token = ByteArray(32).also(random::nextBytes)
             .joinToString("") { "%02x".format(it) }
-        grants[token] = Grant(lease.id, lease.projectId, uid, root, rootIdentity)
+        grants[token] = Grant(lease.id, lease.projectId, uid, root, rootIdentity, SystemClock.elapsedRealtime() + GRANT_TTL_MS)
         token
     }
 
@@ -90,12 +96,21 @@ class RuntimeCellCapabilityBroker(
         grants.remove(capability) != null
     }
 
-    fun activeGrantCount(): Int = synchronized(lock) { grants.size }
+    fun activeGrantCount(): Int = synchronized(lock) { purgeExpiredLocked(); grants.size }
+
+    private fun purgeExpiredLocked() {
+        val now = SystemClock.elapsedRealtime()
+        grants.entries.removeAll { it.value.expiresAtElapsedMs <= now }
+    }
 
     private fun authorize(leaseId: String, capability: String, callerUid: Int): Grant {
         require(capability.length == 64) { "Invalid filesystem capability." }
         val grant = grants[capability]
             ?: throw SecurityException("Filesystem capability is expired or revoked.")
+        if (grant.expiresAtElapsedMs <= SystemClock.elapsedRealtime()) {
+            grants.remove(capability)
+            throw SecurityException("Filesystem capability has expired.")
+        }
         if (grant.leaseId != leaseId || grant.isolatedUid != callerUid) {
             throw SecurityException("Filesystem capability belongs to another execution cell.")
         }
@@ -109,5 +124,8 @@ class RuntimeCellCapabilityBroker(
             throw SecurityException("Execution cell is no longer authorized.")
         }
         return grant
+    }    companion object {
+        const val MAX_GRANTS_PER_LEASE = 8
+        const val GRANT_TTL_MS = 15 * 60 * 1000L
     }
 }
