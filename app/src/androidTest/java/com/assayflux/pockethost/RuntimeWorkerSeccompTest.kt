@@ -155,7 +155,8 @@ class RuntimeWorkerSeccompTest {
                     reply.readException()
                     transactionSucceeded = true
                     val values = listOf(reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt(), reply.readInt())
-                    values to (reply.createLongArray() ?: error("Cell resource limits were not returned."))
+                    val deniedNetworkIoMask = reply.readInt()
+                    values to (deniedNetworkIoMask to (reply.createLongArray() ?: error("Cell resource limits were not returned.")))
                 } finally {
                     if (!transactionSucceeded) runCatching { client.close() }
                     writer.join(5_000)
@@ -165,7 +166,8 @@ class RuntimeWorkerSeccompTest {
                     reply.recycle()
                 }
                 val results = probe.first
-                val resourceLimits = probe.second
+                val deniedNetworkIoMask = probe.second.first
+                val resourceLimits = probe.second.second
                 assertEquals("socket() must be denied with EPERM", 1, results[0])
                 assertEquals("connect() must be denied with EPERM", 1, results[1])
                 assertEquals("bind() must be denied with EPERM", 1, results[2])
@@ -173,6 +175,11 @@ class RuntimeWorkerSeccompTest {
                 assertEquals("An inherited socket on standard input must also be closed", 1, results[4])
                 assertEquals("The brokered Unix listener must accept visitor traffic", 1, results[5])
                 assertEquals("SO_PEERCRED must identify the host app UID", 1, results[6])
+                assertEquals(
+                    "sendto/sendmsg/sendmmsg/recvfrom/recvmsg/recvmmsg/shutdown must all be denied with EPERM",
+                    0x7f,
+                    deniedNetworkIoMask
+                )
                 assertTrue("NOFILE limit must be no greater than 128", resourceLimits[0] in 1L..128L)
                 assertTrue("NPROC limit must be no greater than 32", resourceLimits[1] in 1L..32L)
                 assertTrue("FSIZE limit must be no greater than 64 MiB", resourceLimits[2] in 1L..(64L * 1024L * 1024L))
