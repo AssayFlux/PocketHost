@@ -875,8 +875,9 @@ async fn relay_visitor(
     let bytes = to_bytes(body, 8 * 1024 * 1024).await
         .map_err(|_| (StatusCode::PAYLOAD_TOO_LARGE, "relay_request_too_large".into()))?;
     let allowed_request_headers = [
-        "accept","accept-encoding","accept-language","authorization","cache-control","content-type",
-        "cookie","if-match","if-modified-since","if-none-match","origin","range","referer","user-agent",
+        "accept","accept-encoding","accept-language","access-control-request-headers","access-control-request-method",
+        "authorization","cache-control","content-type","cookie","if-match","if-modified-since","if-none-match",
+        "origin","range","referer","sec-fetch-dest","sec-fetch-mode","sec-fetch-site","user-agent",
     ];
     let mut forwarded_headers = HashMap::new();
     for name in allowed_request_headers {
@@ -922,8 +923,12 @@ async fn relay_visitor(
         .map_err(|_| (StatusCode::BAD_GATEWAY, "invalid_device_response_body".into()))?;
     if response_body.len() > 8 * 1024 * 1024 { return Err((StatusCode::PAYLOAD_TOO_LARGE, "relay_response_too_large".into())); }
     let allowed_response_headers = [
+        "access-control-allow-credentials","access-control-allow-headers","access-control-allow-methods",
+        "access-control-allow-origin","access-control-expose-headers","access-control-max-age",
         "cache-control","content-disposition","content-encoding","content-language","content-range",
-        "content-type","etag","expires","last-modified","location","vary","www-authenticate",
+        "content-security-policy","content-security-policy-report-only","content-type","cross-origin-embedder-policy",
+        "cross-origin-opener-policy","cross-origin-resource-policy","etag","expires","last-modified","location",
+        "permissions-policy","referrer-policy","strict-transport-security","vary","www-authenticate","x-frame-options",
     ];
     let mut builder = Response::builder().status(status);
     for (name, value) in response.headers {
