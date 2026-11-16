@@ -205,3 +205,5 @@ Update this file with exact evidence whenever the baseline changes.
 
 - 8c2a1a82a670ff307850ce4ac42b2e7e71438545 caps HTTP/2 concurrent streams at eight per TCP socket and bounds reset streams/header-list sizes; 407ec6e2c48aaac7ae27fffd03007b4378030751 clarifies the admission contract. This prevents the prior Hyper default of 200 multiplexed streams/socket from bypassing the mobile connection/task budget. Rust execution remains unverified.
 
+- d3e398965d1dbb1f0adbd9efe303a7fbea104a54 configures a 10-second HTTP/1 header read timeout, 64-header cap and 16 KiB buffer using TokioTimer. This source setting has not yet been exercised by a slowloris test or device load run.
+
