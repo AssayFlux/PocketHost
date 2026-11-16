@@ -52,9 +52,9 @@ Host creates a private Unix-domain stream listener and retains its path for Rust
 The exact descriptor-transfer route must be tested on Android 8 SELinux. If abstract namespace or FD passing fails, compare filesystem-domain sockets with strict directory permissions and a brokered accepted-stream model. Do not assume a transport works because it compiles.
 
 ### 4.4 Kernel policy
-Install native seccomp-BPF with no-new-privileges and thread synchronization before runtime initialization. Deny socket creation, socketpair, connect, bind, socket multiplexors, io_uring networking and prohibited namespace/process syscalls. Permit only the minimal operations required for the already-open visitor listener and runtime.
+Install native seccomp-BPF with no-new-privileges and thread synchronization before runtime initialization. Deny socket creation, socketpair, connect, bind, socket multiplexors, io_uring networking and prohibited namespace/process syscalls. Before policy installation, close every inherited socket descriptor except the broker-created visitor listener; generic read/write syscalls can otherwise use an inherited connected socket as an egress channel. Cleanup failure must abort cell startup. Permit only the minimal operations required for the already-open visitor listener and runtime.
 
-Do not accept a policy that simply blocks known hostname APIs. Test native syscalls, libc, DNS, IPv4/IPv6, TCP/UDP/raw sockets, loopback, private/link-local/metadata targets, child processes and native extensions. If policy cannot be applied to every thread, stop the cell.
+The current native probe implements inherited-socket cleanup and the instrumentation source supplies an already-connected TCP socket to verify closure. This remains probe-only: the policy still ends in an allow fallback and is not yet installed by a production Python/Node launcher. Do not accept a policy that simply blocks known hostname APIs. Test native syscalls, libc, DNS, IPv4/IPv6, TCP/UDP/raw sockets, loopback, private/link-local/metadata targets, child processes and native extensions. If policy cannot be applied to every thread, stop the cell.
 
 ### 4.5 Resource controls
 Android process isolation is not a hard CPU quota. Implement explicit admission, memory ceilings where enforceable, process/FD limits, bounded project storage, request deadlines, log caps, restart backoff and kill/recovery. Document what Android cannot guarantee.
@@ -63,7 +63,7 @@ Android process isolation is not a hard CPU quota. Implement explicit admission,
 
 1. Build a minimal isolated-cell proof app and run API 26/33/35.
 2. Verify distinct simultaneous UIDs, file descriptor ownership and Unix listener peer identity.
-3. Validate seccomp policy behavior and TSYNC failure handling with adversarial native test code.
+3. Validate seccomp policy behavior, inherited connected-socket closure, and TSYNC failure handling with adversarial native test code.
 4. Build broker slot manager, per-project allocation, identity binding and cleanup.
 5. Implement per-cell project transfer and descriptor-backed storage.
 6. Migrate Python to one interpreter per cell; prove WSGI through Rust.
