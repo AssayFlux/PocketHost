@@ -21,8 +21,8 @@
   <a href="https://github.com/AssayFlux/PocketHost/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AssayFlux/PocketHost?style=flat-square&label=LICENSE"></a>
 </p>
 
-> **Engineering baseline · 16 November 2026 · main:** `a8988f5068f4a65206b89451e8204b51b86abc55`  
-> **Estimated overall engineering readiness: 37%.** This is a weighted milestone assessment, not a test-coverage metric or a claim of production readiness. The native app, static Rust origin, local management and several operations foundations exist. The separate-UID companion is not yet running Python or Node. See [the single current baseline](docs/PROJECT_BASELINE.md).
+> **Companion integration source snapshot · 16 November 2026:** `bd227b0e5564ad25c88064cfc36796469390b773`  
+> **Estimated overall engineering readiness: 37%.** This is a weighted milestone assessment, not a test-coverage metric or a claim of production readiness. The native app, static Rust origin, local management and operations foundations exist. Python and Node have now been moved into the separate-UID companion in source; build and API-matrix verification are pending. The previous 37% readiness score is retained until that evidence is available. See [the single current baseline](docs/PROJECT_BASELINE.md).
 
 ---
 
@@ -47,13 +47,13 @@ AssayFlux Pocket Host turns an Android phone into a self-hosted website origin. 
 | Android app | Kotlin, Jetpack Compose, five destinations, foreground hosting service |
 | Website origin | Rust, Tokio and Hyper; hostname routing, static files, streaming and byte ranges |
 | Static deployment | Folder/ZIP import, staged deployment, file management and rollback |
-| Python | Embedded CPython 3.11 / WSGI integration; trusted owner-installed code only |
-| Node.js | Pinned Node.js 24 mobile runtime; trusted owner-installed code only |
+| Python | CPython 3.11 / WSGI in separate-UID companion; trusted owner-installed code only |
+| Node.js | Pinned Node.js 24 mobile runtime in separate-UID companion; trusted owner-installed code only |
 | Management | Authenticated loopback API and TypeScript/React console |
 | Edge connectivity | Android cloudflared connector; use the owner's existing named tunnel |
 | Operations | Device/resource metrics, activity logs, diagnostics and initial Capacity Lab |
 | Backup | Passphrase-encrypted backup/restore with device-bound credentials excluded |
-| Companion | Separate package/UID and signature-protected Binder capability probe; runtime migration is not complete |
+| Companion | Separate package/UID; signature-protected versioned Binder IPC, bounded project transfer, Python and Node runtime source integration |
 
 ## ARCHITECTURE
 
@@ -68,10 +68,12 @@ flowchart TD
   A[Native Android app] --> R
   A --> M[Authenticated local management API]
   M --> C[TypeScript / React console]
-  A -. future isolated worker IPC .-> W[Separate-UID companion prototype]
+  A -->|versioned Binder IPC + bounded project transfer| W[Separate-UID runtime companion]
+  W --> P
+  W --> N
 ```
 
-The public hostname must route to the Rust website listener. It must **never** route to the management API. The current Python and Node runtimes still execute under the host app UID; do not treat the companion probe or path canonicalization as an OS sandbox.
+The public hostname must route to the Rust website listener. It must **never** route to the management API. Python and Node now execute under the companion package UID in the migrated source. This separates them from host-app-private files, but does not isolate sites from one another or enforce network egress. The companion migration is not verified until its build and API 26/33/35 instrumentation pass.
 
 ## RELEASE READINESS
 
@@ -100,13 +102,13 @@ These percentages are engineering estimates against acceptance criteria. They ar
 
 ## BUILD
 
-Open the repository in Android Studio or use the Gradle wrapper in an Android SDK environment. The host app and `:runtime-worker` companion are separate Android application modules. CI builds debug artifacts for the configured ABIs. Production signing is intentionally gated on owner-controlled GitHub Actions secrets; see [RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md).
+Open the repository in Android Studio or use the Gradle wrapper in an Android SDK environment. Build both `:runtime-worker:assembleDebug` and `:app:assembleDebug`. Install the matching `pockethost-runtime-worker` APK first, then the ABI-specific host APK; both must be signed with the same certificate. The Android workflow packages the pair together. Production signing is intentionally gated on owner-controlled GitHub Actions secrets; see [RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md).
 
 ## PRODUCT BOUNDARIES
 
 - Supported target: small websites, development and modest workloads on a phone.
 - Not a cloud-region replacement or an uptime guarantee.
-- Python and Node are for trusted owner-installed code only until genuine isolation and egress enforcement are implemented and independently reviewed.
+- Python and Node are for trusted owner-installed code only. The companion UID separates runtime code from host-private files, but per-project isolation and enforceable network egress remain incomplete and require adversarial review.
 - No hard CPU quota is claimed for ordinary Android app processes.
 - Physical device lifecycle/thermal/battery acceptance and external Cloudflare HTTPS verification are not inferred from emulator or connector builds.
 
@@ -120,5 +122,6 @@ Open the repository in Android Studio or use the Gradle wrapper in an Android SD
 | [Completion milestone](docs/COMPLETION_MILESTONE.md) | Acceptance criteria for release completion |
 | [Development context](docs/DEVELOPMENT_CONTEXT.md) | Architecture and constraints for contributors |
 | [Release signing](docs/RELEASE_SIGNING.md) | Secure owner-controlled release signing |
+| [Runtime companion](docs/RUNTIME_COMPANION.md) | Separate UID, IPC, project transfer, APK pairing and security limits |
 
 **Maintained by AssayFlux.** The code and evidence—not a badge, plan or percentage—determine release readiness.
