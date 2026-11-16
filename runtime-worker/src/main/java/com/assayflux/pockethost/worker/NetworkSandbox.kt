@@ -13,5 +13,7 @@ object NetworkSandbox {
     @JvmStatic external fun closeInheritedSocketsExcept(listenerFd: Int): Int
 
     @JvmStatic external fun installNetworkPolicy(listenerFd: Int): Int
+    @JvmStatic external fun duplicateToStandardInput(socketFd: Int): Int
+    @JvmStatic external fun getResourceLimits(): LongArray
     @JvmStatic external fun getPeerUid(socketFd: Int): Int
 }
