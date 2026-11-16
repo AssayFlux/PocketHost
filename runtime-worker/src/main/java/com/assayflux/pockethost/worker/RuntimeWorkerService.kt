@@ -188,7 +188,7 @@ class RuntimeWorkerService : Service() {
             }
             owned.put(hostname, root.absolutePath)
         }
-        synchronized(runtimeLock) {
+        synchronized(this) {
             return ensurePython().callAttr("start_many", owned.toString(), port, false).toString()
         }
     }
@@ -270,12 +270,12 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_PYTHON_CONFIGURE -> {
                         val workers = data.readInt()
                         require(workers in 2..16) { "Python worker limit must be between 2 and 16." }
-                        synchronized(runtimeLock) { ensurePython().callAttr("configure", workers) }
+                        synchronized(this) { ensurePython().callAttr("configure", workers) }
                         "CONFIGURED"
                     }
                     TRANSACTION_PYTHON_START -> startPython(data.readString().orEmpty(), data.readInt())
                     TRANSACTION_PYTHON_START_SITES -> startPythonSites(data.readString().orEmpty(), data.readInt())
-                    TRANSACTION_PYTHON_STOP -> synchronized(runtimeLock) {
+                    TRANSACTION_PYTHON_STOP -> synchronized(this) {
                         pythonModule()?.callAttr("stop")?.toString() ?: "STOPPED"
                     }
                     TRANSACTION_PYTHON_STATUS -> pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
