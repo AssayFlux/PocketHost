@@ -32,7 +32,7 @@ object NodeHostRuntime {
         runCatching { RuntimeWorkerClient.stopNode(context) }.getOrDefault("STOPPED")
 
     fun status(context: Context): String =
-        runCatching { RuntimeWorkerClient.nodeStatus(context) }.getOrDefault("STOPPED")
+        runCatching { RuntimeWorkerClient.nodeStatus(context) }.getOrDefault("UNAVAILABLE")
 
     fun metrics(context: Context): JSONObject? =
         runCatching { RuntimeWorkerClient.nodeMetrics(context) }.getOrNull()
