@@ -8,7 +8,7 @@ Core local hosting and the phone's Cloudflare Tunnel do not require this backend
 
 1. Review `compose.yaml` and `Caddyfile`. The default Caddy topology expects inbound 80/443 and is not automatically suitable for a Cloudflare Tunnel-only deployment.
 2. Copy `.env.example` to `.env`.
-3. Set `CONTROL_PLANE_DOMAIN`, set `POCKETHOST_CONTROL_HOST` to the same dedicated management hostname, and set the exact HTTPS `POCKETHOST_CONTROL_ORIGIN`. Relay visitor hostnames must be separate from this management hostname; admin and device API routes return 404 when addressed through a Relay visitor hostname.
+3. Set `CONTROL_PLANE_DOMAIN`, set `POCKETHOST_CONTROL_API_HOST` to the same dedicated management hostname, and set the exact HTTPS `POCKETHOST_CONTROL_ORIGIN`. Relay visitor hostnames must be separate from this management hostname; admin and device API routes return 404 when addressed through a Relay visitor hostname.
 4. Generate unique high-entropy values for `POCKETHOST_CONTROL_ADMIN_TOKEN` and `POSTGRES_PASSWORD`.
 5. Start the stack:
 
@@ -75,7 +75,7 @@ Do not advertise this as a complete general-purpose Relay until streaming/WebSoc
 - Administrative mutations (user/device lifecycle, configuration, command/deployment queueing, token rotation and command acknowledgement) commit with their audit event in the same database transaction.
 - Deployment ZIP blobs are created without overwrite, flushed to storage, and removed automatically if the database transaction fails; blob deletion after successful acknowledgement/revocation is post-commit.
 - CORS is restricted to the configured exact console origin.
-- Production startup requires POCKETHOST_CONTROL_HOST. Admin and device endpoints accept requests only when the HTTP Host matches this dedicated hostname; verified Relay visitor hostnames can reach only the visitor gateway fallback, not the management or device API.
+- Production startup requires POCKETHOST_CONTROL_API_HOST. Admin and device endpoints accept requests only when the HTTP Host matches this dedicated hostname; verified Relay visitor hostnames can reach only the visitor gateway fallback, not the management or device API.
 - Keep the API and database private behind the selected TLS/reverse-proxy topology.
 
 ## Boundaries and unverified items
