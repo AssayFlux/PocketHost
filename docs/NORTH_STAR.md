@@ -214,7 +214,7 @@ The primary version is complete only when the gates below have objective exit ev
 
 ### Gate 4 — Visitor authentication and operator security
 - Implement public/private/restricted site policy.
-- Implement passkey-first owner identity, operator roles, session management, recovery and audit.
+- Implement passkey-first owner identity, operator roles, session management, recovery and audit. Current source includes 12-hour revocable remote sessions, five-minute step-up for remote writes and sensitive local Owner actions, plus automatic in-memory credential re-exchange in the console; this is not a passkey implementation.
 - Add short-lived site-scoped tokens, brute-force protection and revocation.
 - Acceptance: site authorization tests pass independently of management authorization; cross-site token reuse and privilege escalation fail.
 
