@@ -146,17 +146,91 @@ fn new_token() -> String {
 }
 
 #[derive(Clone, Debug)]
-struct AdminActor { name: String, role: String }
+struct AdminActor { session_id: Uuid, name: String, role: String }
 
-async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
-    let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_auth_required".into()))?;
+#[derive(Clone, Debug)]
+struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, bootstrap_hash: Option<String> }
+
+const ADMIN_SESSION_TTL_HOURS: i64 = 12;
+
+/// Long-lived API credentials are accepted only at the session-exchange endpoint.
+async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<AdminCredential, (StatusCode, String)> {
+    let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_credential_required".into()))?;
     if secure_equal(supplied, &state.admin_token) {
-        return Ok(AdminActor { name: "Bootstrap Owner".into(), role: "owner".into() });
+        return Ok(AdminCredential {
+            user_id: None,
+            name: "Bootstrap Owner".into(),
+            role: "owner".into(),
+            bootstrap_hash: Some(token_hash(supplied)),
+        });
     }
-    let row = sqlx::query("SELECT name,role FROM control_users WHERE token_hash=$1 AND active=TRUE")
+    let row = sqlx::query("SELECT id,name,role FROM control_users WHERE token_hash=$1 AND active=TRUE")
         .bind(token_hash(supplied)).fetch_optional(&state.db).await.map_err(internal)?;
-    row.map(|row| AdminActor { name: row.get("name"), role: row.get("role") })
-        .ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_token".into()))
+    row.map(|row| AdminCredential {
+        user_id: Some(row.get("id")),
+        name: row.get("name"),
+        role: row.get("role"),
+        bootstrap_hash: None,
+    }).ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_credential".into()))
+}
+
+async fn create_admin_session(
+    State(s): State<AppState>, headers: HeaderMap,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let credential = admin_credential(&headers, &s).await?;
+    let id = Uuid::new_v4();
+    let token = new_token();
+    let expires_at = Utc::now() + chrono::Duration::hours(ADMIN_SESSION_TTL_HOURS);
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    sqlx::query("INSERT INTO control_sessions(id,user_id,name,role,token_hash,bootstrap_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7)")
+        .bind(id).bind(credential.user_id).bind(&credential.name).bind(&credential.role)
+        .bind(token_hash(&token)).bind(&credential.bootstrap_hash).bind(expires_at)
+        .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'session.create',$2,$3)")
+        .bind(&credential.name).bind(id.to_string())
+        .bind(json!({"role":credential.role,"expiresAt":expires_at}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::CREATED, Json(json!({
+        "accessToken": token,
+        "expiresAt": expires_at,
+        "role": credential.role,
+        "warning": "This session expires after 12 hours. Your long-lived API credential is used only to create sessions."
+    }))))
+}
+
+/// Every management operation requires a short-lived server-side session.
+/// A user session is invalidated immediately when its account is revoked or token rotated.
+async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
+    let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_session_required".into()))?;
+    let row = sqlx::query(
+        "SELECT s.id,s.name,s.role FROM control_sessions s \
+         LEFT JOIN control_users u ON u.id=s.user_id \
+         WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() \
+         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2) OR \
+              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role))"
+    )
+        .bind(token_hash(supplied)).bind(token_hash(&state.admin_token))
+        .fetch_optional(&state.db).await.map_err(internal)?;
+    row.map(|row| AdminActor {
+        session_id: row.get("id"),
+        name: row.get("name"),
+        role: row.get("role"),
+    }).ok_or((StatusCode::UNAUTHORIZED, "invalid_or_expired_admin_session".into()))
+}
+
+async fn revoke_admin_session(
+    State(s): State<AppState>, headers: HeaderMap,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let actor = admin(&headers, &s).await?;
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    sqlx::query("UPDATE control_sessions SET revoked_at=now() WHERE id=$1 AND revoked_at IS NULL")
+        .bind(actor.session_id).execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'session.revoke',$2,$3)")
+        .bind(&actor.name).bind(actor.session_id.to_string()).bind(json!({}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn admin_write(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (StatusCode, String)> {
@@ -219,6 +293,8 @@ async fn revoke_user(
     let result = sqlx::query("UPDATE control_users SET active=FALSE WHERE id=$1 AND active=TRUE")
         .bind(id).execute(&mut *tx).await.map_err(internal)?;
     if result.rows_affected() == 0 { return Err((StatusCode::NOT_FOUND, "user_not_found_or_already_revoked".into())); }
+    sqlx::query("UPDATE control_sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL")
+        .bind(id).execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
         .bind(&actor.name).bind("user.revoke").bind(id.to_string()).bind(json!({}))
         .execute(&mut *tx).await.map_err(internal)?;
@@ -240,6 +316,8 @@ async fn rotate_user_token(
     if updated.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "active_user_not_found".into()));
     }
+    sqlx::query("UPDATE control_sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL")
+        .bind(id).execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
         .bind(&actor.name).bind("user.token.rotate").bind(id.to_string())
         .bind(json!({"previous_token_revoked":true}))
@@ -597,6 +675,7 @@ async fn main() -> anyhow::Result<()> {
     };
     let app = Router::new()
         .route("/health", get(health))
+        .route("/v1/admin/session", post(create_admin_session).delete(revoke_admin_session))
         .route("/v1/admin/audit", get(list_audit))
         .route("/v1/admin/users", get(list_users).post(create_user))
         .route("/v1/admin/users/:id", axum::routing::delete(revoke_user))
@@ -636,8 +715,11 @@ mod tests {
         sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'CI viewer','viewer',$2)")
             .bind(id).bind(token_hash(&token)).execute(&db).await.unwrap();
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
-        let mut headers = HeaderMap::new();
-        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap());
+        let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap())]);
+        assert_eq!(admin_credential(&credential_headers, &state).await.unwrap().role, "viewer");
+        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let session_token = session_body["accessToken"].as_str().unwrap();
+        let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
         assert_eq!(admin(&headers, &state).await.unwrap().role, "viewer");
         assert_eq!(admin_write(&headers, &state).await.unwrap_err().0, StatusCode::FORBIDDEN);
         audit(&state, "viewer", "test.read", &id.to_string(), json!({"test":true})).await.unwrap();
@@ -658,17 +740,24 @@ mod tests {
         sqlx::query("INSERT INTO control_users(id,name,role,token_hash) VALUES($1,'rotation-test','editor',$2)")
             .bind(user_id).bind(token_hash(&old_token)).execute(&db).await.unwrap();
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
-        let mut headers = HeaderMap::new();
-        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap());
+        let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
+        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let session_token = session_body["accessToken"].as_str().unwrap();
+        let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
         let (status, Json(body)) = rotate_user_token(
             State(state.clone()), headers, Path(user_id)
         ).await.unwrap();
         assert_eq!(status, StatusCode::OK);
         let replacement = body["token"].as_str().unwrap();
         assert_ne!(replacement, old_token);
-        assert!(admin(&HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())]), &state).await.is_err());
+        assert!(admin_credential(&HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {old_token}")).unwrap())]), &state).await.is_err());
+        let (_, Json(replacement_session)) = create_admin_session(
+            State(state.clone()),
+            HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement}")).unwrap())])
+        ).await.unwrap();
+        let replacement_session_token = replacement_session["accessToken"].as_str().unwrap();
         let replacement_actor = admin(
-            &HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement}")).unwrap())]),
+            &HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {replacement_session_token}")).unwrap())]),
             &state
         ).await.unwrap();
         assert_eq!(replacement_actor.name, "rotation-test");
@@ -688,8 +777,10 @@ mod tests {
         sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'CI rotation device',$2)")
             .bind(device).bind(token_hash(&old_token)).execute(&db).await.unwrap();
         let state = AppState { db: db.clone(), admin_token: "owner-test-token-0123456789abcdef".into() };
-        let mut headers = HeaderMap::new();
-        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap());
+        let credential_headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap())]);
+        let (_, Json(session_body)) = create_admin_session(State(state.clone()), credential_headers).await.unwrap();
+        let session_token = session_body["accessToken"].as_str().unwrap();
+        let headers = HeaderMap::from_iter([(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap())]);
         let (status, Json(body)) = rotate_device_token(
             State(state.clone()), headers, Path(device)
         ).await.unwrap();
