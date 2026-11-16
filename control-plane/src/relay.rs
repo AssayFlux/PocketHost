@@ -112,45 +112,68 @@ impl Drop for RelaySessionGuard {
     }
 }
 
-fn skip_dns_name(packet: &[u8], offset: &mut usize) -> Option<()> {
+fn read_dns_name(packet: &[u8], offset: &mut usize) -> Option<String> {
+    let mut cursor = *offset;
+    let mut jumped = false;
+    let mut jumps = 0usize;
+    let mut labels = Vec::new();
     loop {
-        let length = *packet.get(*offset)?;
+        let length = *packet.get(cursor)?;
         if length & 0xc0 == 0xc0 {
-            packet.get(*offset + 1)?;
-            *offset += 2;
-            return Some(());
+            let low = *packet.get(cursor + 1)?;
+            let pointer = (((length & 0x3f) as usize) << 8) | low as usize;
+            if !jumped { *offset = cursor + 2; }
+            cursor = pointer;
+            jumped = true;
+            jumps += 1;
+            if jumps > 16 { return None; }
+            continue;
         }
-        *offset += 1;
-        if length == 0 { return Some(()); }
-        if length & 0xc0 != 0 || length > 63 { return None; }
-        let end = (*offset).checked_add(length as usize)?;
-        packet.get(*offset..end)?;
-        *offset = end;
-    }
-}
-
-pub fn parse_dns_txt_answers(packet: &[u8]) -> Vec<String> {
-    if packet.len() < 12 || packet[3] & 0x0f != 0 { return Vec::new(); }
-    let questions = u16::from_be_bytes([packet[4], packet[5]]) as usize;
-    let answers = u16::from_be_bytes([packet[6], packet[7]]) as usize;
-    if questions > 8 || answers > 256 { return Vec::new(); }
-    let mut offset = 12usize;
-    for _ in 0..questions {
-        if skip_dns_name(packet, &mut offset).is_none() || packet.get(offset..offset + 4).is_none() {
-            return Vec::new();
-        }
-        offset += 4;
-    }
-    let mut values = Vec::new();
-    for _ in 0..answers {
-        if skip_dns_name(packet, &mut offset).is_none() || packet.get(offset..offset + 10).is_none() {
+        if length == 0 {
+            if !jumped { *offset = cursor + 1; }
             break;
         }
+        if length & 0xc0 != 0 || length > 63 { return None; }
+        let begin = cursor + 1;
+        let finish = begin.checked_add(length as usize)?;
+        let label = std::str::from_utf8(packet.get(begin..finish)?).ok()?;
+        if !label.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-') { return None; }
+        labels.push(label.to_ascii_lowercase());
+        cursor = finish;
+        if !jumped { *offset = cursor; }
+        if labels.iter().map(|label: &String| label.len() + 1).sum::<usize>() > 255 { return None; }
+    }
+    Some(labels.join("."))
+}
+
+pub fn parse_dns_txt_answers(packet: &[u8], expected_name: &str) -> Vec<String> {
+    if packet.len() < 12 { return Vec::new(); }
+    let flags = u16::from_be_bytes([packet[2], packet[3]]);
+    if flags & 0x8000 == 0 || flags & 0x7800 != 0 || flags & 0x0200 != 0 || flags & 0x000f != 0 {
+        return Vec::new();
+    }
+    let questions = u16::from_be_bytes([packet[4], packet[5]]) as usize;
+    let answers = u16::from_be_bytes([packet[6], packet[7]]) as usize;
+    if questions != 1 || answers > 256 { return Vec::new(); }
+    let mut offset = 12usize;
+    let Some(question_name) = read_dns_name(packet, &mut offset) else { return Vec::new(); };
+    if question_name != expected_name.trim_end_matches('.').to_ascii_lowercase() ||
+        packet.get(offset..offset + 4).is_none() ||
+        u16::from_be_bytes([packet[offset], packet[offset + 1]]) != 16 ||
+        u16::from_be_bytes([packet[offset + 2], packet[offset + 3]]) != 1 {
+        return Vec::new();
+    }
+    offset += 4;
+    let mut values = Vec::new();
+    for _ in 0..answers {
+        let Some(owner) = read_dns_name(packet, &mut offset) else { break };
+        if packet.get(offset..offset + 10).is_none() { break; }
         let record_type = u16::from_be_bytes([packet[offset], packet[offset + 1]]);
+        let record_class = u16::from_be_bytes([packet[offset + 2], packet[offset + 3]]);
         let length = u16::from_be_bytes([packet[offset + 8], packet[offset + 9]]) as usize;
         offset += 10;
         let Some(data) = packet.get(offset..offset.saturating_add(length)) else { break };
-        if record_type == 16 {
+        if record_type == 16 && record_class == 1 && owner == question_name {
             let mut part = 0usize;
             let mut text = Vec::new();
             let mut valid = true;
@@ -193,11 +216,13 @@ pub async fn dns_txt_records(name: String) -> anyhow::Result<Vec<String>> {
         socket.set_write_timeout(Some(Duration::from_secs(3)))?;
         socket.send_to(&query, resolver)?;
         let mut response = [0u8; 4096];
-        let (length, _) = socket.recv_from(&mut response)?;
+        let (length, source) = socket.recv_from(&mut response)?;
+        anyhow::ensure!(source == resolver, "DNS response came from an unexpected resolver");
         anyhow::ensure!(length >= 12, "truncated DNS response");
         anyhow::ensure!(u16::from_be_bytes([response[0], response[1]]) == id, "DNS transaction ID mismatch");
         anyhow::ensure!(response[2] & 0x80 != 0, "DNS server did not return a response");
-        Ok(parse_dns_txt_answers(&response[..length]))
+        anyhow::ensure!(response[2] & 0x02 == 0, "DNS response was truncated");
+        Ok(parse_dns_txt_answers(&response[..length], &name))
     }).await?
 }
 
@@ -250,7 +275,7 @@ mod tests {
         ];
         packet[0] = 0x12;
         packet[1] = 0x34;
-        assert_eq!(parse_dns_txt_answers(&packet), vec!["pockethos".to_string()]);
+        assert_eq!(parse_dns_txt_answers(&packet, "a.example"), vec!["pockethos".to_string()]);
     }
 
     #[test]
