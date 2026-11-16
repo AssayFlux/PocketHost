@@ -727,6 +727,14 @@ fn is_trusted_relay_proxy(ip: std::net::IpAddr) -> bool {
         .unwrap_or(false)
 }
 
+fn relay_client_ip(peer: std::net::IpAddr, cf_connecting_ip: Option<&str>) -> std::net::IpAddr {
+    if is_trusted_relay_proxy(peer) {
+        cf_connecting_ip.and_then(|value| value.trim().parse::<std::net::IpAddr>().ok()).unwrap_or(peer)
+    } else {
+        peer
+    }
+}
+
 fn normalize_relay_hostname(value: &str) -> Result<String, (StatusCode, String)> {
     let hostname = value.trim().trim_end_matches('.').to_ascii_lowercase();
     if hostname.len() > 253 || hostname.is_empty() || hostname.parse::<std::net::IpAddr>().is_ok() ||
@@ -926,13 +934,10 @@ async fn relay_visitor(
     // Only CF-Connecting-IP is accepted from an explicitly trusted proxy. Never
     // fall back to the left-most X-Forwarded-For value: a visitor can pre-seed it
     // before Cloudflare appends its own hop and evade per-IP authentication limits.
-    let client_ip = if is_trusted_relay_proxy(peer.ip()) {
+    let client_ip = relay_client_ip(
+        peer.ip(),
         parts.headers.get("cf-connecting-ip").and_then(|value| value.to_str().ok())
-            .and_then(|value| value.trim().parse::<std::net::IpAddr>().ok())
-            .unwrap_or_else(|| peer.ip())
-    } else {
-        peer.ip()
-    };
+    );
     forwarded_headers.insert("cf-connecting-ip".into(), client_ip.to_string());
     let request_id = Uuid::new_v4();
     let message = relay::RelayRequest {
@@ -1250,6 +1255,16 @@ mod tests {
         assert_eq!(revoke_admin_session(State(state.clone()), second_headers.clone()).await.unwrap(), StatusCode::NO_CONTENT);
         assert!(admin(&second_headers, &state).await.is_err(), "Explicitly revoked sessions must be rejected.");
         sqlx::query("DELETE FROM control_sessions WHERE id=$1").bind(first_id).execute(&db).await.unwrap();
+    }
+
+    #[test]
+    fn relay_client_ip_uses_only_cloudflare_header_from_trusted_proxy() {
+        let proxy: std::net::IpAddr = "127.0.0.1".parse().unwrap();
+        let visitor: std::net::IpAddr = "203.0.113.7".parse().unwrap();
+        assert_eq!(relay_client_ip(proxy, Some("203.0.113.7")), visitor);
+        assert_eq!(relay_client_ip(proxy, Some("not-an-ip")), proxy);
+        assert_eq!(relay_client_ip("192.0.2.20".parse().unwrap(), Some("203.0.113.7")),
+            "192.0.2.20".parse::<std::net::IpAddr>().unwrap());
     }
 
     #[test]
