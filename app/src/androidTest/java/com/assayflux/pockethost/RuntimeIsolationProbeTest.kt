@@ -98,6 +98,16 @@ class RuntimeIsolationProbeTest {
             val traversalRejected = runCatching {
                 RuntimeProjectFileBroker.openReadOnly(projectRoot, "../sibling/secret.txt")
             }.isFailure
+            // Symlink checks must be enforced by openat(O_NOFOLLOW), not a
+            // canonical-path check followed by a separate open operation.
+            Os.symlink(File(siblingRoot, "secret.txt").absolutePath, File(projectRoot, "linked-secret.txt").absolutePath)
+            Os.symlink(siblingRoot.absolutePath, File(projectRoot, "linked-directory").absolutePath)
+            val finalSymlinkRejected = runCatching {
+                RuntimeProjectFileBroker.openReadOnly(projectRoot, "linked-secret.txt")
+            }.isFailure
+            val intermediateSymlinkRejected = runCatching {
+                RuntimeProjectFileBroker.openReadOnly(projectRoot, "linked-directory/secret.txt")
+            }.isFailure
             val fileData = Parcel.obtain()
             val fileReply = Parcel.obtain()
             val fileResults = try {
@@ -120,6 +130,8 @@ class RuntimeIsolationProbeTest {
             assertTrue("Isolated cell could not read its explicitly brokered project file", fileResults[0] == 1)
             assertTrue("Isolated cell could not write through its explicitly brokered output file", fileResults[1] == 1)
             assertTrue("Host file broker accepted a sibling traversal path", traversalRejected)
+            assertTrue("Host file broker followed a final-component symlink", finalSymlinkRejected)
+            assertTrue("Host file broker followed an intermediate-directory symlink", intermediateSymlinkRejected)
             assertTrue("Host did not receive the isolated cell's project-local output",
                 outputFile.readText() == "created-by-isolated-cell")
             assertTrue("Sibling project data changed during the capability test",
