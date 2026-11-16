@@ -99,3 +99,11 @@ Learn explains import, hosting, networking, security limitations, backups and tr
 - Test API 26, 33, 35 and physical target devices.
 
 UI completion is not production acceptance without screenshot and accessibility evidence.
+
+## Current implementation snapshot — 2026-11-16
+
+- Dashboard, Sites, Activity and Learn have dedicated Compose screen files; the five-destination navigation is wired in the main activity.
+- Settings currently remains embedded in the main activity with General, Network, Runtimes and About sections; it has not yet been extracted into a dedicated screen/state contract.
+- Existing screens provide static import/preview/publish controls, backup/restore, operational logs and Learn topics. Visual regression screenshots, TalkBack traversal, scalable-font/contrast checks, compact-screen and landscape acceptance remain unverified.
+- Gate 7 remains open until Settings is completed/refactored, first-run publishing is validated end to end without a terminal, and accessibility/visual acceptance evidence is recorded.
+
