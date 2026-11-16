@@ -119,3 +119,8 @@ UI completion is not production acceptance without screenshot and accessibility 
 - Settings section navigation is a separate Compose component. The UIAutomator navigation test now visits General, Network, Runtimes and About and captures a screenshot plus accessibility hierarchy for each subsection, in addition to the five main destinations.
 - This is source-level extraction and test coverage; Settings' network/runtime/about content still shares state with the root activity. Executed artifacts and human accessibility/responsive visual review remain required.
 
+## Visitor access and publishing UI smoke coverage — 2026-11-16
+
+- The Settings/Network UIAutomator flow now seeds a temporary registered static site, verifies hostname-route and visitor-policy controls, switches the site to Private, issues the one-time shared visitor credential, confirms the credential is registered, revokes it, and confirms the credential is removed.
+- The Sites destination smoke test also verifies folder import, ZIP import and encrypted backup export entry points without requiring a terminal. These are source test definitions; they still require successful API 26/33/35 execution and artifact review.
+
