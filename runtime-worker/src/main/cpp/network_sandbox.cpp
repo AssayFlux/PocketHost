@@ -62,6 +62,22 @@ static int close_inherited_sockets_except(int listener_fd) {
     if (fstat(listener_fd, &listener_stat) != 0) return errno;
     if (!S_ISSOCK(listener_stat.st_mode)) return ENOTSOCK;
 
+    // The sole socket allowed to survive startup must be a broker-created,
+    // already-listening AF_UNIX stream. Never accept a TCP/UDP socket here:
+    // that would turn the visitor capability into a network egress primitive.
+    int domain = -1;
+    socklen_t option_length = sizeof(domain);
+    if (getsockopt(listener_fd, SOL_SOCKET, SO_DOMAIN, &domain, &option_length) != 0) return errno;
+    if (domain != AF_UNIX) return EAFNOSUPPORT;
+    int socket_type = -1;
+    option_length = sizeof(socket_type);
+    if (getsockopt(listener_fd, SOL_SOCKET, SO_TYPE, &socket_type, &option_length) != 0) return errno;
+    if (socket_type != SOCK_STREAM) return EPROTOTYPE;
+    int accepting = 0;
+    option_length = sizeof(accepting);
+    if (getsockopt(listener_fd, SOL_SOCKET, SO_ACCEPTCONN, &accepting, &option_length) != 0) return errno;
+    if (accepting != 1) return EINVAL;
+
     DIR* directory = opendir("/proc/self/fd");
     if (directory == nullptr) return errno == 0 ? EIO : errno;
     const int directory_fd = dirfd(directory);
