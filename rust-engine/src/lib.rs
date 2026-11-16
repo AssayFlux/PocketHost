@@ -424,6 +424,7 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
     strip_hop_by_hop(headers);
     headers.remove("x-pockethost-original-host");
     if let Some(host) = original_host {
+        headers.insert(hyper::header::HOST, host.clone());
         headers.insert("x-forwarded-host", host);
     }
     headers.insert("x-forwarded-proto", forwarded_proto.parse().unwrap());
