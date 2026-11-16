@@ -52,7 +52,8 @@ val prepareNodeRuntime by tasks.registering {
                 val name = entry.name.replace('\\', '/')
                 val lowerName = name.lowercase()
                 if (lowerName.substringAfterLast('/').let { it.startsWith("license") || it.startsWith("notice") || it.startsWith("copying") }) {
-                    val destination = File(assetRoot, "licenses/nodejs-mobile/" + name.substringAfterLast('/')).canonicalFile
+                    val relativeLicense = name.substringAfter('/', name)
+                    val destination = File(assetRoot, "licenses/nodejs-mobile/" + relativeLicense).canonicalFile
                     check(destination.toPath().startsWith(assetRoot.canonicalFile.toPath())) { "Unsafe Node license archive path." }
                     destination.parentFile.mkdirs()
                     zip.getInputStream(entry).use { input -> destination.outputStream().use { input.copyTo(it) } }
