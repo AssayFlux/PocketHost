@@ -20,6 +20,8 @@ import com.assayflux.pockethost.runtime.RuntimeTrustGate
 import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.management.RemoteControlAgent
 import com.assayflux.pockethost.sites.SiteRegistry
+import com.assayflux.pockethost.storage.ApplicationBackupManager
+import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import java.io.File
@@ -53,7 +55,19 @@ class HostingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(1, notification("Starting local website server…"))
+        startForeground(1, notification("Checking website recovery…"))
+        val recovery = runCatching {
+            ApplicationBackupManager.recoverInterruptedRestore(this)
+            SiteImporter.recoverInterruptedActivation(this)
+        }
+        if (recovery.isFailure) {
+            val error = recovery.exceptionOrNull()
+            OperationalLog.record(this, "ERROR", "HOSTING_RECOVERY_BLOCKED",
+                error?.message ?: "Hosting could not verify the website recovery state.")
+            updateStatus("Hosting blocked: website recovery must be completed before serving traffic.")
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         runCatching { ManagementApiServer.start(this) }
             .onFailure { OperationalLog.record(this, "ERROR", "MANAGEMENT_API_START_FAILED", it.message ?: "Management API failed to start.") }
         RemoteControlAgent.start(this)
