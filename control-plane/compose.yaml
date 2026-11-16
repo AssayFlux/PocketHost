@@ -26,6 +26,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-pockethost}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-pockethost}
       POCKETHOST_CONTROL_ADMIN_TOKEN: ${POCKETHOST_CONTROL_ADMIN_TOKEN:?Set a long random administrator token}
+      POCKETHOST_CONTROL_HOST: ${POCKETHOST_CONTROL_HOST:?Set the dedicated control-plane hostname}
       POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the exact HTTPS console origin}
       POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
       RUST_LOG: info
