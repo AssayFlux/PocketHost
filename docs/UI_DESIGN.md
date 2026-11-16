@@ -113,3 +113,9 @@ UI completion is not production acceptance without screenshot and accessibility 
 - The test saves a screenshot and accessibility hierarchy XML for each destination. The Android API 26/33/35 workflow collects the full screenshots directory as an artifact.
 - These are automated acceptance definitions; actual screenshots, TalkBack traversal, scalable-font/contrast and compact-screen review are not accepted until the workflow succeeds and artifacts are inspected.
 
+## Settings extraction and subsection acceptance source — 2026-11-16
+
+- Device preferences (dark theme, biometric app unlock, auto-start on boot and battery-optimization settings) now render through a dedicated Compose Settings screen component with explicit state and action contracts.
+- Settings section navigation is a separate Compose component. The UIAutomator navigation test now visits General, Network, Runtimes and About and captures a screenshot plus accessibility hierarchy for each subsection, in addition to the five main destinations.
+- This is source-level extraction and test coverage; Settings' network/runtime/about content still shares state with the root activity. Executed artifacts and human accessibility/responsive visual review remain required.
+
