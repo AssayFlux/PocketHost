@@ -443,7 +443,7 @@ async fn serve(
                 req.headers().get("x-forwarded-proto").and_then(|v| v.to_str().ok())
                     .map(|v| v.eq_ignore_ascii_case("https")).unwrap_or(false) ||
                 req.headers().get("cf-visitor").and_then(|v| v.to_str().ok())
-                    .map(|v| v.contains("\\"scheme\\":\\"https\\"")).unwrap_or(false)
+                    .map(|v| v.contains(r#""scheme":"https""#)).unwrap_or(false)
             );
             if !secure_proxy {
                 let mut response = text_response(StatusCode::FORBIDDEN, "text/plain; charset=utf-8", "Private site access requires an HTTPS proxy.");
@@ -452,7 +452,7 @@ async fn serve(
             }
             if !authorize_site_request(req.headers(), policy) {
                 let mut response = text_response(StatusCode::UNAUTHORIZED, "text/plain; charset=utf-8", "Visitor authentication required.");
-                response.headers_mut().insert("www-authenticate", "Basic realm=\\"AssayFlux Pocket Host\\", charset=\\"UTF-8\\"".parse().unwrap());
+                response.headers_mut().insert("www-authenticate", r#"Basic realm="AssayFlux Pocket Host", charset="UTF-8""#.parse().unwrap());
                 response.headers_mut().insert("cache-control", "no-store".parse().unwrap());
                 return Ok(response);
             }
