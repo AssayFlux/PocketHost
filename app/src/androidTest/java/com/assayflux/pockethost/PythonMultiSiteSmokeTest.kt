@@ -3,6 +3,7 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.runtime.RuntimeWorkerClient
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -51,6 +52,7 @@ class PythonMultiSiteSmokeTest {
             assertEquals(2, metrics.getInt("worker_limit"))
         } finally {
             PythonHostRuntime.stop(context)
+            RuntimeWorkerClient.shutdownWorker(context)
             val restore = preferences.edit()
             if (hadOld) restore.putInt("python_max_workers", oldWorkers) else restore.remove("python_max_workers")
             if (hadTrustAck) restore.putBoolean("trusted_runtime_code_ack", oldTrustAck)
