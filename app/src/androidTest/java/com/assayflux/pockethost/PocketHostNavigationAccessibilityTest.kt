@@ -29,6 +29,8 @@ class PocketHostNavigationAccessibilityTest {
             .commit()
         val registryPreferences = context.getSharedPreferences("pockethost_site_registry", 0)
         val previousRegistry = registryPreferences.getString("sites", "[]") ?: "[]"
+        val visitorSiteId = "ui-visitor-" + System.nanoTime()
+        val visitorHostname = "ui-" + System.nanoTime() + ".local"
         val visitorSiteRoot = File(context.filesDir, "ui-visitor-site-${System.nanoTime()}")
         val device = UiDevice.getInstance(instrumentation)
         val screenshotDir = File(checkNotNull(context.getExternalFilesDir(null)), "screenshots")
@@ -45,11 +47,11 @@ class PocketHostNavigationAccessibilityTest {
             assertTrue(visitorSiteRoot.mkdirs())
             File(visitorSiteRoot, "index.html").writeText("<h1>UI visitor policy test</h1>")
             SiteRegistry.put(context, SiteRegistry.Site(
-                id = "ui-visitor-test",
+                id = visitorSiteId,
                 name = "UI visitor test",
                 runtime = "static",
                 root = visitorSiteRoot.absolutePath,
-                hostnames = listOf("ui-visitor-test.local"),
+                hostnames = listOf(visitorHostname),
                 enabled = true
             ))
             ActivityScenario.launch(MainActivity::class.java).use {
@@ -100,12 +102,12 @@ class PocketHostNavigationAccessibilityTest {
                         device.wait(Until.hasObject(By.text("Create / rotate shared credential")), 10_000))
                     device.findObject(By.text("Create / rotate shared credential")).click()
                     assertTrue("Visitor credential was not stored",
-                        SiteRegistry.visitorNames(context, "ui-visitor-test").contains("visitor"))
+                        SiteRegistry.visitorNames(context, visitorSiteId).contains("visitor"))
                     assertTrue("One-time credential copy action is missing",
                         device.wait(Until.hasObject(By.text("Copy credential")), 10_000))
                     device.wait(Until.findObject(By.text("Revoke")), 10_000)!!.click()
                     assertFalse("Revoked visitor credential remains active",
-                        SiteRegistry.visitorNames(context, "ui-visitor-test").contains("visitor"))
+                        SiteRegistry.visitorNames(context, visitorSiteId).contains("visitor"))
                 }
                 assertTrue("Could not capture Settings/$section screenshot",
                     device.takeScreenshot(File(screenshotDir, "settings-${section.lowercase()}.png")))
