@@ -52,7 +52,7 @@ object RelayAgent {
             var retry = 1_000L
             while (running && generation == runGeneration && !Thread.currentThread().isInterrupted) {
                 try {
-                    streamOnce(app, endpoint, token)
+                    streamOnce(app, endpoint, token, runGeneration)
                     retry = 1_000L
                 } catch (error: Exception) {
                     if (running) {
@@ -86,9 +86,13 @@ object RelayAgent {
         worker = null
     }
 
-    private fun streamOnce(context: Context, endpoint: String, token: String) {
+    private fun streamOnce(context: Context, endpoint: String, token: String, runGeneration: Long) {
         val connection = URL("$endpoint/v1/device/relay/stream").openConnection() as HttpURLConnection
         streamConnection = connection
+        if (!running || generation != runGeneration) {
+            connection.disconnect()
+            return
+        }
         try {
             connection.requestMethod = "GET"
             connection.connectTimeout = 10_000
