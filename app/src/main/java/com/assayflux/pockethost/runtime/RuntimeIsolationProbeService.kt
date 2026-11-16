@@ -18,7 +18,7 @@ import java.net.Socket
 class RuntimeIsolationProbeService : Service() {
     private val probeBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code == INTERFACE_TRANSACTION) {
+            if (code == IBinder.INTERFACE_TRANSACTION) {
                 reply?.writeString(DESCRIPTOR)
                 return true
             }

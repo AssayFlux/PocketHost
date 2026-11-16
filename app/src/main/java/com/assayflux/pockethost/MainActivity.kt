@@ -11,13 +11,6 @@ import android.widget.Toast
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Timeline
-import androidx.compose.material.icons.outlined.School
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
 import androidx.biometric.BiometricManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -446,66 +439,12 @@ private fun PocketHostDashboard() {
         val palette = MaterialTheme.colorScheme
         Scaffold(
             containerColor = palette.background,
-            topBar = {
-                Surface(color = palette.surface, tonalElevation = 1.dp) {
-                    Row(
-                        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            modifier = Modifier.size(42.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = palette.primary
-                        ) {
-                            Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                Text("AF", color = palette.onPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text("Pocket Host", color = palette.onSurface,
-                                fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("ASSAYFLUX  ·  $selectedTab", color = palette.onSurfaceVariant,
-                                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = if (hosting) Color(0xFFE8F3E9) else palette.surfaceVariant
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                            ) {
-                                Box(Modifier.size(7.dp).clip(CircleShape)
-                                    .background(if (hosting) Color(0xFF2E7D32) else palette.onSurfaceVariant))
-                                Text(if (hosting) "Live" else "Offline",
-                                    color = if (hosting) Color(0xFF246B35) else palette.onSurfaceVariant,
-                                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-            },
+            topBar = { PocketHostTopBar(selectedTab = selectedTab, hosting = hosting) },
             bottomBar = {
-                NavigationBar(modifier = Modifier.imePadding(), containerColor = palette.surface) {
-                    listOf("Dashboard", "Sites", "Activity", "Learn", "Settings").forEach { destination ->
-                        val symbol = when (destination) {
-                            "Dashboard" -> Icons.Outlined.Dashboard
-                            "Sites" -> Icons.Outlined.FolderOpen
-                            "Activity" -> Icons.Outlined.Timeline
-                            "Learn" -> Icons.Outlined.School
-                            else -> Icons.Outlined.Settings
-                        }
-                        NavigationBarItem(
-                            selected = selectedTab == destination,
-                            onClick = { selectedTab = destination },
-                            icon = { Icon(symbol, contentDescription = destination) },
-                            label = { Text(destination, fontSize = 12.sp, maxLines = 1) },
-                            alwaysShowLabel = true
-                        )
-                    }
-                }
+                PocketHostNavigationBar(
+                    selectedTab = selectedTab,
+                    onDestinationSelected = { selectedTab = it }
+                )
             }
         ) { innerPadding ->
             Surface(Modifier.fillMaxSize(), color = palette.background) {

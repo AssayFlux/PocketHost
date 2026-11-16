@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
-import android.os.Process
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -53,7 +52,7 @@ class RuntimeIsolationProbeTest {
             assertTrue("Isolated probe service connection timed out", connected.await(10, TimeUnit.SECONDS))
             val binder = checkNotNull(binderRef.get())
             val workerUid = transactInt(binder, RuntimeIsolationProbeService.TRANSACTION_UID)
-            assertNotEquals("Probe must run under a distinct Android UID", Process.myUid(), workerUid)
+            assertNotEquals("Probe must run under a distinct Android UID", context.applicationInfo.uid, workerUid)
 
             val canRead = transactInt(
                 binder,
