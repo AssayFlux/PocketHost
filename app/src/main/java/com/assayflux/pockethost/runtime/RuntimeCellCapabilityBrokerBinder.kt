@@ -5,7 +5,6 @@ import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.Parcelable
-import com.assayflux.pockethost.worker.RuntimeCellCapabilityBrokerProtocol
 
 /**
  * Host-side Binder adapter for per-cell filesystem capabilities.
@@ -27,18 +26,18 @@ class RuntimeCellCapabilityBrokerBinder(
         val callerUid = Binder.getCallingUid()
         return try {
             when (code) {
-                RuntimeCellCapabilityBrokerProtocol.TRANSACTION_ISSUE -> {
+                TRANSACTION_ISSUE -> {
                     val leaseId = requireNotNull(data.readString()) { "lease_id_required" }
                     val capability = broker.issue(leaseId, callerUid)
                     reply.writeNoException()
                     reply.writeString(capability)
                     true
                 }
-                RuntimeCellCapabilityBrokerProtocol.TRANSACTION_OPEN_READ_ONLY -> {
+                TRANSACTION_OPEN_READ_ONLY -> {
                     val leaseId = requireNotNull(data.readString()) { "lease_id_required" }
                     val capability = requireNotNull(data.readString()) { "capability_required" }
                     val relativePath = requireNotNull(data.readString()) { "relative_path_required" }
-                    require(relativePath.length <= RuntimeCellCapabilityBrokerProtocol.MAX_RELATIVE_PATH_CHARS) { "relative_path_too_long" }
+                    require(relativePath.length <= MAX_RELATIVE_PATH_CHARS) { "relative_path_too_long" }
                     val descriptor = broker.openReadOnly(leaseId, capability, callerUid, relativePath)
                     try {
                         reply.writeNoException()
@@ -48,11 +47,11 @@ class RuntimeCellCapabilityBrokerBinder(
                     }
                     true
                 }
-                RuntimeCellCapabilityBrokerProtocol.TRANSACTION_WRITE_BYTES -> {
+                TRANSACTION_WRITE_BYTES -> {
                     val leaseId = requireNotNull(data.readString()) { "lease_id_required" }
                     val capability = requireNotNull(data.readString()) { "capability_required" }
                     val relativePath = requireNotNull(data.readString()) { "relative_path_required" }
-                    require(relativePath.length <= RuntimeCellCapabilityBrokerProtocol.MAX_RELATIVE_PATH_CHARS) { "relative_path_too_long" }
+                    require(relativePath.length <= MAX_RELATIVE_PATH_CHARS) { "relative_path_too_long" }
                     val append = data.readInt() != 0
                     val content = requireNotNull(data.createByteArray()) { "content_required" }
                     val written = broker.writeBytes(leaseId, capability, callerUid, relativePath, content, append)
@@ -70,8 +69,8 @@ class RuntimeCellCapabilityBrokerBinder(
 
     companion object {
         const val DESCRIPTOR = RuntimeCellCapabilityBrokerProtocol.DESCRIPTOR
-        const val TRANSACTION_ISSUE = RuntimeCellCapabilityBrokerProtocol.TRANSACTION_ISSUE
-        const val TRANSACTION_OPEN_READ_ONLY = RuntimeCellCapabilityBrokerProtocol.TRANSACTION_OPEN_READ_ONLY
-        const val TRANSACTION_WRITE_BYTES = RuntimeCellCapabilityBrokerProtocol.TRANSACTION_WRITE_BYTES
+        const val TRANSACTION_ISSUE = TRANSACTION_ISSUE
+        const val TRANSACTION_OPEN_READ_ONLY = TRANSACTION_OPEN_READ_ONLY
+        const val TRANSACTION_WRITE_BYTES = TRANSACTION_WRITE_BYTES
     }
 }
