@@ -8,6 +8,7 @@ import android.os.Parcel
 import android.os.Process
 import android.os.ParcelFileDescriptor
 import android.system.Os
+import android.system.OsConstants
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -61,6 +62,38 @@ open class RuntimeIsolationProbeService : Service() {
                     }
                     reply?.writeInt(if (acceptedRequest) 1 else 0)
                 }
+                TRANSACTION_PROJECT_DIRECTORY -> {
+                    val directory = ParcelFileDescriptor.CREATOR.createFromParcel(data)
+                    val base = "/proc/self/fd/${directory.fd}"
+                    fun canRead(relative: String): Boolean = runCatching {
+                        val fd = Os.open("$base/$relative", OsConstants.O_RDONLY, 0)
+                        try {
+                            val buffer = ByteArray(64)
+                            Os.read(fd, buffer, 0, buffer.size) > 0
+                        } finally {
+                            Os.close(fd)
+                        }
+                    }.getOrDefault(false)
+                    val ownFileReadable = canRead("marker.txt")
+                    val siblingFileReadable = canRead("../sibling/secret.txt")
+                    val created = runCatching {
+                        val fd = Os.open(
+                            "$base/worker-created.txt",
+                            OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_EXCL,
+                            0x1A4
+                        )
+                        try {
+                            val bytes = "created-by-isolated-cell".toByteArray(Charsets.UTF_8)
+                            Os.write(fd, bytes, 0, bytes.size)
+                        } finally {
+                            Os.close(fd)
+                        }
+                        true
+                    }.getOrDefault(false)
+                    directory.close()
+                    reply?.writeInt((if (ownFileReadable) 1 else 0) or
+                        (if (siblingFileReadable) 2 else 0) or (if (created) 4 else 0))
+                }
                 else -> return super.onTransact(code, data, reply, flags)
             }
             return true
@@ -75,6 +108,7 @@ open class RuntimeIsolationProbeService : Service() {
         const val TRANSACTION_CAN_READ = IBinder.FIRST_CALL_TRANSACTION + 1
         const val TRANSACTION_LOOPBACK = IBinder.FIRST_CALL_TRANSACTION + 2
         const val TRANSACTION_BROKERED_SOCKET = IBinder.FIRST_CALL_TRANSACTION + 3
+        const val TRANSACTION_PROJECT_DIRECTORY = IBinder.FIRST_CALL_TRANSACTION + 4
     }
 }
 

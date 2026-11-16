@@ -7,6 +7,8 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import android.system.Os
+import android.system.OsConstants
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -110,6 +112,47 @@ class RuntimeIsolationProbeTest {
                 client.close()
                 accepted.close()
             }
+
+            // Probe whether an isolated UID can use only a directory capability passed
+            // by the host, while the app-private parent and sibling project stay closed.
+            val capabilityParent = File(context.filesDir, "isolation-fs-" + System.nanoTime()).apply { mkdirs() }
+            val projectRoot = File(capabilityParent, "project-a").apply { mkdirs() }
+            val siblingRoot = File(capabilityParent, "sibling").apply { mkdirs() }
+            val markerFile = File(projectRoot, "marker.txt").apply { writeText("project-a-only") }
+            File(siblingRoot, "secret.txt").writeText("project-b-secret")
+            Os.chmod(capabilityParent.absolutePath, 0x1C0) // 0700: inaccessible without a passed capability.
+            Os.chmod(projectRoot.absolutePath, 0x1FF) // 0777: access only through the passed directory FD.
+            Os.chmod(siblingRoot.absolutePath, 0x1FF)
+            Os.chmod(markerFile.absolutePath, 0x1A4) // 0644.
+            Os.chmod(File(siblingRoot, "secret.txt").absolutePath, 0x1A4)
+            val directoryFd = ParcelFileDescriptor.adoptFd(
+                Os.open(projectRoot.absolutePath, OsConstants.O_RDONLY or OsConstants.O_DIRECTORY, 0)
+            )
+            val directoryData = Parcel.obtain()
+            val directoryReply = Parcel.obtain()
+            val directoryCapabilities = try {
+                directoryData.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
+                directoryFd.writeToParcel(directoryData, 0)
+                check(binder.transact(
+                    RuntimeIsolationProbeService.TRANSACTION_PROJECT_DIRECTORY,
+                    directoryData, directoryReply, 0
+                )) { "Project directory capability transaction failed." }
+                directoryReply.readException()
+                directoryReply.readInt()
+            } finally {
+                directoryFd.close()
+                directoryData.recycle()
+                directoryReply.recycle()
+            }
+            assertTrue("Isolated cell could not read its explicitly shared project directory",
+                directoryCapabilities and 1 != 0)
+            assertFalse("Isolated cell traversed into a sibling project directory",
+                directoryCapabilities and 2 != 0)
+            assertTrue("Isolated cell could not create data inside its own project directory",
+                directoryCapabilities and 4 != 0)
+            assertTrue("Host could not read the isolated cell's project-local output",
+                File(projectRoot, "worker-created.txt").readText() == "created-by-isolated-cell")
+            capabilityParent.deleteRecursively()
 
             val canRead = transactInt(
                 binder,
