@@ -7,15 +7,16 @@ import java.security.SecureRandom
 /**
  * Lease-bound capability broker for project files.
  *
- * This is host-process code. The Binder entry point must authenticate the calling cell
- * and pass its observed UID; never accept a UID supplied by project code. A capability
- * is valid only for the exact active lease, project, and isolated UID that received it.
+ * The trusted host resolves a project ID to its registered root. Callers cannot supply
+ * an arbitrary path when requesting a capability, preventing a valid lease for project A
+ * from accidentally being bound to project B's directory.
  *
- * This broker deliberately exposes individual regular-file reads and bounded write
- * operations, not directory descriptors or host filesystem paths.
+ * This is host-process code. The future Binder entry point must authenticate the calling
+ * cell and pass Binder.getCallingUid(); never accept a UID from a parcel or project code.
  */
 class RuntimeCellCapabilityBroker(
-    private val leases: RuntimeCellLeaseRegistry
+    private val leases: RuntimeCellLeaseRegistry,
+    private val projectRootFor: (projectId: String) -> File?
 ) {
     private data class Grant(
         val leaseId: String,
@@ -28,16 +29,18 @@ class RuntimeCellCapabilityBroker(
     private val random = SecureRandom()
     private val grants = HashMap<String, Grant>()
 
-    /** Issue a capability only after the registry has observed an ACTIVE isolated cell. */
-    fun issue(leaseId: String, projectRoot: File): String = synchronized(lock) {
+    /** Resolve the root from the lease's immutable project ID; callers cannot choose it. */
+    fun issue(leaseId: String): String = synchronized(lock) {
         val lease = leases.snapshot().singleOrNull { it.id == leaseId }
             ?: throw SecurityException("Unknown cell lease.")
         check(lease.state == RuntimeCellLeaseRegistry.State.ACTIVE) {
             "Filesystem access requires an active isolated cell."
         }
         val uid = requireNotNull(lease.isolatedUid) { "Active lease has no isolated UID." }
-        val root = projectRoot.absoluteFile.toPath().normalize().toFile()
-        require(root.isDirectory) { "Project root must exist." }
+        val root = requireNotNull(projectRootFor(lease.projectId)) {
+            "No registered filesystem root exists for this project."
+        }.canonicalFile
+        require(root.isDirectory) { "Registered project root must exist and be a directory." }
         val token = ByteArray(32).also(random::nextBytes)
             .joinToString("") { "%02x".format(it) }
         grants[token] = Grant(lease.id, lease.projectId, uid, root)
@@ -46,7 +49,7 @@ class RuntimeCellCapabilityBroker(
 
     /**
      * Open one read-only regular file. callerUid must come from Binder.getCallingUid()
-     * in the trusted host-side IPC boundary, not from an IPC parcel field.
+     * inside the trusted host-side Binder transaction, not from an IPC parcel field.
      */
     fun openReadOnly(
         leaseId: String,
