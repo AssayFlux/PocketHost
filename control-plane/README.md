@@ -39,6 +39,7 @@ The returned device token is displayed once. Enter it in PocketHost → Advanced
 - Queue allowlisted site, tunnel, runtime and resource actions.
 - Upload a website ZIP (up to 50 MiB); the phone downloads it using its device token, checks SHA-256, validates it and activates a new release.
 - Create/revoke Editor and Viewer users; bootstrap token is Owner.
+- Rotate a device token immediately; the previous credential is invalidated and the replacement is returned once.
 - Read latest 200 audit events.
 
 Supported configuration keys include `pythonMaxWorkers` (2–16), `nodeHeapMb` (96–512) and `tunnelEnabled` (boolean). The phone validates settings before applying them.
@@ -50,6 +51,8 @@ Supported configuration keys include `pythonMaxWorkers` (2–16), `nodeHeapMb` (
 - Commands are allowlisted; no arbitrary shell or SQL endpoint is exposed.
 - Command delivery uses a lease and expiry. The phone persists command-start and final-result markers before acknowledgement. If the process is interrupted mid-action, the agent reports an interrupted result rather than blindly repeating the side effect.
 - Device revocation invalidates subsequent device API calls and removes device-scoped queued data.
+- Administrative mutations (user/device lifecycle, configuration, command/deployment queueing, token rotation and command acknowledgement) commit with their audit event in the same database transaction.
+- Deployment ZIP blobs are created without overwrite, flushed to storage, and removed automatically if the database transaction fails; blob deletion after successful acknowledgement/revocation is post-commit.
 - CORS is restricted to the configured exact console origin.
 - Keep the API and database private behind the selected TLS/reverse-proxy topology.
 
