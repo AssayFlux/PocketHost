@@ -3,6 +3,7 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.runtime.PythonHostRuntime
+import com.assayflux.pockethost.runtime.RuntimeWorkerClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -52,6 +53,7 @@ class PythonRuntimeSmokeTest {
                 context.applicationInfo.uid, runtimeUid)
         } finally {
             assertEquals("STOPPED", PythonHostRuntime.stop(context))
+            RuntimeWorkerClient.shutdownWorker(context)
             prefs.edit().putBoolean("trusted_runtime_code_ack", false).commit()
             root.deleteRecursively()
         }
