@@ -253,6 +253,12 @@ class RuntimeWorkerService : Service() {
                     TRANSACTION_NODE_STOP -> stopNode()
                     TRANSACTION_NODE_STATUS -> nodeStatus()
                     TRANSACTION_NODE_METRICS -> NodeRuntimeStateStore.metrics(this@RuntimeWorkerService)?.toString() ?: "{}"
+                    TRANSACTION_SHUTDOWN -> {
+                        runCatching { pythonModule()?.callAttr("stop") }
+                        runCatching { stopService(Intent(this@RuntimeWorkerService, NodeHostingService::class.java)) }
+                        stopSelf()
+                        "STOPPING"
+                    }
                     else -> return super.onTransact(code, data, reply, flags)
                 }
                 reply?.writeNoException()
@@ -308,6 +314,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_NODE_STOP = IBinder.FIRST_CALL_TRANSACTION + 11
         const val TRANSACTION_NODE_STATUS = IBinder.FIRST_CALL_TRANSACTION + 12
         const val TRANSACTION_NODE_METRICS = IBinder.FIRST_CALL_TRANSACTION + 13
+        const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
