@@ -443,6 +443,7 @@ object ApplicationBackupManager {
                     java.nio.file.Files.exists(directory.toPath(), noFollow)
             }
             ?.sortedBy { it.name } ?: emptyList()
+        if (directories.isNotEmpty()) requireAllRuntimesStopped(context)
         var recovered = false
         for (directory in directories) {
             if (java.nio.file.Files.isSymbolicLink(directory.toPath()) ||
