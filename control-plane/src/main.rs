@@ -707,7 +707,7 @@ async fn create_relay_site(
         .execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'relay.hostname.create',$2,$3)")
         .bind(&actor.name).bind(id.to_string())
-        .bind(json!({"deviceId":device,"hostname":hostname,"siteId":input.site_id}))
+        .bind(json!({"deviceId":device,"hostname":hostname.clone(),"siteId":input.site_id.clone()}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
     Ok((StatusCode::CREATED, Json(json!({
@@ -827,7 +827,7 @@ async fn relay_visitor(
         .ok_or((StatusCode::NOT_FOUND, "relay_hostname_not_found".into()))?;
     let device: Uuid = route.get("device_id");
     let site_id: String = route.get("site_id");
-    if ![Method::GET, Method::HEAD, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS].contains(&parts.method) {
+    if ![Method::GET, Method::HEAD, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS].contains(&parts.method) {
         return Err((StatusCode::METHOD_NOT_ALLOWED, "relay_method_not_allowed".into()));
     }
     let path = parts.uri.path_and_query().map(|value| value.as_str()).unwrap_or("/");
