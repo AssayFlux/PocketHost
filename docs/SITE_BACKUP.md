@@ -66,3 +66,11 @@ Credentials remain device-bound and must be configured independently on a replac
 
 If activation is interrupted after the previous static site has been moved into release history, the next app startup checks the active website entry page. When the active site is missing or invalid, Pocket Host restores the newest retained release with a valid root index.html and preserves invalid active data for diagnosis. This recovery path is instrumented in source; API 26/33/35 execution and full backup-restore process-death recovery remain unverified.
 
+## Crash-recoverable full restore transaction — 2026-11-16
+
+Full application restore now writes and fsyncs a versioned recovery journal before moving the existing Python, Node, custom static roots or site registry/settings. The journal records the previous registry snapshot, non-secret settings, previous static-release marker and which project roots existed. Directory changes remain same-filesystem renames; a separate fsynced commit marker is written only after the new site, routes and safe settings have all been applied.
+
+On the next app launch, Pocket Host checks for unfinished restore transactions before ordinary static-site recovery. If a transaction has no commit marker, it restores prior runtime directories and custom roots, rolls the static site back only when a new release appeared after the snapshot, then restores the prior route registry and settings. A committed transaction is only cleaned up. If recovery cannot complete, the journal and remaining rollback files are preserved and an operational error is recorded.
+
+Instrumentation source simulates process interruption after partial Python, static-site, custom-root, route and settings mutation. API 26/33/35 execution, low-storage and real process-kill/device-reboot fault injection remain unverified.
+
