@@ -232,3 +232,11 @@ Update this file with exact evidence whenever the baseline changes.
 
 - a3cb89ce6cc42ee738360d1e0217a05424077e64 extends the API-matrix UI test to seed a temporary hostname route, exercise Private visitor credential issuance and revocation against SiteRegistry, and verify terminal-free folder/ZIP import and backup actions. It remains unexecuted.
 
+## Gate 5–7 follow-up audit — 2026-11-16
+
+- Main HEAD at this follow-up audit: 06c7c29b82994f67828e9e2a1c5b406377573945.
+- The latest UI test source seeds a unique registered site and exercises the private visitor credential create/revoke flow as well as terminal-free publishing entry points. It captures screenshots and accessibility hierarchy XML for the main destinations and Settings subsections.
+- The combined commit-status lookup returned no status entries and the available commit-workflow lookup returned no PR-triggered runs for this direct-main commit. This does not prove success or failure. The Android integration workflow and Rust quality workflow must be checked in GitHub Actions for exact-SHA logs and artifacts.
+- Gate 5 still needs executed slow-header/multiplexed-load, representative workload and target-phone thermal/battery evidence. Gate 6 still needs executed API-matrix, low-storage, forced process-death, reboot/Doze/network/service-death evidence. Gate 7 still needs executed UI artifacts and human TalkBack, font-scale, contrast and compact/landscape review.
+- Do not close Gates 5, 6 or 7 on source presence alone.
+
