@@ -3,6 +3,7 @@ package com.assayflux.pockethost.management
 import android.content.Context
 import android.util.Base64
 import org.json.JSONObject
+import org.json.JSONArray
 import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.BufferedReader
 import java.io.BufferedInputStream
@@ -154,6 +155,7 @@ object RelayAgent {
                 .put("id", id)
                 .put("status", localResponse.status)
                 .put("headers", localResponse.headers)
+                .put("set_cookies", JSONArray(localResponse.setCookies))
                 .put("body_base64", Base64.encodeToString(localResponse.body, Base64.NO_WRAP)))
         } catch (error: Exception) {
             runCatching {
@@ -174,7 +176,7 @@ object RelayAgent {
     }
 
 
-    private data class LocalResponse(val status: Int, val headers: JSONObject, val body: ByteArray)
+    private data class LocalResponse(val status: Int, val headers: JSONObject, val body: ByteArray, val setCookies: List<String>)
 
     /** Raw loopback HTTP preserves the visitor Host header; HttpURLConnection filters it. */
     private fun forwardLocalRequest(
@@ -234,6 +236,7 @@ object RelayAgent {
             val status = statusParts[1].toIntOrNull() ?: throw IllegalStateException("Invalid local HTTP status.")
             require(status in 100..599) { "Invalid local HTTP status." }
             val headers = LinkedHashMap<String, String>()
+            val setCookies = ArrayList<String>()
             var headerBytes = 0
             while (true) {
                 val line = readLine()
@@ -246,9 +249,10 @@ object RelayAgent {
                 val value = line.substring(split + 1).trim()
                 if (name in setOf("cache-control", "content-disposition", "content-encoding",
                         "content-language", "content-range", "content-type", "etag", "expires",
-                        "last-modified", "location", "vary") && value.length <= 8_192) {
+                        "last-modified", "location", "vary", "www-authenticate") && value.length <= 8_192) {
                     headers[name] = if (headers.containsKey(name)) "${headers[name]}, $value" else value
                 }
+                if (name == "set-cookie" && value.length <= 8_192) setCookies.add(value)
                 if (name == "transfer-encoding" || name == "content-length") headers[name] = value
             }
             val response = ByteArrayOutputStream()
@@ -302,8 +306,8 @@ object RelayAgent {
             val jsonHeaders = JSONObject()
             headers.filterKeys { it in setOf("cache-control", "content-disposition", "content-encoding",
                 "content-language", "content-range", "content-type", "etag", "expires",
-                "last-modified", "location", "vary") }.forEach { (name, value) -> jsonHeaders.put(name, value) }
-            return LocalResponse(status, jsonHeaders, response.toByteArray())
+                "last-modified", "location", "vary", "www-authenticate") }.forEach { (name, value) -> jsonHeaders.put(name, value) }
+            return LocalResponse(status, jsonHeaders, response.toByteArray(), setCookies)
         }
     }
 
