@@ -29,11 +29,11 @@ class RuntimeWorkerSeccompTest {
     @Test(timeout = 30_000)
     fun isolatedCellDeniesNewSocketsAndConnectButAcceptsHostUnixListener() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val path = context.filesDir.resolve("seccomp-cell-${System.nanoTime()}").absolutePath
-        val address = LocalSocketAddress(path, LocalSocketAddress.Namespace.FILESYSTEM)
-        val listener = LocalServerSocket(address)
+        val socketName = "pockethost-seccomp-" + System.nanoTime()
+        val address = LocalSocketAddress(socketName)
+        val listener = LocalServerSocket(socketName)
         val outbound = Os.socket(OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP)
-        val listenerPfd = ParcelFileDescriptor.dup(listener.fileDescriptor)
+        val listenerPfd = ParcelFileDescriptor.dup(listener.getFileDescriptor())
         val outboundPfd = ParcelFileDescriptor.dup(outbound)
         val connected = CountDownLatch(1)
         val binderRef = AtomicReference<IBinder?>()

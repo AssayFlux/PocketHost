@@ -126,10 +126,10 @@ class RuntimeIsolationProbeTest {
 
             // API 26 SELinux denies isolated_app access to a Binder-passed TCP socket.
             // Use the filesystem Unix-domain listener selected for production transport.
-            val socketPath = File(context.filesDir, "isolation-listener-" + System.nanoTime()).absolutePath
-            val address = LocalSocketAddress(socketPath, LocalSocketAddress.Namespace.FILESYSTEM)
-            val localServer = LocalServerSocket(address)
-            val listenerPfd = ParcelFileDescriptor.dup(localServer.fileDescriptor)
+            val socketName = "pockethost-isolation-" + System.nanoTime()
+            val address = LocalSocketAddress(socketName)
+            val localServer = LocalServerSocket(socketName)
+            val listenerPfd = ParcelFileDescriptor.dup(localServer.getFileDescriptor())
             val visitorOne = LocalSocket()
             val visitorTwo = LocalSocket()
             visitorOne.connect(address)
@@ -168,7 +168,6 @@ class RuntimeIsolationProbeTest {
                 visitorOne.close()
                 visitorTwo.close()
                 localServer.close()
-                File(socketPath).delete()
             }
 
             val canRead = transactInt(
