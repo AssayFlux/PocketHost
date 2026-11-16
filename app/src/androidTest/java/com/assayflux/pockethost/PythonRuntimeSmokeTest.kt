@@ -24,9 +24,11 @@ class PythonRuntimeSmokeTest {
         }
         val root = File(context.cacheDir, "pockethost-python-${System.nanoTime()}")
         assertTrue(root.mkdirs())
+        File(root, ".env").writeText("HOST_SECRET=must-not-transfer")
         File(root, "wsgi.py").writeText(
             "def application(environ, start_response):\n" +
-                "    import os\n    body = str(os.getuid()).encode('ascii')\n" +
+                "    import os\n" +
+                "    body = (str(os.getuid()) + ':' + str(os.path.exists(os.path.join(os.path.dirname(__file__), '.env')))).encode('ascii')\n" +
                 "    start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', str(len(body)))])\n" +
                 "    return [body]\n"
         )
@@ -48,7 +50,9 @@ class PythonRuntimeSmokeTest {
             }
             assertTrue(response.startsWith("HTTP/1.0 200"))
             assertTrue(response.contains("200 OK"))
-            val runtimeUid = response.substringAfter("\r\n\r\n").trim().toInt()
+            val body = response.substringAfter("\r\n\r\n").trim().split(":")
+            val runtimeUid = body.first().toInt()
+            assertEquals("False", body.getOrElse(1) { "missing" })
             org.junit.Assert.assertNotEquals("Python must execute under companion UID, not host UID",
                 context.applicationInfo.uid, runtimeUid)
         } finally {
