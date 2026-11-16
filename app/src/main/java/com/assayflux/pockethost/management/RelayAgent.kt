@@ -7,8 +7,6 @@ import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.BufferedReader
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
