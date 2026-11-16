@@ -212,8 +212,8 @@ fn per_site_connection_limit(site_count: usize) -> usize {
 }
 
 /// Tokio's semaphore is FIFO-fair: requests for a busy site wait in arrival order,
-/// but only for the same bounded interval as global admission. The accept loop
-/// already bounds live connection tasks, so this cannot create an unbounded queue.
+/// but only for the same bounded interval as global admission. The global socket
+/// queue is separately capped; HTTP/2 request concurrency remains protocol-bounded.
 async fn acquire_site_permit(
     limiter: Arc<Semaphore>,
     wait: Duration,
