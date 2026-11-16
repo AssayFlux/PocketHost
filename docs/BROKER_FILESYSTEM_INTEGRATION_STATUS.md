@@ -1,7 +1,7 @@
 # Broker and project-filesystem integration status
 
 **Status: partial source implementation; not an accepted isolation boundary.**  
-**Owner rule:** Android compilation and device/instrumentation testing are deferred until Gate 8.
+**Owner rule (updated 2026-11-16):** intermediate Android compilation, ABI packaging and API 26/33/35 emulator instrumentation are required during Gates 2–4. Gate 8 retains final signed release, physical-device acceptance and independent review.
 
 ## Implemented source on main
 
