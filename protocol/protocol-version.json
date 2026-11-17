@@ -1,0 +1,27 @@
+{
+  "protocol": "pockethost.device",
+  "version": "1.0",
+  "schema_dialect": "https://json-schema.org/draft/2020-12/schema",
+  "minimum_compatible_minor": 0,
+  "maximum_compatible_minor": 0,
+  "roles": [
+    "storage",
+    "traffic",
+    "build_publish",
+    "native_job",
+    "backup_recovery",
+    "edge_gateway"
+  ],
+  "transports": [
+    "lan",
+    "ble",
+    "usb",
+    "remote_https"
+  ],
+  "mobile_modes": [
+    "server_only",
+    "command_center_server"
+  ],
+  "job_delivery": "at_least_once",
+  "job_mutations": "idempotent_required"
+}
