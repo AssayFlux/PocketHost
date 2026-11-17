@@ -29,7 +29,16 @@ TypeScript is not browser-native and must not be served as if a browser could ex
 
 The initial built-in workflow must not silently promise full npm package installation, arbitrary native addons, server-side Node execution or a general-purpose build farm. Those are separate product decisions.
 
-## 3. Main-app boundaries
+## 3. Technology separation
+
+The accepted technology ownership and dependency boundaries are normative in [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md):
+
+- React, React DOM, TypeScript and Vite dependencies used by the browser operator console stay inside `web-console/`; none are bundled into the Android app.
+- The main app receives its own bundled TypeScript compiler/transpiler for website authoring. This is a compiler tool, not Node.js or a server-side runtime.
+- The main app's TypeScript workflow must work without npm, React, Vite, Node.js or the runtime companion. Full npm package resolution and arbitrary package scripts are explicitly out of scope for the initial baseline.
+- Python and Node.js remain separate optional server-side runtimes in `runtime-worker/`.
+
+## 4. Main-app boundaries
 
 - Basic HTML/CSS/JavaScript static hosting works without installing any extra runtime.
 - A failed TypeScript build leaves the previous active website unchanged.
@@ -38,7 +47,7 @@ The initial built-in workflow must not silently promise full npm package install
 - The main app does not bundle every server-side language runtime.
 - Optional runtime package management is a future, separately scoped Runtime Library feature, not a Step 4 exit requirement.
 
-## 4. Current implementation evidence
+## 5. Current implementation evidence
 
 Already present in the repository:
 - Android server app packages the Rust website engine through its native build.
@@ -52,7 +61,7 @@ Still required before the main-app baseline can be called verified:
 - Verify a fresh main-app installation serves HTML/CSS/JS without installing the runtime companion or any optional runtime.
 - Verify on supported Android ABIs and physical devices.
 
-## 5. Step 4 partial-close definition
+## 6. Step 4 partial-close definition
 
 **Partially closed:** the architecture and existing implementation establish the always-included HTML/CSS static-serving baseline. TypeScript is frozen as a built-in main-app toolchain capability, not an optional language runtime.
 
