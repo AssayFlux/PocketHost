@@ -12,8 +12,12 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
-from validate_protocol import load_contracts  # noqa: E402
+from runpy import run_path
+
+# The validator is intentionally named with a hyphen for its CLI path. Load
+# its public contract reader by path so test discovery does not import a
+# nonexistent underscore-named module.
+load_contracts = run_path(str(ROOT / "scripts" / "validate-protocol.py"))["load_contracts"]
 
 
 class EnrollmentAuthorityModel:
