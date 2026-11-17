@@ -38,10 +38,11 @@ This roadmap follows the five-step master plan. The mobile command center is the
 **Partial close boundary:** Step 4 is the main Pocket Host application and its built-in web-serving stack only. HTML and CSS are served by the bundled Rust engine. The required built-in TypeScript authoring/build capability must compile to browser JavaScript before publication; the compiler is not yet bundled or verified. The existing repository contains the Rust static-serving foundation; TypeScript compiler integration and acceptance remain implementation work.
 - Built-in main-app baseline: HTML, CSS, browser JavaScript, TypeScript-to-JavaScript build support, static assets and site routing.
 - Main-app website lifecycle, secure staging, preview and atomic publish approval.
+- **Workbench:** full multi-site project explorer and editor, workspace/production separation, diff/change review, durable local commits, isolated preview, deployment history and rollback. This is a required Step 4 workstream, not a sixth step; see [Workbench specification](WORKBENCH.md).
 - Build worker artifact handoff without bypassing owner approval.
 - Static serving must remain independent of any future optional runtime add-ons.
 
-**Step 4 does not include optional server-side language runtimes or a runtime companion.** Those are moved to the post-five-step Future Runtime Library plan in [FUTURE_RUNTIME_LIBRARY.md](FUTURE_RUNTIME_LIBRARY.md). Do not hold Step 4 open for those future add-ons. The Step 4 gate remains open only for the main-app baseline and publishing/physical-device acceptance.
+**Step 4 does not include optional server-side language runtimes or a runtime companion.** Those are moved to the post-five-step Future Runtime Library plan in [FUTURE_RUNTIME_LIBRARY.md](FUTURE_RUNTIME_LIBRARY.md). Do not hold Step 4 open for those future add-ons. The Step 4 gate remains open for the main-app baseline, Workbench workspace-to-release workflow, publishing/rollback and physical-device acceptance.
 
 ## Step 5 — Resilience and release
 - Independent Local Network, AssayFlux Relay and Cloudflare providers.
