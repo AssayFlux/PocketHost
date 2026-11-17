@@ -110,6 +110,7 @@ private val pocketHostNavItems = listOf(
     PocketHostNavItem("Devices", "Verified devices, roles and revocation", Icons.Outlined.Memory, "Devices"),
     PocketHostNavItem("Hosting", "Server lifecycle, port and local access", Icons.Outlined.Language, "Dashboard"),
     PocketHostNavItem("Websites & files", "Projects, import, publish and rollback", Icons.Outlined.FolderOpen, "Sites"),
+    PocketHostNavItem("Workbench", "Edit website code, review changes and commit drafts", Icons.Outlined.Code, "Workbench"),
     PocketHostNavItem("Relay & networking", "Cloudflare tunnel and network settings", Icons.Outlined.NetworkCheck, "Settings:Network"),
     PocketHostNavItem("Python & Node runtimes", "Runtime projects and trusted-code controls", Icons.Outlined.Code, "Settings:Runtimes"),
     PocketHostNavItem("Security & access", "Biometric app lock and visitor access controls", Icons.Outlined.Security, "Settings:Network"),
