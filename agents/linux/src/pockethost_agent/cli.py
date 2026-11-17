@@ -15,7 +15,19 @@ from .runner import execute_job
 ROOT = Path(os.environ.get("POCKETHOST_AGENT_HOME", Path.home() / ".local" / "state" / "pockethost-agent"))
 
 
-def main() -> None:
+def _load_active_grant(store: AgentStore, device_id: str) -> tuple[dict, str]:
+    grant_row = store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()
+    owner_row = store.db.execute("SELECT value FROM agent_state WHERE key='owner_public_key'").fetchone()
+    if not grant_row or not owner_row:
+        raise SystemExit("No verified role grant is installed.")
+    grant_data = json.loads(grant_row[0])
+    owner_key = owner_row[0]
+    policy = json.loads((Path(__file__).resolve().parent / "ROLE_CAPABILITY_POLICY.json").read_text())
+    verify_role_grant(grant_data, owner_key, device_id, store.get_generation(), policy)
+    return grant_data, owner_key
+
+
+def main() -> None
     parser = argparse.ArgumentParser(prog="pockethost-agent")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("identity", help="Create or display this Linux agent's public identity")
@@ -56,12 +68,11 @@ def main() -> None:
                 raise SystemExit("Poll interval must be between 0.25 and 60 seconds.")
             store.recover_interrupted_jobs()
             while True:
-                grant_row = store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()
-                owner_row = store.db.execute("SELECT value FROM agent_state WHERE key='owner_public_key'").fetchone()
-                if not grant_row or not owner_row:
+                try:
+                    grant_data, owner_key = _load_active_grant(store, device_id)
+                except (SystemExit, ValueError):
                     time.sleep(args.poll_interval)
                     continue
-                grant_data = json.loads(grant_row[0])
                 for source in sorted(inbox.glob("*.json")):
                     job_id = source.stem
                     try:
@@ -72,7 +83,10 @@ def main() -> None:
                         if not store.claim_job(job_id):
                             source.unlink(missing_ok=True)
                             continue
-                        verify_job_signature(job_data, owner_row[0])
+                        verify_job_signature(job_data, owner_key)
+                        # Re-check grant signature, expiry, generation and policy for every side effect.
+                        grant_data, owner_key = _load_active_grant(store, device_id)
+                        verify_job_signature(job_data, owner_key)
                         result = execute_job(job_data, grant_data)
                         store.complete_job(job_id, result)
                         output = results / f"{job_id}.json"
@@ -89,15 +103,11 @@ def main() -> None:
                         source.unlink(missing_ok=True)
                 time.sleep(args.poll_interval)
         elif args.command == "run-job":
-            row = store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()
-            if not row:
-                raise SystemExit("No verified role grant is installed.")
-            grant_data = json.loads(row[0])
+            grant_data, owner_key = _load_active_grant(store, device_id)
             job_data = json.loads(Path(args.job_json).read_text())
-            owner_key = store.db.execute("SELECT value FROM agent_state WHERE key='owner_public_key'").fetchone()
-            if not owner_key:
-                raise SystemExit("No owner verification key is stored.")
-            verify_job_signature(job_data, owner_key[0])
+            verify_job_signature(job_data, owner_key)
+            grant_data, owner_key = _load_active_grant(store, device_id)
+            verify_job_signature(job_data, owner_key)
             result = execute_job(job_data, grant_data)
             print(json.dumps({"result": result, "sha256": __import__("hashlib").sha256(
                 json.dumps(result, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}, indent=2))
