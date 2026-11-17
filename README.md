@@ -421,3 +421,6 @@ The repository is distributed under the Apache License 2.0. Third-party runtimes
 ## Current engineering plan
 
 The authoritative implementation sequence, modular optional-runtime architecture, security model and gate acceptance criteria are maintained in [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) (Master Engineering Plan V2). Pocket Host uses one required host app and optional independently installable language runtime packs; static hosting does not require any runtime. Package separation by language is not per-project isolation. See the master plan before implementing or reporting gate completion.
+
+
+**Connectivity choice:** Pocket Host includes two independent optional public tunnel providers: first-party AssayFlux Relay and Cloudflare Tunnel. Users may use either one or both concurrently, with separate provider health and per-site hostname routing. Local Network-only hosting remains available. Neither tunnel provider is mandatory, and a failure in one must not interrupt the other or local hosting. See the networking North Star and Master Engineering Plan V2.
