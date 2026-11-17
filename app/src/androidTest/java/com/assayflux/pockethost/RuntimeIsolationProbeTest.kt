@@ -17,6 +17,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.runtime.RuntimeIsolationProbeService
 import com.assayflux.pockethost.runtime.RuntimeProjectFileBroker
+import com.assayflux.pockethost.runtime.RuntimeCellCapabilityBroker
+import com.assayflux.pockethost.runtime.RuntimeCellCapabilityBrokerBinder
+import com.assayflux.pockethost.runtime.RuntimeCellLeaseRegistry
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -225,6 +228,73 @@ class RuntimeIsolationProbeTest {
             runCatching { context.unbindService(connection) }
             host.close()
             marker.delete()
+        }
+    }
+
+    @Test(timeout = 30_000)
+    fun isolatedUidObtainsOnlyItsOwnFileThroughRealHostBinderBroker() {
+        val root = File(context.cacheDir, "broker-cell-${System.nanoTime()}").apply { mkdirs() }
+        File(root, "marker.txt").writeText("project-a-through-real-binder")
+        val connected = CountDownLatch(1)
+        val binderRef = AtomicReference<IBinder?>()
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                binderRef.set(service)
+                connected.countDown()
+            }
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        val leases = RuntimeCellLeaseRegistry(context.applicationInfo.uid, capacity = 1)
+        var leaseId: String? = null
+        var broker: RuntimeCellCapabilityBroker? = null
+        try {
+            assertTrue(context.bindService(
+                Intent(context, RuntimeIsolationProbeService::class.java),
+                connection,
+                Context.BIND_AUTO_CREATE
+            ))
+            assertTrue("Isolated cell failed to bind", connected.await(10, TimeUnit.SECONDS))
+            val cellBinder = checkNotNull(binderRef.get())
+            val cellUid = transactInt(cellBinder, RuntimeIsolationProbeService.TRANSACTION_UID)
+            assertNotEquals(context.applicationInfo.uid, cellUid)
+
+            val lease = leases.reserve("broker-cell")
+            leaseId = lease.id
+            leases.activate(lease.id, cellUid)
+            broker = RuntimeCellCapabilityBroker(leases) { projectId ->
+                if (projectId == "broker-cell") root else null
+            }
+            val hostBroker = RuntimeCellCapabilityBrokerBinder(broker)
+            val data = Parcel.obtain()
+            val reply = Parcel.obtain()
+            val content = try {
+                data.writeInterfaceToken(RuntimeIsolationProbeService.DESCRIPTOR)
+                data.writeStrongBinder(hostBroker)
+                data.writeString(lease.id)
+                check(cellBinder.transact(
+                    RuntimeIsolationProbeService.TRANSACTION_HOST_BROKER_READ,
+                    data,
+                    reply,
+                    0
+                ))
+                reply.readException()
+                reply.readString()
+            } finally {
+                data.recycle()
+                reply.recycle()
+            }
+            assertTrue(
+                "The isolated UID must read its own project only through the real Binder broker",
+                content == "project-a-through-real-binder"
+            )
+        } finally {
+            broker?.close()
+            leaseId?.let { id ->
+                runCatching { leases.markProcessDied(id) }
+                runCatching { leases.release(id) }
+            }
+            runCatching { context.unbindService(connection) }
+            root.deleteRecursively()
         }
     }
 
