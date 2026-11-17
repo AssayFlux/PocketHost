@@ -9,7 +9,7 @@ The Android phone is the first website-serving node. It serves static website fi
 | Server only | Enabled | Hidden/disabled |
 | Command Center + Server | Enabled | Enabled when fleet release is accepted |
 
-Local static hosting is independent of the remote control plane, Relay, Cloudflare and optional language runtimes.
+Local static hosting is independent of the remote control plane, Relay, Cloudflare and optional language runtimes. Public access is an optional v0.1.0 layer; local/LAN hosting continues if a provider is stopped or unavailable.
 
 ## v0.1.0 website composition
 
@@ -45,12 +45,21 @@ v0.1.0 hosts already-built static output. For a Vite/React project, run the buil
 
 ## Host listener
 
-The Rust engine defaults to loopback. LAN mode explicitly binds to all network interfaces and must be user-enabled. The port is configurable. Public ingress is not a v0.1.0 release requirement.
+The Rust engine defaults to loopback. LAN mode explicitly binds to all network interfaces and must be user-enabled. The port is configurable. The public providers connect only to this website origin; they never expose the management API or arbitrary local ports.
 
 ## v0.1.1 Workbench publishing
 
 Workbench has a separate private draft workspace. Save and commit do not change the active release. Publishing later adds isolated preview, diff, immutable staging, digest verification, explicit owner approval, atomic activation and rollback. See [WORKBENCH.md](WORKBENCH.md).
 
-## v0.2.0 public ingress
+## v0.1.0 public domain hosting
 
-Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers. Public hostname verification, DNS/TLS, access policy and management-route isolation require external acceptance. Tunnel readiness is not proof of public reachability.
+Public ingress is delivered by two independent providers:
+
+- **Cloudflare Tunnel:** the Android app runs the owner-configured named tunnel as an outbound connector. Configure the Cloudflare public hostname to route to `http://127.0.0.1:<website-port>`. The tunnel token is stored encrypted by Android Keystore. Cloudflare terminates visitor TLS and routes the request to the local Rust HTTP origin.
+- **AssayFlux Relay:** the owner deploys the first-party Relay gateway on a public VPS/server. The Android host maintains an outbound authenticated HTTPS/SSE connection. The gateway accepts only DNS-verified hostnames and forwards bounded HTTP requests to the authenticated host session and selected site.
+
+Both providers must support visitor HTTP and HTTPS. HTTPS must present a valid certificate. HTTP redirects to HTTPS by default; plain HTTP content serving is an explicit owner opt-in and must be clearly marked insecure. A hostname is assigned to one provider at a time. Separate hostnames may use different providers; same-hostname active-active/failover requires a separate DNS/load-balancer layer and is not assumed.
+
+The Relay visitor listener and management API are separate listeners/hostnames. The public visitor hostname may reach only the website route. The device's local listener remains loopback/LAN scoped and is not opened directly to the Internet. Verify DNS, TLS, correct site content, unknown-host rejection, management-route denial and provider independence from mobile data or another external network. A local readiness probe is not proof of public reachability.
+
+See [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md), [AssayFlux Relay](ASSAYFLUX_RELAY.md) and [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md).
