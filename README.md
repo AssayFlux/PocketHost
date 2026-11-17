@@ -416,3 +416,8 @@ The repository is distributed under the Apache License 2.0. Third-party runtimes
 ---
 <p align="center"><strong>Designed by AssayFlux</strong></p>
 <p align="center"><sub>Build Deliberately - Host Responsibly - Verify Everything</sub></p>
+
+
+## Current engineering plan
+
+The authoritative implementation sequence, modular optional-runtime architecture, security model and gate acceptance criteria are maintained in [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) (Master Engineering Plan V2). Pocket Host uses one required host app and optional independently installable language runtime packs; static hosting does not require any runtime. Package separation by language is not per-project isolation. See the master plan before implementing or reporting gate completion.
