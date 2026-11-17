@@ -77,7 +77,7 @@ Pocket Host is a pre-release engineering project. The repository contains substa
       P-256 identity, signed short-lived enrollment challenges, metadata-bound proof, role grants and revocation foundation.
     </td>
     <td align="center" width="33%">
-      <img src="https://api.iconify.design/lucide/workers.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <img src="https://api.iconify.design/lucide/workflow.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>DEVICE WORKERS</strong><br>
       Linux preview agent with durable jobs, HTTPS polling and default-deny health/storage/backup snapshot operations.
     </td>
@@ -248,7 +248,7 @@ python -m unittest discover -s tests -p 'test_protocol_contracts.py' -v
 
 ### CI evidence
 
-The [Pocket Host quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) checks Rust, Python/Linux agent, browser console, Node metrics, Gradle wrapper and control-plane configuration/tests. The latest quality run at the previous documentation snapshot passed: [run 44046355538](https://github.com/AssayFlux/PocketHost/actions/runs/44046355538). CI does not by itself prove Android runtime execution, physical-device behavior, external public reachability or production security.
+The [Pocket Host quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs on pushes and pull requests targeting the default branch, Alpha. It checks Rust, Python/Linux agent, browser console, Node metrics, Gradle wrapper and control-plane configuration/tests. Use the live badge above and [workflow history](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) for the latest result. CI does not by itself prove Android runtime execution, physical-device behavior, external public reachability or production security.
 
 The Android integration workflow has compile-only and manual APK/emulator paths. APK packaging and emulator tests are not automatic on every push. No production APK, signed release or device certification is claimed by this README.
 
