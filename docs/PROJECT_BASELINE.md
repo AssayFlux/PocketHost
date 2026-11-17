@@ -1,53 +1,55 @@
-# Pocket Host 0.1.0 — Baseline
+# Pocket Host 0.1.0 — Repository Baseline
 
 ## Product identity
 
 - Product: AssayFlux Pocket Host
 - Version: 0.1.0
 - Canonical branch: main
-- Primary human interface: Android and iOS mobile command-center applications
-- System form: distributed self-hosting ecosystem
-- Core principle: independent components connected through authenticated contracts
+- Primary owner interface: Android or iPhone command center
+- Mobile modes: Command Center, Server, Command Center + Server
+- System form: verified, role-assigned device fleet
 
 ## Repository implementation inventory
 
-| Area | Current repository foundation | Product role |
+| Area | Existing foundation | 0.1.0 role |
 |---|---|---|
-| Android app | Kotlin, Jetpack Compose, AndroidX | Mobile command center and Android host client |
-| Android runtime companion | Separate Android package; Python/Node runtime integration | Runtime provider boundary |
-| Rust engine | Tokio/Hyper native library | Android website ingress and routing |
-| Remote management API | Android loopback API | Local owner management |
-| Remote control agent | Android agent polling configured control plane | Remote host connection |
-| Control plane | Rust/Axum, PostgreSQL, migrations, device commands, audit | Optional remote fleet coordination |
+| Android app | Kotlin, Jetpack Compose, AndroidX | Command center and optional mobile host |
+| Android runtime companion | Separate Android package; Python/Node integration | Language runtime provider on mobile serving node |
+| Rust engine | Tokio/Hyper native library | Mobile website ingress and routing |
+| Remote management API | Android loopback API | Local mobile management |
+| Remote control agent | Android agent polling configured control plane | Host connection foundation |
+| Control plane | Rust/Axum, PostgreSQL, migrations, commands and audit | Optional remote fleet coordination |
 | Browser console | React/TypeScript/Vite | Secondary operator client |
 | Cloudflare connector | cloudflared Android integration | Optional visitor ingress |
 | AssayFlux Relay | Rust visitor gateway and Android agent source | First-party bounded HTTP visitor ingress |
-| Tests/CI | Android instrumentation, Rust tests, Python/Node tests, console build, workflow validation | Engineering verification |
-| DemonCore | ESP32 MicroPython firmware, DCP, board profile and simulator | Separate MCU/edge-device project |
+| DemonCore | Separate ESP32 MicroPython firmware, DCP and board profiles | MCU/edge foundation |
 
-## Version baseline
+## Platform and role coverage
 
-The Android app, runtime companion, Rust website engine, control plane and browser console declare 0.1.0 in their current build metadata. The product release identity is 0.1.0. A common release manifest and cross-component compatibility matrix are required before a coordinated multi-platform distribution.
+- Android: application and mobile host foundation present; role model, verification ceremony and fleet worker roles require implementation/acceptance.
+- iOS: no native application workspace in this repository; command-center app is a planned deliverable.
+- Linux/Windows/macOS: no production host-agent installer is claimed.
+- Raspberry Pi/SBC: no named production board/OS profile is accepted.
+- MCU: DemonCore firmware/protocol foundation exists; each board, secure enrollment and capability needs physical acceptance.
 
-## Platform coverage
+## Current implementation boundaries
 
-- Android: application and host implementation present.
-- iOS: no native application workspace in this repository; must be implemented as a first-class mobile control client.
-- Linux/Windows/macOS: no host agent implementation is claimed by this baseline.
-- Raspberry Pi/SBC: no named board profile is accepted by this baseline.
-- MCU: DemonCore firmware/protocol foundation exists; each board and secure fleet capability requires physical acceptance.
+The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated in the Android app package/process; the Rust engine is a native library hosted by the app. The runtime companion is a separate package. Python and Node projects share its application UID, so this package boundary alone is not per-project isolation. The control plane is separately deployable and the browser console is a separate client.
 
-## Component separation assessment
-
-The repository contains logical modules, but not every module is yet an independent operating-system fault domain. The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated within the Android application package/process; the Rust engine is a native library hosted by that app. The runtime companion is a separate package, but Python and Node projects share its application UID. The remote control plane is separately deployable, and the browser console is a separate client. These boundaries are implementation facts, not proof that all desired isolation and failure-containment guarantees already pass.
-
-The 0.1.0 architecture requires independent supervisors, process identities, resource budgets, health and rollback for components according to their platform capabilities. The mobile command center must not be required for workloads to continue. Platform, runtime, security, tunnel, fleet and device support must be claimed only against named target tests and release evidence.
+The repository contains useful foundations, not yet the full device-fabric implementation. The following must not be inferred from the architecture documents:
+- verified multi-device pairing and role grants are not complete merely because device IDs or QR flows exist;
+- Bluetooth and USB transports are not supported until their platform-specific implementations and tests exist;
+- Linux, Windows, macOS and SBC installers are not complete;
+- the iOS app is not present;
+- storage, traffic, build/publish and backend worker roles are not production-ready merely because the role model is specified;
+- central runtime placement and per-project isolation require implementation and adversarial tests.
 
 ## Normative specifications
 
-- [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)
-- [MASTER_PLAN.md](MASTER_PLAN.md)
-- [ROADMAP.md](ROADMAP.md)
-- [UI_DESIGN.md](UI_DESIGN.md)
-- [SECURITY_ISOLATION_DESIGN.md](SECURITY_ISOLATION_DESIGN.md)
-- [REMOTE_CONTROL_ACCEPTANCE.md](REMOTE_CONTROL_ACCEPTANCE.md)
+- [System Architecture](SYSTEM_ARCHITECTURE.md)
+- [Master Plan](MASTER_PLAN.md)
+- [Host Agent and Role Contract](HOST_AGENT_CONTRACT.md)
+- [Roadmap](ROADMAP.md)
+- [UI Design](UI_DESIGN.md)
+- [Security Isolation](SECURITY_ISOLATION_DESIGN.md)
+- [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
