@@ -12,9 +12,9 @@ Pocket Host differentiates through a mobile-first owner experience, local-first 
 
 | Priority | Version | Product proof |
 |---|---|---|
-| P0 | v0.1.0 | A real website imports and serves from Android locally and over same-Wi-Fi LAN |
+| P0 | v0.1.0 | A real website imports and serves from Android locally, over same-Wi-Fi LAN and publicly through Cloudflare Tunnel or AssayFlux Relay on a custom domain |
 | P1 | v0.1.1 | Safe editing, isolated preview, versioned publishing and optional runtime integration |
-| P2 | v0.2.0 | Verified devices, bounded worker roles, authenticated coordination and public ingress |
+| P2 | v0.2.0 | Verified devices, bounded worker roles, authenticated coordination and multi-host Relay scaling/failover |
 
 ## Lessons to adopt
 
@@ -30,11 +30,11 @@ Pocket Host differentiates through a mobile-first owner experience, local-first 
 
 ## Explicit non-goals for v0.1.0
 
-Do not block first hosting on multi-device orchestration, public relay, arbitrary language runtimes, full Workbench, TypeScript compilation or cross-platform agents. Do not imply these features are complete because partial source exists.
+Do not block first hosting on multi-device orchestration, multi-host Relay scaling, arbitrary language runtimes, full Workbench, TypeScript compilation or cross-platform agents. Single-host public hosting through Cloudflare Tunnel and AssayFlux Relay is part of v0.1.0 and must pass external acceptance.
 
 ## Proof of product
 
-The first demonstrable vertical slice is: install APK → import a 500 MB-bounded website → start host → open locally → open from another device on same Wi-Fi → verify assets/navigation → stop/restart → restore backup. All G0–G9 gates then determine release readiness.
+The first demonstrable vertical slice is: install APK → import a 500 MB-bounded website → start host → open locally → open from another device on same Wi-Fi → reach the real custom domain over HTTP/HTTPS through Cloudflare and Relay → verify assets/navigation and visitor/admin isolation → stop/restart → restore backup. All G0–G9 gates then determine release readiness.
 
 ## Decision
 
