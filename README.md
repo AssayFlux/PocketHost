@@ -65,6 +65,28 @@ The iOS command center and additional desktop/server/SBC node packages are produ
 9. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
 10. [Documentation Index](docs/INDEX.md)
 
+## Five-step delivery plan and current position
+
+Pocket Host is being delivered in five gated steps. The architecture and documentation define the target; a step is complete only when its implementation, security checks and named-device acceptance evidence pass.
+
+| Step | Scope | Current position |
+|---|---|---|
+| 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Specification baseline drafted.** Core contracts and two-mode decision are documented. Protocol simulations, threat-model review and contract conformance tests remain. |
+| 2. Mobile command center | Android/iOS modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **In progress / incomplete.** Android app foundation exists. End-to-end verified enrollment and fleet role workflows are not accepted; native iOS app is not present. |
+| 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Mostly planned.** Android foundations and separate runtime companion exist, but production role agents/installers for Linux, Windows, macOS and SBCs are not delivered. DemonCore integration still needs board-level acceptance. |
+| 4. Mobile website server and runtimes | Static serving, selected mobile runtime packs, isolation and verified publishing | **Partial implementation.** Android/Rust serving and Python/Node runtime foundations exist. Companion installation/recovery, per-project isolation, runtime fault containment and the complete artifact approval pipeline still need verification or work. |
+| 5. Resilience and release | Replication, recovery, connectivity, security, physical-device acceptance, signed releases and support evidence | **Not closed.** Some tunnel/control-plane foundations exist, but end-to-end resilience, physical-device matrix, security acceptance and release evidence remain. |
+
+### What “complete” means
+
+- A document or interface is not proof that a capability is implemented.
+- A successful compile is not proof that a device role or transport is supported.
+- Each gate requires automated tests plus acceptance on its named OS, hardware and workload.
+- Unsupported platforms and roles remain labelled planned or conditional until evidence is recorded.
+- The mobile device has exactly two modes: **Server only** and **Command Center + Server**. Both serve websites; only the combined mode administers the fleet.
+
+See [Master Plan](docs/MASTER_PLAN.md), [Project Baseline](docs/PROJECT_BASELINE.md) and [Roadmap](docs/ROADMAP.md) for the detailed scope and acceptance criteria.
+
 ## Build and verification
 
 Android:
