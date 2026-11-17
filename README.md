@@ -101,6 +101,12 @@ Pocket Host is a pre-release engineering project. The repository contains substa
   </tr>
 </table>
 
+## WEBSITE WORKBENCH
+
+Workbench is a planned first-class feature inside the mobile app, available in both operating modes. It gives each website a GitHub-inspired project workspace: full directory explorer, code editor, isolated preview, change diffs, local commits, deployment history and rollback. It does not require a GitHub account.
+
+**Production safety is fundamental:** Workbench edits a separate workspace while visitors continue receiving the current live release. Save and Commit do not overwrite production. Deploy validates and stages an immutable release, shows the changes, requires owner approval, switches atomically and retains a last-known-good version for rollback. The current Websites & Files editor is a foundation only; this full isolated workflow is not yet implemented. See [Workbench specification](docs/WORKBENCH.md).
+
 ## TECHNOLOGY BOUNDARIES
 
 The tools have separate responsibilities. They are not one giant Android bundle.
@@ -139,6 +145,10 @@ flowchart TB
     AGENTS --> JOBS["BOUNDED NATIVE JOBS"]
     SERVER --> RUST["RUST HTTP INGRESS"]
     RUST --> STATIC["HTML · CSS · JAVASCRIPT"]
+    MOBILE --> WB["WORKBENCH · EXPLORER / EDITOR / DIFFS"]
+    WB --> WS["ISOLATED WORKSPACE + PREVIEW"]
+    WS --> RELEASE["COMMIT · VALIDATE · APPROVE · ATOMIC RELEASE"]
+    RELEASE --> STATIC
     RUST --> COMPANION["OPTIONAL RUNTIME COMPANION"]
     COMPANION --> PY["PYTHON 3.11"]
     COMPANION --> NODE["NODE.JS 24.22.1"]
@@ -157,7 +167,7 @@ The diagram shows target integration boundaries, not a claim that every connecti
 | **STEP 1 · CONTRACTS** | Protocol 1.0 schemas, role/job policies, validator and trust simulations committed | Confirm Alpha CI evidence and complete review |
 | **STEP 2 · MOBILE TRUST** | Android two-mode UI, P-256 owner identity, signed challenge/proof, role grant, encrypted registry and revocation foundation | Authenticated transports, per-use key auth, full control-plane workflow, agent provisioning and physical-device acceptance |
 | **STEP 3 · DEVICE AGENTS** | Linux preview package, durable SQLite jobs, HTTPS polling, signed grants/jobs, health and local storage/backup snapshot executors | Full mobile provisioning, grant renewal/revocation, stronger isolation, other OS packages, missing worker roles and hardware acceptance |
-| **STEP 4 · WEB SERVER** | Rust static-serving foundation, site import/registry/backup and Android hosting lifecycle | Main-app TypeScript compiler, secure staging/preview/atomic publish and physical-device acceptance |
+| **STEP 4 · WEB SERVER + WORKBENCH** | Rust static-serving foundation, site import/registry/backup and Android hosting lifecycle | Main-app TypeScript compiler, isolated Workbench/editor/preview/commits, immutable releases, atomic deploy/rollback and physical-device acceptance |
 | **STEP 5 · RESILIENCE** | Control-plane, Relay, Cloudflare, backup and diagnostics foundations exist | External ingress acceptance, restore drills, security review, fault/soak testing and signed release acceptance |
 | **FUTURE RUNTIME LIBRARY** | Python and Node.js runtime foundations; 20 catalog manifests | Independent package artifacts, Runtime Manager, security/lifecycle acceptance and 18 additional runtimes |
 
