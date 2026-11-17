@@ -70,7 +70,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-017 — Relay gateway is a visitor-only service
 
-**Decision:** the v0.1.0 Relay deployment may reuse the existing control-plane repository/service foundation but exposes a separate visitor listener and a minimal host/site registration path. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.2.0.
+**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. It must install on declared Termux/Android and Linux targets without mandatory Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.2.0.
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
