@@ -13,7 +13,7 @@ class RelayAgentHttpFramingTest {
 
     @Test
     fun sseLineReaderBoundsAllocationAndAcceptsNormalLineEndings() {
-        val reader = java.io.StringReader("abc\\r\\nxy\\nlast")
+        val reader = java.io.StringReader("abc\r\nxy\nlast")
         assertEquals("abc", RelayAgent.readBoundedSseLine(reader, 3))
         assertEquals("xy", RelayAgent.readBoundedSseLine(reader, 3))
         assertEquals("last", RelayAgent.readBoundedSseLine(reader, 4))
@@ -22,7 +22,7 @@ class RelayAgentHttpFramingTest {
 
     @Test
     fun sseLineReaderRejectsOversizedLineBeforeReturningIt() {
-        val reader = java.io.StringReader("abcd\\n")
+        val reader = java.io.StringReader("abcd\n")
         assertTrue(runCatching { RelayAgent.readBoundedSseLine(reader, 3) }.isFailure)
         assertTrue(runCatching { RelayAgent.readBoundedSseLine(java.io.StringReader("x"), 0) }.isFailure)
     }
