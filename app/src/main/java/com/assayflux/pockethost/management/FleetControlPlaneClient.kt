@@ -40,6 +40,17 @@ object FleetControlPlaneClient {
         } finally { runCatching { request(base, session, "/v1/admin/session", "DELETE", null) } }
     }
 
+    /** Reads the owner-visible heartbeat inventory for linked workers. */
+    fun deviceInventory(endpoint: String, ownerCredential: String): JSONArray {
+        val base = validateEndpoint(endpoint)
+        val session = exchangeSession(base, ownerCredential)
+        try {
+            return requestArray(base, session, "/v1/admin/devices")
+        } finally {
+            runCatching { request(base, session, "/v1/admin/session", "DELETE", null) }
+        }
+    }
+
     /** Reads the latest 50 command states and worker acknowledgements for one device. */
     fun commandHistory(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String): JSONArray {
         val base = validateEndpoint(endpoint)
