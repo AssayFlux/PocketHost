@@ -2,9 +2,8 @@
 
 ## 1. Choose the mobile mode
 
-- **Command Center:** use the phone to manage devices; mobile website serving is off.
-- **Server:** use the phone to serve websites.
-- **Command Center + Server:** manage the fleet and serve websites from the same phone.
+- **Server only:** use the phone to serve websites. Fleet device enrollment, verification approvals and role assignment are unavailable.
+- **Command Center + Server:** manage and verify the fleet, assign device jobs and serve websites from the same phone.
 
 The operating system may limit background hosting. The app shows only modes supported by the device and OS.
 
@@ -34,7 +33,7 @@ Review data access, network routes, permissions, resource budgets and expiry bef
 
 ## 4. Publish a website
 
-1. Enable Server or Command Center + Server mode on the mobile serving node.
+1. Enable Server only or Command Center + Server mode on the mobile serving node.
 2. Create/import the website.
 3. Choose static hosting and the language components it needs.
 4. Install only the required signed language runtime packs on the mobile serving node.
