@@ -7,12 +7,12 @@
 
 ## Product objective
 
-Let a user install the appropriate Pocket Host software on different devices, verify each device through a mobile command center, assign it a bounded job and combine those devices into a resilient personal service system. The mobile device can independently act as Command Center, Website Server, or both.
+Let a user install the appropriate Pocket Host software on different devices, verify each device through a mobile command center, assign it a bounded job and combine those devices into a resilient personal service system. The mobile device can act as a Website Server only, or combine Website Server and Command Center.
 
 ## Non-negotiable decisions
 
 1. The mobile application is the primary owner command center.
-2. Mobile has three modes: Command Center only, Server only, and Command Center + Server.
+2. Mobile has exactly two modes: Server only and Command Center + Server.
 3. A device must be explicitly verified and approved by the command center before integration.
 4. Every device has a stable cryptographic identity, short-lived enrollment challenge and revocable role grants.
 5. Different device classes receive separate installable software/firmware built for their OS, architecture and hardware.
@@ -57,7 +57,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 - Implement discovery, QR/device-ID verification, one-time code, owner approval, secure key binding, role assignment and revocation.
 - Implement Wi-Fi/LAN control first, BLE pairing/control second, USB only for verified platform paths.
 - Show device capabilities, health, assigned job, permissions, connection and audit history.
-- Implement Command Center / Server / Both mobile modes as separate role controls.
+- Implement exactly two mobile modes: Server only and Command Center + Server.
 **Exit:** unknown devices cannot join; replay/expired codes fail; role changes and revocation work; mobile app outage does not stop accepted jobs.
 
 ### STEP 3 — Autonomous device software and role workers
@@ -70,7 +70,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 **Exit:** each supported role passes device-specific lifecycle, reboot, network-loss, resource-pressure and isolation tests; one worker cannot compromise sibling roles.
 
 ### STEP 4 — Mobile website server, runtimes and publishing pipeline
-- Make mobile Server role independent of Command Center role.
+- Keep Server only and Command Center + Server as explicit modes; do not provide a standalone Command Center-only mode.
 - Harden Rust ingress, static serving and site routing.
 - Build separately installable, signed, versioned language runtime packs.
 - User chooses and installs only required runtimes on the mobile serving node.
