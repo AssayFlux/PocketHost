@@ -13,6 +13,53 @@ type ControlUser = { id: string; name: string; role: "editor" | "viewer"; active
 type RelaySite = { id: string; hostname: string; siteId: string; verified: boolean; enabled: boolean };
 type RelayChallenge = { hostname: string; name: string; value: string };
 
+function decodeBase64Url(value: string): ArrayBuffer {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(base64 + "=".repeat((4 - base64.length % 4) % 4));
+  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+  return bytes.buffer;
+}
+
+function encodeBase64Url(value: ArrayBuffer): string {
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+}
+
+function serializePasskeyCredential(credential: PublicKeyCredential): Record<string, unknown> {
+  const response = credential.response;
+  const common = {
+    id: credential.id,
+    rawId: encodeBase64Url(credential.rawId),
+    type: credential.type,
+    extensions: credential.getClientExtensionResults(),
+  };
+  if (response instanceof AuthenticatorAttestationResponse) {
+    return {
+      ...common,
+      response: {
+        clientDataJSON: encodeBase64Url(response.clientDataJSON),
+        attestationObject: encodeBase64Url(response.attestationObject),
+        transports: response.getTransports?.() || [],
+      },
+    };
+  }
+  if (response instanceof AuthenticatorAssertionResponse) {
+    return {
+      ...common,
+      response: {
+        clientDataJSON: encodeBase64Url(response.clientDataJSON),
+        authenticatorData: encodeBase64Url(response.authenticatorData),
+        signature: encodeBase64Url(response.signature),
+        userHandle: response.userHandle ? encodeBase64Url(response.userHandle) : null,
+      },
+    };
+  }
+  throw new Error("The authenticator returned an unsupported credential response.");
+}
+
+
 const initialPayloads: Record<string, string> = {
   site_action: JSON.stringify({ siteId: "my-site", action: "stop" }, null, 2),
   tunnel_action: JSON.stringify({ action: "stop" }, null, 2),
@@ -45,6 +92,7 @@ export function RemoteControlPlane() {
   const [relayHostname, setRelayHostname] = useState("");
   const [relaySiteId, setRelaySiteId] = useState("static-default");
   const [relayChallenge, setRelayChallenge] = useState<RelayChallenge | null>(null);
+  const [passkeyDisplayName, setPasskeyDisplayName] = useState("PocketHost Owner");
 
   async function exchangeAdminSession(credential: string): Promise<string> {
     const response = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
@@ -71,6 +119,80 @@ export function RemoteControlPlane() {
     return body.accessToken;
   }
 
+  async function authenticateOwnerPasskey(): Promise<string> {
+    if (!endpoint.startsWith("https://")) throw new Error("Use an HTTPS Control Plane URL for passkey authentication.");
+    if (!window.PublicKeyCredential || !navigator.credentials) throw new Error("This browser does not support WebAuthn passkeys.");
+    const base = endpoint.replace(/\/$/, "");
+    const startResponse = await fetch(base + "/v1/admin/passkeys/authentication/start", { method: "POST", cache: "no-store" });
+    const start = await startResponse.json() as { challengeId?: string; publicKey?: Record<string, unknown>; error?: string };
+    if (!startResponse.ok || !start.challengeId || !start.publicKey) throw new Error(start.error || "Could not start passkey authentication.");
+    const raw = start.publicKey;
+    const options = {
+      ...raw,
+      challenge: decodeBase64Url(String(raw.challenge)),
+      allowCredentials: Array.isArray(raw.allowCredentials) ? raw.allowCredentials.map(item => {
+        const descriptor = item as Record<string, unknown>;
+        return { ...descriptor, id: decodeBase64Url(String(descriptor.id)) };
+      }) : undefined,
+    } as unknown as PublicKeyCredentialRequestOptions;
+    const credential = await navigator.credentials.get({ publicKey: options }) as PublicKeyCredential | null;
+    if (!credential) throw new Error("Passkey authentication was cancelled.");
+    const finishResponse = await fetch(base + "/v1/admin/passkeys/authentication/finish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challenge_id: start.challengeId, credential: serializePasskeyCredential(credential) }),
+      cache: "no-store",
+    });
+    const result = await finishResponse.json() as { accessToken?: string; role?: "owner"; error?: string };
+    if (!finishResponse.ok || !result.accessToken) throw new Error(result.error || "Passkey authentication failed.");
+    setSessionToken(result.accessToken);
+    setSessionRole("owner");
+    setReauthCredential("");
+    return result.accessToken;
+  }
+
+  async function enrollOwnerPasskey() {
+    setBusy(true);
+    try {
+      if (!window.PublicKeyCredential || !navigator.credentials) throw new Error("This browser does not support WebAuthn passkeys.");
+      const start = await request<{ challengeId: string; publicKey: Record<string, unknown> }>(
+        "/v1/admin/passkeys/registration/start",
+        { method: "POST", body: JSON.stringify({ display_name: passkeyDisplayName.trim() }) },
+      );
+      const raw = start.publicKey;
+      const options = {
+        ...raw,
+        challenge: decodeBase64Url(String(raw.challenge)),
+        user: {
+          ...(raw.user as Record<string, unknown>),
+          id: decodeBase64Url(String((raw.user as Record<string, unknown>).id)),
+        },
+        excludeCredentials: Array.isArray(raw.excludeCredentials) ? raw.excludeCredentials.map(item => {
+          const descriptor = item as Record<string, unknown>;
+          return { ...descriptor, id: decodeBase64Url(String(descriptor.id)) };
+        }) : undefined,
+      } as unknown as PublicKeyCredentialCreationOptions;
+      const credential = await navigator.credentials.create({ publicKey: options }) as PublicKeyCredential | null;
+      if (!credential) throw new Error("Passkey registration was cancelled.");
+      const response = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/passkeys/registration/finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + sessionToken },
+        body: JSON.stringify({
+          challenge_id: start.challengeId,
+          credential: serializePasskeyCredential(credential),
+          display_name: passkeyDisplayName.trim(),
+        }),
+        cache: "no-store",
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Passkey registration failed.");
+      await authenticateOwnerPasskey();
+      setMessage("Owner passkey enrolled. Bootstrap sessions have been revoked; future Owner sign-ins use the passkey.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Passkey enrollment failed.");
+    } finally { setBusy(false); }
+  }
+
   async function request<T>(path: string, init: RequestInit = {}, bearerToken = sessionToken): Promise<T> {
     if (!bearerToken) throw new Error("Create an administrative session before using the Control Plane.");
     const send = (token: string) => fetch(endpoint.replace(/\/$/, "") + path, {
@@ -83,9 +205,12 @@ export function RemoteControlPlane() {
       cache: "no-store",
     });
     let response = await send(bearerToken);
-    if ((response.status === 428 || response.status === 401) && reauthCredential) {
-      // Long-lived credentials stay in component memory only. Re-exchange after the
-      // server's five-minute write step-up window; never persist this value in storage.
+    if (response.status === 428 && sessionRole === "owner") {
+      // Passkey user verification is the Owner step-up. Do not fall back to a bootstrap
+      // credential after passkey enrollment has revoked that recovery path.
+      const refreshed = await authenticateOwnerPasskey();
+      response = await send(refreshed);
+    } else if ((response.status === 428 || response.status === 401) && reauthCredential) {
       const refreshed = await exchangeAdminSession(reauthCredential);
       response = await send(refreshed);
     }
@@ -396,6 +521,15 @@ export function RemoteControlPlane() {
       </article>
     </div>}
     <p className="scope-note">The backend cannot browse the phone filesystem or execute shell commands. Website archives are validated on-device and activated using the native release importer.</p>
+    <div className="section-heading"><div><span className="eyebrow">OWNER IDENTITY</span><h2>Passkey security</h2></div><span className="muted-tag">WEBAUTHN</span></div>
+    <div className="resource-panel">
+      <p>Enroll a device passkey with user verification. After the first passkey is enrolled, bootstrap Owner sessions are revoked and future Owner sign-ins use the passkey challenge.</p>
+      <label>Passkey name<input value={passkeyDisplayName} onChange={event => setPasskeyDisplayName(event.target.value)} maxLength={80} /></label>
+      <div className="site-actions">
+        <button disabled={busy || !sessionToken || sessionRole !== "owner" || !passkeyDisplayName.trim()} onClick={() => void enrollOwnerPasskey()}>Enroll owner passkey</button>
+        <button disabled={busy || !endpoint.startsWith("https://")} onClick={() => void authenticateOwnerPasskey().then(() => setMessage("Signed in with Owner passkey.")).catch(error => setMessage(error instanceof Error ? error.message : "Passkey sign-in failed."))}>Sign in with passkey</button>
+      </div>
+    </div>
     <div className="section-heading"><div><span className="eyebrow">ACCESS CONTROL</span><h2>Team permissions</h2></div><span className="muted-tag">OWNER MANAGED</span></div>
     <div className="resource-panel">
       <p>Owner credentials can create revocable Editor and Viewer accounts. Editors can manage devices and deployments; Viewers can inspect device state, configuration and audit history.</p>
