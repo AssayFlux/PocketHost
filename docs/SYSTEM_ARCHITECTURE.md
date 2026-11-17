@@ -147,7 +147,15 @@ The mobile website server is the final serving node in this baseline:
 - Worker devices may build, validate, stage, cache, store or distribute immutable artifacts, but do not execute arbitrary customer-selected language runtimes in the current baseline.
 - Publishing is intended to be staged, verified, previewed and atomically activated on the mobile serving node. The complete TypeScript build/publish workflow remains open.
 
-## 8. Data and traffic roles
+## 8. Website Workbench and release architecture
+
+Workbench is the owner-facing website development workspace in the mobile app. It is available in both operating modes because both modes include the website server. It selects an existing SiteRegistry project and provides Explorer, Editor, Preview, Changes, Commits and Deployments.
+
+The serving path must point only at an immutable active release. Workbench edits a separate per-site workspace. Its local commits capture durable snapshots and diffs; a commit is not automatically a production deployment. A staged release is validated, previewed and health-checked, then explicitly approved by the owner before an atomic active-release switch. Failed or interrupted activation restores the previous known-good release. Visitors continue receiving the current release during editing and preview.
+
+Workbench must preserve site boundaries, reject traversal and symlink escapes, exclude secrets/private metadata from public artifacts, bound file/build/storage resources and audit publish/rollback. The current SiteFileManager edits the deployed site tree and is only a foundation; it is not the isolated Workbench architecture. Normative details and acceptance are in [WORKBENCH.md](WORKBENCH.md).
+
+## 9. Data and traffic roles
 
 Storage nodes hold only explicitly assigned encrypted datasets or object namespaces. Keys are scoped and not shared with unrelated roles. Replication and backup are distinct from the live authoritative serving copy.
 
