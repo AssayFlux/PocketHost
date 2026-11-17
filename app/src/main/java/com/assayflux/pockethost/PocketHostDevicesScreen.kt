@@ -182,24 +182,49 @@ internal fun PocketHostDevicesScreen(context: Context) {
                                                 context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
                                                     .edit().putString("fleet_device_map", fleetMapText).apply()
                                                 oneTimeToken = registered.oneTimeDeviceToken
-                                                fleetMessage = "Worker registered. The signed grant is queued; configure its one-time token and HTTPS endpoint on the worker, then wait for it to poll."
+                                                fleetMessage = if (registered.grantQueued) {
+                                                    "Worker registered and signed grant queued. Configure its one-time token and HTTPS endpoint on the worker, then wait for it to poll."
+                                                } else {
+                                                    "Worker registered and its one-time token is available, but grant queueing failed. Use Retry signed grant delivery below."
+                                                }
                                             }.onFailure { fleetMessage = it.message ?: "Worker registration failed." }
                                         }
                                     }, modifier = Modifier.fillMaxWidth()
                                 ) { Text("Register worker & send signed grant") }
                             } else {
                                 Text("Control Plane device: $controlPlaneId", color = palette.onSurfaceVariant)
+                                OutlinedButton(
+                                    enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
+                                    onClick = {
+                                        scope.launch {
+                                            fleetMessage = "Queueing the current owner-signed role grant…"
+                                            val result = runCatching {
+                                                withContext(Dispatchers.IO) {
+                                                    FleetControlPlaneClient.queueRoleGrant(
+                                                        controlPlaneEndpoint, ownerCredential, controlPlaneId,
+                                                        DeviceTrustStore.signedGrantDocument(context, device.deviceId),
+                                                        DeviceTrustStore.ownerIdentity().second
+                                                    )
+                                                }
+                                            }
+                                            fleetMessage = result.fold(
+                                                { "Signed role grant queued. The worker will install it on its next poll." },
+                                                { it.message ?: "Role grant queueing failed." }
+                                            )
+                                        }
+                                    }, modifier = Modifier.fillMaxWidth()
+                                ) { Text("Retry signed grant delivery") }
                                 if (device.role == "native_job") OutlinedButton(
                                     enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
                                     onClick = {
                                         scope.launch {
                                             fleetMessage = "Signing and queueing a health-check job…"
                                             val result = runCatching {
-                                                val envelope = DeviceTrustStore.createSignedJobEnvelope(
-                                                    context, device.deviceId, "native.health_check",
-                                                    JSONObject().put("check_id", "mobile-command-center-health-check")
-                                                )
                                                 withContext(Dispatchers.IO) {
+                                                    val envelope = DeviceTrustStore.createSignedJobEnvelope(
+                                                        context, device.deviceId, "native.health_check",
+                                                        JSONObject().put("check_id", "mobile-command-center-health-check")
+                                                    )
                                                     FleetControlPlaneClient.queueSignedJob(
                                                         controlPlaneEndpoint, ownerCredential, controlPlaneId, envelope
                                                     )
