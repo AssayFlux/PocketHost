@@ -6,8 +6,6 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
 import java.io.File
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -16,6 +14,8 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.Signature
 import java.security.spec.ECGenParameterSpec
+import java.time.Instant
+import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -42,7 +42,9 @@ object DeviceTrustStore {
         val candidateDeviceId: String,
         val nonce: String,
         val issuedAt: Long,
-        val expiresAt: Long
+        val expiresAt: Long,
+        val transport: String,
+        val ownerSignature: String
     )
 
     data class Candidate(
@@ -79,7 +81,9 @@ object DeviceTrustStore {
         val issuedAt: Long,
         val expiresAt: Long,
         val signature: String,
-        val ownerPublicKeySpki: String
+        val ownerPublicKeySpki: String,
+        val grantId: String,
+        val resourceBudget: Map<String, Long>
     )
 
     /** Creates or loads the non-exportable P-256 owner identity held by Android Keystore. */
@@ -94,17 +98,18 @@ object DeviceTrustStore {
         require(candidateDeviceId.matches(Regex("[a-f0-9]{64}"))) { "candidate_device_id_invalid" }
         val ownerId = ownerIdentity().first
         val nonceBytes = ByteArray(32).also(random::nextBytes)
-        val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP)
+        val nonce = Base64.encodeToString(nonceBytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
         nonceBytes.fill(0)
-        val idBytes = ByteArray(16).also(random::nextBytes)
-        val id = Base64.encodeToString(idBytes, Base64.NO_WRAP)
-        idBytes.fill(0)
-        val challenge = EnrollmentChallenge(id, ownerId, candidateDeviceId, nonce,
-            nowSeconds, nowSeconds + CHALLENGE_TTL_SECONDS)
-        pending[id] = challenge
+        val challenge = EnrollmentChallenge(
+            UUID.randomUUID().toString(), ownerId, candidateDeviceId, nonce,
+            nowSeconds, nowSeconds + CHALLENGE_TTL_SECONDS, "lan", ""
+        )
+        val ownerSignature = Base64.encodeToString(sign(challengeBytes(challenge)), Base64.NO_WRAP)
+        val signedChallenge = challenge.copy(ownerSignature = ownerSignature)
+        pending[signedChallenge.challengeId] = signedChallenge
         // Bound transient challenges to prevent memory exhaustion from repeated scans.
         while (pending.size > 32) pending.remove(pending.keys.first())
-        return challenge
+        return signedChallenge
     }
 
     /**
@@ -149,9 +154,13 @@ object DeviceTrustStore {
         val generation = (existing?.optLong("generation", 0L) ?: 0L) + 1L
         require(registry.length() < MAX_DEVICES || existing != null) { "trusted_device_limit_reached" }
         val owner = ownerIdentity()
+        val grantId = UUID.randomUUID().toString()
+        val issuedAtIso = Instant.ofEpochSecond(nowSeconds).toString()
+        val expiresAtIso = Instant.ofEpochSecond(nowSeconds + grantLifetimeSeconds).toString()
+        val budget = budgetFor(role)
         val unsigned = SignedRoleGrant(candidate.deviceId, owner.first, role,
             approvedCapabilities.sorted(), generation, nowSeconds, nowSeconds + grantLifetimeSeconds,
-            "", owner.second)
+            "", owner.second, grantId, budget)
         val signature = sign(grantBytes(unsigned))
         val grant = unsigned.copy(signature = Base64.encodeToString(signature, Base64.NO_WRAP))
         val record = JSONObject()
@@ -167,6 +176,7 @@ object DeviceTrustStore {
             .put("approvedAt", nowSeconds)
             .put("revokedAt", 0)
             .put("grant", grantJson(grant))
+            .put("ownerPublicKeySpki", grant.ownerPublicKeySpki)
         if (existing != null) registry.put((0 until registry.length()).first { registry.getJSONObject(it).optString("deviceId") == candidate.deviceId }, record) else registry.put(record)
         writeRegistry(context, registry)
         pending.remove(challengeId)
@@ -210,23 +220,42 @@ object DeviceTrustStore {
             grant.optLong("generation", -1L) == generation
     }
 
-    // Fixed-field compact JSON with lexically ordered keys; matches the Step 1 signed payload profile.
-    private fun challengeBytes(value: EnrollmentChallenge): ByteArray =
-        ("{\"candidateDeviceId\":" + JSONObject.quote(value.candidateDeviceId) +
-            ",\"challengeId\":" + JSONObject.quote(value.challengeId) +
-            ",\"expiresAt\":" + value.expiresAt + ",\"issuedAt\":" + value.issuedAt +
-            ",\"nonce\":" + JSONObject.quote(value.nonce) +
-            ",\"ownerDeviceId\":" + JSONObject.quote(value.ownerDeviceId) + "}").toByteArray(Charsets.UTF_8)
+    // RFC 8785 canonical JSON for the fixed protocol objects; signature is excluded.
+    private fun challengeBytes(value: EnrollmentChallenge): ByteArray {
+        val issued = Instant.ofEpochSecond(value.issuedAt).toString()
+        val expires = Instant.ofEpochSecond(value.expiresAt).toString()
+        return ("{\"challenge_nonce\":" + JSONObject.quote(value.nonce) +
+            ",\"challenge_id\":" + JSONObject.quote(value.challengeId) +
+            ",\"device_id\":" + JSONObject.quote(value.candidateDeviceId) +
+            ",\"expires_at\":" + JSONObject.quote(expires) +
+            ",\"issued_at\":" + JSONObject.quote(issued) +
+            ",\"owner_id\":" + JSONObject.quote(value.ownerDeviceId) +
+            ",\"protocol\":\"pockethost.device/1.0\",\"single_use\":true" +
+            ",\"transport\":" + JSONObject.quote(value.transport) + "}").toByteArray(Charsets.UTF_8)
+    }
 
     private fun grantBytes(value: SignedRoleGrant): ByteArray {
-        val capabilities = value.capabilities.sorted().joinToString(",") { JSONObject.quote(it) }
-        return ("{\"capabilities\":[" + capabilities + "]," +
-            "\"deviceId\":" + JSONObject.quote(value.deviceId) +
-            ",\"expiresAt\":" + value.expiresAt + ",\"generation\":" + value.generation +
-            ",\"issuedAt\":" + value.issuedAt +
-            ",\"ownerDeviceId\":" + JSONObject.quote(value.ownerDeviceId) +
+        val caps = value.capabilities.sorted().joinToString(",") { JSONObject.quote(it) }
+        val budget = value.resourceBudget
+        val budgetJson = "{\"allow_battery_operation\":false" +
+            ",\"cpu_millis\":" + budget.getValue("cpu_millis") +
+            ",\"memory_bytes\":" + budget.getValue("memory_bytes") +
+            ",\"network_bytes_per_day\":" + budget.getValue("network_bytes_per_day") +
+            ",\"storage_bytes\":" + budget.getValue("storage_bytes") + "}"
+        val issued = Instant.ofEpochSecond(value.issuedAt).toString()
+        val expires = Instant.ofEpochSecond(value.expiresAt).toString()
+        return ("{\"capabilities\":[" + caps + "],\"denied_capabilities\":[]," +
+            "\"device_id\":" + JSONObject.quote(value.deviceId) +
+            ",\"expires_at\":" + JSONObject.quote(expires) +
+            ",\"generation\":" + value.generation +
+            ",\"grant_id\":" + JSONObject.quote(value.grantId) +
+            ",\"issued_at\":" + JSONObject.quote(issued) +
+            ",\"owner_id\":" + JSONObject.quote(value.ownerDeviceId) +
+            ",\"policy_version\":\"1.0\",\"protocol\":\"pockethost.device/1.0\"," +
+            "\"resource_budget\":" + budgetJson +
             ",\"role\":" + JSONObject.quote(value.role) + "}").toByteArray(Charsets.UTF_8)
     }
+
     private fun sign(bytes: ByteArray): ByteArray {
         val signer = Signature.getInstance("SHA256withECDSA")
         signer.initSign(signingKeyPair().private)
@@ -255,11 +284,37 @@ object DeviceTrustStore {
         (0 until array.length()).map { array.getJSONObject(it) }.firstOrNull { it.optString("deviceId") == id }
 
     private fun grantJson(grant: SignedRoleGrant): JSONObject = JSONObject()
-        .put("deviceId", grant.deviceId).put("ownerDeviceId", grant.ownerDeviceId)
-        .put("role", grant.role).put("capabilities", JSONArray(grant.capabilities))
-        .put("generation", grant.generation).put("issuedAt", grant.issuedAt)
-        .put("expiresAt", grant.expiresAt).put("signature", grant.signature)
-        .put("ownerPublicKeySpki", grant.ownerPublicKeySpki)
+        .put("protocol", "pockethost.device/1.0")
+        .put("grant_id", grant.grantId)
+        .put("owner_id", grant.ownerDeviceId)
+        .put("device_id", grant.deviceId)
+        .put("role", grant.role)
+        .put("generation", grant.generation)
+        .put("capabilities", JSONArray(grant.capabilities))
+        .put("denied_capabilities", JSONArray())
+        .put("resource_budget", JSONObject()
+            .put("cpu_millis", grant.resourceBudget.getValue("cpu_millis"))
+            .put("memory_bytes", grant.resourceBudget.getValue("memory_bytes"))
+            .put("storage_bytes", grant.resourceBudget.getValue("storage_bytes"))
+            .put("network_bytes_per_day", grant.resourceBudget.getValue("network_bytes_per_day"))
+            .put("allow_battery_operation", false))
+        .put("issued_at", Instant.ofEpochSecond(grant.issuedAt).toString())
+        .put("expires_at", Instant.ofEpochSecond(grant.expiresAt).toString())
+        .put("policy_version", "1.0")
+        .put("signature", JSONObject()
+            .put("algorithm", "ecdsa-p256-sha256")
+            .put("key_id", grant.ownerDeviceId)
+            .put("value", grant.signature))
+
+    private fun budgetFor(role: String): Map<String, Long> = when (role) {
+        "storage" -> mapOf("cpu_millis" to 250L, "memory_bytes" to 268435456L, "storage_bytes" to 10737418240L, "network_bytes_per_day" to 1073741824L)
+        "traffic" -> mapOf("cpu_millis" to 500L, "memory_bytes" to 536870912L, "storage_bytes" to 2147483648L, "network_bytes_per_day" to 10737418240L)
+        "build_publish" -> mapOf("cpu_millis" to 1000L, "memory_bytes" to 1073741824L, "storage_bytes" to 5368709120L, "network_bytes_per_day" to 2147483648L)
+        "native_job" -> mapOf("cpu_millis" to 250L, "memory_bytes" to 268435456L, "storage_bytes" to 536870912L, "network_bytes_per_day" to 536870912L)
+        "backup_recovery" -> mapOf("cpu_millis" to 500L, "memory_bytes" to 536870912L, "storage_bytes" to 10737418240L, "network_bytes_per_day" to 5368709120L)
+        "edge_gateway" -> mapOf("cpu_millis" to 100L, "memory_bytes" to 134217728L, "storage_bytes" to 268435456L, "network_bytes_per_day" to 536870912L)
+        else -> error("unknown_device_role")
+    }
 
     private fun readRegistry(context: Context): JSONArray {
         val file = File(context.noBackupFilesDir, REGISTRY_FILE)
