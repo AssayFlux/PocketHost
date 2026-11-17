@@ -315,7 +315,7 @@ export function RemoteControlPlane() {
   }
 
   async function rotateDeviceToken(device: Device) {
-    if (!window.confirm("Rotate " + device.name + "'s device token? Its current token will stop working immediately. You must replace it in the phone's Advanced → Remote Control Plane settings.")) return;
+    if (!window.confirm("Rotate " + device.name + "'s device token? Its current token will stop working immediately. You must replace it in the target host's secure enrollment settings.")) return;
     setBusy(true);
     setIssuedToken("");
     try {
@@ -474,14 +474,14 @@ export function RemoteControlPlane() {
       const result = await request<{ commandId: string }>(`/v1/admin/devices/${encodeURIComponent(selected)}/commands`, {
         method: "POST", body: JSON.stringify({ kind: commandKind, payload }),
       });
-      setMessage(`Command queued: ${result.commandId}. The phone will poll and acknowledge it.`);
+      setMessage(`Command queued: ${result.commandId}. The host agent will poll and acknowledge it.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Command could not be queued."); }
     finally { setBusy(false); }
   }
 
   return <section className="panel" id="remote-control">
     <div className="panel-heading"><h3>Remote Control Plane</h3><span className="muted-tag">INDEPENDENT BACKEND</span></div>
-    <p>Manage registered PocketHost phones while their hosting services remain active. Administrative credentials exchange for revocable 12-hour sessions; device commands currently use outbound HTTPS polling.</p>
+    <p>Manage enrolled Pocket Host nodes while their host agents remain active. Administrative credentials exchange for revocable 12-hour sessions; device commands currently use outbound HTTPS polling.</p>
     <div className="resource-panel">
       <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => { setEndpoint(event.target.value); setSessionToken(""); }} placeholder="https://control.example.com" /></label>
       <label>API credential<input type="password" value={adminToken} onChange={event => { setAdminToken(event.target.value); setSessionToken(""); }} placeholder="Owner, Editor or Viewer credential" /><small>Used only to create a short-lived administrative session; it is not accepted by management endpoints.</small></label>
@@ -492,11 +492,11 @@ export function RemoteControlPlane() {
       </div>
     </div>
     <p className="scope-note">{message}</p>
-    <div className="section-heading"><div><span className="eyebrow">DEVICE REGISTRY</span><h2>Registered phones</h2></div><span className="muted-tag">{devices.length} DEVICES</span></div>
+    <div className="section-heading"><div><span className="eyebrow">DEVICE REGISTRY</span><h2>Registered hosts</h2></div><span className="muted-tag">{devices.length} DEVICES</span></div>
     <div className="resource-panel">
-      <label>New device name<input value={deviceName} onChange={event => setDeviceName(event.target.value)} placeholder="e.g. PocketHost main phone" /></label>
+      <label>New device name<input value={deviceName} onChange={event => setDeviceName(event.target.value)} placeholder="e.g. Pocket Host primary host" /></label>
       <button disabled={busy || !sessionToken || !deviceName.trim()} onClick={registerDevice}>Register device</button>
-      {issuedToken && <div className="notice"><div><strong>One-time device token</strong><p>Copy this token into Advanced Mode on the target phone. It will not be shown again.</p><code>{issuedToken}</code><button onClick={() => void navigator.clipboard.writeText(issuedToken)}>Copy token</button></div></div>}
+      {issuedToken && <div className="notice"><div><strong>One-time device token</strong><p>Copy this token into Advanced Mode on the target host. It will not be shown again.</p><code>{issuedToken}</code><button onClick={() => void navigator.clipboard.writeText(issuedToken)}>Copy token</button></div></div>}
     </div>
     {devices.map(device => <div className="status-line" key={device.id}>
       <span><strong>{device.name}</strong><small>{device.id} · Last seen: {device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</small></span>
@@ -505,7 +505,7 @@ export function RemoteControlPlane() {
     {selected && <div className="lower-grid">
       <article className="panel">
         <div className="panel-heading"><h3>AssayFlux Relay hostnames</h3><span className="muted-tag">OUTBOUND DEVICE STREAM</span></div>
-        <p>Bind a verified hostname to this device and an existing Pocket Host site ID. The selected site ID must resolve to an enabled local site with at least one configured hostname. Visitor Private or Restricted access is enforced by the phone's site policy.</p>
+        <p>Bind a verified hostname to this device and an existing Pocket Host site ID. The selected site ID must resolve to an enabled local site with at least one configured hostname. Visitor Private or Restricted access is enforced by the selected host's site policy.</p>
         <label>Hostname<input value={relayHostname} onChange={event => setRelayHostname(event.target.value)} placeholder="www.example.com" /></label>
         <label>Local site ID<input value={relaySiteId} onChange={event => setRelaySiteId(event.target.value)} placeholder="static-default" /></label>
         <div className="site-actions">
@@ -529,13 +529,13 @@ export function RemoteControlPlane() {
       </article>
       <article className="panel">
         <div className="panel-heading"><h3>Desired device configuration</h3><span className="muted-tag">VERSION {configVersion ?? "—"}</span></div>
-        <p>Supported keys currently include pythonMaxWorkers, nodeHeapMb and tunnelEnabled. The phone validates settings before applying them.</p>
+        <p>Supported keys currently include pythonMaxWorkers, nodeHeapMb and tunnelEnabled. The host validates settings before applying them.</p>
         <textarea rows={9} value={configText} onChange={event => setConfigText(event.target.value)} spellCheck={false}/>
         <button disabled={busy || !sessionToken || configVersion === null} onClick={saveConfig}>Save and queue configuration</button>
       </article>
       <article className="panel">
         <div className="panel-heading"><h3>Deploy website archive</h3><span className="muted-tag">ZIP · 50 MiB MAX</span></div>
-        <p>Upload a ZIP containing index.html at its root. The phone verifies SHA-256 and atomically activates the release while hosting stays online.</p>
+        <p>Upload a ZIP containing index.html at its root. The host verifies SHA-256 and atomically activates the release while existing services remain online.</p>
         <label>Website ZIP<input type="file" accept=".zip,application/zip" onChange={event => setArchive(event.target.files?.[0] || null)} /></label>
         <button disabled={busy || !sessionToken || !archive} onClick={deployArchive}>Upload and deploy</button>
       </article>
@@ -550,7 +550,7 @@ export function RemoteControlPlane() {
         <button disabled={busy || !sessionToken} onClick={queueCommand}>Queue command</button>
       </article>
     </div>}
-    <p className="scope-note">The backend cannot browse the phone filesystem or execute shell commands. Website archives are validated on-device and activated using the native release importer.</p>
+    <p className="scope-note">The backend cannot browse a host filesystem or execute shell commands. Website archives are validated on-device and activated using the native release importer.</p>
     <div className="section-heading"><div><span className="eyebrow">OWNER IDENTITY</span><h2>Passkey security</h2></div><span className="muted-tag">WEBAUTHN</span></div>
     <div className="resource-panel">
       <p>Enroll a device passkey with user verification. After the first passkey is enrolled, bootstrap Owner sessions are revoked and future Owner sign-ins use the passkey challenge.</p>
