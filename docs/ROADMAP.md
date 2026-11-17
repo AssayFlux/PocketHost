@@ -5,7 +5,7 @@ All milestones use the contracts and failure boundaries in [SYSTEM_ARCHITECTURE.
 | Milestone | Scope | Exit condition |
 |---|---|---|
 | 0.1.0-A | Architecture and contracts | Threat model, device identity, host-agent API, service/runtime manifests, desired state, events, telemetry and compatibility rules approved |
-| 0.1.0-B | Mobile command center | Android fleet UX and iOS companion specification; local pairing, secure owner approvals, host list and health |
+| 0.1.0-B | Mobile command center | Implement Android and iOS command-center clients against the same fleet API; local pairing, secure owner approvals, host list and health |
 | 0.1.0-C | Autonomous host supervisor | Durable local state, independent lifecycle, health, resource budgets, restart, graceful drain and rollback |
 | 0.1.0-D | Service component model | Multi-component sites, multi-runtime manifest, static ingress and authenticated internal routes |
 | 0.1.0-E | Isolation and security | Per-project/component OS boundary, scoped filesystem/network, secret separation and adversarial tests |
