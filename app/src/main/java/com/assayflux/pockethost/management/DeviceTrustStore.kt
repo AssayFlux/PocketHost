@@ -164,17 +164,22 @@ object DeviceTrustStore {
         require(document.getJSONArray("denied_capabilities").length() == 0)
         val generation = document.getLong("generation")
         require(generation >= minimumGeneration)
+        UUID.fromString(document.getString("grant_id"))
         val issued = Instant.parse(document.getString("issued_at")).epochSecond
         val expires = Instant.parse(document.getString("expires_at")).epochSecond
         require(issued <= nowSeconds && expires > nowSeconds)
+        require(expires - issued in 60L..(90L * 24L * 60L * 60L))
         require(document.optString("policy_version") == "1.0")
         val budgetJson = document.getJSONObject("resource_budget")
         val budget = mapOf("cpu_millis" to budgetJson.getLong("cpu_millis"),
             "memory_bytes" to budgetJson.getLong("memory_bytes"),
             "storage_bytes" to budgetJson.getLong("storage_bytes"),
             "network_bytes_per_day" to budgetJson.getLong("network_bytes_per_day"))
+        val maximum = budgetFor(role)
         require(budget.values.all { it >= 0L } && budget.getValue("cpu_millis") > 0L &&
             budget.getValue("memory_bytes") > 0L)
+        require(budget.all { (key, value) -> value <= maximum.getValue(key) })
+        require(!budgetJson.optBoolean("allow_battery_operation", false))
         val signed = document.getJSONObject("signature")
         require(signed.optString("algorithm") == "ecdsa-p256-sha256" && signed.optString("key_id") == ownerId)
         val grant = SignedRoleGrant(expectedDeviceId, ownerId, role, caps.sorted(), generation,
@@ -314,8 +319,9 @@ object DeviceTrustStore {
         if (record.optLong("revokedAt", 0L) != 0L || record.optString("role") != role ||
             record.optLong("generation", -1L) != generation) return false
         val grant = record.optJSONObject("grant") ?: return false
-        val expiry = runCatching { Instant.parse(grant.optString("expires_at")).epochSecond }.getOrDefault(0L)
-        return expiry > nowSeconds && grant.optLong("generation", -1L) == generation
+        if (grant.optLong("generation", -1L) != generation) return false
+        val ownerKey = record.optString("ownerPublicKeySpki")
+        return ownerKey.isNotBlank() && verifyRoleGrant(grant, ownerKey, deviceId, nowSeconds, generation)
     }
 
     // RFC 8785 canonical JSON for the fixed protocol objects; signature is excluded.
