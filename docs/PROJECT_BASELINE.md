@@ -26,6 +26,7 @@ There is no Command Center-only mode. External devices use separate platform-spe
 | Runtime companion | `runtime-worker/` | Separate APK/package and UID; CPython 3.11 via Chaquopy; Node.js mobile 24.22.1 via JNI/libnode; Binder services, project transfer, process lifecycle and network/runtime probes | Both integrations in progress; not production sandboxed |
 | Python runtime | `runtime-worker/src/main/python/` | WSGI adapter, loopback serving, multi-host routing, bounded workers/body/timeouts and metrics | Existing implementation; Android acceptance and independent package split open |
 | Node.js runtime | `runtime-worker/src/main/cpp/`, `src/main/java/` | JNI/libnode bridge, pinned native SDK for arm64-v8a/armeabi-v7a/x86_64, foreground service, bounded heap and metrics | Existing implementation; Android acceptance and independent package split open |
+| Website file foundation | app/.../storage/SiteFileManager.kt, PocketHostSitesScreen.kt | Bounded list/read/write/create/upload/rename/delete/index operations and a Websites & Files screen; current editing targets the deployed site tree | Useful foundation only; isolated Workbench workspace, full editor, diffs/commits, preview separation and atomic release publishing are not implemented |
 | Android trust | `app/.../management/DeviceTrustStore.kt`, Devices UI | Keystore P-256 owner identity, signed short-lived challenges, metadata-bound candidate proof, role grants, encrypted local registry and generation revocation | Foundation implemented; transport and end-to-end acceptance open |
 | Local management API | `ManagementApiServer.kt` | Loopback management API with security/instrumentation tests | Implemented foundation; full product/API acceptance open |
 | Remote control agent | `RemoteControlAgent.kt`, `FleetControlPlaneClient.kt` | Android control-plane client/agent foundation | Partial integration; end-to-end fleet workflows open |
@@ -76,7 +77,7 @@ The Android integration workflow has compiled app and instrumentation sources in
 1. Step 1: preserve schema/policy parity and confirm protocol CI evidence on Alpha.
 2. Step 2: complete owner step-up key authentication, authenticated transport, remote control-plane integration, agent provisioning/revocation and physical Android tests.
 3. Step 3: close Linux agent security/lifecycle gaps and implement other platform packages and missing role adapters.
-4. Step 4: bundle and test TypeScript compiler in the main app; finish site staging, preview, atomic publish and Android acceptance.
+4. Step 4: bundle and test TypeScript compiler; implement Workbench workspace isolation, full project editor, diffs/commits, isolated preview, immutable staged releases, owner-approved atomic deploy/rollback and Android acceptance.
 5. Step 5: public ingress/relay operations, backup/restore rehearsals, resilience, security review, platform matrix and signed release evidence.
 6. Post-baseline Runtime Library: split Python and Node into independently signed packages; then implement and distribute further language packs.
 
