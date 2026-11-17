@@ -346,7 +346,27 @@ object RelayAgent {
                                 ?: throw IllegalStateException("Invalid chunk length.")
                             require(size <= MAX_BODY_BYTES.toLong()) { "Chunked response exceeds 8 MiB." }
                             if (size == 0L) {
-                                while (readLine().isNotEmpty()) { }
+                                var trailerBytes = 0
+                                var trailerCount = 0
+                                while (true) {
+                                    val trailer = readLine()
+                                    trailerBytes += trailer.length + 2
+                                    if (trailerBytes > 64 * 1024 || ++trailerCount > 64) {
+                                        throw IllegalStateException("Local HTTP chunk trailers exceed their limit.")
+                                    }
+                                    if (trailer.isEmpty()) break
+                                    val separator = trailer.indexOf(':')
+                                    require(separator > 0) { "Malformed local HTTP chunk trailer." }
+                                    val name = trailer.substring(0, separator).trim()
+                                    val value = trailer.substring(separator + 1).trim()
+                                    require(name.isNotEmpty() && value.length <= 8_192 &&
+                                        name.all { it.isLetterOrDigit() || it == '-' }) {
+                                        "Invalid local HTTP chunk trailer."
+                                    }
+                                    require(name.lowercase() !in setOf("content-length", "transfer-encoding", "host")) {
+                                        "Forbidden local HTTP chunk trailer."
+                                    }
+                                }
                                 break
                             }
                             readExact(size.toInt())
