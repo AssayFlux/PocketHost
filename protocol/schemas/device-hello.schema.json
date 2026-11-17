@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pockethost.assayflux.com/protocol/1.0/device-hello.schema.json",
+  "title": "Pocket Host Device Hello",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "message_type",
+    "message_id",
+    "issued_at",
+    "device",
+    "capabilities"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "pockethost.device/1.0"
+    },
+    "message_type": {
+      "const": "device_hello"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "public_key",
+        "key_algorithm",
+        "instance_id",
+        "product_id",
+        "product_version",
+        "os",
+        "architecture"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "public_key": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 4096
+        },
+        "key_algorithm": {
+          "enum": [
+            "ed25519",
+            "p256"
+          ]
+        },
+        "instance_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "product_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$"
+        },
+        "product_version": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "os": {
+          "enum": [
+            "android",
+            "linux",
+            "windows",
+            "macos",
+            "embedded_linux"
+          ]
+        },
+        "os_version": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "architecture": {
+          "enum": [
+            "arm64",
+            "armv7",
+            "x86_64",
+            "aarch64",
+            "riscv64",
+            "other"
+          ]
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "transports",
+        "resources"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "storage",
+              "traffic",
+              "build_publish",
+              "native_job",
+              "backup_recovery",
+              "edge_gateway"
+            ]
+          },
+          "maxItems": 8
+        },
+        "transports": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "lan",
+              "ble",
+              "usb",
+              "remote_https"
+            ]
+          },
+          "maxItems": 4
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_count",
+            "memory_bytes",
+            "storage_bytes"
+          ],
+          "properties": {
+            "cpu_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "memory_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "storage_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "battery_powered": {
+              "type": "boolean"
+            },
+            "thermal_state": {
+              "enum": [
+                "nominal",
+                "fair",
+                "serious",
+                "critical",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "isolation": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "process",
+              "container",
+              "namespace",
+              "seccomp",
+              "app_sandbox",
+              "hardware_backed_key"
+            ]
+          },
+          "maxItems": 16
+        }
+      }
+    }
+  }
+}
