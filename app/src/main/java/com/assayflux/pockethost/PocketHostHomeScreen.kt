@@ -8,14 +8,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.NetworkCheck
-import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.Card
@@ -50,18 +50,21 @@ internal fun PocketHostHomeScreen(
     hosting: Boolean, status: String, requests: Long, activeConnections: Long, uptimeText: String,
     importedSummary: String, tunnelStatus: String, pythonHosting: Boolean, nodeHosting: Boolean,
     deviceTelemetry: JSONObject, recentEvents: List<com.assayflux.pockethost.diagnostics.OperationalLog.Entry>,
+    operatingMode: String,
     onOpen: (String) -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     val services = listOf(
         HomeService("Hosting", "Local website origin", if (hosting) "$requests requests" else "Not serving requests", if (hosting) "Running · $uptimeText" else "Stopped", Icons.Outlined.Language, "Dashboard"),
-        HomeService("Websites", "Projects and publishing", importedSummary, "Site workspace", Icons.Outlined.FolderOpen, "Sites"),
-        HomeService("Relay & tunnels", "External connectivity", tunnelStatus, "Connector status", Icons.Outlined.NetworkCheck, "Settings:Network"),
-        HomeService("Runtimes", "Python and Node.js", "Python: ${if (pythonHosting) "running" else "stopped"} · Node: ${if (nodeHosting) "running" else "stopped"}", "Trusted code only", Icons.Outlined.Code, "Settings:Runtimes"),
-        HomeService("Security", "Access and protection", "Owner and visitor controls", "Review settings", Icons.Outlined.Security, "Settings:Network"),
-        HomeService("Capacity", "Device and workload", "$activeConnections active connections", "Live engine snapshot", Icons.Outlined.Memory, "Dashboard"),
-        HomeService("Backups", "Protect and recover", "Encrypted backup tools", "Open site operations", Icons.Outlined.Backup, "Sites")
-    )
+        HomeService("Websites & files", "Projects, publishing and backups", importedSummary, "Site workspace", Icons.Outlined.FolderOpen, "Sites"),
+        HomeService("Workbench", "Edit website code safely", "Draft workspace and local commits", "Live site remains unchanged", Icons.Outlined.Code, "Workbench"),
+        HomeService("Network & tunnels", "LAN, Relay and Cloudflare", tunnelStatus, "Connector status", Icons.Outlined.NetworkCheck, "Settings:Network"),
+        HomeService("Activity & logs", "Events and diagnostics", "$activeConnections active connections", "Operational history", Icons.Outlined.Timeline, "Activity"),
+        HomeService("Learn", "Guides and operating limits", "Setup and troubleshooting", "Documentation", Icons.Outlined.School, "Learn"),
+        HomeService("Settings", "Appearance and device preferences", "Python ${if (pythonHosting) "running" else "stopped"} · Node ${if (nodeHosting) "running" else "stopped"}", "Device preferences", Icons.Outlined.Settings, "Settings:General")
+    ) + (if (operatingMode == "COMMAND_CENTER_SERVER") listOf(
+        HomeService("Devices", "Trusted fleet and workers", "Device enrollment and status", "Command Center enabled", Icons.Outlined.Memory, "Devices")
+    ) else emptyList())
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -69,7 +72,7 @@ internal fun PocketHostHomeScreen(
                 Text("Swipe to explore Pocket Host", color = palette.onSurfaceVariant, fontSize = 12.sp)
             }
             Surface(color = palette.primaryContainer, shape = RoundedCornerShape(50)) {
-                Text("7 modules", modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = palette.onPrimaryContainer, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text("${services.size} modules", modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = palette.onPrimaryContainer, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
