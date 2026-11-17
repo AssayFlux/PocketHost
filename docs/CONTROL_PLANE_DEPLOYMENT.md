@@ -2,66 +2,65 @@
 
 ## Role
 
-The optional control plane coordinates owner identity, host enrollment, desired state, leased commands, artifact delivery, team roles and audit. It is not a website origin, runtime supervisor or required dependency for local hosting.
+The optional control plane coordinates owner identity, device registry, enrollment challenges, role grants, desired state, leased jobs, artifact metadata and audit. It is not the website origin, runtime supervisor or required dependency for already-authorized local jobs.
 
-Android and iOS mobile applications are the primary command-center clients. Each host independently stores authorized configuration and supervises its workloads.
+Android and iOS command-center apps are the primary owner clients. Every node stores its own device identity and accepted role/job state.
 
-## Deployment topology
+## Topology
 
-- Rust/Axum API and PostgreSQL run on a dedicated management network.
-- Caddy or Cloudflare Tunnel provides access to the management hostname.
-- AssayFlux Relay visitor gateway uses a separate visitor hostname/listener.
-- Host agents initiate outbound authenticated connections.
-- Website visitors reach host website ingress through Local Network, AssayFlux Relay or Cloudflare Tunnel; they never reach management endpoints.
+- Rust/Axum API and PostgreSQL on a dedicated management network.
+- Caddy or Cloudflare Tunnel for the management hostname.
+- AssayFlux Relay visitor gateway on a separate visitor hostname/listener.
+- Device agents initiate authenticated outbound connections.
+- Visitor routes terminate only at approved website ingress.
+- Worker data-plane routes are explicit and never expose management, runtime broker or MCU controls.
 
-## Host requirements
+## Deployment requirements
 
-The current Compose deployment uses a Linux server with Docker Engine and Docker Compose v2, persistent PostgreSQL/artifact volumes and outbound access to required registries. This is an optional infrastructure requirement for remote fleet coordination only.
+The current Compose deployment uses Linux, Docker Engine and Docker Compose v2 with persistent PostgreSQL/artifact volumes. This is optional infrastructure for remote fleet coordination; local LAN pairing and accepted local jobs must not depend on it.
 
-## Configuration
+## Device enrollment and role grants
+
+1. Owner authenticates in the mobile command center.
+2. Candidate node generates a device key and short-lived one-time challenge.
+3. Mobile verifies the candidate key/fingerprint and owner reviews requested roles and capabilities.
+4. Owner approves exact role permissions and resource/data scope.
+5. Registry issues a scoped credential bound to device key and role grant.
+6. Device persists accepted state and reports health/observed assignment.
+7. Owner may pause, change or revoke the role grant.
+
+Discovery is not trust. The control plane does not accept a code alone as proof of device identity. Revocation invalidates sessions and outstanding unstarted jobs.
+
+## Jobs and desired state
+
+- Commands are typed, allow-listed, scoped, expiring and idempotent.
+- Jobs include target device, role grant, artifact digest, input/output scopes and resource budget.
+- Host agent validates locally before accepting.
+- Device persists result before acknowledgement.
+- Control plane stores desired state generation and observed state.
+- During control-plane outage, device continues its last authorized jobs within local lease/policy.
+
+## Configuration and deployment
 
 1. Review `control-plane/compose.yaml`, `Caddyfile` and `.env.example`.
 2. Configure a dedicated management hostname and exact allowed client origins.
-3. Generate independent high-entropy Owner and database credentials.
-4. Configure exact trusted proxy peer IPs; do not trust an entire private subnet.
-5. Choose the Caddy public-TLS or Cloudflare Tunnel profile.
-6. Keep PostgreSQL and the application listener private behind the edge proxy.
-7. Store all credentials in protected deployment secrets, never in source control.
-
-## Deployment
+3. Generate independent Owner and database credentials.
+4. Configure exact trusted proxy peers; do not trust an entire private subnet.
+5. Keep PostgreSQL and application listener private.
+6. Store credentials in protected deployment secrets, never source control.
 
 ```sh
 docker compose --env-file .env -f compose.yaml up -d --build
 ```
 
-The deployment workflow does not create DNS records, register hosts, configure mobile clients or perform external acceptance.
+Deployment does not create DNS records, enroll devices, grant roles or prove external acceptance.
 
-## Enrollment and operations
+## Security and recovery
 
-- Owner authenticates in the mobile command center.
-- The command center requests a short-lived enrollment challenge.
-- The target host proves possession of its device-bound key and displays its identity/capabilities for owner approval.
-- The control plane issues a scoped, revocable host credential.
-- Host agents maintain their own heartbeat and command lease.
-- Commands are typed, allow-listed, scoped, expiring and idempotent.
-- Hosts persist the result before acknowledgement.
-- Revocation closes sessions and invalidates credentials.
-
-## Availability contract
-
-A control-plane/database outage may block new enrollment and remote changes. It must not stop running workloads, local host supervision or local management. Hosts retain last-authorized desired state and reconcile when connectivity returns.
-
-## Security checks
-
-- Management hostname is distinct from all visitor hostnames.
-- Visitor listener has no administrative or device-management routes.
+- Management and visitor hostnames are distinct.
 - No public database or raw application port.
-- Exact trusted proxy peers only.
-- Short-lived sessions, role checks, token rotation and audit.
-- No shell, arbitrary SQL or unrestricted filesystem API.
-- Device and owner credentials are separate.
-- Verify revocation and command expiry from an independent client.
-
-## Recovery
-
-Back up PostgreSQL and artifact volumes consistently. Protect the Owner recovery material and signing keys separately. Restore the database and artifacts from the same backup point, verify host enrollment state and rotate credentials if compromise is suspected.
+- No arbitrary shell, SQL or unrestricted filesystem API.
+- Owner, mobile-client, device and role credentials are distinct.
+- Test expiry, replay, role escalation, revocation and command idempotency.
+- Back up database and artifact metadata consistently.
+- Restore does not clone device private keys; restored devices re-enroll and receive fresh credentials.
