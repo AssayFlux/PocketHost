@@ -81,7 +81,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                     Text("Nonce: ${it.nonce}")
                     Text("Owner: ${it.ownerDeviceId}")
                     Text("Transport: ${it.transport} · single-use · expires: ${it.expiresAt}")
-                    Text("Owner signature: ${it.ownerSignature}")
+                    Text("Signed challenge document · send this exact payload to the agent:", color = palette.onSurfaceVariant)
+                    Text(DeviceTrustStore.enrollmentChallengeDocument(it).toString(), color = palette.onSurfaceVariant)
                     OutlinedTextField(proof, { proof = it.trim() }, label = { Text("Agent proof signature · Base64 ECDSA") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                     Button(onClick = {
                         val requested = capabilities.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
