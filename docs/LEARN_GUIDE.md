@@ -35,14 +35,15 @@ Review data access, network routes, permissions, resource budgets and expiry bef
 
 1. Enable Server only or Command Center + Server mode on the mobile serving node.
 2. Create/import the website.
-3. Choose static hosting and the language components it needs.
-4. Install only the required signed language runtime packs on the mobile serving node.
-5. Optionally assign a worker to build/test the website or store encrypted data.
-6. Review the artifact digest and test result.
-7. Approve activation on the mobile serving node.
-8. Select Local Network, AssayFlux Relay or Cloudflare Tunnel for visitor access.
+3. Start with static HTML, CSS and browser JavaScript; these do not require the runtime companion.
+4. TypeScript website compilation is a planned built-in main-app capability; it is not yet available in the current Android build.
+5. If a site needs Python WSGI or Node.js server-side execution, install the separate runtime companion APK. These integrations are in progress, shipped together, and should run only trusted owner-controlled code until isolation testing is complete.
+6. Optionally assign a worker to build/test the website or store encrypted data.
+7. Review the artifact digest and test result.
+8. Approve activation on the mobile serving node.
+9. Select Local Network, AssayFlux Relay or Cloudflare Tunnel for visitor access.
 
-In 0.1.0 customer-selected language runtimes execute on the mobile serving node. Worker devices provide infrastructure support; they do not silently become Python/Node runtime hosts.
+Python and Node.js currently run through the optional Android companion on the mobile serving node; the future 20-package Runtime Library is not yet delivered. Worker devices provide infrastructure support; they do not silently become customer-language runtime hosts.
 
 Static websites do not require a language runtime.
 
