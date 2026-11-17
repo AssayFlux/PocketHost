@@ -54,6 +54,7 @@ def main() -> None:
             results.mkdir(mode=0o700, parents=True, exist_ok=True)
             if not 0.25 <= args.poll_interval <= 60:
                 raise SystemExit("Poll interval must be between 0.25 and 60 seconds.")
+            store.recover_interrupted_jobs()
             while True:
                 grant_row = store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()
                 owner_row = store.db.execute("SELECT value FROM agent_state WHERE key='owner_public_key'").fetchone()
