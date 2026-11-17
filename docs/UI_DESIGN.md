@@ -119,3 +119,12 @@ Show the smallest failing component and what remains healthy. Display offline st
 ## 12. Acceptance
 
 Test both modes, device verification/revocation, role assignment and job lifecycle, large text, screen readers, app termination, phone reboot, offline hosts, stale telemetry, role-specific permissions, runtime installation and worker artifact approval. No UI control may imply an unimplemented capability.
+
+
+## Built-in web baseline and optional runtimes
+
+- The mobile server app includes HTML/CSS static hosting by default in both operating modes.
+- TypeScript belongs to the built-in web toolchain and is compiled to JavaScript before publication; never present raw TypeScript as directly browser-executable.
+- Additional server-side language runtimes appear as separate signed/versioned optional packs in Runtime Manager. Installing one must not be required for basic HTML/CSS/TypeScript websites.
+- Clearly distinguish the built-in web toolchain from optional server-side runtime packs in setup, status, storage and update screens.
+- Do not show a runtime as installed/ready until its package verification and health checks pass.
