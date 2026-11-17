@@ -23,7 +23,7 @@ Legend: **Target** means a planned role subject to hardware/OS acceptance; **Con
 
 | Role | Android | iOS | Linux/server | Windows | macOS | SBC | MCU |
 |---|---|---|---|---|---|---|---|
-| Command Center | Target | Target | No | No | No | No | No |
+| Command Center (inside combined mode) | Target | Target | No | No | No | No | No |
 | Mobile Website Server | Conditional | No promise | No in 0.1.0 | No in 0.1.0 | No in 0.1.0 | No in 0.1.0 | No |
 | Storage | Conditional | No | Target | Target | Target | Target | No |
 | Traffic | Conditional | No | Target | Conditional | Conditional | Conditional | No |
