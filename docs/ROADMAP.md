@@ -4,7 +4,7 @@ This roadmap follows the five-step master plan. The mobile command center is the
 
 ## Step 1 — Contracts and trust
 
-**Contract baseline frozen:** versioned schemas, default-deny role/job policies, trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore interop are committed. Schema/policy validator and trust-state simulation tests run in a dedicated workflow. Confirm the latest Alpha run before closing the gate; production crypto/platform pairing remains Step 2.
+**Contract baseline frozen:** versioned schemas, default-deny role/job policies, trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore interop are committed. Schema/policy validator and trust-state simulation tests run in a dedicated workflow. Alpha workflow [#16](https://github.com/AssayFlux/PocketHost/actions/runs/44059614650) passed schema/policy validation and all 15 protocol/trust-state simulation tests. The Step 1 contract gate is closed; production crypto/platform pairing remains Step 2.
 - Normative device/role/job model.
 - Mobile modes: Server only and Command Center + Server; no standalone Command Center-only mode.
 - Device identity, verification code, enrollment and revocation.
