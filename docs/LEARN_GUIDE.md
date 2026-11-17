@@ -1,63 +1,60 @@
-# POCKET HOST — LEARN GUIDE
+# Pocket Host 0.1.0 — Owner Guide
 
-This guide explains the product as it exists and clearly labels planned capabilities. Read `docs/NORTH_STAR.md` for the full primary-version sequence.
+## 1. The Pocket Host model
 
-## 1. What Pocket Host does
+Use the Android or iOS mobile command center to manage a fleet of devices. A fleet can include phones, computers, servers, Raspberry Pi-class boards and supported microcontrollers. Each device runs only the services supported by its verified capabilities.
 
-Pocket Host runs a website engine on your Android phone. Rust serves static website files and routes configured hostnames. Optional Python and Node runtimes can host small applications. The phone is the website origin; an external tunnel is only a way for visitors to reach it.
+The mobile phone is the owner's control center. Host devices supervise their own services and keep working from their last authorized configuration when the phone or remote control plane is unavailable.
 
-Pocket Host does not require root or Termux. Android power, thermal, memory, carrier-network and OEM background restrictions still apply.
+## 2. Add a device
 
-## 2. Static website publishing
+1. Open Devices in the mobile command center.
+2. Choose nearby discovery, QR pairing or manual pairing.
+3. Confirm the device identity fingerprint, owner and requested capabilities.
+4. Approve the requested role and permissions.
+5. Wait for the host to report its signed capability profile and health.
+6. Review the device's supported service catalog before deploying workloads.
 
-1. Build your website using its usual tools.
-2. Find the production output folder containing root `index.html`.
-3. Open Sites and import the folder or a ZIP.
-4. Let Pocket Host validate file paths, size and site structure.
-5. Preview locally.
-6. Configure hostname and publish.
-7. If public, choose a configured tunnel and verify HTTPS from another network.
-8. Back up before replacing a working deployment.
+Discovery alone never enrolls or trusts a device.
 
-Static hosting is the foundational capability and must remain independent of optional runtimes and remote services.
+## 3. Deploy a website or service
 
-## 3. Networking choices
+1. Create a website/service project.
+2. Add one or more components (static frontend, Python, Node or another supported provider).
+3. Review each component's runtime, resource budget, storage and network needs.
+4. Select an eligible host or allow compatibility-aware placement.
+5. Deploy the signed release and wait for health checks.
+6. Configure the hostname and visitor access policy.
+7. Choose local ingress or one or more enabled public tunnel providers.
+8. Verify from an independent network and create a backup.
 
-- **Local Network:** access from devices on the same trusted LAN; no public tunnel.
-- **Cloudflare Tunnel:** reuse the owner's existing named tunnel and route its Public Hostname to the Rust website listener.
-- **AssayFlux Relay:** an initial bounded HTTP path exists in source, but it is not deployed or available as a production connector yet. It uses an outbound authenticated phone stream and verified hostnames; WebSocket/streaming and deployment validation remain open.
-- **Direct Hosting:** advanced owner-managed exposure; not a default recommendation.
+A website can contain multiple runtimes and components. Each component has independent health and controls.
 
-A tunnel process showing ready does not prove public website reachability. Test from a separate network. Never expose the management API through a public hostname.
+## 4. Manage the fleet
 
-## 4. Python and Node
+From the mobile command center:
+- View host health, stale/offline state and active services.
+- Approve or revoke devices and team members.
+- Start, stop, restart, update, drain and roll back a component.
+- Inspect resource budgets, diagnostics and audit history.
+- Configure Local Network, AssayFlux Relay and Cloudflare Tunnel independently.
+- Back up and restore project data.
+- Review security and pending approvals.
 
-Python expects root `wsgi.py` with callable `application`. Node expects a self-contained project with prebundled dependencies and a server entry. Automatic pip/npm installation and arbitrary shell workflows are not provided.
+## 5. Offline behavior
 
-**Important security limitation:** Python and Node currently share the companion app UID. Per-project OS isolation and outbound egress denial are not yet accepted. Run only code you own and trust. Do not run visitor-submitted or arbitrary third-party code.
+If the phone disconnects, running services on hosts continue. If the remote control plane is unavailable, hosts keep their last authorized state. New sensitive changes may wait until an owner can authenticate. Reconnection reconciles desired and observed state.
 
-## 5. Owner versus visitor authentication
+## 6. Device capability guidance
 
-Management authentication controls who can change Pocket Host settings, sites, devices and tunnels. Visitor authentication controls who can see a website. These must remain separate.
+- Android devices can host supported workloads within Android lifecycle, power, thermal and storage limits.
+- iPhone is a command center; iOS background restrictions do not permit a general always-on arbitrary host promise.
+- Linux, Windows and macOS hosts use their native service/security adapters.
+- Raspberry Pi and other SBCs require exact model and OS profiles.
+- Microcontrollers provide bounded device APIs, telemetry and control, not arbitrary full-stack runtimes by default.
 
-Future visitor modes are Public, Private and Restricted. They must not be presented as available until gateway/site policy enforcement is implemented.
+## 7. Security and recovery
 
-## 6. Capacity and device health
+Use strong owner authentication, device-bound keys, scoped permissions and revocation. Do not upload secrets with website source. Backups do not automatically transfer device identity. Test restore and keep recovery material separate.
 
-A phone's capacity depends on device model, response sizes, route mix, network, heat, battery and background policy. No universal visitor count is promised. Capacity Lab is an initial local benchmark, not a production guarantee. Sustainable capacity requires repeated tests with latency, errors, throughput, memory and thermal evidence.
-
-## 7. Backup and recovery
-
-Encrypted .afbackup files contain supported website/runtime project data, routes and selected non-secret settings. Device-bound credentials, sessions, tunnel tokens and Keystore keys are excluded. Keep backup and passphrase separately. Review executable project contents before sharing a backup.
-
-## 8. Troubleshooting principles
-
-- Website local works, public fails: inspect tunnel route, DNS, TLS and external verification.
-- Connector ready, hostname fails: local health is not public proof; test from another network.
-- Runtime fails, static works: inspect runtime logs without exposing secrets; static origin should remain available.
-- Device overheats or memory is low: reduce workload and allow governor to degrade service.
-- Restore fails: preserve original backup and last-known-good site; do not repeatedly overwrite recovery data.
-
-## 9. Security vocabulary
-
-Source present, compiled, automated-tested, emulator-verified, device-verified, externally-verified and production-approved are different states. A separate companion UID is not a per-project sandbox. A design document is not implementation evidence.
+If one component fails, inspect that component's health and logs. Unrelated hosts and services should remain available. Avoid global restarts unless diagnostics identify a host-wide failure.
