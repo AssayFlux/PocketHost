@@ -1,39 +1,59 @@
 # Pocket Host — Fleet Control Plane Deployment
 
-**Release assignment:** minimal Relay gateway deployment in v0.1.0; full fleet control-plane acceptance in v0.2.0.  
-**Local hosting dependency:** none.
+**Release assignment:** v0.2.0 — Connected Device Fabric  
+**Current source status:** Rust/Axum and PostgreSQL implementation exists; production enrollment and fleet acceptance remain open.
 
 ## Role
 
-The optional Rust/Axum service contains two deliberately separate planes: a visitor-only Relay gateway (single-host public-ingress requirement in v0.1.0) and the owner/device fleet control API (full acceptance in v0.2.0). It is not the website origin, runtime supervisor or required dependency for local static hosting. The v0.1.0 Relay deployment must not make the full admin API public to visitors.
+The control plane is the optional fleet coordination service. It handles owner sessions, devices, roles, desired state, typed commands, artifacts and audit. It is not the Android website origin and is not required for local or LAN static hosting.
 
-## Topology
+**Important boundary:** the current source also places the Relay visitor gateway in the same Rust executable. This is an implementation coupling, not the intended product boundary. v0.1.0 must extract the owner-operated Relay Node into a separately installable service so that public website hosting does not require the full fleet control plane or its PostgreSQL database.
 
-- Android Pocket Host remains the owner mobile interface and website-serving node.
-- Separately installed agents connect over authenticated transport.
-- The control plane stores coordination state and dispatches typed commands/jobs.
-- Website visitor ingress is a separate listener/hostname from management/device-control endpoints. The visitor listener is v0.1.0 scope; fleet enrollment/jobs remain v0.2.0.
-- Browser operator console is a separate web-console build.
+## Current source topology
 
-## Deployment requirements
+- Rust/Axum service in `control-plane/src/main.rs`.
+- PostgreSQL migrations in `control-plane/migrations/`.
+- Control listener defaults to `127.0.0.1:8080`.
+- Relay visitor listener defaults to `127.0.0.1:8081`.
+- Caddy configuration publishes public ports 80/443 and uses on-demand TLS for verified Relay hostnames.
+- Docker Compose defines PostgreSQL, the Rust service, a public Caddy profile and an optional Cloudflare Tunnel profile.
+- The application requires `DATABASE_URL`, a long administrator token and a dedicated control API hostname at startup.
+- The visitor listener has no admin/device routes, but shares the process and database with the fleet API.
+- The Relay active session/pending request hub is in memory; PostgreSQL stores device and hostname route records.
 
-- TLS at every external boundary.
-- Protected owner sessions and short-lived device credentials.
-- PostgreSQL migrations with backup and restore procedure.
-- Secret management outside source control.
-- Rate limits, request/body limits, audit retention and monitoring.
-- Private management routes; no visitor hostname may proxy to admin APIs.
-- Explicit health checks, upgrade and rollback procedure.
-- Control-plane outage must not invalidate already-approved local work before its lease/policy expires.
+The current deployment therefore assumes a publicly reachable Docker-capable host and PostgreSQL. It is not a no-VPS Termux Relay package.
 
-## Enrollment and jobs
+## Intended v0.1.0 Relay boundary
 
-The control plane may transport signed owner decisions but does not replace owner approval. Device agents verify signed grants and typed job envelopes locally. Unknown operations, roles, capabilities, expired grants and wrong target IDs are rejected.
+The first-party Relay Node must be a separate, owner-operated service:
 
-## Current source status
+- Installable on Termux/Android and Linux targets declared by the device matrix.
+- No paid VPS, Docker or PostgreSQL requirement.
+- Independent host-ingress identity and revocation, not fleet admin or device-control credentials.
+- Durable hostname/site/host route records and bounded visitor request handling.
+- Public HTTP/HTTPS edge with valid TLS and HTTP redirect default.
+- Visitor-only listener, never a management API.
+- A reachable public IPv4/IPv6 network path remains mandatory. CGNAT without global IPv6 or port forwarding cannot accept inbound visitors.
 
-The repository includes a Rust/Axum API foundation, PostgreSQL migrations, session/passkey foundation, device commands, audit and Compose/Caddy deployment configuration. Source presence does not prove production deployment, security hardening or end-to-end Android integration.
+The detailed contract is in [AssayFlux Relay](ASSAYFLUX_RELAY.md) and [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md).
+
+## v0.2.0 fleet control-plane responsibilities
+
+- Owner sessions, passkey/recovery flows and role-based access.
+- Device registration, enrollment, approval, token rotation and revocation.
+- Desired-state/configuration versions.
+- Typed, allow-listed commands with leases, expiry, idempotency and durable acknowledgement.
+- Artifact upload/delivery with checksums and bounded size.
+- Audit events and database backup/restore.
+- Linux/Android agent lifecycle and cross-device recovery.
+- Fleet health and multi-host Relay scheduling/advanced failover only after the standalone v0.1.0 Relay Node is stable.
+
+## Deployment requirements for the current Compose stack
+
+The existing Compose stack remains a development/deployment foundation for the fleet control plane and current combined service. It requires Docker Compose, PostgreSQL, a stable public host if the edge is exposed, DNS, TLS and protected secrets. The manual GitHub deployment workflow requires an SSH deployment host and configured repository environment variables/secrets.
+
+Do not claim that this stack has been deployed or is running in production unless a successful deployment and independent health check are recorded.
 
 ## Acceptance
 
-Deploy to a controlled environment, test TLS/session lifecycle, owner enrollment, grant issuance/revocation, job lease/idempotency, database recovery, audit, rate limits, backup/restore and mobile/agent reconnect. Public visitor ingress must not reach the control plane. For the minimal Relay gateway profile, apply v0.1.0 G0–G9. Apply v0.2.0 G0–G9 to full fleet control-plane acceptance.
+For v0.2.0, test owner session lifecycle, device enrollment/revocation, role-grant signatures, typed job lease/idempotency, database recovery, audit, credential rotation, rate limits and mobile/agent reconnect. Verify visitor ingress cannot reach the management API. The v0.1.0 standalone Relay Node has its own G0–G9 acceptance and must not be treated as completed by control-plane CI alone.
