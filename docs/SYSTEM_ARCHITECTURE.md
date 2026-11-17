@@ -13,9 +13,8 @@ The user chooses one of three mobile modes:
 
 | Mode | Mobile responsibilities | Website serving |
 |---|---|---|
-| Command Center | Discover, verify, assign, configure, monitor and recover fleet devices | Off |
 | Server | Serve websites from the mobile device and manage its own local services | On |
-| Command Center + Server | All command-center duties plus local website hosting | On |
+| Command Center + Server | Fleet command, device verification and local website hosting | On |
 
 The command-center role and server role are independent switches. Turning off the mobile server role must not disable command-center access to other hosts. Closing the mobile application must not stop workloads that have been handed to autonomous host agents.
 
@@ -44,7 +43,7 @@ A physical device may receive multiple compatible roles, but each role is an ind
 
 | Role | Purpose | Typical devices |
 |---|---|---|
-| Command Center | Owner approvals and fleet orchestration | Android/iPhone |
+| Command Center + Server | Owner approvals and fleet orchestration | Android/iPhone |
 | Mobile Website Server | Final website ingress, static files and selected language runtimes | Supported Android phone/tablet |
 | Storage Node | Encrypted object/file storage, snapshots and replication | PC, NAS, server, SBC |
 | Traffic Node | Approved reverse proxy, cache, relay or traffic distribution | Linux server, SBC, eligible desktop |
@@ -64,7 +63,7 @@ A device may be storage-only, build-only or traffic-only. It does not become a g
                    OWNER
                     |
         Android / iPhone COMMAND CENTER
-          | Command Center role
+          | Command Center + Server mode
           | optional Mobile Server role
           | language runtimes only here
           |
@@ -205,7 +204,7 @@ A platform is supported only for tested roles, transports, OS versions and hardw
 
 - Owner approves exact device identity and role before it joins the trusted fleet.
 - Expired/replayed verification codes and revoked identities are rejected.
-- Mobile Command Center, Server and combined modes can be switched independently without corrupting accepted worker jobs.
+- The two mobile modes can be switched without corrupting accepted worker jobs. Server only cannot issue fleet commands or approve integrations; only Command Center + Server can.
 - Phone/app/control-plane loss leaves authorized jobs running according to local policy.
 - A storage-only node cannot execute jobs or proxy traffic.
 - A traffic-only node cannot access management or runtime broker endpoints.
