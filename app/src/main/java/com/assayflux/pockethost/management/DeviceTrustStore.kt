@@ -312,7 +312,8 @@ object DeviceTrustStore {
         val requiredCapability = when (kind) {
             "native.health_check" -> "native_job.report_health"
             "storage.snapshot" -> "storage.read_assigned_namespace"
-            "backup.create", "backup.verify" -> "backup.create_assigned_namespace"
+            "backup.create" -> "backup.create_snapshot"
+            "backup.verify" -> "backup.verify_snapshot"
             else -> error("job_kind_not_supported")
         }
         require(role in setOf("native_job", "storage", "backup_recovery")) { "role_cannot_execute_job_kind" }
