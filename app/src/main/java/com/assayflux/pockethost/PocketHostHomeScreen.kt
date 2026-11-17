@@ -29,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -116,11 +118,17 @@ internal fun PocketHostHomeScreen(
             Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 services.indices.forEach { index ->
                     Box(
-                        Modifier.padding(horizontal = 4.dp).size(if (index == activePage) 9.dp else 7.dp)
-                            .clip(CircleShape)
-                            .background(if (index == activePage) palette.primary else palette.outlineVariant)
-                            .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } }
-                    )
+                        modifier = Modifier.size(48.dp)
+                            .semantics { contentDescription = "Show service page ${index + 1}" }
+                            .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            Modifier.size(if (index == activePage) 9.dp else 7.dp)
+                                .clip(CircleShape)
+                                .background(if (index == activePage) palette.primary else palette.outlineVariant)
+                        )
+                    }
                 }
             }
         }
