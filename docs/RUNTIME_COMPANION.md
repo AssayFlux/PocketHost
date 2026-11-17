@@ -1,6 +1,6 @@
 # Runtime Companion — Existing Python and Node.js Provider
 
-<badge>IN PROGRESS</badge> The runtime companion is an existing, separately installable Android APK in the repository. It currently integrates CPython 3.11 and Node.js mobile 24.22.1. It is not part of the main Pocket Host app or Step 4, and it is not required for static HTML/CSS/JavaScript/TypeScript websites. The future goal is to split the two existing runtimes into independently downloadable packages and add further languages.
+**STATUS: IN PROGRESS** The runtime companion is an existing, separately installable Android APK in the repository. It currently integrates CPython 3.11 and Node.js mobile 24.22.1. It is not part of the main Pocket Host app or Step 4, and it is not required for static HTML/CSS/JavaScript/TypeScript websites. The future goal is to split the two existing runtimes into independently downloadable packages and add further languages.
 
 ## Product role
 
