@@ -7,11 +7,16 @@ import os
 import platform
 import time
 import uuid
+
+from .storage import create_snapshot, verify_snapshot
 from datetime import datetime, timezone
 from typing import Any
 
 SUPPORTED = {
     "native.health_check": ("native_job", "native_job.report_health", {"check_id": "identifier"}),
+    "storage.snapshot": ("storage", "storage.snapshot", {"namespace_id": "identifier", "snapshot_id": "identifier"}),
+    "backup.create": ("backup_recovery", "backup.create_snapshot", {"namespace_id": "identifier", "snapshot_id": "identifier"}),
+    "backup.verify": ("backup_recovery", "backup.verify_snapshot", {"snapshot_id": "identifier"}),
 }
 
 
@@ -74,6 +79,16 @@ def validate_job(envelope: dict[str, Any], grant: dict[str, Any]) -> None:
 
 def execute_job(envelope: dict[str, Any], grant: dict[str, Any]) -> dict[str, Any]:
     validate_job(envelope, grant)
+    kind = envelope["kind"]
+    if kind in ("storage.snapshot", "backup.create"):
+        return create_snapshot(
+            envelope["payload"]["namespace_id"],
+            envelope["payload"]["snapshot_id"],
+            min(envelope["resource_budget"].get("storage_bytes", 0),
+                grant["resource_budget"].get("storage_bytes", 0)),
+        )
+    if kind == "backup.verify":
+        return verify_snapshot(envelope["payload"]["snapshot_id"])
     started = time.monotonic()
     return {
         "check_id": envelope["payload"]["check_id"],
