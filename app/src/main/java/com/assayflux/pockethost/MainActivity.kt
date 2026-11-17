@@ -586,6 +586,9 @@ private fun PocketHostDashboard() {
                 if (selectedTab == "Devices" && operatingMode == "COMMAND_CENTER_SERVER") {
                     PocketHostDevicesScreen(context = context)
                 }
+                if (selectedTab == "Workbench") {
+                    PocketHostWorkbenchScreen(context = context)
+                }
                 if (selectedTab == "Learn") {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
