@@ -199,7 +199,7 @@ class RuntimeWorkerSeccompTest {
             listener.close()
             runCatching { outboundPeer.close() }
             runCatching { outboundServer.close() }
-            Os.close(outbound)
+            runCatching { outboundSocket.close() }
         }
     }
 
