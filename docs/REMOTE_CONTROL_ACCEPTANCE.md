@@ -4,9 +4,9 @@ Record exact commit SHA, build provenance, device/board model, OS/firmware versi
 
 ## 1. Mobile modes and command center
 
-- Android supports exactly two modes: Server only and Command Center + Server. Server only cannot enroll, approve or assign fleet devices.
-- iOS supports Command Center + Server only where the website-serving role passes platform lifecycle acceptance; otherwise it is not advertised as a supported server.
-- iOS exposes Command Center; Server mode is available only after platform-specific acceptance.
+- Android exposes exactly two mutually exclusive modes: Server only and Command Center + Server. Website serving remains enabled in both; Server only cannot enroll, approve or assign fleet devices.
+- iOS must not introduce a standalone Command Center-only mode. Advertise the two-mode experience only where the website-serving role passes platform lifecycle acceptance; otherwise clearly mark the iOS deliverable as not yet supported under this product contract.
+- iOS platform restrictions must be handled through capability/availability messaging, not by redefining the product as Command Center-only.
 - Turning mobile Server off does not stop other device assignments.
 - Force-stop, reboot, battery loss and uninstall of mobile app do not stop autonomous jobs on enrolled worker nodes.
 - Replacement-phone recovery and owner re-enrollment work.
