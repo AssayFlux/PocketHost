@@ -35,6 +35,27 @@ class DeviceTrustStoreInstrumentedTest {
         proofSigner.update(DeviceTrustStore.enrollmentProofPayload(challenge))
         val proof = Base64.encodeToString(proofSigner.sign(), Base64.NO_WRAP)
 
+        val escalationRejected = runCatching {
+            DeviceTrustStore.approveCandidate(
+                context = context,
+                challengeId = challenge.challengeId,
+                candidate = DeviceTrustStore.Candidate(
+                    deviceId = deviceId,
+                    publicKeySpki = Base64.encodeToString(agentKeys.public.encoded, Base64.NO_WRAP),
+                    displayName = "Instrumented worker",
+                    product = "Pocket Host test agent",
+                    os = "Android",
+                    architecture = "arm64-v8a",
+                    protocolVersion = "1.0",
+                    requestedCapabilities = capabilities
+                ),
+                proofSignatureBase64 = proof,
+                role = "storage",
+                approvedCapabilities = listOf("management.admin")
+            )
+        }.isFailure
+        assertTrue(escalationRejected)
+
         val grant = DeviceTrustStore.approveCandidate(
             context = context,
             challengeId = challenge.challengeId,
