@@ -64,11 +64,58 @@ def load_or_create_identity(state_dir: Path) -> tuple[ec.EllipticCurvePrivateKey
     return key, device_id, base64.b64encode(public_der).decode("ascii")
 
 
-def sign_challenge(private_key: ec.EllipticCurvePrivateKey, challenge: dict[str, Any]) -> str:
+def sign_challenge(
+    private_key: ec.EllipticCurvePrivateKey,
+    request: dict[str, Any],
+    owner_public_key_der_b64: str,
+) -> str:
+    challenge = request.get("challenge")
+    candidate = request.get("candidate")
+    if not isinstance(challenge, dict) or not isinstance(candidate, dict):
+        raise ValueError("Enrollment proof request must contain challenge and candidate objects.")
     if challenge.get("protocol") != PROTOCOL:
         raise ValueError("Unsupported enrollment protocol.")
-    payload = {key: value for key, value in challenge.items() if key != "signature"}
-    return base64.b64encode(private_key.sign(canonical_json(payload), ec.ECDSA(hashes.SHA256()))).decode("ascii")
+    own_der = private_key.public_key().public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    own_id = public_key_id(own_der)
+    if candidate.get("device_id") != own_id or candidate.get("public_key_spki") != base64.b64encode(own_der).decode("ascii"):
+        raise ValueError("Candidate metadata does not match this agent's private identity.")
+    if challenge.get("device_id") != own_id:
+        raise ValueError("Enrollment challenge targets another device.")
+    if candidate.get("protocol_version") != "1.0":
+        raise ValueError("Unsupported candidate protocol version.")
+    requested = candidate.get("requested_capabilities")
+    if not isinstance(requested, list) or len(requested) != len(set(requested)) or not all(isinstance(x, str) for x in requested):
+        raise ValueError("Candidate requested capabilities must be a unique string list.")
+    try:
+        issued = datetime.fromisoformat(challenge["issued_at"].replace("Z", "+00:00"))
+        expires = datetime.fromisoformat(challenge["expires_at"].replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Enrollment challenge timestamps are invalid.") from error
+    now = datetime.now(timezone.utc)
+    if issued.tzinfo is None or expires.tzinfo is None or issued > now or expires <= now or (expires - issued).total_seconds() > 300:
+        raise ValueError("Enrollment challenge is expired or outside its validity window.")
+    if challenge.get("single_use") is not True or challenge.get("transport") not in {"lan", "ble", "usb", "remote_https"}:
+        raise ValueError("Enrollment challenge flags or transport are invalid.")
+    owner_der = base64.b64decode(owner_public_key_der_b64, validate=True)
+    owner_key = serialization.load_der_public_key(owner_der)
+    owner_id = public_key_id(owner_der)
+    signature = challenge.get("signature", {})
+    if (not isinstance(owner_key, ec.EllipticCurvePublicKey)
+            or not isinstance(owner_key.curve, ec.SECP256R1)
+            or challenge.get("owner_id") != owner_id
+            or signature.get("algorithm") != "ecdsa-p256-sha256"
+            or signature.get("key_id") != owner_id):
+        raise ValueError("Enrollment challenge owner identity is invalid.")
+    unsigned_challenge = {key: value for key, value in challenge.items() if key != "signature"}
+    try:
+        owner_key.verify(base64.b64decode(signature["value"], validate=True),
+                         canonical_json(unsigned_challenge), ec.ECDSA(hashes.SHA256()))
+    except (InvalidSignature, KeyError, ValueError) as error:
+        raise ValueError("Enrollment challenge owner signature is invalid.") from error
+    signed_payload = canonical_json(unsigned_challenge) + b"\\n" + canonical_json(candidate)
+    return base64.b64encode(private_key.sign(signed_payload, ec.ECDSA(hashes.SHA256()))).decode("ascii")
 
 
 def verify_role_grant(
