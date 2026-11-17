@@ -4,7 +4,7 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 
 ## v0.1.0 — First Hosting
 
-**User outcome:** import a website into Pocket Host and serve it from an Android phone.
+**User outcome:** import a website into Pocket Host and serve it from an Android phone locally, on LAN and worldwide through the owner's domain.
 
 ### Deliverables
 - Main Android app and bundled Rust static HTTP server.
@@ -15,13 +15,18 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - HTML, CSS, browser JavaScript, images, fonts and static MIME handling.
 - Local phone preview and configurable port.
 - Optional LAN binding and access from a second device on the same Wi-Fi.
+- Cloudflare Tunnel public ingress for an owner-configured custom hostname, using an encrypted tunnel token and an outbound-only Android connector.
+- First-party AssayFlux Relay gateway, deployed by the owner on a public VPS/server, with DNS TXT hostname proof and an authenticated outbound host session.
+- Public HTTP and HTTPS for verified hostnames; valid HTTPS at the edge and HTTP-to-HTTPS redirect by default. Plain HTTP content serving is an explicit owner opt-in.
+- Independent provider controls, health, reconnect, diagnostics and manual provider failover.
+- End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation.
 - Foreground service, persistent notification, start/stop/restart and Android lifecycle behavior.
 - Clear permission, network, battery and thermal-state handling.
 - Existing encrypted full-app backup/restore, interrupted-activation recovery and basic diagnostics. Current backup capacity is below the 500 MB import limit and must be aligned or explicitly documented before release.
 - Main APK build, install/upgrade and physical Android acceptance.
 
 ### Explicit exclusions
-Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Python/Node server execution, worker enrollment, distributed roles, public Relay/Cloudflare acceptance and cross-device orchestration are not v0.1.0 release blockers.
+Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Python/Node server execution, worker enrollment, distributed roles, multi-host Relay scaling and advanced fleet orchestration are not v0.1.0 release blockers. Public Cloudflare Tunnel and single-host AssayFlux Relay acceptance ARE v0.1.0 release blockers.
 
 ### Hosting acceptance journey
 1. Install the main APK on a named Android device.
@@ -32,7 +37,8 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 6. Verify navigation, CSS, browser JavaScript, images, refresh and MIME types.
 7. Stop/restart hosting; background and foreground the app; test network change and process/device restart.
 8. Create and restore an encrypted website backup.
-9. Record the source SHA, APK artifact digest, device/Android version, logs and G0–G9 results.
+9. Verify the custom domain from an independent network over HTTP and HTTPS through each configured provider; record DNS/TLS, response headers, content, provider status and management-route isolation.
+10. Record the source SHA, APK artifact digest, relay deployment digest, device/Android version, logs and G0–G9 results.
 
 ## v0.1.1 — Workbench & Runtime Development
 
@@ -65,7 +71,7 @@ Production device-fabric support, arbitrary untrusted worker code execution and 
 - Bounded storage/backup, traffic, build/publish preparation and native-job workers.
 - Durable job queue, idempotency, resource budgets, audit, health and signed updates.
 - Optional Rust control plane and browser operator console.
-- Public website access through Local Network, AssayFlux Relay and Cloudflare Tunnel.
+- Multi-host Relay scheduling, regional gateway scaling, automated provider failover and traffic distribution beyond the v0.1.0 single-host public-ingress baseline.
 - Visitor-route separation from management/runtime/MCU controls.
 - Phone, worker, control-plane, network and provider outage/recovery drills.
 - Release provenance, SBOM and support matrix for every shipped package.
