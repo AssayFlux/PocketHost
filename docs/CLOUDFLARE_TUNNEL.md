@@ -1,6 +1,6 @@
 # Cloudflare Tunnel — Provider Specification
 
-**Release assignment:** v0.2.0 public ingress acceptance.  
+**Release assignment:** v0.1.0 — First Hosting public-domain acceptance.  
 **Role:** independent optional visitor-ingress adapter.
 
 ## Purpose
@@ -20,6 +20,12 @@ AssayFlux Relay and Local Network are independent. A provider failure must not s
 - Token is encrypted at rest using AES-256-GCM and Android Keystore.
 
 This is integration source, not proof of public reachability or production certification.
+
+## v0.1.0 public HTTP/HTTPS contract
+
+The owner configures a Cloudflare named tunnel and maps the chosen public hostname to the Android static server origin, normally `http://127.0.0.1:8080` (or the configured website port). Visitors use the public hostname; the phone makes an outbound tunnel connection and does not open a new Internet-facing listener. Cloudflare terminates visitor TLS and forwards to the local HTTP origin.
+
+Both HTTP and HTTPS entry points must be reachable. The default policy redirects HTTP to HTTPS; plain HTTP content serving requires an explicit owner opt-in and warning. Cloudflare DNS and certificate issuance are configured in the owner's Cloudflare zone. Pocket Host does not silently change DNS or claim a hostname is live merely because the connector reports ready.
 
 ## Safe use of an existing named tunnel
 
@@ -55,4 +61,4 @@ Never share tunnel tokens in chat, source, screenshots or logs.
 
 ## Acceptance
 
-Verify token encryption, connector start/stop, public DNS/TLS, correct website origin, unknown-host rejection, management-route isolation, access policy, token rotation and independent provider failure. A local readiness probe is not external verification. Apply v0.2.0 G0–G9.
+Verify token encryption, connector start/stop, public DNS/TLS, correct website origin, unknown-host rejection, management-route isolation, access policy, token rotation and independent provider failure. A local readiness probe is not external verification. Apply v0.1.0 G0–G9 and record an external-network result.
