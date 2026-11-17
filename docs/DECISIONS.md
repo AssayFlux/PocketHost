@@ -61,3 +61,9 @@ This document records decisions that remain binding unless a later ADR explicitl
 ## ADR-014 — Evidence defines release status
 
 **Decision:** code presence, documentation, UI presence, compilation or a simulated environment cannot close a gate that requires an installable artifact, physical device or external network. Every release stores exact commit, build, artifact digest, target, test result and reviewer.
+
+## ADR-015 — Backup capacity is separate from import capacity
+
+**Decision:** the 500 MB importer cap does not imply a 500 MB backup cap. The current ApplicationBackupManager allows 50 MiB for the static site root, 50 MiB for Python, 100 MiB for Node, 200 MiB total uncompressed and 220 MiB encrypted archive. This mismatch must be explicitly resolved or owner-approved as a documented limitation before v0.1.0 release.
+
+**Reason:** import, serving, full-app backup and runtime project storage have separate quotas and memory/disk costs. They must not be described as one shared limit.

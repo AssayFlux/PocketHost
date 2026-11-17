@@ -49,4 +49,8 @@ class SiteImporterStreamSmokeTest {
         assertEquals(expected, SiteImporter.MAX_IMPORT_BYTES)
         assertEquals(expected, SiteBackupManager.MAX_BACKUP_BYTES)
     }
+    @Test
+    fun websiteImportLimitIs500Megabytes() {
+        assertEquals(500_000_000L, SiteImporter.MAX_IMPORT_BYTES)
+    }
 }

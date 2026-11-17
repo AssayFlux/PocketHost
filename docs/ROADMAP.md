@@ -17,7 +17,7 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - Optional LAN binding and access from a second device on the same Wi-Fi.
 - Foreground service, persistent notification, start/stop/restart and Android lifecycle behavior.
 - Clear permission, network, battery and thermal-state handling.
-- Website backup/restore, interrupted-activation recovery and basic diagnostics.
+- Existing encrypted full-app backup/restore, interrupted-activation recovery and basic diagnostics. Current backup capacity is below the 500 MB import limit and must be aligned or explicitly documented before release.
 - Main APK build, install/upgrade and physical Android acceptance.
 
 ### Explicit exclusions

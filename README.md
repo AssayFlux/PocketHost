@@ -84,12 +84,12 @@ The first release has one primary promise: **a website imported into Pocket Host
 - Local phone preview, configurable HTTP port and optional LAN binding.
 - A second device on the same Wi-Fi can open the website.
 - Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
-- Website backup/restore and useful hosting diagnostics.
+- Encrypted full-app backup/restore and useful hosting diagnostics (current backup limits are lower than the 500 MB import cap; see backup documentation).
 - APK build, installation and physical Android acceptance.
 
 The static website path does not require Python, Node.js or a companion runtime. A React/Vite website can be hosted from its already-built static output (normally the contents of <code>dist/</code>); the phone does not compile a raw React/TypeScript project in v0.1.0.
 
-The Rust engine currently has a separate **50 MiB per-file response safety cap**. That is not the overall import limit and must remain visible in the technical documentation.
+The Rust engine has a separate **50 MiB per-file response safety cap**. That is not the overall import limit. The current full-app backup path separately limits the static site tree to 50 MiB and the full uncompressed backup to 200 MiB; a 500 MB imported site cannot currently be fully backed up through that path. Aligning those limits or formally accepting the smaller backup ceiling is an open v0.1.0 task.
 
 ## v0.1.1 — WORKBENCH & RUNTIME DEVELOPMENT
 

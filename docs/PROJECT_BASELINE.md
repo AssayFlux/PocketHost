@@ -24,7 +24,7 @@ There is no Command Center-only mode. The phone is the serving node in both mode
 | Android main app | app/ | Kotlin/Compose UI, hosting foreground service, Rust JNI engine, site import/registry/backup, local API, account/biometric flows, diagnostics, tunnel and runtime client integration, device-trust UI | Foundation; v0.1.0 hosting acceptance open |
 | Rust website engine | rust-engine/ | Tokio/Hyper static HTTP serving, host routing, bounded connections and native Android library | Source/tests present; v0.1.0 device acceptance open |
 | Website importer | app/.../storage/SiteImporter.kt | Folder and ZIP import, staging, path/name checks, index validation, activation/recovery | v0.1.0; 500 MB limits being aligned with code/UI/tests |
-| Website backup | app/.../storage/SiteBackupManager.kt | Passphrase-encrypted active static website backup/restore | Foundation; align and verify 500 MB safety limits in v0.1.0 |
+| Full-app backup | app/.../storage/ApplicationBackupManager.kt | Passphrase-encrypted static site, optional runtime projects, routes and allow-listed settings | Current limits: 50 MiB static site, 50 MiB Python, 100 MiB Node, 200 MiB total uncompressed, 220 MiB encrypted archive; does not cover a 500 MB imported site |
 | Website file UI | PocketHostSitesScreen.kt and SiteFileManager.kt | Bounded list/read/write/create/upload/rename/delete/index operations | Existing site-file foundation; not a complete Workbench |
 | Workbench | WorkbenchWorkspaceManager.kt, PocketHostWorkbenchScreen.kt | Per-site private draft workspace, nested explorer, basic text editor, draft save, file/folder operations, change digest and immutable local commit snapshots | Initial foundation; v0.1.1 completion |
 | Runtime companion | runtime-worker/ | Separate APK/UID; CPython 3.11 via Chaquopy; Node.js mobile 24.22.1 via JNI/libnode; Binder IPC, project transfer and lifecycle controls | In progress; v0.1.1 acceptance |
@@ -72,7 +72,7 @@ The Android integration workflow has a compile-only path. Its manual APK job bui
 ## Known open items for the new roadmap
 
 1. v0.1.0: prove 500 MB ZIP and expanded import boundaries, folder import, archive/path safety, correct static serving, local preview and same-Wi-Fi LAN access.
-2. v0.1.0: verify foreground service, notification, stop/restart, network changes, process death, backup/restore and Android permission/power behavior.
+2. v0.1.0: verify foreground service, notification, stop/restart, network changes, process death, backup/restore limits and Android permission/power behavior; resolve backup/import capacity mismatch.
 3. v0.1.0: build, install and test APK on named physical hardware; attach artifact hash and G0–G9 evidence.
 4. v0.1.1: finish Workbench preview, diff, compiler, release staging, owner-approved activation and rollback.
 5. v0.1.1: finish Python/Node Android acceptance, optional installation lifecycle and isolation hardening.

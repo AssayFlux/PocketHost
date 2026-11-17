@@ -23,7 +23,7 @@ Pocket Host must keep website visitors, owner controls, website files, optional 
 - Keep Rust static response cap at 50 MiB per file unless separately reviewed and tested.
 - Bind to loopback by default. LAN binding is explicit opt-in and exposes the website listener to the local network.
 - Never expose management API or device-control endpoints through the visitor listener.
-- Encrypt website backups and require a strong passphrase.
+- Encrypt full-app backups and require a strong passphrase. Keep the current 50 MiB static-site/200 MiB total backup limits distinct from the 500 MB import quota; fail safely and disclose the mismatch.
 
 ## Android platform safety
 

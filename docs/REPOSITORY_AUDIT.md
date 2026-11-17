@@ -38,7 +38,7 @@ Acceptance still needs a physical device: notification permission, foreground-se
 
 SiteImporter stages folder/ZIP contents, checks file and entry counts, nesting, path traversal, sensitive filenames, index.html and activation/recovery. It currently has a 5,000-file cap, 10,000-entry cap and 32-level depth cap.
 
-The former source had a 50 MB ZIP input and 50 MB expanded-site limit. The new v0.1.0 requirement is 500,000,000 bytes for each independent limit. UI, ZIP input cap, expanded byte counter, folder copy, prepared-directory validation, backup/restore and instrumentation tests must all use the same value. The limit must be tested at, below and above the boundary.
+The former source had a 50 MB ZIP input and 50 MB expanded-site limit. The new v0.1.0 importer requirement is 500,000,000 bytes for each independent limit. UI, ZIP input cap, expanded byte counter, folder copy, prepared-directory validation and importer tests must use the same value. The current ApplicationBackupManager is separate: static site root 50 MiB, Python 50 MiB, Node 100 MiB, total uncompressed 200 MiB and encrypted archive 220 MiB. It cannot currently back up a site near the new 500 MB import cap. This is a distinct v0.1.0 gap; do not claim import and backup limits are aligned.
 
 ### Static engine
 
@@ -68,7 +68,7 @@ The Android integration workflow has a compile-only job and a manually dispatche
 2. 500 MB total import does not guarantee that a single 500 MB file can be served: the Rust engine's per-file cap remains 50 MiB.
 3. Android background behavior varies by OEM and Android release; test on actual devices.
 4. LAN binding exposes the website to the local network; require explicit opt-in and explain the risk.
-5. Backup export currently requires hosting to be stopped; user guidance must say so.
+5. Full-app backup export is disabled while hosting or optional runtimes are active. Its static site cap is 50 MiB and total uncompressed cap is 200 MiB; this does not cover a 500 MB imported website.
 6. Runtime companion processes share one app UID; do not call it a hardened project sandbox.
 7. TypeScript build, Workbench preview and safe publishing are not v0.1.0 features.
 8. Public Relay/Cloudflare connectivity must be tested from an independent network before claiming reachability.

@@ -49,7 +49,7 @@ LAN mode exposes the website listener to the local network. Use trusted networks
 
 ## 6. Backup and restore
 
-The current website backup is passphrase-encrypted. Use a strong unique passphrase and store it safely. The current backup implementation requires hosting to be stopped before export. Cloudflare credentials, runtime projects and unrelated app settings are not part of the portable website backup unless a later contract explicitly adds them.
+The current full-app backup is passphrase-encrypted and includes the active site, optional runtime project data, hostname routes and an allow-list of non-secret settings. It excludes device-bound credentials, Cloudflare tokens, owner/device keys and sessions. Export/restore is disabled while hosting or optional runtimes are active. **Current limits:** 50 MiB for the static site root, 50 MiB for Python, 100 MiB for Node, 200 MiB total uncompressed and 220 MiB encrypted archive. Therefore, a site imported near the 500 MB import cap cannot currently be fully backed up. This mismatch is an open v0.1.0 engineering decision; do not assume import size equals backup size.
 
 ## 7. Optional runtimes
 

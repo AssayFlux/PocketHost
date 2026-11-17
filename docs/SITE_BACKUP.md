@@ -1,48 +1,57 @@
-# Pocket Host — Website Backup and Restore Contract
+# Pocket Host — Backup and Restore Contract
 
 ## Purpose
 
-Protect the active static website from accidental replacement, import failure and device migration. Backup/restore is part of the v0.1.0 hosting milestone; distributed multi-device backup is later.
+Protect active website data and supported runtime project data. The current Android user-facing flow is a **full-app backup**, not a website-only 500 MB archive. Backup capacity is independent of the website importer quota.
 
 ## Current Android implementation
 
-The repository contains SiteBackupManager, a portable passphrase-encrypted backup implementation for the active static website. It uses AES-GCM authenticated encryption and a passphrase-derived key. Export currently requires the native website server to be stopped. The backup is a website archive, not a full phone image.
+The app UI calls ApplicationBackupManager. It creates a passphrase-encrypted archive with authenticated encryption and a versioned header. It can include:
+- Active static website tree.
+- Optional Python project data.
+- Optional Node.js project data.
+- Hostname routes and a small allow-list of non-secret settings.
 
-## v0.1.0 limits
+It deliberately excludes Android Keystore credentials, owner/operator accounts, Cloudflare tokens, remote-control tokens, sessions and device-bound keys. Restored runtimes remain stopped and require a fresh trusted-code acknowledgement.
 
-- Website source content: up to 500,000,000 bytes.
-- Backup archive output: capped at 500,000,000 bytes by the current safety limit.
-- Maximum 5,000 files and 32 directory levels.
-- A compressed backup may be smaller than the source, but encrypted ZIP overhead can cause an archive near the source limit to exceed the backup cap. A clear error must be shown; never truncate silently.
-- Import/restore validates the staged directory, paths, names, file count, total entries, depth and total bytes before activation.
+## Current limits (source-audited)
 
-## Included and excluded data
+| Item | Current limit |
+|---|---:|
+| Static website root | 50 MiB |
+| Python project | 50 MiB |
+| Node.js project | 100 MiB |
+| Total uncompressed backup | 200 MiB |
+| Encrypted archive | 220 MiB |
+| Total files | 20,000 |
+| Total entries | 30,000 |
+| Directory depth | 32 |
 
-The current portable website backup covers the active static website. Cloudflare tokens, owner/device private keys, runtime credentials, runtime project state, control-plane sessions and unrelated Android settings are intentionally excluded. Do not claim full application backup.
+The current implementation therefore cannot back up a static website near the new 500 MB import allowance. **This is an open v0.1.0 capacity mismatch.** Before release, either raise backup limits safely and test them or explicitly approve, expose and document the lower backup ceiling. Do not claim a 500 MB imported site can be fully backed up.
 
 ## Passphrase handling
 
-- Require at least 12 characters.
-- Never log or transmit the passphrase.
-- Do not store the passphrase in plaintext.
-- The user must retain the passphrase; recovery is not possible if it is lost.
-- Authenticate the backup before activation; corrupted or wrong-passphrase data must not replace the active site.
+Use at least 12 characters. Never log, transmit or store the passphrase in plaintext. The user must retain it; recovery is not possible if it is lost. Authentication failure or archive corruption must not replace active data.
+
+## Current operational behavior
+
+The UI disables export/restore while hosting or optional runtimes are active. Stop the host and runtimes before starting the operation. Do not kill the process or delete staging directories during backup/restore.
 
 ## Restore lifecycle
 
-1. Stop hosting where required by the current implementation.
-2. Select backup and enter passphrase.
-3. Decrypt into an app-private staging location.
-4. Validate archive paths, entries, file count, expanded bytes and index.html.
-5. Preserve the active site and record a recovery snapshot.
-6. Activate the restored site atomically.
-7. Recover last-known-good if the process stops during activation.
-8. Restart hosting and verify the restored website.
+1. Select the backup and enter the passphrase.
+2. Decrypt to a private temporary archive.
+3. Validate archive roots, paths, names, file/entry/depth and byte quotas.
+4. Extract into private staging.
+5. Preserve current data and record transaction state.
+6. Apply validated static/runtime data and safe settings.
+7. Keep restored runtimes stopped.
+8. Recover interrupted restore before hosting resumes.
 
 ## v0.2.0 expansion
 
-Remote encrypted namespaces, worker-assisted backup, off-device replication, device replacement and restore orchestration are later features and require their own role/security acceptance.
+Remote encrypted namespaces, worker-assisted backup, off-device replication, device replacement and distributed restore orchestration are later features.
 
 ## Acceptance
 
-Test wrong passphrase, tampering, truncated archive, oversized archive, path traversal, duplicate/unsafe entries, low storage, process death during restore, restart recovery, active-site preservation and a successful website smoke test. See G0–G9.
+Test wrong passphrase, tampering, truncated archive, oversized compressed/decrypted data, traversal, duplicate paths, low storage, process death during restore, recovery, active-site preservation and a successful website smoke test. Add a dedicated test for the agreed relationship between 500 MB imports and backup limits. Apply G0–G9.
