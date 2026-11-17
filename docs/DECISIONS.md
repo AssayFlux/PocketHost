@@ -77,3 +77,12 @@ This document records decisions that remain binding unless a later ADR explicitl
 **Decision:** the 500 MB importer cap does not imply a 500 MB backup cap. The current ApplicationBackupManager allows 50 MiB for the static site root, 50 MiB for Python, 100 MiB for Node, 200 MiB total uncompressed and 220 MiB encrypted archive. This mismatch must be explicitly resolved or owner-approved as a documented limitation before v0.1.0 release.
 
 **Reason:** import, serving, full-app backup and runtime project storage have separate quotas and memory/disk costs. They must not be described as one shared limit.
+
+
+## ADR-018 — AssayFlux Relay is owner-operated; no paid VPS prerequisite
+
+**Decision:** v0.1.0 must provide a standalone AssayFlux Relay Node installable on owner-controlled Termux/Android and Linux hardware. It must not require a paid VPS, Cloudflare, Docker, PostgreSQL or the full fleet control plane. The Android website host connects outbound using independent, revocable Relay credentials. The Relay Node accepts public visitors and forwards only to the registered website route.
+
+**Network constraint:** a self-hosted public gateway still needs public IPv4 with router port forwarding or globally routed IPv6, public DNS A/AAAA and an allowed inbound path for the visitor listener. A device behind CGNAT without global IPv6 or port forwarding cannot accept inbound public visitors. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled reachable node exists, Cloudflare Tunnel remains an optional fallback; the product must never imply that DNS or application code alone bypasses CGNAT.
+
+**Current-source status:** the repository has a partial Relay client and gateway, but no standalone Termux package/installer. The client is coupled to RemoteControlAgent credentials; the gateway shares the fleet control-plane executable and PostgreSQL. This ADR defines the target architecture, not a claim that it is implemented.
