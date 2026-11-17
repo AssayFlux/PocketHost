@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -78,6 +79,14 @@ def verify_role_grant(
         raise ValueError("Grant protocol or target device does not match this agent.")
     if not isinstance(grant.get("generation"), int) or grant["generation"] < minimum_generation:
         raise ValueError("Grant generation is stale.")
+    try:
+        issued = datetime.fromisoformat(grant["issued_at"].replace("Z", "+00:00"))
+        expires = datetime.fromisoformat(grant["expires_at"].replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Grant timestamps are invalid.") from error
+    now = datetime.now(timezone.utc)
+    if issued.tzinfo is None or expires.tzinfo is None or issued > now or expires <= now or expires <= issued:
+        raise ValueError("Grant is not currently valid.")
     role = grant.get("role")
     roles = role_policy.get("roles", {})
     if role not in roles:
@@ -103,7 +112,8 @@ def verify_role_grant(
     owner_key = serialization.load_der_public_key(owner_der)
     if not isinstance(owner_key, ec.EllipticCurvePublicKey) or not isinstance(owner_key.curve, ec.SECP256R1):
         raise ValueError("Owner key must be P-256.")
-    if public_key_id(owner_der) != grant.get("owner_id"):
+    owner_id = public_key_id(owner_der)
+    if owner_id != grant.get("owner_id") or signature.get("key_id") != owner_id:
         raise ValueError("Owner key fingerprint does not match grant owner.")
     payload = {key: value for key, value in grant.items() if key != "signature"}
     try:
