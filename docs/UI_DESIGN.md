@@ -2,7 +2,7 @@
 
 **Platforms:** Android and iOS command-center applications  
 **Design language:** Pocket Host Design Language V1  
-**Purpose:** manage a verified device fleet and optionally host websites on the mobile device.
+**Purpose:** serve websites from the mobile device in both operating modes, with fleet administration available only in the combined mode.
 
 ## 1. Brand and visual language
 
@@ -50,7 +50,7 @@ Every destination must work. Unsupported capabilities are labelled unavailable, 
 The home screen is a fleet overview:
 - Device counts by healthy, degraded, offline and pending approval.
 - Current jobs and assigned roles.
-- Website/server status and installed runtimes when Server mode is enabled.
+- Website/server status and installed runtimes in both modes.
 - Storage, traffic and build/publish health.
 - Recent security approvals and alerts.
 - Clear stale/offline timestamps.
