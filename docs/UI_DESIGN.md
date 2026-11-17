@@ -35,7 +35,7 @@ Primary drawer:
 - Devices and pairing.
 - Role assignments and job queues.
 - Websites and publishing.
-- Runtime Manager (mobile server only).
+- Runtime Companion / Runtime Manager (mobile server only; clearly distinguish currently available Python/Node companion from future independent runtime packs).
 - Storage and backups.
 - Traffic and tunnels.
 - Build/publish activity.
@@ -80,14 +80,14 @@ Role assignment is an explicit flow: choose role, show required permissions/data
 
 Roles: Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery, Edge Gateway and Mobile Website Server.
 
-## 7. Website and Runtime Manager
+## 7. Website and Runtime Companion
 
-- Website editor/deployment shows static and dynamic components.
-- Runtime Manager is available only for the mobile website-serving node in 0.1.0.
-- Show separate signed language packs, versions, ABI, size, license and compatibility.
-- User installs only selected language runtimes.
-- Display which components require which installed runtime.
-- Static content remains available if an optional runtime is absent or fails.
+- Website workspace supports importing static HTML/CSS/JavaScript sites and displaying site/deployment status.
+- TypeScript authoring/build is a planned built-in main-app feature; do not show it as available until compiler bundling and tests are complete.
+- Python 3.11 and Node.js 24.22.1 are available as in-progress optional integrations through the separate runtime companion APK, not as independent downloadable packs.
+- Clearly label companion availability, install state, process health and trusted-code warning. Both runtimes share the companion UID; never present them as a hardened multi-tenant sandbox.
+- Future Runtime Library package selection, ABI, size, license, signature and compatibility UI is future work; current JSON manifests are not installable packages.
+- Static content remains available if the companion is absent or a runtime fails.
 - Build worker artifacts are verified and staged before explicit activation on the mobile serving node.
 
 ## 8. Storage, traffic and publishing
