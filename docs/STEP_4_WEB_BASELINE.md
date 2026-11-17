@@ -2,7 +2,7 @@
 
 **Release assignment:** v0.1.0 — First Hosting  
 **Scope:** main Android Pocket Host app and bundled Rust static website engine.  
-**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and single-host AssayFlux Relay are mandatory v0.1.0 public-ingress scope.
+**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node (Termux/Android and Linux targets) are mandatory v0.1.0 public-ingress scope.
 
 ## 1. Release promise
 
@@ -22,8 +22,8 @@ A user can import a static website into the Android app, start hosting, open it 
 - Foreground hosting service, notification, start/stop/restart and recovery.
 - Basic encrypted website backup/restore.
 - Cloudflare Tunnel with encrypted token storage and external custom-domain HTTP/HTTPS verification.
-- Owner-deployed AssayFlux Relay gateway with DNS TXT hostname proof, authenticated outbound host session and visitor-only route.
-- Minimal owner-facing Relay hostname setup/verification surface.
+- Standalone AssayFlux Relay Node installable on owner-controlled Termux/Android or Linux hardware; DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only route. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability remains required.
+- Minimal owner-facing Relay hostname setup/verification surface plus Termux/Linux install, start/stop, status and restart/reconnect flow.
 - Clear error, diagnostics and Android permission/lifecycle behavior.
 
 ## 3. Static response safety
