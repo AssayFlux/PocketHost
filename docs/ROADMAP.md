@@ -147,3 +147,12 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - At 16:12 UTC, API 26 emulator instrumentation was still in progress and API 33/API 35 jobs were queued. The matrix is not accepted until all three complete successfully and their reports/artifacts are reviewed.
 - Intermediate Android build and emulator validation is being run during Gates 2–4. This does not move final signed-release, physical-device, external connectivity or independent-review acceptance out of Gate 8.
 - Gates 2–7 remain open; see `docs/PROJECT_STATUS_2026-11-16.md` and `docs/PROJECT_BASELINE.md` for the exact outstanding blockers. Source presence and APK compilation do not close these gates.
+
+
+## 2026-11-17 exact-SHA build and first-publish update
+
+- Quality workflow [43983408019](https://github.com/AssayFlux/PocketHost/actions/runs/43983408019) passed all six jobs on `4f7d887ab26935dca0ca19a135b55e4b2f779d92`.
+- Android integration workflow [43983407943](https://github.com/AssayFlux/PocketHost/actions/runs/43983407943) on that SHA passed cloudflared Android ABI/ELF verification, separate ABI debug APK build and APK-content verification, and signature-matched runtime companion build. Debug APK artifact 14285116893 was uploaded and extracted for delivery. These are not signed release APKs.
+- API 26 emulator instrumentation remained in progress at the snapshot; API 33 and API 35 were queued. The matrix is not accepted until all three finish successfully and reports/screenshots/hierarchy artifacts are inspected.
+- Gate 7 first-publish guidance is implemented in the Sites empty state and an instrumentation assertion has been added for the heading, top-level `index.html` and start-hosting guidance. This is a narrow source increment, not closure of first-publication acceptance; execution, human accessibility and visual review remain open.
+- Gates 2–7 remain open. APK packaging and source-level UI tests do not close them.
