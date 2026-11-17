@@ -11,6 +11,7 @@ import java.net.URL
 object FleetControlPlaneClient {
     data class RegisteredWorker(val controlPlaneId: String, val oneTimeDeviceToken: String, val grantQueued: Boolean)
     private const val MAX_RESPONSE = 256 * 1024
+    private const val MAX_REQUEST = 256 * 1024
 
     fun registerWorker(endpoint: String, ownerCredential: String, name: String, grant: JSONObject, ownerPublicKeySpki: String): RegisteredWorker {
         require(name.isNotBlank() && name.length <= 120) { "worker_name_invalid" }
@@ -107,6 +108,7 @@ object FleetControlPlaneClient {
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Authorization", "Bearer $bearer")
             connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Cache-Control", "no-store")
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val bytes = stream?.use { input -> ByteArrayOutputStream().use { output ->
@@ -121,7 +123,7 @@ object FleetControlPlaneClient {
                 }
                 output.toByteArray()
             } } ?: ByteArray(0)
-            if (status !in 200..299) throw IllegalStateException("Control plane returned HTTP $status: ${String(bytes).take(200)}")
+            if (status !in 200..299) throw IllegalStateException("Control plane returned HTTP $status.")
             return JSONArray(String(bytes, Charsets.UTF_8))
         } finally {
             connection.disconnect()
@@ -138,10 +140,15 @@ object FleetControlPlaneClient {
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Authorization", "Bearer $bearer")
             connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Cache-Control", "no-store")
             if (body != null) {
+                val requestBytes = body.toString().toByteArray(Charsets.UTF_8)
+                require(requestBytes.size <= MAX_REQUEST) { "control_plane_request_too_large" }
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+                connection.setFixedLengthStreamingMode(requestBytes.size)
+                connection.outputStream.use { it.write(requestBytes) }
+                requestBytes.fill(0)
             }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
