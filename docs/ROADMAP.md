@@ -3,6 +3,8 @@
 This roadmap follows the five-step master plan. The mobile command center is the owner-facing control surface; enrolled devices run separate, role-specific software.
 
 ## Step 1 — Contracts and trust
+
+**Contract baseline frozen:** versioned schemas, default-deny role policy, typed job catalogue, trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore interop are documented under `protocol/` and `docs/STEP_1_TRUST_AND_PROTOCOL.md`. Schema and trust-state simulation CI is committed; do not mark the gate passed until the workflow has a green run. Production crypto/platform pairing remains Step 2 implementation work.
 - Normative device/role/job model.
 - Mobile modes: Server only and Command Center + Server; no standalone Command Center-only mode.
 - Device identity, verification code, enrollment and revocation.
