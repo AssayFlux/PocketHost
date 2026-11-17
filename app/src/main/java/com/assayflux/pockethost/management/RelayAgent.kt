@@ -192,8 +192,7 @@ object RelayAgent {
             val next = reader.read()
             if (next < 0) return if (line.isEmpty()) null else line.toString()
             if (next == '\n'.code) return line.toString()
-            // CRLF and LF are accepted; ignoring CR also safely handles CR-only input
-            // without letting it bypass the per-line bound.
+            // CRLF and LF are accepted. Ignoring CR prevents CR bytes from bypassing the bound.
             if (next == '\r'.code) continue
             if (line.length >= maxChars) {
                 throw IllegalStateException("Relay SSE line exceeds its ${maxChars}-character limit.")
