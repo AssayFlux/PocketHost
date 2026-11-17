@@ -4,7 +4,7 @@ on:
   # Security implementation changes must be compiled and exercised on the
   # supported Android API matrix before their gates can be considered complete.
   push:
-    branches: [main]
+    branches: [Alpha]
     paths:
       - ".github/workflows/android-integration.yml"
       - "app/**"
