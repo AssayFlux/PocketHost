@@ -60,7 +60,7 @@ class LinuxAgentTests(unittest.TestCase):
         grant = {"grant_id": "g", "owner_id": "o", "device_id": "d", "role": "native_job"}
         job = {"protocol": "pockethost.device/1.0", "target_device_id": "d", "role_grant_id": "g",
                "owner_id": "o", "kind": "native.health_check", "issued_at": "2026-11-17T00:00:00Z",
-               "expires_at": "2026-11-17T00:05:00Z", "payload": {"check_id": "node-1"}}
+               "expires_at": "2027-11-17T00:05:00Z", "payload": {"check_id": "node-1"}}
         self.assertEqual("healthy", execute_job(job, grant)["status"])
         job["kind"] = "process.exec"
         with self.assertRaises(ValueError):
