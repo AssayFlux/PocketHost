@@ -15,13 +15,13 @@
 
 ## 2. Mobile operating modes
 
-A prominent mode control exposes three independent choices:
+A prominent mode control exposes exactly two choices:
 
-- **Command Center:** manage devices and jobs; mobile website-serving role is off.
 - **Server:** serve websites from this mobile device. Fleet-management controls remain available for local service operations; no remote fleet command role is implied.
-- **Command Center + Server:** manage the fleet and serve websites on the same mobile device.
+- **Server only:** serve websites; hide fleet enrollment, device approvals and role assignment.
+- **Command Center + Server:** manage and verify the fleet while serving websites on the same mobile device.
 
-Show the active mode, capability limitations, battery/thermal impact and whether a website-serving process is running. Switching off Server must not revoke or stop worker assignments on other devices. Switching off Command Center must not stop the mobile server process where the OS permits independent lifecycle.
+Show the active mode, capability limitations, battery/thermal impact and whether a website-serving process is running. Switching between the two modes must not revoke or stop already-authorized worker assignments. Server only must not expose command-center operations; entering Command Center + Server requires owner authentication.
 
 iOS displays Server mode only if a supported implementation can satisfy the OS lifecycle and distribution requirements; never imply arbitrary always-on hosting.
 
@@ -117,4 +117,4 @@ Show the smallest failing component and what remains healthy. Display offline st
 
 ## 12. Acceptance
 
-Test all three modes, device verification/revocation, role assignment and job lifecycle, large text, screen readers, app termination, phone reboot, offline hosts, stale telemetry, role-specific permissions, runtime installation and worker artifact approval. No UI control may imply an unimplemented capability.
+Test both modes, device verification/revocation, role assignment and job lifecycle, large text, screen readers, app termination, phone reboot, offline hosts, stale telemetry, role-specific permissions, runtime installation and worker artifact approval. No UI control may imply an unimplemented capability.
