@@ -120,3 +120,21 @@ def verify_role_grant(
         owner_key.verify(base64.b64decode(signature["value"], validate=True), canonical_json(payload), ec.ECDSA(hashes.SHA256()))
     except (InvalidSignature, KeyError, ValueError) as error:
         raise ValueError("Role grant signature is invalid.") from error
+
+
+def verify_job_signature(envelope: dict[str, Any], owner_public_key_der_b64: str) -> None:
+    signature = envelope.get("signature", {})
+    if signature.get("algorithm") != "ecdsa-p256-sha256":
+        raise ValueError("Unsupported job signature algorithm.")
+    owner_der = base64.b64decode(owner_public_key_der_b64, validate=True)
+    owner_key = serialization.load_der_public_key(owner_der)
+    owner_id = public_key_id(owner_der)
+    if signature.get("key_id") != owner_id or envelope.get("owner_id") != owner_id:
+        raise ValueError("Job signer does not match the active owner identity.")
+    if not isinstance(owner_key, ec.EllipticCurvePublicKey) or not isinstance(owner_key.curve, ec.SECP256R1):
+        raise ValueError("Job owner key must be P-256.")
+    payload = {key: value for key, value in envelope.items() if key != "signature"}
+    try:
+        owner_key.verify(base64.b64decode(signature["value"], validate=True), canonical_json(payload), ec.ECDSA(hashes.SHA256()))
+    except (InvalidSignature, KeyError, ValueError) as error:
+        raise ValueError("Job envelope signature is invalid.") from error
