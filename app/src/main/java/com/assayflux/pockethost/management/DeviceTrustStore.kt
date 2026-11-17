@@ -99,8 +99,14 @@ object DeviceTrustStore {
 
     fun deviceFingerprint(publicKeySpki: ByteArray): String = fingerprint(publicKeySpki)
 
-    /** Exact unsigned canonical bytes that an enrolling agent signs for proof of possession. */
-    fun enrollmentProofPayload(challenge: EnrollmentChallenge): ByteArray = challengeBytes(challenge)
+    /** Exact canonical challenge plus advertised candidate metadata that the agent signs. */
+    fun enrollmentProofPayload(challenge: EnrollmentChallenge, candidate: Candidate): ByteArray =
+        challengeBytes(challenge) + byteArrayOf(10) + candidateBytes(candidate)
+
+    /** Copy this request to the independent agent; its signature covers both sections. */
+    fun enrollmentProofRequestDocument(challenge: EnrollmentChallenge, candidate: Candidate): JSONObject =
+        JSONObject().put("challenge", enrollmentChallengeDocument(challenge))
+            .put("candidate", candidateJson(candidate))
 
     /** Wire document for the shared signed role-grant schema. */
     fun roleGrantDocument(grant: SignedRoleGrant): JSONObject = grantJson(grant)
@@ -238,7 +244,7 @@ object DeviceTrustStore {
         val verifier = Signature.getInstance("SHA256withECDSA")
         verifier.initVerify(java.security.KeyFactory.getInstance("EC").generatePublic(
             java.security.spec.X509EncodedKeySpec(publicKey)))
-        verifier.update(challengeBytes(challenge))
+        verifier.update(enrollmentProofPayload(challenge, candidate))
         require(verifier.verify(proof)) { "device_proof_of_possession_invalid" }
 
         val rolePolicy = ROLE_CAPABILITIES[role] ?: error("unknown_device_role")
@@ -336,6 +342,28 @@ object DeviceTrustStore {
             ",\"owner_id\":" + JSONObject.quote(value.ownerDeviceId) +
             ",\"protocol\":\"pockethost.device/1.0\",\"single_use\":true" +
             ",\"transport\":" + JSONObject.quote(value.transport) + "}").toByteArray(Charsets.UTF_8)
+    }
+
+    private fun candidateJson(value: Candidate): JSONObject = JSONObject()
+        .put("architecture", value.architecture)
+        .put("device_id", value.deviceId)
+        .put("display_name", value.displayName)
+        .put("os", value.os)
+        .put("product", value.product)
+        .put("protocol_version", value.protocolVersion)
+        .put("public_key_spki", value.publicKeySpki)
+        .put("requested_capabilities", JSONArray(value.requestedCapabilities.sorted()))
+
+    private fun candidateBytes(value: Candidate): ByteArray {
+        val caps = value.requestedCapabilities.sorted().joinToString(",") { JSONObject.quote(it) }
+        return ("{\"architecture\":" + JSONObject.quote(value.architecture) +
+            ",\"device_id\":" + JSONObject.quote(value.deviceId) +
+            ",\"display_name\":" + JSONObject.quote(value.displayName) +
+            ",\"os\":" + JSONObject.quote(value.os) +
+            ",\"product\":" + JSONObject.quote(value.product) +
+            ",\"protocol_version\":" + JSONObject.quote(value.protocolVersion) +
+            ",\"public_key_spki\":" + JSONObject.quote(value.publicKeySpki) +
+            ",\"requested_capabilities\":[" + caps + "]}").toByteArray(Charsets.UTF_8)
     }
 
     private fun grantBytes(value: SignedRoleGrant): ByteArray {
