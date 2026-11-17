@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -83,10 +84,22 @@ def sign_challenge(
         raise ValueError("Candidate metadata does not match this agent's private identity.")
     if challenge.get("device_id") != own_id:
         raise ValueError("Enrollment challenge targets another device.")
+    try:
+        uuid.UUID(challenge["challenge_id"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Enrollment challenge ID is invalid.") from error
+    nonce = challenge.get("challenge_nonce")
+    if not isinstance(nonce, str) or len(nonce) != 43 or not all(ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for ch in nonce):
+        raise ValueError("Enrollment challenge nonce is invalid.")
     if candidate.get("protocol_version") != "1.0":
         raise ValueError("Unsupported candidate protocol version.")
+    for field, limit in (("display_name", 80), ("product", 80), ("os", 40), ("architecture", 40)):
+        value = candidate.get(field)
+        if not isinstance(value, str) or not 1 <= len(value) <= limit:
+            raise ValueError("Candidate metadata is invalid: " + field)
     requested = candidate.get("requested_capabilities")
-    if not isinstance(requested, list) or len(requested) != len(set(requested)) or not all(isinstance(x, str) for x in requested):
+    if (not isinstance(requested, list) or not all(isinstance(x, str) for x in requested)
+            or len(requested) != len(set(requested))):
         raise ValueError("Candidate requested capabilities must be a unique string list.")
     try:
         issued = datetime.fromisoformat(challenge["issued_at"].replace("Z", "+00:00"))
