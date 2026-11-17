@@ -290,6 +290,60 @@ object DeviceTrustStore {
         return grant
     }
 
+    /** Returns the exact owner-signed grant document for one currently approved worker. */
+    @Synchronized
+    fun signedGrantDocument(context: Context, deviceId: String): JSONObject {
+        val record = findDevice(readRegistry(context), deviceId) ?: error("trusted_device_not_found")
+        require(record.optLong("revokedAt", 0L) == 0L) { "device_revoked" }
+        val grant = record.optJSONObject("grant") ?: error("active_role_grant_missing")
+        val ownerKey = record.optString("ownerPublicKeySpki")
+        require(verifyRoleGrant(grant, ownerKey, deviceId, System.currentTimeMillis() / 1000L, record.optLong("generation", 1L))) { "active_role_grant_invalid" }
+        return JSONObject(grant.toString())
+    }
+
+    /** Creates a short-lived owner-signed typed job; arbitrary commands are never accepted. */
+    @Synchronized
+    fun createSignedJobEnvelope(context: Context, deviceId: String, kind: String, payload: JSONObject, timeoutSeconds: Long = 30L, memoryBytes: Long = 16777216L, nowSeconds: Long = System.currentTimeMillis() / 1000L): JSONObject {
+        require(kind in setOf("native.health_check", "storage.snapshot", "backup.create", "backup.verify")) { "job_kind_not_supported_by_mobile_preview" }
+        require(payload.length() <= 32) { "job_payload_too_large" }
+        require(timeoutSeconds in 1L..3600L && memoryBytes in 1L..1073741824L) { "job_resource_budget_out_of_bounds" }
+        val grant = signedGrantDocument(context, deviceId)
+        val role = grant.getString("role")
+        val requiredCapability = when (kind) {
+            "native.health_check" -> "native_job.report_health"
+            "storage.snapshot" -> "storage.read_assigned_namespace"
+            "backup.create", "backup.verify" -> "backup.create_assigned_namespace"
+            else -> error("job_kind_not_supported")
+        }
+        require(role in setOf("native_job", "storage", "backup_recovery")) { "role_cannot_execute_job_kind" }
+        require((0 until grant.getJSONArray("capabilities").length()).any { grant.getJSONArray("capabilities").getString(it) == requiredCapability }) { "active_grant_does_not_allow_job" }
+        val budget = grant.getJSONObject("resource_budget")
+        val envelope = JSONObject()
+            .put("protocol", "pockethost.device/1.0")
+            .put("job_id", UUID.randomUUID().toString())
+            .put("idempotency_key", UUID.randomUUID().toString())
+            .put("correlation_id", UUID.randomUUID().toString())
+            .put("owner_id", grant.getString("owner_id"))
+            .put("target_device_id", deviceId)
+            .put("role_grant_id", grant.getString("grant_id"))
+            .put("kind", kind)
+            .put("payload", JSONObject(payload.toString()))
+            .put("issued_at", Instant.ofEpochSecond(nowSeconds).toString())
+            .put("expires_at", Instant.ofEpochSecond(nowSeconds + timeoutSeconds + 300L).toString())
+            .put("resource_budget", JSONObject().put("timeout_seconds", timeoutSeconds).put("memory_bytes", memoryBytes).put("storage_bytes", budget.optLong("storage_bytes", 0L)).put("network_bytes", budget.optLong("network_bytes_per_day", 0L)))
+        envelope.put("signature", JSONObject().put("algorithm", "ecdsa-p256-sha256").put("key_id", grant.getString("owner_id")).put("value", Base64.encodeToString(sign(canonicalJson(envelope)), Base64.NO_WRAP)))
+        return envelope
+    }
+
+    private fun canonicalJson(value: Any): ByteArray = canonicalValue(value).toByteArray(Charsets.UTF_8)
+    private fun canonicalValue(value: Any): String = when (value) {
+        is JSONObject -> value.keys().asSequence().toList().sorted().joinToString(",", "{", "}") { key -> JSONObject.quote(key) + ":" + canonicalValue(value.get(key)) }
+        is JSONArray -> (0 until value.length()).joinToString(",", "[", "]") { canonicalValue(value.get(it)) }
+        JSONObject.NULL -> "null"
+        is String -> JSONObject.quote(value)
+        is Boolean, is Number -> value.toString()
+        else -> error("unsupported_signed_json_value")
+    }
     @Synchronized
     fun revoke(context: Context, deviceId: String, nowSeconds: Long = System.currentTimeMillis() / 1000L): Boolean {
         val registry = readRegistry(context)
