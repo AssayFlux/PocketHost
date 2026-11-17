@@ -13,6 +13,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
+import uuid
 
 from .runner import execute_job
 from .store import AgentStore
@@ -33,10 +34,12 @@ class ControlPlaneClient:
         if (parsed.scheme != "https" and not
                 (parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"})):
             raise ValueError("Control-plane transport requires HTTPS (HTTP is localhost-only).")
-        if not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        if (not parsed.hostname or parsed.username or parsed.password or parsed.query or
+                parsed.fragment or parsed.path not in {"", "/"}):
             raise ValueError("Invalid control-plane endpoint.")
-        if len(token) < 32:
-            raise ValueError("Control-plane device token must contain at least 32 characters.")
+        if (not 32 <= len(token) <= 256 or not token.isascii() or
+                not all(ch.isalnum() or ch in "-_." for ch in token)):
+            raise ValueError("Control-plane device token format is invalid.")
         if not 1 <= timeout <= 60:
             raise ValueError("HTTP timeout must be between 1 and 60 seconds.")
         self.endpoint = endpoint.strip().rstrip("/")
@@ -109,8 +112,12 @@ def _active_grant(store: AgentStore, device_id: str) -> tuple[dict[str, Any], st
 def process_command(client: ControlPlaneClient, store: AgentStore, device_id: str,
                     command: dict[str, Any]) -> None:
     command_id = command.get("id")
-    if not isinstance(command_id, str) or len(command_id) > 64:
+    if not isinstance(command_id, str):
         raise ValueError("Remote command ID is invalid.")
+    try:
+        uuid.UUID(command_id)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Remote command ID is invalid.") from error
     if command.get("kind") != "agent_job":
         client.acknowledge(command_id, False, {"error": "unsupported_agent_command"})
         return
@@ -122,6 +129,12 @@ def process_command(client: ControlPlaneClient, store: AgentStore, device_id: st
     idempotency_key = envelope.get("idempotency_key")
     if not isinstance(job_id, str) or not isinstance(idempotency_key, str):
         client.acknowledge(command_id, False, {"error": "job_identity_required"})
+        return
+    try:
+        grant, owner_key = _active_grant(store, device_id)
+        verify_job_signature(envelope, owner_key)
+    except Exception as error:
+        client.acknowledge(command_id, False, {"error": str(error)[:256]})
         return
 
     # Duplicate delivery after a lost ACK returns the durable prior result; it
