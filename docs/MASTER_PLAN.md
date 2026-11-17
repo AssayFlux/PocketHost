@@ -1,8 +1,8 @@
 # Pocket Host 0.1.0 — Master Plan
 
-**Canonical branch:** main  
+**Canonical branch:** Alpha  
 **Product baseline:** 0.1.0  
-**Primary owner interface:** Android or iPhone mobile command center  
+**Primary owner interface:** Android mobile app (iOS is planned; no iOS project exists in this repository)  
 **System form:** mobile-controlled, role-assigned device fabric
 
 ## Product objective
@@ -45,7 +45,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 
 ### STEP 1 — Freeze contracts, trust and product boundaries
 
-**Contract freeze delivered:** protocol `pockethost.device/1.0` now defines device hello, one-time enrollment challenge, signed role grants, typed job envelopes, role capability policy and per-job payload/role policy. `docs/STEP_1_TRUST_AND_PROTOCOL.md` freezes canonical signing input, identity derivation, challenge lifetime, transport limits, runtime/artifact boundaries, threat mitigations and DemonCore interop. Deterministic positive/negative trust-state simulations and schema/policy CI are committed. **Gate status: implementation complete; automated run evidence pending.** No production cryptographic verifier or platform enrollment implementation is claimed; those are Step 2 implementation deliverables.
+**Contract freeze delivered:** protocol `pockethost.device/1.0` now defines device hello, one-time enrollment challenge, signed role grants, typed job envelopes, role capability policy and per-job payload/role policy. `docs/STEP_1_TRUST_AND_PROTOCOL.md` freezes canonical signing input, identity derivation, challenge lifetime, transport limits, runtime/artifact boundaries, threat mitigations and DemonCore interop. Deterministic positive/negative trust-state simulations and schema/policy CI are committed. **Gate status: contract implementation delivered; confirm current Alpha workflow evidence before closure.** No production cryptographic verifier or platform enrollment implementation is claimed; those are Step 2 implementation deliverables.
 - Make SYSTEM_ARCHITECTURE.md normative.
 - Freeze device identity, enrollment, verification code, role grant, host-agent and job schemas.
 - Define mobile operating modes and role/permission matrix.
@@ -57,7 +57,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 
 ### STEP 2 — Mobile command center and verified device integration
 
-**Android trust foundation committed; gate open.** The mobile app now persists the two operating modes, gates the Devices workspace to Command Center + Server, creates a P-256 Android Keystore owner identity, signs protocol-shaped five-minute enrollment challenges, verifies candidate proof-of-possession, issues schema-shaped role grants with allow-listed capabilities and resource budgets, verifies grants, encrypts the local registry and revokes by generation. Android instrumentation coverage and compile-only CI are added. Current enrollment is manual payload exchange; LAN/BLE/USB/remote transport, remote control-plane integration, independently installed agent verification, owner re-authentication, durable jobs and physical-device acceptance remain open. See [Step 2 implementation record](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md).
+**Android trust foundation implemented; gate open.** The app persists both modes, gates the Devices workspace to Command Center + Server, creates a P-256 Android Keystore owner identity, signs five-minute enrollment challenges, verifies metadata-bound candidate proof-of-possession, issues role-policy-checked grants, encrypts the local registry and revokes by generation. A preview control-plane client can bootstrap/register a worker and queue owner-signed grant/health-check commands, but automatic credential delivery, full status/acknowledgement UX, authenticated device transport, revocation propagation and physical-device acceptance remain open. Approval/revocation currently use app-level biometric/device-credential confirmation; the signing key is not yet per-use authenticated. See [Step 2 implementation record](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md).
 
 - Build Android and iOS fleet experiences with identical core capabilities.
 - Implement discovery, QR/device-ID verification, one-time code, owner approval, secure key binding, role assignment and revocation.
@@ -68,7 +68,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 
 ### STEP 3 — Autonomous device software and role workers
 
-**Linux agent preview foundation committed; Step 3 gate open.** A separately installable Python package at `agents/linux` now creates a P-256 device identity, signs enrollment challenge proofs, verifies owner-signed role grants and policy bounds, persists generation/job idempotency in SQLite, and runs only an allow-listed native health-check job. CI runs its unit tests. It is not yet a network-connected daemon or a production-supported worker: authenticated transport, service supervision, cgroups, role adapters, signed updates and Windows/macOS/SBC packages remain open. See [Step 3 implementation record](STEP_3_DEVICE_AGENTS.md).
+**Linux agent preview foundation committed; Step 3 gate open.** `agents/linux` is a separately installable Python package with P-256 identity, metadata-bound challenge proof, owner-signed grant/job verification, durable SQLite state, HTTPS control-plane polling, and allow-listed `native.health_check`, `storage.snapshot`, `backup.create` and `backup.verify` executors. Namespace access is default-deny. This is still a preview: HTTPS bearer transport is not mTLS, grant renewal/revocation polling and end-to-end mobile provisioning remain incomplete, and Windows/macOS/SBC packages, build/publish, traffic, restore/replication, signed updates and physical acceptance remain open. See [Step 3 implementation record](STEP_3_DEVICE_AGENTS.md).
 
 - Build separate signed installers/agents for Android, Linux, Windows and macOS.
 - Build Raspberry Pi/SBC packages and gateway images.
@@ -79,6 +79,8 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 **Exit:** each supported role passes device-specific lifecycle, reboot, network-loss, resource-pressure and isolation tests; one worker cannot compromise sibling roles.
 
 ### STEP 4 — Main Pocket Host mobile website server
+
+**Technology boundaries:** React + TypeScript + Vite remain the separate `web-console/` operator console. The main app's TypeScript compiler is a distinct bundled website-authoring tool and is not yet implemented/verified. HTML/CSS/JS static hosting remains independent of optional server-side runtimes.
 **Partial-close boundary:** Step 4 is the main Pocket Host mobile application and its built-in web-serving stack. HTML and CSS are handled by the bundled Rust static server. TypeScript is a built-in authoring/build capability that must compile to browser JavaScript before publication. A user does not install a companion runtime to publish a basic HTML/CSS/JavaScript/TypeScript website. The current Rust engine already serves HTML/CSS; TypeScript compiler integration and app-bundling/acceptance evidence remain implementation work.
 - Keep Server only and Command Center + Server as explicit modes; both continue serving websites.
 - Keep Rust ingress, static serving, site routing and safe asset delivery in the main app.
