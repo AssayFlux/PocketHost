@@ -27,8 +27,9 @@ Other devices use separate, platform-appropriate Pocket Host software. A device 
 - **Separate node software:** platform-specific Android, Linux, Windows, macOS and supported SBC agents are planned as separate installable products. Production desktop/SBC installers are not yet delivered.
 - **Verified device fabric:** explicit device identity, short-lived enrollment challenge, owner approval, scoped role grants, revocation and audit.
 - **Role-based workers:** target roles include storage, backup, traffic, build/publish, bounded native backend jobs and edge gateway. Each role is subject to exact platform and hardware acceptance.
-- **Central runtime placement:** in 0.1.0, customer-selected language runtime packs execute only on the mobile website-serving node. Worker devices do not silently become arbitrary Python/Node hosting nodes.
-- **Website delivery:** Rust ingress and static serving form the serving foundation; Python/Node runtime foundations and the publish pipeline still require hardening and acceptance.
+- **Built-in web baseline:** the mobile server app includes HTML/CSS static hosting by default. TypeScript is part of the built-in web toolchain and is compiled to browser JavaScript before publication; its app-bundled compiler integration remains an implementation/acceptance item.
+- **Optional language runtimes:** additional server-side languages are separately selectable and installable on the mobile serving node. They are not required for basic HTML/CSS/TypeScript websites. Worker devices do not silently become arbitrary Python/Node hosting nodes.
+- **Website delivery:** Rust ingress and HTML/CSS static serving are present; TypeScript build integration, optional runtime isolation and the publish pipeline still require hardening and acceptance.
 - **Device transports:** Wi-Fi/LAN is preferred for secure control and bulk transfer; Bluetooth supports discovery/proximity and small control messages; USB is platform/API-specific; remote links use authenticated sessions.
 - **Visitor ingress:** Local Network, AssayFlux Relay and Cloudflare Tunnel are independent connectivity options.
 - **DemonCore:** separate MCU firmware and edge-device integration through board-aware adapters.
