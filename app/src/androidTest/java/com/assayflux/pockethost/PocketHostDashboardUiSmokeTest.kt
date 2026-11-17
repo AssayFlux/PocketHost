@@ -53,8 +53,8 @@ class PocketHostDashboardUiSmokeTest {
             accountMenu!!.click()
             assertTrue("Account dropdown settings route is missing",
                 device.wait(Until.hasObject(By.text("App settings")), 5_000))
-            assertTrue("Account dropdown security route is missing",
-                device.wait(Until.hasObject(By.text("Security settings")), 5_000))
+            assertTrue("Account dropdown network and access route is missing",
+                device.wait(Until.hasObject(By.text("Network & access")), 5_000))
             assertTrue("Account dropdown About route is missing",
                 device.wait(Until.hasObject(By.text("About Pocket Host")), 5_000))
             device.findObject(By.text("App settings")).click()
