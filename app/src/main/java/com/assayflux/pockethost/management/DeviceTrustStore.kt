@@ -236,8 +236,17 @@ object DeviceTrustStore {
         require(challenge.expiresAt > nowSeconds && challenge.issuedAt <= nowSeconds) { "enrollment_challenge_expired" }
         require(challenge.candidateDeviceId == candidate.deviceId) { "enrollment_device_binding_mismatch" }
         require(candidate.protocolVersion == "1.0") { "unsupported_device_protocol" }
-        require(candidate.displayName.length in 1..80 && candidate.product.length in 1..80) { "device_metadata_invalid" }
-        require(candidate.os.length in 1..40 && candidate.architecture.length in 1..40) { "device_platform_invalid" }
+        require(isSafeMetadata(candidate.displayName, 1, 80) &&
+            isSafeMetadata(candidate.product, 1, 80)) { "device_metadata_invalid" }
+        require(isSafeMetadata(candidate.os, 1, 40) &&
+            isSafeMetadata(candidate.architecture, 1, 40)) { "device_platform_invalid" }
+        require(candidate.publicKeySpki.length in 1..2048) { "device_public_key_size_invalid" }
+        require(proofSignatureBase64.length in 1..512) { "device_proof_size_invalid" }
+        require(candidate.requestedCapabilities.size in 1..64 &&
+            candidate.requestedCapabilities.distinct().size == candidate.requestedCapabilities.size &&
+            candidate.requestedCapabilities.all { it.matches(Regex("[a-z][a-z0-9_.-]{0,127}")) }) {
+            "device_requested_capabilities_invalid"
+        }
         val publicKey = Base64.decode(candidate.publicKeySpki, Base64.NO_WRAP)
         require(fingerprint(publicKey) == candidate.deviceId) { "device_fingerprint_mismatch" }
         val proof = Base64.decode(proofSignatureBase64, Base64.NO_WRAP)
@@ -489,6 +498,9 @@ object DeviceTrustStore {
             .build())
         return generator.generateKeyPair()
     }
+
+    private fun isSafeMetadata(value: String, minimum: Int, maximum: Int): Boolean =
+        value.length in minimum..maximum && value.none { it.isISOControl() }
 
     private fun fingerprint(spki: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(spki).joinToString("") { "%02x".format(it) }
