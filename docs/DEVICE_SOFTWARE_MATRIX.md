@@ -8,7 +8,9 @@
 |---|---|---|---|
 | Android phone/tablet | Pocket Host main APK | Kotlin/Compose app, Rust JNI hosting, site management, diagnostics and service foundations | v0.1.0 |
 | Android runtime provider | Separate runtime-worker APK | Existing CPython 3.11 and Node.js 24.22.1 implementations, shipped together | v0.1.1 |
-| Browser | web-console | React/TypeScript/Vite operator console | v0.2.0 |
+| Termux on Android | AssayFlux Relay Node | No standalone Termux package, installer or service exists in the audited source | v0.1.0 target |
+| Linux home server / mini PC | AssayFlux Relay Node | No standalone Relay Node package exists; current gateway is coupled to the fleet control plane | v0.1.0 target |
+| Browser | web-console | React/TypeScript/Vite operator console; Relay hostname panel source exists but is not a standalone gateway | v0.2.0 full console; minimal Relay setup in v0.1.0 |
 | Linux x86_64 | Linux Node Agent | Preview Python package with SQLite jobs and HTTPS polling | v0.2.0 |
 | Windows | Windows agent | Not present as a production package in audited tree | Later v0.2.x expansion |
 | macOS | macOS agent | Not present as a production package in audited tree | Later v0.2.x expansion |
@@ -38,6 +40,7 @@ The planned worker roles are storage, traffic, build/publish preparation, native
 | Build/publish | Scoped source input and immutable staging output; no signing/activation authority | v0.2.0 |
 | Native job | Signed fixed-purpose operation; no arbitrary shell | v0.2.0 |
 | Edge gateway | Board-profile allow-listed operations | Later expansion |
+| Public Relay Node | Dedicated visitor-only HTTP gateway; no fleet admin authority | v0.1.0 |
 
 ## Web and runtime boundaries
 
@@ -50,7 +53,7 @@ The planned worker roles are storage, traffic, build/publish preparation, native
 
 ## Package and installer contract
 
-Each OS/architecture product has a distinct artifact, signature, version, permissions and update/rollback path. Do not combine the Android host app, browser console and Linux agent into a single universal package. The Android host/companion signature-level IPC requirement must be preserved while the companion remains separate.
+Each OS/architecture product has a distinct artifact, signature, version, permissions and update/rollback path. The Relay Node is a separate installable product from the Android website-host APK and the full fleet control plane. A Termux gateway is a supported public endpoint only when its network has public IPv4/port forwarding or globally routed IPv6. Do not combine the Android host app, browser console and Linux agent into a single universal package. The Android host/companion signature-level IPC requirement must be preserved while the companion remains separate.
 
 ## Release acceptance
 
