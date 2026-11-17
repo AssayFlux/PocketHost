@@ -46,10 +46,10 @@ object ApplicationBackupManager {
     private const val ITERATIONS = 210_000
     private const val MAX_FILES = 20_000
     private const val MAX_ENTRIES = 30_000
-    private const val MAX_TOTAL_BYTES = 200L * 1024L * 1024L
-    private const val MAX_ENCRYPTED_BYTES = 220L * 1024L * 1024L
+    private const val MAX_TOTAL_BYTES = 650_000_000L
+    private const val MAX_ENCRYPTED_BYTES = 680_000_000L
     private const val MAX_DEPTH = 32
-    private const val STATIC_LIMIT = 50L * 1024L * 1024L
+    private const val STATIC_LIMIT = 500_000_000L
     private const val PYTHON_LIMIT = 50L * 1024L * 1024L
     private const val NODE_LIMIT = 100L * 1024L * 1024L
 
@@ -933,7 +933,7 @@ object ApplicationBackupManager {
                             } else if (entryBytes > 256_000L) {
                                 throw IOException("Backup metadata exceeds its size limit.")
                             }
-                            if (counters.bytes > MAX_TOTAL_BYTES) throw IOException("The backup exceeds 200 MiB uncompressed.")
+                            if (counters.bytes > MAX_TOTAL_BYTES) throw IOException("The backup exceeds 650 MB uncompressed.")
                             output.write(buffer, 0, count)
                         }
                     }
@@ -1056,7 +1056,7 @@ object ApplicationBackupManager {
 
         private fun ensureCapacity(length: Int) {
             if (length < 0 || written + length > limit) {
-                throw IOException("Encrypted full app backup exceeds its 220 MiB archive limit.")
+                throw IOException("Encrypted full app backup exceeds its 680 MB archive limit.")
             }
         }
     }
