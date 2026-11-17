@@ -57,7 +57,12 @@ Python 3.11 and Node.js 24.22.1 exist in a separate companion APK and are in pro
 
 ## 8. Public internet access
 
-Public access through AssayFlux Relay or Cloudflare Tunnel is later-release work and requires separate setup and external-network verification. A local URL or a tunnel process reporting ready does not prove public DNS/TLS/visitor access.
+v0.1.0 supports two optional public paths for a custom domain:
+
+- **Cloudflare Tunnel:** configure a named tunnel and public hostname in Cloudflare, then store its token in Pocket Host. Point the hostname to the local Rust website origin. Do not share the token.
+- **AssayFlux Relay:** deploy the Relay gateway on your own public VPS/server, verify the domain with the DNS TXT challenge, and bind the hostname to the selected Pocket Host site.
+
+Both paths must serve valid HTTPS. HTTP redirects to HTTPS by default; plain HTTP content serving is an explicit insecure option. Verify the domain from mobile data or another external network. A local URL, saved token or tunnel process reporting ready does not prove public DNS/TLS/visitor access. See [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md).
 
 ## 9. Report a problem
 
