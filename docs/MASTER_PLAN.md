@@ -44,7 +44,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 
 ### STEP 1 — Freeze contracts, trust and product boundaries
 
-**Implementation started:** versioned machine-readable protocol `pockethost.device/1.0` now defines device hello/capability, signed role grant and typed job envelope shapes under `protocol/`. CI schema validation is being added. This is contract scaffolding, not yet a closed trust gate; signing, key binding, replay/expiry and protocol simulation tests remain required.
+**Contract freeze delivered:** protocol `pockethost.device/1.0` now defines device hello, one-time enrollment challenge, signed role grants, typed job envelopes, role capability policy and per-job payload/role policy. `docs/STEP_1_TRUST_AND_PROTOCOL.md` freezes canonical signing input, identity derivation, challenge lifetime, transport limits, runtime/artifact boundaries, threat mitigations and DemonCore interop. Deterministic positive/negative trust-state simulations and schema/policy CI are committed. **Gate status: implementation complete; automated run evidence pending.** No production cryptographic verifier or platform enrollment implementation is claimed; those are Step 2 implementation deliverables.
 - Make SYSTEM_ARCHITECTURE.md normative.
 - Freeze device identity, enrollment, verification code, role grant, host-agent and job schemas.
 - Define mobile operating modes and role/permission matrix.
