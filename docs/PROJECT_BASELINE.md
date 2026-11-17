@@ -35,8 +35,8 @@ There is no Command Center-only mode. The phone is the serving node in both mode
 | Android device trust | DeviceTrustStore.kt and Devices UI | P-256 owner key, short-lived challenge, proof checks, role grants, encrypted local registry and generation revocation | Foundation; v0.2.0 acceptance |
 | Linux agent | agents/linux/ | Python package, P-256 identity, grant/job checks, SQLite durable jobs, HTTPS polling preview and allow-listed health/storage/backup snapshot tasks | Preview; v0.2.0 acceptance |
 | Control plane | control-plane/ | Rust/Axum API, PostgreSQL migrations, session/passkey foundations, device commands, audit and deployment configuration | Foundation; v0.2.0 acceptance |
-| AssayFlux Relay | RelayAgent.kt and control-plane/src/relay.rs | Bounded HTTP request/response visitor path | Source foundation; public deployment/acceptance v0.2.0 |
-| Cloudflare Tunnel | tunnel/ and Android native assets | Android cloudflared connector build/lifecycle and encrypted token store | Integration source present; external acceptance v0.2.0 |
+| AssayFlux Relay | RelayAgent.kt and control-plane/src/relay.rs | Outbound authenticated SSE host session, bounded request/response path, hostname/site binding and separate visitor listener | Source foundation; v0.1.0 public deployment, configuration UX and external acceptance open |
+| Cloudflare Tunnel | app/.../tunnel/, scripts/build-cloudflared-android.sh and Android native assets | Android cloudflared connector lifecycle, readiness probe and AES-GCM/Android Keystore token storage | Integration source present; v0.1.0 domain/DNS/TLS and external acceptance open |
 | Protocol | protocol/ | Versioned JSON Schemas, role/job policy and validator/tests | Contract foundation; production device integration v0.2.0 |
 | Runtime Library | runtime-library/catalog/ | 20 JSON catalog manifests; Python/Node in progress, remaining 18 planned | Metadata only; no independent package artifacts |
 | DemonCore | External project | Separate firmware and board profiles | External dependency; adapter acceptance later |
@@ -76,6 +76,7 @@ The Android integration workflow has a compile-only path. Its manual APK job bui
 3. v0.1.0: build, install and test APK on named physical hardware; attach artifact hash and G0–G9 evidence.
 4. v0.1.1: finish Workbench preview, diff, compiler, release staging, owner-approved activation and rollback.
 5. v0.1.1: finish Python/Node Android acceptance, optional installation lifecycle and isolation hardening.
-6. v0.2.0: finish device enrollment, authenticated transport, worker agents, control-plane integration, public ingress and cross-device recovery.
+6. v0.1.0: finish provider settings/hostname UX, decouple Relay host credentials from full fleet administration where required, deploy the Relay gateway, verify DNS/TLS and public HTTP/HTTPS from an external network, and prove visitor/admin isolation.
+7. v0.2.0: finish device enrollment, authenticated transport, worker agents, full control-plane integration, multi-host Relay scaling and cross-device recovery.
 
 See [Repository Deep Audit](REPOSITORY_AUDIT.md), [Roadmap](ROADMAP.md) and [Release Gates](RELEASE_GATES.md).
