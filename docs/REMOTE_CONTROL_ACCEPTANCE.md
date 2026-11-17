@@ -1,87 +1,82 @@
 # Pocket Host 0.1.0 — System Acceptance
 
-Record exact commit SHA, build provenance, device model, OS version, architecture, test command, result, logs and artifact digest for every run. Use PASS, FAIL or NOT TESTED. A compile or documentation update is not runtime acceptance.
+Record exact commit SHA, build provenance, device/board model, OS/firmware version, architecture, test command, result, logs and artifact digest. Use PASS, FAIL or NOT TESTED. Compilation and simulated devices do not prove production support.
 
-## 1. Mobile command center
+## 1. Mobile modes and command center
 
-- Android and iOS authenticate to the same versioned control contract.
-- Pair a host locally and remotely using a one-time challenge and fingerprint confirmation.
-- Approve, rotate and revoke device credentials.
-- Show fresh, stale, offline and degraded states accurately.
-- Test app force-stop, reboot, uninstall, phone battery loss and mobile network change.
-- Verify all remote workloads continue without the mobile app.
-- Verify recovery and replacement-phone onboarding.
+- Android supports Command Center, Server and Command Center + Server modes.
+- iOS exposes Command Center; Server mode is available only after platform-specific acceptance.
+- Turning mobile Server off does not stop other device assignments.
+- Force-stop, reboot, battery loss and uninstall of mobile app do not stop autonomous jobs on enrolled worker nodes.
+- Replacement-phone recovery and owner re-enrollment work.
 
-## 2. Host autonomy
+## 2. Device verification and transports
 
-- Host boots and restores its last authorized desired state.
-- Control-plane loss does not stop active services.
-- Reconnection reconciles desired and observed state without duplicate side effects.
-- Expired/revoked credentials cannot authorize new sensitive operations.
-- Local operator recovery works without Internet.
+- Pair via Wi-Fi/LAN and one-time code; verify candidate key and owner approval.
+- Test wrong, expired, replayed, brute-forced and already-used codes.
+- Verify unknown devices cannot receive jobs, access namespaces or proxy traffic.
+- Test BLE discovery and control separately from bulk transfer.
+- Test USB only on named hardware/OS combinations with supported APIs.
+- Switching transport preserves the same device identity and does not bypass authorization.
+- Revocation closes active sessions and cancels queued unstarted jobs.
 
-## 3. Component fault isolation
+## 3. Role assignment
 
-Independently crash, OOM, stop, corrupt or exhaust:
-- One website component.
-- One runtime provider.
-- One site volume.
-- One tunnel connector.
-- Telemetry/log exporter.
-- One host agent.
-- Optional control plane.
-- One edge gateway and one MCU.
+For each supported device, install the role-specific package and test:
+- Storage-only cannot execute or proxy.
+- Traffic-only cannot access management, runtime broker or MCU controls.
+- Build/publish worker cannot sign or activate directly.
+- Native backend/job worker accepts only signed allow-listed packages.
+- Backup worker cannot browse unrelated live files.
+- Edge gateway exposes only board-verified MCU capabilities.
+- Multiple roles on one device are tested for isolation and resource contention.
 
-Verify unrelated hosts, sites, components, tunnels and local ingress continue. Verify bounded degraded state and recovery.
+## 4. Mobile runtime and website serving
 
-## 4. Multi-runtime website
+- Static hosting works with no language runtime installed.
+- User installs only selected language runtime packs on the mobile serving node.
+- Multiple selected languages serve one site through declared routes.
+- Each project/component has distinct OS-enforced identity and scoped data/network.
+- Runtime crash does not interrupt static serving or sibling runtimes.
+- Worker build artifact is signature/digest checked, staged and health-tested before activation.
+- Failed build/deployment leaves active release untouched and rollback works.
 
-- One website contains static, Python and Node components.
-- Components may be assigned to different eligible hosts.
-- Site router sends requests only to the declared component.
-- Internal routes require explicit authenticated capability.
-- Runtime crash does not interrupt static delivery or sibling runtimes.
-- Component update and rollback are independent.
+## 5. Worker and fleet autonomy
 
-## 5. Device and platform matrix
+- Device reboot resumes accepted jobs safely.
+- Phone/control-plane loss does not stop local accepted work.
+- Network partition, duplicate delivery, expired lease and interrupted job reconcile deterministically.
+- One worker failure does not stop sibling workers.
+- Storage exhaustion, CPU/memory pressure, thermal derating and power loss remain contained.
+- Update rollback and device replacement preserve data without cloning identity.
 
-For each advertised Android, Linux, Windows, macOS, SBC or MCU profile:
+## 6. Platform and hardware matrix
+
+For every advertised Android, iOS, Linux, Windows, macOS, SBC and MCU role:
 - Install, enroll, reboot, update, revoke and uninstall.
-- Verify capability discovery and resource limits.
-- Verify lifecycle behavior, power/thermal handling and offline recovery.
-- Verify the exact runtime/service compatibility matrix.
-- For MCU boards, test real hardware pin mapping, memory, transport, watchdog and safe failure.
+- Verify exact OS permissions, architecture, resource limits and transport support.
+- Test real hardware and lifecycle constraints.
+- For MCU, verify pin mapping, watchdog, firmware signature, safe state and physical behavior.
 
-## 6. Networking
+## 7. Connectivity
 
-- Local LAN works without a public tunnel.
-- AssayFlux Relay and Cloudflare Tunnel can run independently and concurrently.
-- Failure, credential rotation or route removal in one provider does not affect the other or local ingress.
-- Hostname conflicts are detected before activation.
-- Public ingress cannot reach management, broker, debug or MCU control routes.
-- External HTTPS and visitor authorization are tested from an independent network.
+- Local LAN works without public tunnels.
+- AssayFlux Relay and Cloudflare Tunnel operate independently and concurrently.
+- Provider failure leaves other providers and local ingress available.
+- Public routes reach only approved website ingress.
+- Management, runtime broker, worker control and MCU endpoints remain private.
 
-## 7. Security
+## 8. Security, storage and recovery
 
-- Per-project filesystem and network isolation.
-- No cross-project secrets or identity leakage.
-- Device identity, replay protection, revocation and owner approvals.
-- Signed artifacts, update rollback and recovery.
-- Bounded resource exhaustion, parser and archive adversarial tests.
-- Independent review for each production security boundary.
-
-## 8. Storage and recovery
-
-- Backup integrity, wrong key, corruption, interrupted backup/restore and low storage.
-- Atomic release activation and rollback.
-- Host loss and device replacement.
-- Restore state and credentials without cloning device identity.
-- Validate recovery on real target storage.
+- Test identity spoofing, role escalation, replay, malicious worker, artifact tampering and cross-namespace access.
+- Test encrypted backup, wrong key, corruption, interruption, low storage and restore.
+- Verify revocation and credential rotation.
+- Verify MCU gateway failure does not affect website serving.
+- Complete independent security review for production boundaries.
 
 ## 9. Release
 
-- Product version 0.1.0 and component versions recorded.
-- Signed packages, matching expected identities, checksums and SBOM.
-- Protocol/API compatibility and schema migration tested.
-- Install/upgrade/rollback verified on named targets.
-- Release notes and support matrix match observed evidence.
+- Signed platform-specific packages and firmware.
+- SBOM, provenance, checksums and compatibility declarations.
+- Install/upgrade/rollback verified on named devices.
+- Published support matrix matches observed evidence.
