@@ -26,6 +26,7 @@
 - [Site Backup](SITE_BACKUP.md)
 - [Adaptive Capacity and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
 - [Control Plane Deployment](CONTROL_PLANE_DEPLOYMENT.md)
+- [Release Signing and Provenance](RELEASE_SIGNING.md)
 - [AssayFlux Relay](ASSAYFLUX_RELAY.md)
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Management API schema](management-api-v1.yaml)
