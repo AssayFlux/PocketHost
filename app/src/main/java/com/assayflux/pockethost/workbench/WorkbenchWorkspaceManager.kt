@@ -103,8 +103,13 @@ object WorkbenchWorkspaceManager {
         val bytes = content.toByteArray(Charsets.UTF_8)
         if (bytes.size > MAX_TEXT_BYTES) throw IOException("Workbench text files are limited to 256 KiB.")
         val root = workspaceRoot(context, projectId)
+        val stats = validateTree(root)
         val target = resolve(root, relativePath)
         if (!target.isFile || target.extension.lowercase() !in textExtensions) throw IOException("Select an existing supported text file.")
+        val existingBytes = target.length()
+        if (bytes.size.toLong() > MAX_BYTES - (stats.second - existingBytes)) {
+            throw IOException("Workbench workspace would exceed its 50 MiB size limit.")
+        }
         atomicWrite(target, bytes)
     }
 
@@ -118,7 +123,12 @@ object WorkbenchWorkspaceManager {
         val parent = target.parentFile ?: throw IOException("Invalid destination path.")
         if (!parent.mkdirs() && !parent.isDirectory) throw IOException("Could not create the parent folder.")
         atomicWrite(target, bytes, mustNotExist = true)
-        validateTree(root)
+        try {
+            validateTree(root)
+        } catch (error: IOException) {
+            target.delete()
+            throw error
+        }
     }
 
     fun createFolder(context: Context, projectId: String, relativePath: String) {
@@ -128,7 +138,12 @@ object WorkbenchWorkspaceManager {
         val parent = target.parentFile ?: throw IOException("Invalid folder path.")
         if (!parent.isDirectory) throw IOException("Create the parent folder first.")
         if (!target.mkdir()) throw IOException("Could not create the folder.")
-        validateTree(root)
+        try {
+            validateTree(root)
+        } catch (error: IOException) {
+            target.delete()
+            throw error
+        }
     }
 
     fun rename(context: Context, projectId: String, sourcePath: String, destinationPath: String) {
@@ -216,7 +231,9 @@ object WorkbenchWorkspaceManager {
 
     fun commits(context: Context, projectId: String): List<Commit> {
         val root = commitsRoot(context, projectId)
-        return root.listFiles()?.filter { it.isDirectory && it.name.startsWith("commit-") }?.mapNotNull { directory ->
+        return root.listFiles()?.filter {
+            it.isDirectory && !java.nio.file.Files.isSymbolicLink(it.toPath()) && isValidCommitId(it.name)
+        }?.mapNotNull { directory ->
             runCatching {
                 val json = JSONObject(File(directory, "commit.json").readText(Charsets.UTF_8))
                 val id = json.getString("id")
