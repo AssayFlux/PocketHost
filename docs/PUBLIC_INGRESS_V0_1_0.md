@@ -85,11 +85,11 @@ The persistence format, certificate provisioning, local setup API and Termux ser
 - Relay gateway and full fleet API share the same Rust executable; startup requires PostgreSQL, a control API hostname and administrator credentials.
 - Relay sessions and pending visitor requests are held in an in-memory RelayHub; they are lost on process restart.
 - The current Compose deployment is Docker/PostgreSQL/Caddy-oriented.
-- No standalone Termux Relay Node package, installer, independent credential flow or no-PostgreSQL deployment exists.
+- `relay-node/Cargo.toml` has been added as a package manifest scaffold. There is no `src/main.rs`, executable, tests, installer, independent credential flow or no-PostgreSQL deployment yet. The existing Android wire contract is `GET /v1/device/relay/stream` (Bearer token + SSE) and `POST /v1/device/relay/responses/{id}` (Bearer token + JSON).
 - No independent public DNS/TLS/content acceptance is recorded.
 - HTTP-to-HTTPS redirect exists at the current Relay edge; optional plain HTTP serving does not.
 
-These source foundations must be decoupled and packaged into the standalone owner-operated Relay Node before the first-party path can be called independently self-hosted.
+These source foundations must be decoupled and packaged into the standalone owner-operated Relay Node before the first-party path can be called independently self-hosted. The new crate must preserve the above Android endpoint contract or update the Android client and its framing tests in the same change.
 
 ## 6. Current Relay transport limits
 
