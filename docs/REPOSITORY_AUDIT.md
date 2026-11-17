@@ -1,7 +1,7 @@
 # Pocket Host — Repository Deep Audit
 
 **Audited branch:** `Alpha`  
-**Source snapshot:** `4185ea0f5e258c0d4c024f79de0a59f4757af9af`  
+**Current source snapshot checked:** `0784b3294f2de9f435479c7a290f336e85b78df0` (257 tracked files, 72 directories)  
 **Audit date:** 2026-11-17  
 **Complete inventory:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md)
 
@@ -63,13 +63,13 @@ Critical coupling/gaps:
 - The in-memory RelayHub loses active sessions and pending requests on process restart.
 - The current Caddy port-80 listener redirects to HTTPS; the Relay visitor handler requires a trusted HTTPS frontend. There is no plain-HTTP content opt-in.
 - The native Android app has no independent Relay setup screen.
-- No standalone Termux Relay Node package, installer or public-network acceptance exists.
+- A `relay-node/Cargo.toml` package manifest has since been added, but there is still no `src/main.rs`, runnable gateway, installer, service unit, Termux lifecycle or public-network acceptance. It is a scaffold, not an implementation.
 
 ### Correct no-VPS product boundary
 
 A paid VPS is not required. A separate owner-operated Relay Node can run on Termux/Android or Linux hardware the owner already owns. It still needs a publicly reachable network path (public IPv4 with router port forwarding, or global IPv6 with the firewall opened) and DNS A/AAAA records. If the only network is CGNAT with no global IPv6/port forwarding, the device cannot accept inbound visitors. Another owner-controlled reachable node or optional Cloudflare Tunnel is then required.
 
-The v0.1.0 implementation must extract a lightweight standalone Relay Node from the current fleet control-plane service, remove mandatory PostgreSQL/Docker/fleet credentials, add independent host credentials and Termux lifecycle support, and prove visitor/admin isolation.
+The current `relay-node/` directory contains only a Cargo manifest. The v0.1.0 implementation must add a runnable lightweight standalone Relay Node, independent host credentials, durable/recoverable host-session handling, Termux/Linux lifecycle support, TLS termination or a rigorously defined trusted edge, and tests proving visitor/admin isolation. It must not depend on PostgreSQL, Docker or fleet credentials.
 
 ## 5. Workbench review
 
@@ -94,7 +94,7 @@ Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundatio
 ## 8. Build and workflow review
 
 - Quality CI passed on the baseline source commit: Rust, control-plane/PostgreSQL/migrations, Caddy/Compose validation, Python/Linux agent tests, Node metrics smoke test, web-console build and Gradle wrapper validation.
-- Protocol schema/policy tests passed on the baseline source commit.
+- Protocol schema/policy CI passed on `0784b3294f2de9f435479c7a290f336e85b78df0` ([run 44091819294](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294)).
 - Android integration CI passed on code commit 5d90c1d for cloudflared Android native builds and Kotlin/instrumentation-source compilation.
 - In that Android workflow, APK packaging and emulator instrumentation were skipped. Push CI compiles sources but does not itself prove a packaged APK or installed app.
 - Signed release and control-plane deployment workflows are manual. The deployment workflow requires an SSH host and configured environment/secrets.
@@ -116,3 +116,10 @@ Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundatio
 ## 10. Evidence policy
 
 The repository baseline records source presence and the exact CI runs. No item is release-complete until its relevant G0–G9 evidence exists. A passing CI suite is not a public-domain test or a physical-device acceptance.
+
+
+## 11. Current Alpha snapshot delta
+
+The current recursive tree at `0784b3294f2de9f435479c7a290f336e85b78df0` contains 257 tracked files across 72 directories. Since the original `4185ea0` audit snapshot, a `relay-node/Cargo.toml` manifest has appeared. Inspection of the complete current `relay-node/` path list confirms that this is the only file in that directory. It declares dependencies and package metadata but does not provide an executable, tests, configuration, credentials, TLS, installer or service lifecycle. The previous audit conclusions about the absence of a working standalone Relay remain valid; only the wording “no package” is now outdated.
+
+The Quality and Protocol workflows both completed successfully for the current Alpha head. These CI results validate the configured workflows; they do not prove that the Relay Node runs, that an APK is packaged, or that public-domain traffic reaches an Android host.
