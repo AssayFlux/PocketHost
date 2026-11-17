@@ -32,7 +32,8 @@ def main() -> None
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("identity", help="Create or display this Linux agent's public identity")
     challenge = sub.add_parser("answer-challenge", help="Sign a mobile-owner enrollment challenge")
-    challenge.add_argument("challenge_json")
+    challenge.add_argument("challenge_json", help="JSON containing challenge and candidate proof objects")
+    challenge.add_argument("--owner-public-key", required=True, help="Base64 DER SPKI for the Command Center owner")
     grant = sub.add_parser("install-grant", help="Verify and persist an owner-signed role grant")
     grant.add_argument("grant_json")
     grant.add_argument("--owner-public-key", required=True, help="Base64 DER SubjectPublicKeyInfo")
@@ -52,7 +53,8 @@ def main() -> None
                               "public_key_spki_base64": public_key, "os": "linux"}, indent=2))
         elif args.command == "answer-challenge":
             challenge_data = json.loads(Path(args.challenge_json).read_text())
-            print(json.dumps({"device_id": device_id, "proof_signature": sign_challenge(key, challenge_data)}, indent=2))
+            proof = sign_challenge(key, challenge_data, args.owner_public_key)
+            print(json.dumps({"device_id": device_id, "proof_signature": proof}, indent=2))
         elif args.command == "install-grant":
             grant_data = json.loads(Path(args.grant_json).read_text())
             policy = json.loads((Path(__file__).resolve().parent / "ROLE_CAPABILITY_POLICY.json").read_text())
