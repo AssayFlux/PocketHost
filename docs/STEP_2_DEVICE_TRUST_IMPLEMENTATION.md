@@ -33,7 +33,7 @@
 
 ### Automated coverage added
 - Android instrumentation coverage exercises owner identity creation, signed challenge verification, wrong-device rejection, capability-escalation rejection, candidate proof-of-possession, signed grant verification, authorization and revocation.
-- Android integration workflow now compiles app and Android instrumentation Kotlin sources on pushes without packaging APKs.
+- Android integration workflow now checks Kotlin role-policy parity against the shared JSON policy and compiles app and Android instrumentation Kotlin sources on pushes without packaging APKs.
 - APK packaging and emulator APK installation are gated behind an explicit workflow dispatch. The final APK build remains deferred until the five-step implementation is ready.
 
 ## Step 2 work still required — gate not closed
@@ -47,7 +47,7 @@ This commit is a real Android trust foundation, not a claim of complete fleet in
 5. Add device capability attestation, health/connection state, audit events, role changes and multi-role isolation.
 6. Implement durable typed job queues, leases, idempotency and cancellation against `JOB_KIND_POLICY.json`.
 7. Add physical Android device tests and transport adversarial tests, including replay, MITM, stale generation, clock rollback, storage corruption, Keystore invalidation and reboot/network-loss recovery.
-8. Make the Kotlin capability catalogue mechanically checked against `protocol/ROLE_CAPABILITY_POLICY.json` to prevent policy drift.
+8. Continue expanding parity checks to job-kind policy, schema versions and grant resource-budget constraints. The role capability allow-list itself is now mechanically checked against `protocol/ROLE_CAPABILITY_POLICY.json` in Android CI.
 
 ## Acceptance rule
 
