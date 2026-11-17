@@ -82,11 +82,19 @@ The phone is the origin. Kotlin owns Android lifecycle and native UI. Rust/Tokio
 - Backup schedules, retention, recovery and optional remote management.
 
 ### Navigation and native UI contract
-The native Android experience follows the owner-approved two-screen design in `docs/UI_DESIGN.md`: a secure login/app-unlock panel followed by a branded home screen. The home hierarchy is brand identity, a horizontal hamburger/account control card, a swipeable service carousel with a larger active card and partial adjacent previews, then a vertically stacked notification/device information centre.
 
-The hamburger drawer is the primary global navigation. It exposes Home, Hosting, Websites & Files, Relay & Networking, Python & Node Runtimes, Security & Access, Capacity & Performance, Backups & Recovery, Activity & Logs, Learn, Settings and About. Drawer destinations must route into existing feature implementations and settings subsections; they are not permission to invent new backend capability. The account dropdown exposes only supported local app settings and security/about routes. No conventional five-destination bottom navigation is part of the approved home shell.
+The authoritative native UI specification is **Pocket Host Design Language V1** in `docs/UI_DESIGN.md`. The native launch experience is a branded local biometric app-unlock panel (not a claimed native username/password login), followed by a branded home dashboard.
 
-Use a clean classic warm-neutral and navy visual system, light default with coordinated dark mode, monochrome icons and card-based hierarchy. No gradients, neon or glass effects. A UI control must never imply a backend capability that does not exist.
+V1 dashboard hierarchy: compact Pocket Host brand/header; horizontal control bar with hamburger on the left and separate user/account menu on the right; tall **portrait-rectangular** service cards in a horizontal carousel, with a slightly emphasized active card and partial adjacent previews; then a fixed information centre with **four or five compact information bars visible simultaneously**. The information centre uses minimal monochrome icons, useful metrics, meaningful small graphs/progress indicators and truthful status.
+
+**Scrolling is strict:** the dashboard does not vertically scroll. Only the service carousel scrolls horizontally. The information centre does not scroll horizontally or vertically. Adapt the composition and information density to available screen space, Android font scale and display size; do not introduce dashboard scrolling or clip content as a workaround.
+
+The hamburger drawer is the primary global navigation and contains supported destinations for Home, Hosting, Websites & Files, Relay & Networking, Python Runtime, Node Runtime, Security & Access, Capacity & Performance, Backups & Recovery, Activity & Logs, Learn, Settings and About. Each destination must route to its correct feature surface; no cosmetic duplicate routes or invented capabilities.
+
+The separate user/account dropdown exposes only real identity/session actions and supported shortcuts. Do not invent a cloud identity, profile or sign-out flow. Login, drawer and user menu must have explicit visual hierarchy, monochrome iconography, accessible touch targets and correct dismissal/back behaviour.
+
+V1 typography uses a bundled licensed calligraphic wordmark, elegant display headings and readable sans-serif operational text. Use a consistent minimal monochrome icon family. Provide ten coordinated classic palettes (Classic Ivory, Midnight, Forest, Burgundy, Ocean, Graphite, Sandstone, Lavender, Copper and Arctic) and persisted System/Light/Dark appearance modes across the entire app. Detailed dimensions, theme tokens, screen-specific layout, accessibility and acceptance criteria are in `docs/UI_DESIGN.md`.
+
 
 ## 5. NETWORKING NORTH STAR — THREE CORE MODES
 
