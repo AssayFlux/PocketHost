@@ -12,11 +12,10 @@
 Pocket Host lets an owner install separate software on different devices, verify each device from an Android or iPhone command center, and assign it a specific job: website serving, storage, traffic handling, builds and publishing, native backend jobs, backup or edge gateway.
 
 The mobile device has exactly two operating modes:
-- **Server:** serves websites from the mobile device.
-- **Server only:** serves websites from this mobile device; fleet command, pairing approvals and role assignment are unavailable in this mode.
-- **Command Center + Server:** manages the fleet, verifies devices and serves websites from the same mobile device.
+- **Server only:** serves websites from this mobile device. Fleet command, device discovery approvals and role assignment are unavailable.
+- **Command Center + Server:** manages and verifies the fleet, assigns device jobs and serves websites from the same mobile device.
 
-The mobile command center approves every device integration and every role grant. Unknown devices cannot join the trusted fleet.
+Only Command Center + Server can approve new device integrations and grant fleet roles. Unknown devices cannot join the trusted fleet.
 
 ## Core architecture
 
