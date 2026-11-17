@@ -47,6 +47,7 @@ In scope:
 - Access from another device on the same Wi-Fi.
 - Public custom-domain hosting through Cloudflare Tunnel, using an owner-created named tunnel and encrypted Android token storage.
 - First-party AssayFlux Relay gateway deployment, DNS TXT hostname ownership proof, authenticated outbound host session and visitor-only routing to the selected static website.
+- Minimal owner-facing Relay setup surface for registering a host/site, creating a hostname binding, displaying the DNS TXT proof challenge and revoking the route; reuse the existing web-console Relay panel where practical. The full browser operator console remains v0.2.0.
 - Public HTTP and HTTPS entry points for verified custom hostnames; HTTPS certificates are validated at the public edge, and HTTP redirects to HTTPS by default with an explicit owner opt-in for unencrypted HTTP serving.
 - Independent provider status, start/stop, reconnect, diagnostics and manual failover between Cloudflare Tunnel and AssayFlux Relay.
 - External verification from mobile data or an unrelated network, including DNS, TLS, expected site content and management-route isolation.
