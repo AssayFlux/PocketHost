@@ -19,7 +19,7 @@ Neither track can compensate for failure in the other. A beautiful interface doe
 
 ### 2.1 One host app, optional runtime packs
 
-The main Pocket Host APK is the only required user-facing application. Static hosting must work without any language runtime installed.
+For the Android host, the main Pocket Host APK is the only required Android application; runtime packs remain optional. Other host platforms use their own signed host-agent/package delivery. Static hosting must work without any language runtime installed.
 
 Python, Node.js and future languages are **optional runtime packs**. Users discover, install, update, disable and uninstall each language independently from Runtime Manager. A project declares its required runtime and compatible version range. The app must explain missing or incompatible runtimes and offer an explicit install action.
 
@@ -56,7 +56,7 @@ Static hosting remains available when runtime packs are absent, broken, updating
 - **Runtime providers:** separately versioned language distributions, adapters and bootstrap contracts.
 - **Execution-cell supervisor:** creates, monitors and destroys per-project isolated processes/UIDs; applies limits and revokes grants on death or lease expiry.
 - **Project cells:** execute only their own project code under constrained storage, network and resource policy.
-- **Tunnel providers:** first-party AssayFlux Relay and Cloudflare Tunnel are independent, optional, first-class connectivity providers. Users can enable either one or both concurrently, globally or per site/hostname where supported. Local-network access remains a separate option. The phone remains the origin; tunnel providers only transport visitor traffic and never expose management APIs.
+- **Tunnel providers:** first-party AssayFlux Relay and Cloudflare Tunnel are independent, optional, first-class connectivity providers. Users can enable either one or both concurrently, globally or per site/hostname where supported. Local-network access remains a separate option. The selected host node remains the origin; tunnel providers only transport visitor traffic and never expose management APIs.
 - **Control plane:** optional identity/device registry and remote management; never the website origin.
 - **Web console:** owner/operator client, not a second website request router.
 - **Portable host contracts:** versioned host-agent, service-manifest, runtime-manifest, capability, identity, telemetry and desired-state contracts shared across platform adapters.
