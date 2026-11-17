@@ -63,7 +63,7 @@ class LinuxAgentTests(unittest.TestCase):
                 verify_role_grant(grant, owner_key, device_id, 2, POLICY)
 
     def test_typed_job_default_deny(self):
-        grant = {"grant_id": "g", "owner_id": "o", "device_id": "d", "role": "native_job"}
+        grant = {"grant_id": "g", "owner_id": "o", "device_id": "d", "role": "native_job", "capabilities": ["native_job.report_health"], "resource_budget": {"cpu_millis": 100, "memory_bytes": 4096, "storage_bytes": 0, "network_bytes_per_day": 0}}
         job = {"protocol": "pockethost.device/1.0", "target_device_id": "d", "role_grant_id": "g",
                "owner_id": "o", "kind": "native.health_check", "issued_at": "2026-11-17T00:00:00Z",
                "expires_at": "2027-11-17T00:05:00Z", "resource_budget": {"timeout_seconds": 30, "memory_bytes": 1024}, "payload": {"check_id": "node-1"}}
