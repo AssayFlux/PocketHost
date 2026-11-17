@@ -25,11 +25,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,7 +78,13 @@ internal fun PocketHostHomeScreen(
             Row(Modifier.fillMaxWidth().horizontalScroll(scrollState), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Spacer(Modifier.width((maxWidth - cardWidth - 12.dp) / 2))
                 services.forEachIndexed { index, service ->
-                    Card(onClick = { onOpen(service.destination) }, modifier = Modifier.width(cardWidth).heightIn(min = 224.dp),
+                    val cardScale by animateFloatAsState(
+                        targetValue = if (index == activePage) 1.04f else 0.94f,
+                        label = "service-card-scale"
+                    )
+                    Card(onClick = { onOpen(service.destination) },
+                        modifier = Modifier.width(cardWidth).heightIn(min = 224.dp)
+                            .graphicsLayer { scaleX = cardScale; scaleY = cardScale },
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(containerColor = if (index == 0) palette.surface else palette.surfaceVariant),
                         elevation = CardDefaults.cardElevation(defaultElevation = if (index == 0) 3.dp else 1.dp)) {
