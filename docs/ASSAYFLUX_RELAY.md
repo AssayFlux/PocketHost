@@ -1,9 +1,7 @@
-# ASSAYFLUX RELAY — PRODUCT AND ENGINEERING SPECIFICATION
+# AssayFlux Relay — Provider Specification 0.1.0
 
-**Parent product:** AssayFlux Pocket Host  
-**Status:** partially implemented in source; not deployed or production-approved  
-**Priority:** Gate 3 in `docs/NORTH_STAR.md`  
-**Purpose:** first-party outbound tunnel and visitor-access gateway for phone-hosted websites.
+**Product:** AssayFlux Pocket Host 0.1.0  
+**Role:** first-party independent visitor-ingress provider for eligible Pocket Host host nodes.
 
 ## Current implementation status (2026-11-16)
 
@@ -21,13 +19,13 @@ The repository now contains an initial first-party HTTP Relay path:
 
 This is a request/response HTTP Relay, not yet the full general-purpose streaming Relay originally specified. Request and response bodies are capped at 8 MiB; requests time out after 45 seconds; four local requests run concurrently per device. The Android agent rejects ambiguous `Transfer-Encoding` plus `Content-Length`, unsupported transfer codings, malformed lengths and bodies over the cap; it accepts only a single `chunked` coding, a valid bounded length, or connection-close framing. WebSocket upgrades, streaming downloads/SSE, end-to-end HTTP/2 multiplexing, and long-lived response streaming remain unimplemented. DNS TXT proof validates the resolver source, transaction ID, question and answer owner; DNSSEC validation is not implemented. Production DNS/TLS deployment and load/soak validation are not proven.
 
-The existing Cloudflare Tunnel remains independent and functional. For this Compose topology, route the dedicated management hostname to port 8080 and verified Relay visitor hostnames to port 8081. The phone's outbound device agent connects to the dedicated management hostname; the visitor listener contains only the visitor gateway. The phone's Relay connection is outbound-only. Do not describe the current bounded HTTP path as arbitrary TCP forwarding or as production-ready general Relay.
+Cloudflare Tunnel remains an independent provider and may operate concurrently with AssayFlux Relay on the same host or across different hosts. For this Compose topology, route the dedicated management hostname to port 8080 and verified Relay visitor hostnames to port 8081. The phone's outbound device agent connects to the dedicated management hostname; the visitor listener contains only the visitor gateway. The phone's Relay connection is outbound-only. Do not describe the current bounded HTTP path as arbitrary TCP forwarding or as production-ready general Relay.
 
 ## 1. Product objective
 
-Let a Pocket Host owner publish a website without Cloudflare and without exposing the phone's public IP address to ordinary visitors. The phone initiates an authenticated outbound connection to AssayFlux Relay. Visitors connect to a public relay hostname; the relay forwards authorized streams to the phone.
+Let a Pocket Host owner publish a website without Cloudflare and without exposing the host's public IP address to ordinary visitors. Each eligible host node initiates an authenticated outbound connection to AssayFlux Relay. Visitors connect to a public relay hostname; the relay forwards authorized streams to the phone.
 
-This hides the phone IP from ordinary visitors, not from the relay operator, carrier or network provider. Disclose this plainly.
+This hides the host IP from ordinary visitors, not from the relay operator, carrier or network provider. Disclose this plainly.
 
 ## 2. Non-goals
 
@@ -44,14 +42,14 @@ This hides the phone IP from ordinary visitors, not from the relay operator, car
 ```text
 Visitor → public TLS gateway → hostname and visitor policy
         → enrolled device tunnel session → multiplexed stream
-        → Android Relay Agent → Pocket Host Rust listener
+        → Host Relay Agent → Pocket Host Rust listener
         → site router → static content / isolated runtime
 ```
 
 ### Services
 1. **Relay Gateway:** TLS, host validation, request limits, visitor authorization and stream routing.
 2. **Device Enrollment Broker:** one-time pairing, device identity, mutual authentication, key rotation and revocation.
-3. **Android Relay Agent:** outbound connection, heartbeat, reconnect, network-change detection and local health reporting.
+3. **Host Relay Agent:** outbound connection, heartbeat, reconnect, network-change detection and local health reporting.
 4. **Stream Multiplexer:** concurrent streams, flow control, bounded buffers, deadlines and cancellation.
 5. **Domain Registry:** prove hostname control and bind hostname → device → site.
 6. **Certificate Manager:** issue, renew and revoke TLS certificates for verified hostnames.
@@ -160,3 +158,12 @@ Secrets must live in a managed secret store, not source or container images. Def
 AssayFlux Relay is not complete until an enrolled phone can establish an outbound-only authenticated tunnel; external visitors can reach the intended site through a verified hostname; the phone's public IP is not exposed to ordinary visitors; revoked devices and unauthorized visitors are denied; network changes recover; management endpoints remain private; limits are enforced; and independent review accepts the design.
 
 Cloudflare Tunnel and Local Network modes must continue working independently.
+
+
+## Mobile command-center operation
+
+The Android and iOS Pocket Host applications are the primary owner interfaces for Relay configuration, hostname approval, provider health, traffic metrics, credential rotation and revocation. The mobile app does not proxy visitor traffic and is not required to keep a host's Relay session alive. Each host agent owns its Relay process and reconnect lifecycle. Losing the phone or control plane must not terminate an established host service unless an explicit owner policy or credential revocation requires it.
+
+## Fault isolation
+
+Relay has its own process/service lifecycle, credentials, queues, limits, health and rollback. Relay failure must not stop the host supervisor, website ingress on local interfaces, Cloudflare Tunnel or unrelated workloads. Relay visitor routes can reach only the website ingress. Management, runtime broker and DemonCore control remain separate.
