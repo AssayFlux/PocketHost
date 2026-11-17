@@ -1,82 +1,61 @@
-# Pocket Host — Repository Baseline
+# Pocket Host — Project Baseline
 
-**Repository:** AssayFlux/PocketHost  
-**Branch audited:** Alpha  
-**Audit baseline commit:** afb0cceadfabca840590eb42eb4b5f3aaf9eac3e  
-**Release target:** v0.1.0 — First Hosting  
-**Certification state:** pre-release; physical Android acceptance not yet established by this audit
-
-This file records source presence and known workflow evidence. It is not a claim that all listed features are complete or production-ready.
+**Baseline snapshot:** branch `Alpha`, source commit `4185ea0f5e258c0d4c024f79de0a59f4757af9af`, audited 2026-11-17.  
+**Complete file-level record:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md). That document lists every tracked file and directory, module boundaries, source status, exact limits and verification evidence.
 
 ## Product invariants
 
-| Mode | Website serving | Fleet administration |
-|---|---|---|
-| Server only | Enabled | Disabled |
-| Command Center + Server | Enabled | Enabled when fleet implementation is accepted |
-
-There is no Command Center-only mode. The phone is the serving node in both modes. Device enrollment and fleet administration are later-release functionality.
+- Exactly two Android operating modes: **Server only** and **Command Center + Server**. Both retain website hosting.
+- Static HTML/CSS/browser JavaScript hosting must not require Python, Node, the browser console, the fleet control plane or a Relay provider.
+- Main Android app and optional runtime companion are separate installable APKs. Python and Node currently ship together in the companion.
+- Cloudflare Tunnel is optional and third-party. AssayFlux Relay is intended to be owner-operated on the user's own reachable hardware; a paid VPS is not required, but a public IPv4/IPv6 ingress path is.
+- No software can make a CGNAT-only device accept unsolicited public traffic without a publicly reachable gateway or external tunnel provider.
+- Source presence, successful compilation and CI tests are not the same as physical-device or public-domain acceptance.
+- Preserve Pocket Host Design Language V1; this audit does not authorize a redesign.
 
 ## Implementation inventory
 
-| Component | Source location | Source-audited implementation | Honest status / release |
-|---|---|---|---|
-| Android main app | app/ | Kotlin/Compose UI, hosting foreground service, Rust JNI engine, site import/registry/backup, local API, account/biometric flows, diagnostics, tunnel and runtime client integration, device-trust UI | Foundation; v0.1.0 hosting acceptance open |
-| Rust website engine | rust-engine/ | Tokio/Hyper static HTTP serving, host routing, bounded connections and native Android library | Source/tests present; v0.1.0 device acceptance open |
-| Website importer | app/.../storage/SiteImporter.kt | Folder and ZIP import, staging, path/name checks, index validation, activation/recovery | v0.1.0; 500 MB source/UI limits aligned; actual boundary and physical-device acceptance open |
-| Full-app backup | app/.../storage/ApplicationBackupManager.kt | Passphrase-encrypted static site, optional runtime projects, routes and allow-listed settings | Current limits: 50 MiB static site, 50 MiB Python, 100 MiB Node, 200 MiB total uncompressed, 220 MiB encrypted archive; does not cover a 500 MB imported site |
-| Website file UI | PocketHostSitesScreen.kt and SiteFileManager.kt | Bounded list/read/write/create/upload/rename/delete/index operations | Existing site-file foundation; not a complete Workbench |
-| Workbench | WorkbenchWorkspaceManager.kt, PocketHostWorkbenchScreen.kt | Per-site private draft workspace, nested explorer, basic text editor, draft save, file/folder operations, change digest and immutable local commit snapshots | Initial foundation; v0.1.1 completion |
-| Runtime companion | runtime-worker/ | Separate APK/UID; CPython 3.11 via Chaquopy; Node.js mobile 24.22.1 via JNI/libnode; Binder IPC, project transfer and lifecycle controls | In progress; v0.1.1 acceptance |
-| Python | runtime-worker/src/main/python/ | WSGI adapter, loopback serving, host routing, bounded workers/body/timeouts and metrics | Existing integration; Android acceptance and isolation open |
-| Node.js | runtime-worker/src/main/cpp and src/main/java | JNI/libnode integration, pinned mobile SDK and native ABI support | Existing integration; Android acceptance and isolation open |
-| TypeScript authoring | Main app | No verified bundled compiler in current Android dependency graph | v0.1.1 requirement, not v0.1.0 |
-| Browser operator console | web-console/ | React, TypeScript and Vite browser application; existing Relay hostname registration panel | Minimal Relay setup surface must be accepted in v0.1.0; full operator console remains v0.2.0 |
-| Android device trust | DeviceTrustStore.kt and Devices UI | P-256 owner key, short-lived challenge, proof checks, role grants, encrypted local registry and generation revocation | Foundation; v0.2.0 acceptance |
-| Linux agent | agents/linux/ | Python package, P-256 identity, grant/job checks, SQLite durable jobs, HTTPS polling preview and allow-listed health/storage/backup snapshot tasks | Preview; v0.2.0 acceptance |
-| Control plane | control-plane/ | Rust/Axum API, PostgreSQL migrations, session/passkey foundations, device commands, audit and deployment configuration | Foundation; v0.2.0 acceptance |
-| AssayFlux Relay | RelayAgent.kt and control-plane/src/relay.rs | Outbound authenticated SSE host session, bounded request/response path, hostname/site binding and separate visitor listener | Source foundation; v0.1.0 public deployment, configuration UX and external acceptance open |
-| Cloudflare Tunnel | app/.../tunnel/, scripts/build-cloudflared-android.sh and Android native assets | Android cloudflared connector lifecycle, readiness probe and AES-GCM/Android Keystore token storage | Integration source present; v0.1.0 domain/DNS/TLS and external acceptance open |
-| Protocol | protocol/ | Versioned JSON Schemas, role/job policy and validator/tests | Contract foundation; production device integration v0.2.0 |
-| Runtime Library | runtime-library/catalog/ | 20 JSON catalog manifests; Python/Node in progress, remaining 18 planned | Metadata only; no independent package artifacts |
-| DemonCore | External project | Separate firmware and board profiles | External dependency; adapter acceptance later |
-
-## Technology boundaries
-
-- v0.1.0 default: HTML, CSS and browser JavaScript through the Rust static server.
-- The current Rust engine has a 50 MiB per-file response cap. It is distinct from website import limits.
-- v0.1.0 import contract: 500,000,000 bytes maximum for the ZIP input and independently 500,000,000 bytes maximum for expanded site contents; 5,000 files, 10,000 entries and 32 directory levels.
-- React + TypeScript + Vite belong to web-console/, not the main Android application.
-- Built-in TypeScript-to-JavaScript compilation is assigned to v0.1.1 and is not verified in the current app dependency graph.
-- Python and Node.js are in the separate runtime-worker companion APK, currently shipped together and not independently packaged.
-- Python and Node share the companion app UID. This is not an OS-enforced per-project sandbox.
-- Static website hosting must work when the runtime companion is absent or stopped.
-
-## Platform matrix
-
-| Target | Repository evidence | Support status |
+| Component | Current source present | Actual status |
 |---|---|---|
-| Android | Main app, companion module, Rust JNI build | Foundation; named physical-device acceptance open |
-| Linux x86_64 | Preview agent package and tests | Preview only |
-| Windows/macOS | No production agent package found in audited tree | Planned |
-| Raspberry Pi/SBC | No named board acceptance profile | Planned |
-| iOS | No iOS source project | Planned |
-| MCU | Separate DemonCore project | External integration; board acceptance open |
+| Android main app | Kotlin/Compose screens, foreground hosting service, local API, pairing, diagnostics, themes, biometric gate, site/file screens | Implemented foundation; v0.1.0 device acceptance open |
+| Rust website engine | Tokio/Hyper JNI static HTTP server, hostname routes, visitor access modes, range/MIME/SPA handling, rate and connection limits | Source and tests present; 50 MiB per-file serving cap; device acceptance open |
+| Website importer | Folder/ZIP staging and validation | 500,000,000-byte ZIP and expanded-content caps; actual 500 MB boundary/low-storage/device tests open |
+| Full-app backup | `ApplicationBackupManager.kt` | 50 MiB static site, 50 MiB Python, 100 MiB Node, 200 MiB total uncompressed, 220 MiB encrypted archive; cannot back up a site near importer max |
+| Workbench | Private draft workspace, nested explorer, basic editor, save, file/folder operations, change digests, local commit snapshots | Initial foundation exists; isolated preview, TypeScript build, owner-approved publish and rollback incomplete |
+| Cloudflare Tunnel | Android token store, cloudflared process, readiness probe, reconnect supervisor, Settings controls, build script | Connector source/build present; public hostname/DNS/TLS acceptance open |
+| AssayFlux Relay client | Android outbound SSE request/response agent | Coupled to RemoteControlAgent endpoint/device token; no independent Relay settings/credentials |
+| AssayFlux Relay gateway | Rust visitor handler, DNS TXT proof, hostname routes, separate visitor listener, Caddy TLS | Exists inside full control-plane process; PostgreSQL and fleet credentials required; not standalone |
+| Relay Node for Termux/Linux | No package, installer or standalone service in snapshot | Not implemented; mandatory v0.1.0 target |
+| Runtime companion | Separate APK with CPython 3.11/Chaquopy and Node.js mobile 24.22.1/JNI | Both in same companion APK, in progress; not hardened sandbox |
+| Runtime Library | 20 catalog JSON manifests | Python/Node in progress; remaining 18 planned metadata only |
+| Browser console | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; remote control and Relay hostname panel | Separate browser app; build passes; not an Android runtime |
+| Android device trust | P-256 identity, challenge/proof and grant foundations | In progress; v0.2.0 acceptance |
+| Linux agent | Python package, P-256 identity, HTTPS polling, SQLite job store, typed jobs | Preview; v0.2.0 acceptance |
+| Control plane | Rust/Axum, PostgreSQL migrations, admin sessions/passkeys, device commands, audit, Relay visitor listener | Source/tests present; combined fleet/Relay executable; full fleet acceptance open |
+| Protocol | Protocol 1.0 schemas, default-deny role/job policies and validators | Contract tests pass; device-fabric integration incomplete |
 
-## Build and CI interpretation
+## Critical limits and discrepancies
 
-The quality workflow contains Rust, control-plane, Python/Linux agent, console, Node smoke and Gradle wrapper checks. Earlier CI runs are historical evidence, not proof of the current commit's Android runtime behavior.
+- Import limit: 500,000,000 bytes for ZIP input and independently for expanded site contents; 5,000 files, 10,000 entries, depth 32.
+- Rust serving limit: 50 MiB per individual file; independent of total import size.
+- Backup limit: 50 MiB static site, 50 MiB Python, 100 MiB Node, 200 MiB total uncompressed, 220 MiB encrypted archive.
+- Relay current body limit: 8 MiB; gateway timeout 45 seconds; pending requests 32 global/8 per device; HTTP methods only, not arbitrary TCP/WebSocket.
+- Current Relay HTTP listener redirects port 80 to HTTPS; there is no configurable plain-HTTP content mode.
+- Main Android Network UI says “No built-in visitor password yet,” but the Rust engine already implements private/restricted Basic visitor authentication. The UI copy is stale.
+- Main app has optional biometric app unlock and local pairing/approval; it does not currently have a conventional username/password mobile login page. Owner/passkey login is in the browser console.
+- No standalone Termux Relay Node, no production deployment, no signed release, no APK artifact and no physical-device/public-domain acceptance are evidenced at this baseline.
 
-The Android integration workflow has a compile-only path. Its manual APK job builds the main APK and companion APKs and can run emulator instrumentation when explicitly dispatched. Compile-only success is not an APK artifact. APK packaging is not physical-device acceptance.
+## Public hosting direction without a VPS
 
-## Known open items for the new roadmap
+v0.1.0 must deliver a standalone AssayFlux Relay Node installable on Termux/Android and Linux, independent of the fleet control plane, PostgreSQL and Docker. The user can host it on their own spare phone or home machine **only if** the network provides public IPv4 with port forwarding or globally routed IPv6 and firewall access for the public listener. A device behind CGNAT without global IPv6 cannot be the public gateway. The Android website host itself can remain behind CGNAT because it connects outbound to the Relay Node.
 
-1. v0.1.0: prove 500 MB ZIP and expanded import boundaries, folder import, archive/path safety, correct static serving, local preview and same-Wi-Fi LAN access.
-2. v0.1.0: verify foreground service, notification, stop/restart, network changes, process death, backup/restore limits and Android permission/power behavior; resolve backup/import capacity mismatch.
-3. v0.1.0: build, install and test APK on named physical hardware; attach artifact hash and G0–G9 evidence.
-4. v0.1.1: finish Workbench preview, diff, compiler, release staging, owner-approved activation and rollback.
-5. v0.1.1: finish Python/Node Android acceptance, optional installation lifecycle and isolation hardening.
-6. v0.1.0: finish provider settings/hostname UX, decouple Relay host credentials from full fleet administration where required, deploy the Relay gateway, verify DNS/TLS and public HTTP/HTTPS from an external network, and prove visitor/admin isolation.
-7. v0.2.0: finish device enrollment, authenticated transport, worker agents, full control-plane integration, multi-host Relay scaling and cross-device recovery.
+Cloudflare Tunnel remains an optional fallback, not a dependency of the first-party Relay.
 
-See [Repository Deep Audit](REPOSITORY_AUDIT.md), [Roadmap](ROADMAP.md) and [Release Gates](RELEASE_GATES.md).
+## Build and verification evidence
+
+- [Quality workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44082938152) on baseline source commit: Rust tests, PostgreSQL/control-plane tests and migrations, Caddy/Compose validation, Python/Linux agent tests, Node metrics smoke test, web-console TypeScript/Vite build and Gradle wrapper validation passed.
+- [Protocol contract workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44082937765) on baseline source commit.
+- [Android integration workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44079487947) on code commit `5d90c1d`: cloudflared Android builds/ELF checks and Kotlin/instrumentation-source compilation passed. APK packaging and emulator jobs were skipped.
+- No main APK build, signed release, physical-device test, live Cloudflare hostname test, standalone Relay Node deployment or external public-domain acceptance is recorded.
+
+See [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md) for the complete 252-file/71-directory inventory and detailed evidence.
