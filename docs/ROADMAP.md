@@ -30,15 +30,14 @@ This roadmap follows the five-step master plan. The mobile command center is the
 - Raspberry Pi and SBC capability profiles.
 - DemonCore gateway and MCU adapters.
 
-## Step 4 — Mobile website server and language runtimes
-**Partial close boundary:** the built-in web baseline is the default server-app capability: HTML and CSS are served by the bundled Rust engine, and TypeScript authoring/build support belongs in the app's built-in web toolchain. Users must not install a separate language pack to host a basic HTML/CSS/TypeScript website. The current repository already contains the Rust static-serving foundation for HTML/CSS; the TypeScript compile-to-JavaScript integration still requires implementation and acceptance before this baseline can be marked fully verified.
-- Built-in baseline: HTML, CSS, TypeScript-to-JavaScript build support, static assets and site routing.
-- Additional server-side language runtimes remain optional, separately selectable and separately installable packs on the mobile serving node only.
-- Runtime isolation, fault containment and lifecycle are per runtime/project; static serving must survive runtime failure.
-- Build worker artifact handoff and atomic publish approval.
-- Distributed storage and traffic worker integration.
+## Step 4 — Main Pocket Host mobile website server
+**Partial close boundary:** Step 4 is the main Pocket Host application and its built-in web-serving stack only. HTML and CSS are served by the bundled Rust engine. TypeScript authoring/build support is built into the main app and compiles to browser JavaScript before publication. The existing repository contains the Rust static-serving foundation; TypeScript compiler integration and acceptance remain implementation work.
+- Built-in main-app baseline: HTML, CSS, browser JavaScript, TypeScript-to-JavaScript build support, static assets and site routing.
+- Main-app website lifecycle, secure staging, preview and atomic publish approval.
+- Build worker artifact handoff without bypassing owner approval.
+- Static serving must remain independent of any future optional runtime add-ons.
 
-**Step 4 remains open for runtime extensions and publishing/isolation acceptance.** The partial close does not claim Python, Node or any future language runtime is production-ready.
+**Step 4 does not include optional server-side language runtimes or a runtime companion.** Those are moved to the post-five-step Future Runtime Library plan in [FUTURE_RUNTIME_LIBRARY.md](FUTURE_RUNTIME_LIBRARY.md). Do not hold Step 4 open for those future add-ons. The Step 4 gate remains open only for the main-app baseline and publishing/physical-device acceptance.
 
 ## Step 5 — Resilience and release
 - Independent Local Network, AssayFlux Relay and Cloudflare providers.
