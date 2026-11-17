@@ -39,7 +39,7 @@
 
 ## ABOUT POCKET HOST
 
-**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release makes an Android phone a practical static website host. Later releases add an in-app development workbench, optional server runtimes, public visitor ingress and a verified device fabric.
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release makes an Android phone a practical static website host that can be reached locally, over LAN and worldwide through the owner's domain using Cloudflare Tunnel or the first-party AssayFlux Relay. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
 
 A desktop, laptop, server, NAS or supported single-board computer may eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Device products remain separate for their platforms and interoperate through shared contracts. Network discovery never establishes trust.
 
@@ -69,7 +69,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center" width="33%">
       <img src="https://api.iconify.design/lucide/globe.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>FIRST HOSTING</strong><br>
-      v0.1.0: static website import, local preview and same-Wi-Fi LAN hosting from Android.
+      v0.1.0: static website import, local preview, same-Wi-Fi LAN and public custom-domain HTTP/HTTPS hosting from Android.
     </td>
     <td align="center" width="33%">
       <img src="https://api.iconify.design/lucide/code-2.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -91,7 +91,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers; public acceptance in v0.2.0.
+      Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers; public HTTP/HTTPS acceptance in v0.1.0.
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -105,7 +105,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
 
 | Version | Milestone | Release outcome |
 |---|---|---|
-| **v0.1.0** | First Hosting | Import and host a real static website from Android, locally and over the same Wi-Fi network |
+| **v0.1.0** | First Hosting | Import and host a real static website from Android, locally, over LAN and publicly through the owner's domain |
 | **v0.1.1** | Workbench & Runtime Development | Edit, preview, version and safely publish websites; complete optional Python/Node runtime integration |
 | **v0.2.0** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and harden public ingress |
 
@@ -122,6 +122,9 @@ The first release has one primary promise: **a website imported into Pocket Host
 - HTML, CSS, browser JavaScript and static assets.
 - Local phone preview, configurable HTTP port and optional LAN binding.
 - A second device on the same Wi-Fi can open the website.
+- Public custom-domain hosting through Cloudflare Tunnel or the owner-deployed AssayFlux Relay gateway.
+- Public HTTP and HTTPS with valid edge TLS; HTTP redirects to HTTPS by default, with explicit opt-in for plain HTTP content serving.
+- External DNS/TLS/content verification and strict separation between visitor and management routes.
 - Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
 - Encrypted full-app backup/restore and useful hosting diagnostics (current backup limits are lower than the 500 MB import cap; see backup documentation).
 - APK build, installation and physical Android acceptance.
@@ -152,7 +155,7 @@ The complete development workflow is assigned to **v0.1.1**: editor tabs and uns
 - Connect the mobile command center to separate platform-specific worker software.
 - Deliver bounded storage/backup, traffic, build/publish preparation and native-job roles.
 - Harden authenticated transport, job lifecycle, audit, control plane and agent recovery.
-- Deliver independently operated Local Network, AssayFlux Relay and Cloudflare Tunnel ingress paths.
+- Scale the first-party Relay to multiple hosts/gateways, with advanced health-based failover and traffic distribution beyond the v0.1.0 single-host ingress paths.
 - Prove isolation between visitor traffic, device administration, runtimes and edge controls.
 
 ## MANDATORY RELEASE RULE: G0–G9
@@ -304,6 +307,7 @@ The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows
 - [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
 - [v0.1.0 Static Hosting Baseline](docs/STEP_4_WEB_BASELINE.md)
 - [Website Deployment](docs/WEBSITE_DEPLOYMENT.md)
+- [Public Ingress v0.1.0](docs/PUBLIC_INGRESS_V0_1_0.md)
 - [Website Backup and Restore](docs/SITE_BACKUP.md)
 - [Workbench Specification](docs/WORKBENCH.md)
 - [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md)
