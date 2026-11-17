@@ -11,13 +11,13 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 - Mobile modes are exactly Server only and Command Center + Server; both include website serving.
 - No standalone Command Center-only mode.
 - Preserve Pocket Host Design Language V1. Do not redesign branding, login, account menu, hamburger navigation, typography, palettes or theme behavior as part of this roadmap.
-- v0.1.0 is static website hosting on Android. Python/Node and Workbench are not dependencies.
+- v0.1.0 is Android static website hosting with optional public access through Cloudflare Tunnel and AssayFlux Relay. Python/Node and Workbench are not dependencies.
 - Folder/ZIP import: 500,000,000 bytes for compressed ZIP input and independently 500,000,000 bytes for expanded site contents; 5,000 files, 10,000 entries, 32 levels.
 - Rust static response limit remains 50 MiB per file; it is not the import cap.
 - React/Vite is the separate web-console app. Raw React/TypeScript source is not built by v0.1.0; import its built static output.
 - Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
 - Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
-- Device trust, workers, control plane, Relay and public ingress acceptance are v0.2.0 work.
+- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.2.0 work. Cloudflare Tunnel and single-host AssayFlux Relay public acceptance are mandatory v0.1.0 work.
 - Every version must pass G0–G9. See RELEASE_GATES.md.
 
 ## Repository boundaries
@@ -52,4 +52,4 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 
 ## Current next actions
 
-Close the v0.1.0 hosting path: align and test 500 MB import/backup quotas, verify local and LAN serving, exercise service lifecycle and recovery, package the main APK and complete physical-device acceptance.
+Close the v0.1.0 hosting path: align and test 500 MB import/backup quotas, verify local and LAN serving, implement/accept Cloudflare Tunnel and the first-party Relay gateway, verify the owner's domain over external HTTP/HTTPS, exercise service lifecycle and recovery, package the main APK and complete physical-device acceptance.
