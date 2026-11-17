@@ -16,7 +16,7 @@ SUPPORTED = {
     "native.health_check": ("native_job", "native_job.report_health", {"check_id": "identifier"}),
     "storage.snapshot": ("storage", "storage.snapshot", {"namespace_id": "identifier", "snapshot_id": "identifier"}),
     "backup.create": ("backup_recovery", "backup.create_snapshot", {"namespace_id": "identifier", "snapshot_id": "identifier"}),
-    "backup.verify": ("backup_recovery", "backup.verify_snapshot", {"snapshot_id": "identifier"}),
+    "backup.verify": ("backup_recovery", "backup.verify_snapshot", {"namespace_id": "identifier", "snapshot_id": "identifier"}),
 }
 
 
@@ -88,7 +88,7 @@ def execute_job(envelope: dict[str, Any], grant: dict[str, Any]) -> dict[str, An
                 grant["resource_budget"].get("storage_bytes", 0)),
         )
     if kind == "backup.verify":
-        return verify_snapshot(envelope["payload"]["snapshot_id"])
+        return verify_snapshot(envelope["payload"]["namespace_id"], envelope["payload"]["snapshot_id"])
     started = time.monotonic()
     return {
         "check_id": envelope["payload"]["check_id"],
