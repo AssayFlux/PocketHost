@@ -1,7 +1,7 @@
 # AssayFlux Relay — Owner-Operated Visitor Gateway
 
 **Release assignment:** v0.1.0 — First Hosting  
-**Current source status:** partial Relay visitor path exists; standalone owner-operated Relay Node is not yet implemented or publicly accepted.
+**Current source status (Alpha `0784b329`):** the existing fleet-coupled Relay path exists; `relay-node/Cargo.toml` is a new package manifest scaffold only. There is no standalone executable, independent host credential flow, installer or public acceptance.
 
 ## Purpose
 
@@ -61,6 +61,10 @@ The current source Caddyfile redirects port 80 to HTTPS, and the current Relay v
 
 Important coupling: `RelayAgent.start()` checks `RemoteControlAgent.isConfigured()`, takes the endpoint from `RemoteControlAgent.endpoint()` and takes the Relay device token from the remote-control credential store. `RemoteControlAgent.start()` starts RelayAgent. Therefore the current Relay client is not an independent website-hosting provider.
 
+### Standalone Relay Node scaffold
+
+`relay-node/Cargo.toml` declares the `assayflux-relay-node` Rust package and dependencies. The directory currently contains no `src/main.rs`, library source, tests, config, installer or service integration. It is not a runnable binary and is not yet included in the Quality workflow. Do not treat the manifest or the general CI result as evidence of a working standalone gateway.
+
 ### Existing gateway
 
 - `control-plane/src/main.rs` implements hostname registration, DNS TXT verification, TLS authorization check, visitor routing and device SSE/response endpoints.
@@ -85,8 +89,8 @@ These are current source-level limits, not tested production throughput guarante
 
 ## v0.1.0 implementation work
 
-1. Extract a standalone Relay Node from the fleet control-plane executable.
-2. Remove mandatory dependency on fleet device registration and fleet-control bearer credentials. Create dedicated host identity, pairing and revocable visitor-ingress credentials.
+1. Implement the standalone Relay Node binary in `relay-node/`, using the existing Android wire contract as the compatibility baseline: `GET /v1/device/relay/stream` (Bearer host credential, `text/event-stream`) and `POST /v1/device/relay/responses/{id}` (same credential, JSON response).
+2. Remove mandatory dependency on fleet device registration and fleet-control bearer credentials. Create dedicated host identity, pairing and revocable visitor-ingress credentials; never accept the fleet device token as a substitute.
 3. Provide a minimal owner setup flow for Termux/Linux: install, start/stop, status, domain registration, DNS TXT proof, TLS, route binding and revocation.
 4. Avoid mandatory Docker and PostgreSQL for the standalone profile. Use a small durable local store and bounded in-memory request state with safe restart recovery.
 5. Make the Android Relay connector configurable independently of RemoteControlAgent and the fleet control plane.
