@@ -260,6 +260,7 @@ The Android integration workflow has compile-only and manual APK/emulator paths.
 | [Master Plan](docs/MASTER_PLAN.md) | Five-step implementation plan |
 | [Roadmap](docs/ROADMAP.md) | Milestones and gate definitions |
 | [Repository Baseline](docs/PROJECT_BASELINE.md) | Source-audited implementation inventory |
+| [Repository Deep Audit](docs/REPOSITORY_AUDIT.md) | Component-level source findings, workflow wiring and open engineering risks |
 | [Device Software Matrix](docs/DEVICE_SOFTWARE_MATRIX.md) | Platform/role support boundaries |
 | [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md) | React/Vite, TypeScript compiler and runtime separation |
 | [Step 1 — Protocol](docs/STEP_1_TRUST_AND_PROTOCOL.md) | Schemas, signing and threat model |
