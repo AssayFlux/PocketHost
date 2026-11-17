@@ -24,7 +24,7 @@ function encodeBase64Url(value: ArrayBuffer): string {
   const bytes = new Uint8Array(value);
   let binary = "";
   bytes.forEach(byte => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function serializePasskeyCredential(credential: PublicKeyCredential): Record<string, unknown> {
