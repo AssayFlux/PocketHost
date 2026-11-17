@@ -71,6 +71,7 @@ class HostingService : Service() {
         runCatching { ManagementApiServer.start(this) }
             .onFailure { OperationalLog.record(this, "ERROR", "MANAGEMENT_API_START_FAILED", it.message ?: "Management API failed to start.") }
         RemoteControlAgent.start(this)
+        com.assayflux.pockethost.management.RelayAgent.start(this)
         acquireWakeLockIfRequested()
         updateStatus("Starting local website server…")
 
@@ -257,6 +258,7 @@ class HostingService : Service() {
     override fun onDestroy() {
         stopping = true
         RemoteControlAgent.stop()
+        com.assayflux.pockethost.management.RelayAgent.stop()
         ManagementApiServer.stop()
         Thread({ runCatching { CloudflareTunnelRuntime.stop() } }, "PocketHost-Cloudflare-Stop").start()
         runCatching {
