@@ -6,7 +6,7 @@
 - Version: 0.1.0
 - Canonical branch: main
 - Primary owner interface: Android or iPhone command center
-- Mobile modes: Server only; Command Center + Server
+- Mobile modes: Server only; Command Center + Server. Both serve websites; only the combined mode exposes fleet command, device verification and role assignment.
 - System form: verified, role-assigned device fleet
 
 ## Repository implementation inventory
