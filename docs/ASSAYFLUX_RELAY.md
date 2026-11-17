@@ -18,7 +18,7 @@ The node must have at least one publicly reachable ingress path:
 - Public IPv4 with router port forwarding for TCP 80 and 443, or
 - Globally routed IPv6 with firewall rules allowing the required inbound ports.
 
-DNS A/AAAA records must resolve to the reachable node. If the device is behind CGNAT and has no global IPv6 or port-forwardable address, it cannot accept public browser traffic. In that case use a different owner-controlled reachable device/network or choose Cloudflare Tunnel as an optional third-party fallback. This is a network constraint; Pocket Host cannot bypass it by changing DNS.
+DNS A/AAAA records must resolve to the reachable node. If the domain's DNS is hosted by Cloudflare but the owner wants a direct first-party Relay path, configure the hostname as DNS-only; enabling Cloudflare's orange-cloud proxy keeps Cloudflare in the visitor request path and is no longer a direct-only Relay route. If the device is behind CGNAT and has no global IPv6 or port-forwardable address, it cannot accept public browser traffic. In that case use a different owner-controlled reachable device/network or choose Cloudflare Tunnel as an optional third-party fallback. This is a network constraint; Pocket Host cannot bypass it by changing DNS.
 
 ## Target architecture
 
