@@ -22,7 +22,7 @@ Switching between modes must not revoke or stop already-authorized worker assign
 
 ## 2. Mobile command center
 
-Android and iOS are first-class command clients using the same versioned contracts and fleet model.
+Android is the implemented mobile command client. iOS is a planned client; no iOS application source exists in this repository. Any future iOS app must follow the same contracts and must not claim always-on website hosting unless platform acceptance proves it.
 
 Responsibilities:
 - Owner authentication, device discovery and explicit enrollment approval.
@@ -35,7 +35,7 @@ Responsibilities:
 
 The mobile app is not a fleet-wide single point of failure. Enrolled nodes retain their signed local assignments and continue already-authorized work during phone, Internet or control-plane outages. A replacement phone recovers owner authority through account recovery and device re-enrollment.
 
-iOS is a first-class command center. iOS background execution restrictions mean arbitrary always-on hosting is not promised; Server mode is shown only where the OS and device capabilities actually support the required workload.
+iOS is not implemented in this repository. If developed, it must preserve the two-mode product contract; platform lifecycle limits must be surfaced honestly and must not create a standalone Command Center-only mode.
 
 ## 3. Device roles and assignments
 
@@ -138,15 +138,14 @@ The device validates every job locally before accepting it. It persists accepted
 ## 7. Website serving and runtime model
 
 The mobile website server is the final serving node in this baseline:
-- Rust ingress and static website delivery are foundational.
-- Python, Node and other supported language runtimes are separately selectable installable runtime packs.
-- User installs only the runtimes needed by the website.
-- A website can use several installed runtimes, but each project/component receives a distinct OS-enforced execution identity and isolated data/capabilities.
-- Runtime processes are supervised independently; static delivery remains available if a language runtime fails.
-- Worker devices may build, validate, stage, cache, store or distribute immutable artifacts, but do not execute customer-selected language runtimes in 0.1.0.
-- Publishing is a staged, verified, atomic activation on the mobile serving node. A build worker cannot publish directly without owner-authorized approval and serving-node verification.
-
-Runtime packs must declare language/version, ABI, platform compatibility, dependencies, license, digest, signature, health check, resource limits and rollback path. No runtime is installed automatically without owner consent.
+- Rust ingress and static HTML/CSS/JavaScript delivery are foundational and do not require a server-side language runtime.
+- TypeScript-to-browser-JavaScript compilation is a required built-in Step 4 authoring feature. It is **not yet bundled or verified** in the Android app. Raw TypeScript is not browser-executable.
+- React + TypeScript + Vite are used only by the separate `web-console/` browser operator client; they are not Android app dependencies.
+- Python 3.11 and Node.js mobile 24.22.1 already have runtime implementations in the separate `runtime-worker/` companion APK. Both are in progress, are currently shipped together and are optional for static websites.
+- The companion package boundary is not per-project isolation: Python and Node currently share its Android application UID. Only trusted owner-controlled code should run until adversarial isolation/egress acceptance passes.
+- The future Runtime Library will split Python and Node into independent signed packages and add 18 planned languages after the five-step baseline. Current JSON manifests are not downloadable binaries.
+- Worker devices may build, validate, stage, cache, store or distribute immutable artifacts, but do not execute arbitrary customer-selected language runtimes in the current baseline.
+- Publishing is intended to be staged, verified, previewed and atomically activated on the mobile serving node. The complete TypeScript build/publish workflow remains open.
 
 ## 8. Data and traffic roles
 
@@ -192,8 +191,8 @@ All public routes terminate at the approved website ingress. Traffic worker rout
 ## 12. Compatibility and honest support
 
 Every platform has a separate installable product:
-- Android: mobile command center and optional mobile host/worker agent.
-- iOS: mobile command center; hosting only if a supported OS capability and acceptance test permit it.
+- Android: implemented mobile app and serving foundation; Command Center + Server trust UI is a partial implementation.
+- iOS: planned; no iOS application source exists in this repository.
 - Linux, Windows and macOS: native host/worker agent installers.
 - Raspberry Pi/SBC: board/OS/architecture-specific host or gateway image/package.
 - MCU: firmware and board-specific DemonCore adapter.
@@ -209,6 +208,6 @@ A platform is supported only for tested roles, transports, OS versions and hardw
 - A storage-only node cannot execute jobs or proxy traffic.
 - A traffic-only node cannot access management or runtime broker endpoints.
 - Build workers cannot activate a release without serving-node verification and authorized deployment.
-- Customer-selected language runtimes execute only on the designated mobile serving node in this baseline.
+- Python and Node.js runtime foundations execute through the separate Android companion on the designated mobile serving node; they are in progress and not production sandboxed.
 - One worker, runtime, storage provider, tunnel or MCU failure remains isolated.
 - Every job, role change, credential issue/revocation and release activation is auditable.
