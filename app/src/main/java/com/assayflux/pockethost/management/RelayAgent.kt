@@ -28,6 +28,7 @@ object RelayAgent {
     private const val MAX_EVENT_CHARS = 12 * 1024 * 1024
     private const val MAX_SSE_LINE_CHARS = 64 * 1024
     @Volatile private var running = false
+    @Volatile private var currentState = "STOPPED"
     @Volatile private var generation = 0L
     @Volatile private var worker: Thread? = null
     @Volatile private var streamConnection: HttpURLConnection? = null
@@ -39,12 +40,21 @@ object RelayAgent {
 
     @Synchronized
     fun start(context: Context) {
-        if (running || !RemoteControlAgent.isConfigured(context)) return
-        val endpoint = RemoteControlAgent.endpoint(context).trimEnd('/')
-        val token = RemoteControlAgent.relayDeviceToken(context) ?: return
+        if (running) return
+        if (!RelayCredentialStore.isConfigured(context)) {
+            currentState = "STOPPED"
+            return
+        }
+        val endpoint = RelayCredentialStore.endpoint(context).trimEnd('/')
+        val token = RelayCredentialStore.readToken(context)
+        if (token.isNullOrBlank()) {
+            currentState = "ERROR"
+            return
+        }
         generation += 1
         val runGeneration = generation
         running = true
+        currentState = "CONNECTING"
         val app = context.applicationContext
         worker = Thread({
             var retry = 1_000L
@@ -54,6 +64,7 @@ object RelayAgent {
                     retry = 1_000L
                 } catch (error: Exception) {
                     if (running) {
+                        currentState = "RETRYING"
                         com.assayflux.pockethost.diagnostics.OperationalLog.record(
                             app, "WARN", "RELAY_DISCONNECTED",
                             error.message?.take(160) ?: "Relay connection disconnected."
@@ -67,6 +78,7 @@ object RelayAgent {
             }
             if (generation == runGeneration) {
                 running = false
+                currentState = "STOPPED"
                 streamConnection = null
                 if (worker === Thread.currentThread()) worker = null
             }
@@ -77,11 +89,14 @@ object RelayAgent {
     fun stop() {
         generation += 1
         running = false
+        currentState = "STOPPED"
         streamConnection?.disconnect()
         streamConnection = null
         worker?.interrupt()
         worker = null
     }
+
+    fun status(): String = currentState
 
     private fun streamOnce(context: Context, endpoint: String, token: String, runGeneration: Long) {
         val connection = URL("$endpoint/v1/device/relay/stream").openConnection() as HttpURLConnection
@@ -100,6 +115,7 @@ object RelayAgent {
             connection.setRequestProperty("Cache-Control", "no-cache")
             val status = connection.responseCode
             if (status !in 200..299) throw IllegalStateException("Relay stream returned HTTP $status")
+            currentState = "CONNECTED"
             val contentType = connection.contentType.orEmpty()
             require(contentType.startsWith("text/event-stream", ignoreCase = true)) {
                 "Relay endpoint did not return an event stream."
