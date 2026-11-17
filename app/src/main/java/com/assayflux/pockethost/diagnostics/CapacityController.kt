@@ -16,6 +16,10 @@ object CapacityController {
     @Volatile private var lastHealthState = "NORMAL"
     @Volatile private var recoveryUntilElapsed = 0L
 
+    /** Unknown battery state is not evidence of a healthy/full battery. */
+    internal fun batteryRequiresDerating(percent: Int, charging: Boolean): Boolean =
+        percent !in 0..100 || (percent <= 10 && !charging)
+
     private fun healthFactor(context: Context): Pair<Double, String> {
         val memory = android.app.ActivityManager.MemoryInfo()
         context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
@@ -28,7 +32,7 @@ object CapacityController {
         }.getOrNull()
         val level = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val batteryPercent = if (level >= 0 && scale > 0) level * 100 / scale else 100
+        val batteryPercent = if (level >= 0 && scale > 0) level * 100 / scale else -1
         val batteryStatus = battery?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
         val charging = batteryStatus == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
             batteryStatus == android.os.BatteryManager.BATTERY_STATUS_FULL
@@ -39,7 +43,7 @@ object CapacityController {
         // Missing or stale CPU telemetry is not evidence of idle CPU. Apply a
         // conservative admission derating until a fresh sample is available.
         val constrained = thermal >= 3 || memory.availMem < memory.totalMem / 8L ||
-            freeBytes < 1024L * 1024L * 1024L || (batteryPercent <= 10 && !charging) ||
+            freeBytes < 1024L * 1024L * 1024L || batteryRequiresDerating(batteryPercent, charging) ||
             cpuPercent == null || cpuPercent >= 80.0
         if (emergency) { recoveryUntilElapsed = 0L; return 0.05 to "EMERGENCY" }
         if (critical) { recoveryUntilElapsed = 0L; return 0.1 to "PROTECTIVE" }
