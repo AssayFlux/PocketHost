@@ -13,7 +13,7 @@
 
 | Area | Existing foundation | 0.1.0 role |
 |---|---|---|
-| Android app | Kotlin, Jetpack Compose, AndroidX | Command center and optional mobile host |
+| Android app | Kotlin, Jetpack Compose, AndroidX | Website server in both modes; fleet command center in combined mode |
 | Android runtime companion | Separate Android package; Python/Node integration | Language runtime provider on mobile serving node |
 | Rust engine | Tokio/Hyper native library | Mobile website ingress and routing |
 | Remote management API | Android loopback API | Local mobile management |
@@ -26,7 +26,7 @@
 
 ## Platform and role coverage
 
-- Android: application and mobile host foundation present; role model, verification ceremony and fleet worker roles require implementation/acceptance.
+- Android: website-serving foundation present; selectable Server only / Command Center + Server mode enforcement, verified enrollment ceremony and fleet worker roles require implementation/acceptance.
 - iOS: no native application workspace in this repository; command-center app is a planned deliverable.
 - Linux/Windows/macOS: no production host-agent installer is claimed.
 - Raspberry Pi/SBC: no named production board/OS profile is accepted.
