@@ -105,6 +105,10 @@ def verify_role_grant(
     required = {"cpu_millis", "memory_bytes", "storage_bytes", "network_bytes_per_day"}
     if not required.issubset(budget) or any(not isinstance(budget[k], int) or budget[k] < 0 for k in required):
         raise ValueError("Invalid resource budget.")
+    if budget["cpu_millis"] < 1 or budget["memory_bytes"] < 1:
+        raise ValueError("CPU and memory grants must be positive.")
+    if budget.get("allow_battery_operation", False) is not False:
+        raise ValueError("Battery-powered background operation is denied by policy.")
     signature = grant.get("signature", {})
     if signature.get("algorithm") != "ecdsa-p256-sha256":
         raise ValueError("Unsupported owner signature algorithm.")
