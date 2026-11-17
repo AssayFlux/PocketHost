@@ -52,6 +52,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
     var fleetMapText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getString("fleet_device_map", "{}") ?: "{}") }
     var fleetMessage by remember { mutableStateOf("Register an approved agent with the remote control plane to issue its separate device token and deliver the signed role grant.") }
     var oneTimeToken by remember { mutableStateOf("") }
+    var remoteHistoryText by remember { mutableStateOf("{}") }
+    val remoteHistory = remember(remoteHistoryText) { runCatching { JSONObject(remoteHistoryText) }.getOrDefault(JSONObject()) }
     val scope = rememberCoroutineScope()
     val fleetMap = remember(fleetMapText) { runCatching { JSONObject(fleetMapText) }.getOrDefault(JSONObject()) }
     val palette = MaterialTheme.colorScheme
@@ -158,6 +160,43 @@ internal fun PocketHostDevicesScreen(context: Context) {
                         Text("${device.os} · ${device.architecture} · ${device.role} · generation ${device.generation}", color = palette.onSurfaceVariant)
                         Text(device.deviceId, color = palette.onSurfaceVariant)
                         Text(if (device.revokedAt == 0L) "Approved" else "Revoked", color = if (device.revokedAt == 0L) palette.primary else palette.error)
+                        val remoteCommands = remoteHistory.optJSONArray(device.deviceId)
+                        if (fleetMap.optString(device.deviceId).isNotBlank()) {
+                            OutlinedButton(
+                                enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
+                                onClick = {
+                                    val remoteId = fleetMap.optString(device.deviceId)
+                                    scope.launch {
+                                        fleetMessage = "Refreshing command acknowledgements for ${device.displayName}…"
+                                        val result = runCatching {
+                                            withContext(Dispatchers.IO) {
+                                                FleetControlPlaneClient.commandHistory(controlPlaneEndpoint, ownerCredential, remoteId)
+                                            }
+                                        }
+                                        result.onSuccess { history ->
+                                            remoteHistory.put(device.deviceId, history)
+                                            remoteHistoryText = remoteHistory.toString()
+                                            fleetMessage = "Remote command history refreshed for ${device.displayName}."
+                                        }.onFailure { fleetMessage = it.message ?: "Could not refresh remote command history." }
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()
+                            ) { Text("Refresh remote status & job results") }
+                            if (remoteCommands != null) {
+                                Text("LATEST REMOTE COMMANDS", fontWeight = FontWeight.SemiBold)
+                                if (remoteCommands.length() == 0) Text("No remote commands recorded yet.", color = palette.onSurfaceVariant)
+                                (0 until minOf(remoteCommands.length(), 5)).forEach { index ->
+                                    val item = remoteCommands.optJSONObject(index) ?: JSONObject()
+                                    Text(
+                                        "${item.optString("kind")} · ${item.optString("state")} · attempts ${item.optInt("delivery_attempts")}",
+                                        color = palette.onSurfaceVariant
+                                    )
+                                    val result = item.optJSONObject("result")
+                                    if (result != null) Text("Result: ${result}", color = palette.onSurfaceVariant)
+                                    Text("Command ${item.optString("id")} · ${item.optString("acknowledged_at", "not acknowledged")}",
+                                        color = palette.onSurfaceVariant)
+                                }
+                            }
+                        }
                         if (device.revokedAt == 0L) {
                             val controlPlaneId = fleetMap.optString(device.deviceId)
                             if (controlPlaneId.isBlank()) {
