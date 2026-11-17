@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -79,6 +80,46 @@ class LinuxAgentTests(unittest.TestCase):
         job["kind"] = "process.exec"
         with self.assertRaises(ValueError):
             validate_job(job, grant)
+
+    def test_storage_snapshot_is_confined_bounded_and_verifiable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            namespace_root = Path(directory) / "namespaces"
+            snapshot_root = Path(directory) / "snapshots"
+            (namespace_root / "site-1").mkdir(parents=True)
+            (namespace_root / "site-1" / "index.html").write_text("Pocket Host")
+            with __import__("unittest").mock.patch.dict(os.environ, {
+                "POCKETHOST_STORAGE_ROOT": str(namespace_root),
+                "POCKETHOST_SNAPSHOT_ROOT": str(snapshot_root),
+            }):
+                grant = {
+                    "grant_id": "00000000-0000-4000-8000-000000000001",
+                    "owner_id": "owner", "device_id": "d" * 64, "role": "storage",
+                    "capabilities": ["storage.snapshot"],
+                    "resource_budget": {"cpu_millis": 100, "memory_bytes": 4096,
+                                        "storage_bytes": 4096, "network_bytes_per_day": 0},
+                }
+                job = {
+                    "protocol": "pockethost.device/1.0",
+                    "job_id": "00000000-0000-4000-8000-000000000002",
+                    "correlation_id": "00000000-0000-4000-8000-000000000003",
+                    "idempotency_key": "storage-idempotency-0001",
+                    "owner_id": "owner", "target_device_id": "d" * 64,
+                    "role_grant_id": grant["grant_id"], "kind": "storage.snapshot",
+                    "issued_at": "2026-11-17T00:00:00Z", "expires_at": "2027-11-17T00:05:00Z",
+                    "resource_budget": {"timeout_seconds": 30, "memory_bytes": 1024, "storage_bytes": 4096},
+                    "payload": {"namespace_id": "site-1", "snapshot_id": "snapshot-1"},
+                }
+                result = execute_job(job, grant)
+                self.assertEqual(1, result["file_count"])
+                grant["role"] = "backup_recovery"
+                grant["capabilities"] = ["backup.verify_snapshot"]
+                job["kind"] = "backup.verify"
+                job["payload"] = {"snapshot_id": "snapshot-1"}
+                verified = execute_job(job, grant)
+                self.assertTrue(verified["verified"])
+                job["resource_budget"]["storage_bytes"] = 8192
+                with self.assertRaises(ValueError):
+                    execute_job(job, grant)
 
     def test_durable_generation_and_idempotency(self):
         with tempfile.TemporaryDirectory() as directory:
