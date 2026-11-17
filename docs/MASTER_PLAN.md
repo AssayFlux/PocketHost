@@ -43,6 +43,8 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 ## Five-step execution plan
 
 ### STEP 1 — Freeze contracts, trust and product boundaries
+
+**Implementation started:** versioned machine-readable protocol `pockethost.device/1.0` now defines device hello/capability, signed role grant and typed job envelope shapes under `protocol/`. CI schema validation is being added. This is contract scaffolding, not yet a closed trust gate; signing, key binding, replay/expiry and protocol simulation tests remain required.
 - Make SYSTEM_ARCHITECTURE.md normative.
 - Freeze device identity, enrollment, verification code, role grant, host-agent and job schemas.
 - Define mobile operating modes and role/permission matrix.
