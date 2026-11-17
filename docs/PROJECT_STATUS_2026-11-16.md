@@ -160,3 +160,14 @@ This evidence update supersedes the earlier statement that API 26 instrumentatio
 - `RuntimeWorkerSeccompTest.isolatedCellClosesInheritedSocketsDeniesNewSocketsAndAcceptsHostUnixListener`: setup failed with `EAFNOSUPPORT` while connecting its IPv4 loopback test socket. Use an API-26-supported deterministic socket-pair fixture or explicitly separate unavailable emulator networking from the isolation assertion; do not count this as a pass.
 - At the time of this update, API 33 remained in progress and API 35 remained queued. No API 26/33/35 matrix pass is claimed.
 - The above are unresolved defects. Gates 2 and 7 remain open; runtime migration and Android acceptance remain unverified. APK compilation and the six-job quality workflow are not substitutes for these tests.
+
+
+## Follow-up implementation — 2026-11-17 00:54 UTC
+
+- Navigation accessibility semantics were changed to merge the destination label with its descendant click action: commit `3e2b303e5a18f90bcf162ab45f693c7dfd22e6d3`. The API 26 rerun is pending; this is not yet a verified fix.
+- The API 26 seccomp test now establishes its inherited TCP descriptor through the Java Socket API rather than the raw `Os.connect` address conversion that failed with EAFNOSUPPORT: commits `e1f0781` and `2b19625`. The test has not yet rerun successfully.
+- The API 26 filesystem Unix-listener probe now performs client writes concurrently with the Binder accept transaction to avoid blocking the instrumentation thread: commit `ce28d9d0f4c6270b4f9b2fbd8834aceea4608ac3`. This remains unverified until emulator results pass.
+- The latest complete quality run before this status update passed all six jobs on SHA `3e2b303e5a18f90bcf162ab45f693c7dfd22e6d3` (run [43990501777](https://github.com/AssayFlux/PocketHost/actions/runs/43990501777)). The next quality run for current main SHA `2af7aef59a8874a55cef9f5c14cb11a49347695a` is pending.
+- Android integration run [43991190237](https://github.com/AssayFlux/PocketHost/actions/runs/43991190237), SHA `ce28d9d0f4c6270b4f9b2fbd8834aceea4608ac3`, was still in progress when checked; do not treat its API 26/33/35 tests as passing. The run was triggered before the mesh-plan documentation commit; the latest main tree must receive a complete API matrix before Android acceptance can close.
+- A detailed future architecture and phased acceptance plan for the requested Android Wi-Fi hosting mesh is recorded in `docs/ANDROID_DEVICE_MESH_PLAN.md` (commit `2af7aef59a8874a55cef9f5c14cb11a49347695a`). This is a design plan only; no mesh implementation or device-to-device acceptance is claimed.
+- Gates 3–8 remain open. External deployment, TLS/DNS ownership, physical devices, signed release credentials, and independent security review cannot be inferred from source or emulator success. Gate 2 remains intentionally open.
