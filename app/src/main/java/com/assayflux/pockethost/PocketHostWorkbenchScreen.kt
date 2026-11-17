@@ -66,6 +66,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
     var showCreateFile by remember { mutableStateOf(false) }
     var showCreateFolder by remember { mutableStateOf(false) }
     var showCommit by remember { mutableStateOf(false) }
+    var showDiscardChanges by remember { mutableStateOf(false) }
     var commitMessage by remember { mutableStateOf("") }
     var renameSource by remember { mutableStateOf<String?>(null) }
     var renameDestination by remember { mutableStateOf("") }
@@ -121,7 +122,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                         Text("WEBSITE PROJECT", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         Text(selectedSiteLabel, color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                     }
-                    OutlinedButton(onClick = { siteMenuExpanded = true }) { Text("Switch") }
+                    OutlinedButton(onClick = { siteMenuExpanded = true }, enabled = !editorDirty) { Text("Switch") }
                     DropdownMenu(expanded = siteMenuExpanded, onDismissRequest = { siteMenuExpanded = false }) {
                         availableSites.forEach { site ->
                             DropdownMenuItem(text = { Text(site.name) }, onClick = { selectedSiteId = site.id; siteMenuExpanded = false })
@@ -145,7 +146,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(onClick = { if (currentFolder.isNotEmpty()) currentFolder = currentFolder.substringBeforeLast('/', "") },
-                        enabled = currentFolder.isNotEmpty()) { Text("Up") }
+                        enabled = currentFolder.isNotEmpty() && !editorDirty) { Text("Up") }
                     Text(if (currentFolder.isEmpty()) "/" else "/$currentFolder/", color = palette.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.CenterVertically), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -157,7 +158,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 else if (visibleEntries.isEmpty()) Text("This folder is empty.", color = palette.onSurfaceVariant)
                 else visibleEntries.forEach { entry ->
                     Row(
-                        Modifier.fillMaxWidth().clickable(enabled = entry.directory || entry.editable) {
+                        Modifier.fillMaxWidth().clickable(enabled = !editorDirty && (entry.directory || entry.editable)) {
                             if (entry.directory) {
                                 currentFolder = if (currentFolder.isEmpty()) entry.path else "$currentFolder/${entry.path.substringAfterLast('/')}"
                             } else {
@@ -213,7 +214,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                                     .onFailure { status = it.message ?: "Could not save workspace file." }
                             }
                         }, enabled = editorDirty && !loading) { Text("Save draft") }
-                        OutlinedButton(onClick = { selectedFile = null; editorDirty = false }) { Text("Close") }
+                        OutlinedButton(onClick = { if (editorDirty) showDiscardChanges = true else selectedFile = null }) { Text("Close") }
                     }
                 }
             }
@@ -259,6 +260,18 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
             }
         }
     }
+
+    if (showDiscardChanges) AlertDialog(
+        onDismissRequest = { showDiscardChanges = false },
+        title = { Text("Discard unsaved edits?") },
+        text = { Text("Your editor contains changes that have not been saved to the Workbench draft.") },
+        confirmButton = { TextButton(onClick = {
+            showDiscardChanges = false
+            selectedFile = null
+            editorDirty = false
+        }) { Text("Discard") } },
+        dismissButton = { TextButton(onClick = { showDiscardChanges = false }) { Text("Keep editing") } }
+    )
 
     if (showCreateFile) AlertDialog(
         onDismissRequest = { showCreateFile = false },
