@@ -9,6 +9,10 @@ fi
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 python3 -m venv /opt/pockethost-agent
 /opt/pockethost-agent/bin/pip install --upgrade "$ROOT_DIR"
+if [ ! -e /etc/pockethost-agent.env ]; then
+  printf '%s\n' '# Comma-separated namespace IDs explicitly assigned to this agent.' 'POCKETHOST_ALLOWED_NAMESPACES=' > /etc/pockethost-agent.env
+  chmod 0600 /etc/pockethost-agent.env
+fi
 install -D -m 0644 "$ROOT_DIR/pockethost-agent.service" /etc/systemd/system/pockethost-agent.service
 systemctl daemon-reload
 systemctl enable --now pockethost-agent.service
