@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
 private fun PocketHostDashboard() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var selectedTab by remember { mutableStateOf("Dashboard") }
+    var selectedTab by remember { mutableStateOf("Home") }
     var settingsSection by remember { mutableStateOf("General") }
     var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
     var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
@@ -479,13 +479,36 @@ private fun PocketHostDashboard() {
 
     PocketHostTheme(darkTheme = darkTheme) {
         val palette = MaterialTheme.colorScheme
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val navigate: (String) -> Unit = { destination ->
+            if (destination.startsWith("Settings:")) {
+                selectedTab = "Settings"
+                settingsSection = destination.substringAfter(":")
+            } else {
+                selectedTab = destination
+            }
+            scope.launch { drawerState.close() }
+        }
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    PocketHostSidebar(
+                        selectedTab = selectedTab,
+                        selectedSection = settingsSection,
+                        onNavigate = navigate
+                    )
+                }
+            }
+        ) {
         Scaffold(
             containerColor = palette.background,
-            topBar = { PocketHostTopBar(selectedTab = selectedTab, hosting = hosting) },
-            bottomBar = {
-                PocketHostNavigationBar(
+            topBar = {
+                PocketHostOwnerHeader(
                     selectedTab = selectedTab,
-                    onDestinationSelected = { selectedTab = it }
+                    hosting = hosting,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onNavigate = navigate
                 )
             }
         ) { innerPadding ->
@@ -495,6 +518,22 @@ private fun PocketHostDashboard() {
                         .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                if (selectedTab == "Home") {
+                    PocketHostHomeScreen(
+                        hosting = hosting,
+                        status = status,
+                        requests = requests,
+                        activeConnections = activeConnections,
+                        uptimeText = uptimeText,
+                        importedSummary = importedSummary,
+                        tunnelStatus = tunnelStatus,
+                        pythonHosting = pythonHosting,
+                        nodeHosting = nodeHosting,
+                        deviceTelemetry = deviceTelemetry,
+                        recentEvents = recentEvents,
+                        onOpen = navigate
+                    )
+                }
                 if (selectedTab == "Learn") {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
@@ -1235,6 +1274,7 @@ private fun PocketHostDashboard() {
                 }
                 }
             }
+        }
         }
     }
 }

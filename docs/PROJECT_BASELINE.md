@@ -14,7 +14,7 @@ Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root
 
 | Subsystem | Source-level position | Verification / limitation |
 |---|---|---|
-| Android host | Kotlin/Compose app, five destinations, foreground hosting service | Intermediate APK/ABI and API 26/33/35 emulator validation authorized during Gates 2–4; final physical-device/release acceptance remains Gate 8 |
+| Android host | Kotlin/Compose app, owner-designed branded home shell with hamburger drawer and service carousel, foreground hosting service | Intermediate APK/ABI and API 26/33/35 emulator validation authorized during Gates 2–4; final physical-device/release acceptance remains Gate 8 |
 | Rust engine | Tokio/Hyper, static files, hostname routing, reverse proxy, bounded admission | Non-Android Rust tests pass; fairness and sustained-load evidence remain |
 | Python | CPython 3.11/Chaquopy moved into companion package | Python-through-Rust instrumentation test is written; not run yet |
 | Node | Node mobile 24.22.1 native runtime in companion, dedicated process | Node-through-Rust and static-origin continuity tests are written; not run yet |
@@ -249,3 +249,12 @@ Update this file with exact evidence whenever the baseline changes.
 - This is the first successful Android APK/ABI build evidence recorded for this current source line. It does not yet prove the isolated runtime probe, Python/Node startup, full visitor path, backup recovery, UI instrumentation or accessibility because the emulator matrix has not completed and its reports/artifacts have not been inspected.
 - Gates 2–7 remain open. Specifically, per-project UID/storage/egress confinement is not in production; Relay is not deployed and lacks streaming/WebSocket/TLS lifecycle and soak acceptance; passkey-first Owner identity is absent; target-device capacity and lifecycle fault evidence is incomplete; and human accessibility/onboarding acceptance remains outstanding.
 - Sequencing correction: intermediate APK/ABI builds and API 26/33/35 instrumentation are being run during Gates 2–4. Gate 8 still owns final signed release artifacts, physical ARMv7/ARM64 acceptance, external connectivity and independent review.
+
+
+## Owner-approved native UI redesign — 2026-11-17
+
+- The current authoritative layout is defined by `docs/UI_DESIGN.md` and supersedes the historical five-bottom-destination description above.
+- Native app entry retains the optional local biometric app lock; the native application does not currently implement username/password account sign-in. Management-console authentication is separate.
+- Home shell source introduces the brand/header card, hamburger drawer, account dropdown, swipeable service cards and device/notification information cards. Drawer routes map to existing Dashboard, Sites, Activity, Learn and Settings sections rather than claiming separate backend modules exist.
+- Existing business logic remains in the root Compose activity and dedicated Dashboard/Sites/Activity/Learn/Settings composables. The new home cards read existing service state, operational events and DeviceTelemetry JSON. Runtime isolation remains unproven and Python/Node remain trusted-code-only.
+- UI source implementation is not UI acceptance. The new Android shell still requires Android compilation, API 26/33/35 emulator runs, screenshot/hierarchy inspection, accessibility and responsive review.

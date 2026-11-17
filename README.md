@@ -39,6 +39,12 @@ src="https://img.shields.io/badge/AUTHOR-WRITTEN%20BY%20MD%20SAFARUJJAMAN-417B85
 
 ---
 
+## ANDROID APP EXPERIENCE
+
+The native Android UI follows the owner-approved two-screen design in [docs/UI_DESIGN.md](docs/UI_DESIGN.md): a secure local biometric app-unlock screen and a branded, adaptive home screen. The home screen uses a hamburger navigation drawer for the complete app feature set, an account/app dropdown, a horizontally swipeable service carousel, and stacked live system-information and recent-activity cards. The classic visual system uses warm neutral surfaces, clean cards and navy accents, with coordinated dark mode and Android accessibility/responsive behaviour.
+
+The drawer routes into the existing Hosting/Dashboard, Websites/Sites, Relay & Networking settings, Python/Node runtime settings, Security/Access controls, Capacity, Backups, Activity/Logs, Learn and general Settings. The native app currently uses optional biometric app lock; native username/password account login is not claimed. Management-console authentication is a separate feature. See [docs/UI_DESIGN.md](docs/UI_DESIGN.md) for implementation truth and acceptance requirements.
+
 ## ABOUT THE PROJECT
 
 **AssayFlux Pocket Host** is a phone-first website hosting system. An Android device stores and serves the website; its native Rust engine handles HTTP ingress, hostname routing, static delivery and reverse-proxy traffic. Optional connectivity services make a locally hosted site reachable beyond the phone's network.

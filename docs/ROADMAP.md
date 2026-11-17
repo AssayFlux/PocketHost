@@ -72,6 +72,9 @@ Finish Dashboard, Sites, Activity, Learn and Settings. Provide guided static pub
 
 **Exit:** first-time static publication needs no terminal; every displayed state reflects real backend state; accessibility, compact screen and visual acceptance pass.
 
+
+**Owner-directed UI scope update — 2026-11-17:** Gate 7's native UI target is now the two-screen owner-approved design in `docs/UI_DESIGN.md`, replacing the five-destination bottom-navigation shell. Acceptance covers the biometric app-unlock panel, branded home, hamburger drawer with all existing features, account dropdown, service carousel, live notification/device information cards, adaptive Android layouts and preservation of existing feature callbacks. Source implementation alone does not close Gate 7; exact-SHA Android API 26/33/35 builds, screenshot/hierarchy review, TalkBack, font scaling and compact/landscape acceptance remain mandatory.
+
 ## Gate 8 — CI, release candidate and independent review (P0)
 
 Run all required jobs on one exact SHA. Build host and companion APKs for declared ABIs. Retain API 26/33/35 test reports, SBOM, dependency provenance, license audit, vulnerability scan, signing evidence and checksums. Verify Cloudflare and Relay externally. Complete physical ARMv7/ARM64 acceptance and independent security review.

@@ -82,3 +82,8 @@ The companion UID differs from the host UID, but Python and Node projects share 
 ## Owner sequencing correction — 2026-11-16
 
 The historical validation deferral text above is superseded. The Owner explicitly moved intermediate host/companion APK and ABI builds plus API 26/33/35 emulator instrumentation into Gates 2–4. Gate 8 remains final signed-release, physical-device and independent-review acceptance. Current exact-SHA Actions evidence must be read from the linked workflow runs and the canonical `docs/PROJECT_BASELINE.md`; this historical snapshot is not current CI evidence.
+
+
+## UI architecture supersession note — 2026-11-17
+
+This document is a historical Stage 0 snapshot. Its mention of five Android destinations and earlier Gate 8-only Android validation language is not the current UI design authority. The owner-approved native UI layout and implementation status are maintained in `docs/UI_DESIGN.md` and the current `docs/PROJECT_BASELINE.md`. The new home shell uses a hamburger drawer and service carousel; existing feature logic is retained. Android build and API 26/33/35 validation status must be taken from current exact-SHA workflow evidence, not this historical snapshot.

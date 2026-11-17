@@ -81,8 +81,12 @@ The phone is the origin. Kotlin owns Android lifecycle and native UI. Rust/Tokio
 - Tunnel, domain and visitor-access policies.
 - Backup schedules, retention, recovery and optional remote management.
 
-### Navigation contract
-Five destinations: Dashboard, Sites, Activity, Learn and Settings. Use a clean classic interface, light default with optional dark, navy identity, monochrome icons and card-based hierarchy. No gradients, neon or glass effects. A UI control must never imply a backend capability that does not exist.
+### Navigation and native UI contract
+The native Android experience follows the owner-approved two-screen design in `docs/UI_DESIGN.md`: a secure login/app-unlock panel followed by a branded home screen. The home hierarchy is brand identity, a horizontal hamburger/account control card, a swipeable service carousel with a larger active card and partial adjacent previews, then a vertically stacked notification/device information centre.
+
+The hamburger drawer is the primary global navigation. It exposes Home, Hosting, Websites & Files, Relay & Networking, Python & Node Runtimes, Security & Access, Capacity & Performance, Backups & Recovery, Activity & Logs, Learn, Settings and About. Drawer destinations must route into existing feature implementations and settings subsections; they are not permission to invent new backend capability. The account dropdown exposes only supported local app settings and security/about routes. No conventional five-destination bottom navigation is part of the approved home shell.
+
+Use a clean classic warm-neutral and navy visual system, light default with coordinated dark mode, monochrome icons and card-based hierarchy. No gradients, neon or glass effects. A UI control must never imply a backend capability that does not exist.
 
 ## 5. NETWORKING NORTH STAR — THREE CORE MODES
 
