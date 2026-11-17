@@ -1,18 +1,18 @@
 # Pocket Host — Fleet Control Plane Deployment
 
-**Release assignment:** v0.2.0 — Connected Device Fabric.  
+**Release assignment:** minimal Relay gateway deployment in v0.1.0; full fleet control-plane acceptance in v0.2.0.  
 **Local hosting dependency:** none.
 
 ## Role
 
-The optional Rust control plane coordinates owner sessions, device registry, enrollment challenges, role grants, desired state, leased jobs, artifact metadata and audit. It is not the website origin, runtime supervisor or required dependency for local static hosting.
+The optional Rust/Axum service contains two deliberately separate planes: a visitor-only Relay gateway (single-host public-ingress requirement in v0.1.0) and the owner/device fleet control API (full acceptance in v0.2.0). It is not the website origin, runtime supervisor or required dependency for local static hosting. The v0.1.0 Relay deployment must not make the full admin API public to visitors.
 
 ## Topology
 
 - Android Pocket Host remains the owner mobile interface and website-serving node.
 - Separately installed agents connect over authenticated transport.
 - The control plane stores coordination state and dispatches typed commands/jobs.
-- Website visitor ingress is separate from management/device-control endpoints.
+- Website visitor ingress is a separate listener/hostname from management/device-control endpoints. The visitor listener is v0.1.0 scope; fleet enrollment/jobs remain v0.2.0.
 - Browser operator console is a separate web-console build.
 
 ## Deployment requirements
@@ -36,4 +36,4 @@ The repository includes a Rust/Axum API foundation, PostgreSQL migrations, sessi
 
 ## Acceptance
 
-Deploy to a controlled environment, test TLS/session lifecycle, owner enrollment, grant issuance/revocation, job lease/idempotency, database recovery, audit, rate limits, backup/restore and mobile/agent reconnect. Public visitor ingress must not reach the control plane. Apply v0.2.0 G0–G9.
+Deploy to a controlled environment, test TLS/session lifecycle, owner enrollment, grant issuance/revocation, job lease/idempotency, database recovery, audit, rate limits, backup/restore and mobile/agent reconnect. Public visitor ingress must not reach the control plane. For the minimal Relay gateway profile, apply v0.1.0 G0–G9. Apply v0.2.0 G0–G9 to full fleet control-plane acceptance.
