@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Make personal and community-owned infrastructure approachable. A user controls a verified fleet of capable devices from an Android or iPhone command center, assigns each device a useful job and combines their capabilities without making the fleet fragile.
+Make personal and community-owned infrastructure approachable. A user controls a verified fleet of capable devices from an Android command center (iOS is a future target, not yet in this repository), assigns each device a useful job and combines their capabilities without making the fleet fragile.
 
 ## Product promises
 
