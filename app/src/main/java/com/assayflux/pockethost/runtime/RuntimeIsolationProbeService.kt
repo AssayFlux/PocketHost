@@ -93,6 +93,45 @@ open class RuntimeIsolationProbeService : Service() {
                         output.close()
                     }
                 }
+                TRANSACTION_HOST_BROKER_READ -> {
+                    val broker = requireNotNull(data.readStrongBinder()) { "Host capability broker is required." }
+                    val leaseId = requireNotNull(data.readString()) { "Cell lease is required." }
+                    val issueData = Parcel.obtain()
+                    val issueReply = Parcel.obtain()
+                    val openData = Parcel.obtain()
+                    val openReply = Parcel.obtain()
+                    try {
+                        issueData.writeInterfaceToken("com.assayflux.pockethost.RUNTIME_CELL_CAPABILITY_BROKER")
+                        issueData.writeString(leaseId)
+                        check(broker.transact(IBinder.FIRST_CALL_TRANSACTION, issueData, issueReply, 0)) {
+                            "Host broker rejected capability issuance."
+                        }
+                        issueReply.readException()
+                        val capability = requireNotNull(issueReply.readString()) { "Host broker returned no capability." }
+
+                        openData.writeInterfaceToken("com.assayflux.pockethost.RUNTIME_CELL_CAPABILITY_BROKER")
+                        openData.writeString(leaseId)
+                        openData.writeString(capability)
+                        openData.writeString("marker.txt")
+                        check(broker.transact(IBinder.FIRST_CALL_TRANSACTION + 1, openData, openReply, 0)) {
+                            "Host broker rejected the project-file request."
+                        }
+                        openReply.readException()
+                        val descriptor = ParcelFileDescriptor.CREATOR.createFromParcel(openReply)
+                        try {
+                            val content = ByteArray(256)
+                            val count = Os.read(descriptor.fileDescriptor, content, 0, content.size)
+                            reply?.writeString(String(content, 0, count.coerceAtLeast(0), Charsets.UTF_8))
+                        } finally {
+                            descriptor.close()
+                        }
+                    } finally {
+                        issueData.recycle()
+                        issueReply.recycle()
+                        openData.recycle()
+                        openReply.recycle()
+                    }
+                }
                 TRANSACTION_BROKERED_LISTENER -> {
                     val listener = ParcelFileDescriptor.CREATOR.createFromParcel(data)
                     var acceptedCount = 0
@@ -144,6 +183,7 @@ open class RuntimeIsolationProbeService : Service() {
         const val TRANSACTION_BROKERED_SOCKET = IBinder.FIRST_CALL_TRANSACTION + 3
         const val TRANSACTION_PROJECT_FILES = IBinder.FIRST_CALL_TRANSACTION + 4
         const val TRANSACTION_BROKERED_LISTENER = IBinder.FIRST_CALL_TRANSACTION + 5
+        const val TRANSACTION_HOST_BROKER_READ = IBinder.FIRST_CALL_TRANSACTION + 6
     }
 }
 
