@@ -24,6 +24,7 @@
 - [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
 - [Step 3 Device Agents](STEP_3_DEVICE_AGENTS.md)
 - [Step 4 Main-App Web Baseline](STEP_4_WEB_BASELINE.md)
+- [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md)
 - [Future Runtime Library — 20 Optional Packages](FUTURE_RUNTIME_LIBRARY.md)
 - [Runtime Companion](RUNTIME_COMPANION.md)
 - [Runtime Project Storage](RUNTIME_PROJECT_STORAGE.md)
