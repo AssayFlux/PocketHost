@@ -4,7 +4,7 @@
 
 The optional control plane coordinates owner identity, device registry, enrollment challenges, role grants, desired state, leased jobs, artifact metadata and audit. It is not the website origin, runtime supervisor or required dependency for already-authorized local jobs.
 
-Android and iOS command-center apps are the primary owner clients. Every node stores its own device identity and accepted role/job state.
+The Android app is the current owner client foundation. An iOS command-center app is planned but no iOS source project exists in this repository. Every node stores its own device identity and accepted role/job state.
 
 ## Topology
 
