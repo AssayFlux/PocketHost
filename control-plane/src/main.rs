@@ -1425,9 +1425,10 @@ mod tests {
         if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
             headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
         }
+        let recovery_headers = headers.clone();
         let peer = ConnectInfo("203.0.113.222:40000".parse().unwrap());
         let (status, Json(body)) = recover_owner_session(
-            State(state.clone()), headers.clone(), peer, Json(OwnerRecoveryRequest { code: code.clone() }),
+            State(state.clone()), recovery_headers.clone(), peer, Json(OwnerRecoveryRequest { code: code.clone() }),
         ).await.unwrap();
         assert_eq!(status, StatusCode::CREATED);
         let session_token = body["accessToken"].as_str().unwrap();
@@ -1437,7 +1438,7 @@ mod tests {
         assert!(actor.recovery_session);
 
         let replay = recover_owner_session(
-            State(state), HeaderMap::new(),
+            State(state), recovery_headers,
             ConnectInfo("203.0.113.222:40000".parse().unwrap()),
             Json(OwnerRecoveryRequest { code }),
         ).await.unwrap_err();
