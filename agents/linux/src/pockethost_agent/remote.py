@@ -132,6 +132,15 @@ def process_command(client: ControlPlaneClient, store: AgentStore, device_id: st
         try:
             policy_path = Path(__file__).resolve().parent / "ROLE_CAPABILITY_POLICY.json"
             policy = json.loads(policy_path.read_text(encoding="utf-8"))
+            current_row = store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()
+            owner_row = store.db.execute("SELECT value FROM agent_state WHERE key='owner_public_key'").fetchone()
+            if (current_row and owner_row and store.get_generation() == grant.get("generation")
+                    and owner_row[0] == owner_key and json.loads(current_row[0]) == grant):
+                client.acknowledge(command_id, True, {
+                    "status": "grant_already_installed", "generation": grant["generation"],
+                    "role": grant["role"],
+                })
+                return
             verify_role_grant(grant, owner_key, device_id, store.get_generation() + 1, policy)
             store.save_grant(grant, owner_key)
             client.acknowledge(command_id, True, {
