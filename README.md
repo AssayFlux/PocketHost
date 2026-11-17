@@ -39,7 +39,7 @@
 
 ## ABOUT POCKET HOST
 
-**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release makes an Android phone a practical static website host that can be reached locally, over LAN and worldwide through the owner's domain using Cloudflare Tunnel or the first-party AssayFlux Relay. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an owner-operated AssayFlux Relay Node. The Relay Node is designed to run on hardware the owner controls (including Termux/Android or Linux); a paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
 
 A desktop, laptop, server, NAS or supported single-board computer may eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Device products remain separate for their platforms and interoperate through shared contracts. Network discovery never establishes trust.
 
@@ -91,7 +91,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers; public HTTP/HTTPS acceptance in v0.1.0.
+      Local Network, Cloudflare Tunnel and the planned standalone AssayFlux Relay Node are separate ingress paths; public HTTP/HTTPS acceptance is a v0.1.0 target. The current Relay source is still coupled to fleet control-plane credentials and is not yet a standalone Termux service.
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -122,8 +122,9 @@ The first release has one primary promise: **a website imported into Pocket Host
 - HTML, CSS, browser JavaScript and static assets.
 - Local phone preview, configurable HTTP port and optional LAN binding.
 - A second device on the same Wi-Fi can open the website.
-- Public custom-domain hosting through Cloudflare Tunnel or the owner-deployed AssayFlux Relay gateway.
-- Public HTTP and HTTPS with valid edge TLS; HTTP redirects to HTTPS by default, with explicit opt-in for plain HTTP content serving.
+- Public custom-domain hosting through Cloudflare Tunnel or the owner-operated AssayFlux Relay Node.
+- Public HTTP and HTTPS with valid edge TLS; HTTP redirects to HTTPS by default. Plain HTTP content serving is a target opt-in; the current Relay edge does not implement that opt-in.
+- The Relay Node does not require a paid VPS, but it must run on an owner-controlled device with public IPv4/port forwarding or globally routed IPv6. CGNAT without global IPv6 cannot accept inbound visitors.
 - External DNS/TLS/content verification and strict separation between visitor and management routes.
 - Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
 - Encrypted full-app backup/restore and useful hosting diagnostics (current backup limits are lower than the 500 MB import cap; see backup documentation).
@@ -171,7 +172,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
 | Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
 | Cloudflare Tunnel | <code>app/.../tunnel/</code> + native connector | Outbound public ingress for custom domains | v0.1.0 |
-| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> | First-party public visitor gateway and authenticated host stream | v0.1.0 |
+| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Standalone owner-operated Termux/Linux Relay Node is the v0.1.0 target; current source is coupled to fleet control plane and has no standalone installer | v0.1.0 |
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
@@ -210,9 +211,9 @@ The diagram includes future integration boundaries. It is not a claim that every
 
 ## REPOSITORY STATUS
 
-The source tree contains Android hosting, a Rust static engine, website import/registry/backup foundations, a first Workbench workspace, Python and Node companion implementations, Android device-trust foundations, a Linux agent preview, a Rust control plane and visitor-ingress integrations.
+The source tree at the audited baseline contains 252 tracked files across 71 directories: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
 
-The current source baseline and remaining gaps are recorded in [Repository Baseline](docs/PROJECT_BASELINE.md) and [Repository Deep Audit](docs/REPOSITORY_AUDIT.md). These documents distinguish implemented foundations from accepted product behavior.
+**Important:** there is no standalone Termux Relay Node package or installer yet. The existing Relay agent is tied to RemoteControlAgent credentials, and the gateway shares the fleet control-plane process/PostgreSQL. The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
 
 ## ANDROID APPLICATION
 
@@ -221,7 +222,7 @@ The Android app is Kotlin/Jetpack Compose with a native Rust website engine. Rep
 - Folder/ZIP website import, site registry and preview flow.
 - Website backup and interrupted-operation recovery foundations.
 - Local management API, diagnostics, metrics and operational logs.
-- Owner/account and biometric confirmation foundations.
+- Optional biometric app unlock, local API pairing/approval and diagnostics. The main Android app does not currently have a conventional username/password login screen; owner/passkey login is in the browser console.
 - Device trust store and command-center screen foundation.
 - Cloudflare Tunnel integration and AssayFlux Relay client foundation.
 - Optional runtime companion client and project-transfer foundation.
@@ -234,6 +235,7 @@ The Android module declares min SDK 26, target SDK 35 and native ABI targets arm
 |---|---|---|
 | Android phone/tablet | Pocket Host main app | Hosting foundation present; physical acceptance open |
 | Android runtime provider | Separate companion APK | Python + Node integrations in progress |
+| Termux / owner-owned Linux device | AssayFlux Relay Node | Planned v0.1.0 product; standalone package/installer not yet present; public IP/IPv6 reachability required |
 | Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
 | Windows / macOS | Native worker agent | Planned |
 | Raspberry Pi / SBC | Board/OS-specific agent | Planned; no board certified |
@@ -305,6 +307,7 @@ The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows
 - [New Master Plan](docs/MASTER_PLAN.md)
 - [Three-Version Roadmap](docs/ROADMAP.md)
 - [Mandatory G0–G9 Release Gates](docs/RELEASE_GATES.md)
+- [Complete Repository File Inventory & Baseline](docs/REPOSITORY_BASELINE.md)
 - [Repository Baseline](docs/PROJECT_BASELINE.md)
 - [Repository Deep Audit](docs/REPOSITORY_AUDIT.md)
 - [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
