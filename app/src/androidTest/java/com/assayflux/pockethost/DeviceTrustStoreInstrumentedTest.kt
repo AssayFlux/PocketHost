@@ -127,6 +127,14 @@ class DeviceTrustStoreInstrumentedTest {
         val tampered = org.json.JSONObject(envelope.toString())
         tampered.getJSONObject("payload").put("check_id", "tampered")
         assertFalse(DeviceTrustStore.verifyJobEnvelope(tampered, owner.second, deviceId, grant.grantId))
+        val oversizedBudget = org.json.JSONObject(envelope.toString())
+        oversizedBudget.getJSONObject("resource_budget").put("timeout_seconds", 86400L)
+        assertFalse("Job timeout must stay within the 60-minute ceiling.",
+            DeviceTrustStore.verifyJobEnvelope(oversizedBudget, owner.second, deviceId, grant.grantId))
+        val negativeBudget = org.json.JSONObject(envelope.toString())
+        negativeBudget.getJSONObject("resource_budget").put("storage_bytes", -1L)
+        assertFalse("Negative resource budgets must be rejected.",
+            DeviceTrustStore.verifyJobEnvelope(negativeBudget, owner.second, deviceId, grant.grantId))
         assertFalse(DeviceTrustStore.verifyJobEnvelope(envelope, owner.second, "f".repeat(64), grant.grantId))
         DeviceTrustStore.revoke(context, deviceId)
     }
