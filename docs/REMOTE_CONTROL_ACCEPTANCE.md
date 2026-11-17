@@ -13,11 +13,12 @@ Record exact commit SHA, build provenance, device/board model, OS/firmware versi
 
 ## 2. Device verification and transports
 
-- Pair via Wi-Fi/LAN and one-time code; verify candidate key and owner approval.
+- **Current implementation:** test the Android manual challenge/proof exchange, metadata binding, owner approval and local registry.
+- **Future transport acceptance:** pair via authenticated Wi-Fi/LAN and one-time code; verify candidate key and owner approval.
 - Test wrong, expired, replayed, brute-forced and already-used codes.
 - Verify unknown devices cannot receive jobs, access namespaces or proxy traffic.
-- Test BLE discovery and control separately from bulk transfer.
-- Test USB only on named hardware/OS combinations with supported APIs.
+- Test BLE discovery and control separately from bulk transfer when implemented; not currently accepted.
+- Test USB only on named hardware/OS combinations with supported APIs; not currently accepted.
 - Switching transport preserves the same device identity and does not bypass authorization.
 - Revocation closes active sessions and cancels queued unstarted jobs.
 
@@ -35,9 +36,9 @@ For each supported device, install the role-specific package and test:
 ## 4. Mobile runtime and website serving
 
 - Static hosting works with no language runtime installed.
-- User installs only selected language runtime packs on the mobile serving node.
+- Static hosting works without the runtime companion. Python/Node companion behavior is tested separately; independent runtime packages are future work.
 - Multiple selected languages serve one site through declared routes.
-- Each project/component has distinct OS-enforced identity and scoped data/network.
+- Each project/component must have distinct OS-enforced identity and scoped data/network before untrusted code is supported. Current Python/Node companion shares its application UID and is not a per-project sandbox.
 - Runtime crash does not interrupt static serving or sibling runtimes.
 - Worker build artifact is signature/digest checked, staged and health-tested before activation.
 - Failed build/deployment leaves active release untouched and rollback works.
