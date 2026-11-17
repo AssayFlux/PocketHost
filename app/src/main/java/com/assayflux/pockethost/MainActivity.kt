@@ -589,6 +589,7 @@ private fun PocketHostDashboard() {
                         nodeHosting = nodeHosting,
                         deviceTelemetry = deviceTelemetry,
                         recentEvents = recentEvents,
+                        operatingMode = operatingMode,
                         onOpen = navigate
                     )
                 }
