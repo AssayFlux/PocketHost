@@ -12,7 +12,8 @@ Pocket Host is not a blank scaffold. The repository contains an Android Compose 
 The key planning error in the former roadmap was making all of those workstreams part of one first release. The new pathway separates them:
 - v0.1.0 proves Android static website hosting.
 - v0.1.1 completes Workbench and optional runtime development.
-- v0.2.0 completes the connected device fabric and public-ingress operations.
+- v0.1.0 completes the Android website host and the first public-ingress paths (Cloudflare Tunnel and single-host AssayFlux Relay).
+- v0.2.0 completes the connected device fabric, multi-host Relay scaling and advanced fleet operations.
 
 ## 2. Product boundaries confirmed
 
@@ -24,7 +25,7 @@ The key planning error in the former roadmap was making all of those workstreams
 - The main-app TypeScript compiler is not verified in the Android dependency graph.
 - Workbench currently has private workspace/editor and local commit foundations, not complete preview/publish/rollback.
 - Control plane is not required for local website hosting.
-- Relay and Cloudflare source integration does not prove external public reachability.
+- Relay and Cloudflare source integration does not prove external public reachability. Both are v0.1.0 release blockers and require DNS/TLS/domain acceptance from an independent network.
 
 ## 3. Hosting path review
 
@@ -39,6 +40,14 @@ Acceptance still needs a physical device: notification permission, foreground-se
 SiteImporter stages folder/ZIP contents, checks file and entry counts, nesting, path traversal, sensitive filenames, index.html and activation/recovery. It currently has a 5,000-file cap, 10,000-entry cap and 32-level depth cap.
 
 The former source had a 50 MB ZIP input and 50 MB expanded-site limit. The new v0.1.0 importer requirement is 500,000,000 bytes for each independent limit. Source and UI are now aligned to 500,000,000 bytes for ZIP input and expanded content. The current instrumentation test asserts the configured constant and the ZIP happy path; it does not exercise the actual 500 MB boundary. Below/at/above-boundary, low-storage, memory and physical-device tests remain open. The current ApplicationBackupManager is separate: static site root 50 MiB, Python 50 MiB, Node 100 MiB, total uncompressed 200 MiB and encrypted archive 220 MiB. It cannot currently back up a site near the new 500 MB import cap. This is a distinct v0.1.0 gap; do not claim import and backup limits are aligned.
+
+### Public ingress review
+
+Cloudflare source includes an Android `cloudflared` process runner, encrypted Android Keystore token storage, a loopback readiness probe and a hosting-service supervisor. This does not prove the Cloudflare hostname is configured to the correct website origin or that external DNS/TLS works.
+
+AssayFlux Relay source includes an outbound Android SSE agent, bounded local HTTP forwarding, a Rust visitor gateway, DNS TXT hostname verification, separate visitor/control listeners and a Caddy TLS edge. The Android Relay agent currently starts from the remote-control agent configuration and uses its relay device token; this coupling and the user-facing Relay configuration flow must be verified or separated for v0.1.0 so public website hosting does not accidentally require full fleet administration. The gateway requires a public VPS/server, PostgreSQL and a correctly configured TLS reverse proxy. Current transport is bounded HTTP request/response, not general TCP/WebSocket or unlimited streaming.
+
+No independent-network public acceptance has been recorded by this source audit. Verify both providers, the owner's real domain, HTTP/HTTPS behavior, correct site routing, visitor/admin isolation, reconnect and provider independence before release.
 
 ### Static engine
 
@@ -71,7 +80,7 @@ The Android integration workflow has a compile-only job and a manually dispatche
 5. Full-app backup export is disabled while hosting or optional runtimes are active. Its static site cap is 50 MiB and total uncompressed cap is 200 MiB; this does not cover a 500 MB imported website.
 6. Runtime companion processes share one app UID; do not call it a hardened project sandbox.
 7. TypeScript build, Workbench preview and safe publishing are not v0.1.0 features.
-8. Public Relay/Cloudflare connectivity must be tested from an independent network before claiming reachability.
+8. Public Relay/Cloudflare connectivity is a mandatory v0.1.0 gate and must be tested from an independent network before claiming reachability.
 
 ## 9. Audit policy
 
