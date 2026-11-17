@@ -30,7 +30,7 @@ Only the configured edge proxy publishes public ports. PostgreSQL and the API re
 
 ## Mobile and host enrollment
 
-The Android Command Center contains a local trust-authority foundation and preview control-plane client. The complete end-to-end owner enrollment flow remains in progress; no iOS client is present. The host receives a device-bound credential that is shown only once and stored using the platform's secure credential store. The host agent—not the mobile app—maintains its own connection, heartbeat, command lease and workload lifecycle.
+The Android Command Center contains a local trust-authority foundation and a preview control-plane client. It can bootstrap/register a worker and queue an owner-signed grant and typed health-check command, but full end-to-end enrollment remains incomplete: device-token delivery is manual, transport is not mutually authenticated, status/acknowledgement UX and revocation propagation are unfinished, and no iOS client is present. The intended production contract is for each host to store its own device-bound credential securely and maintain its own connection, heartbeat, command lease and workload lifecycle.
 
 Host commands are typed, allow-listed, scoped, expiring and idempotent. Hosts validate owner policy and local capability before applying them. The host persists operation start/result before acknowledgement to prevent blind repetition after interruption.
 
