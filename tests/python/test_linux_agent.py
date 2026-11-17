@@ -12,9 +12,13 @@ from pockethost_agent.store import AgentStore
 from pockethost_agent.runner import execute_job, validate_job
 
 POLICY = json.loads((Path(__file__).resolve().parents[2] / "protocol" / "ROLE_CAPABILITY_POLICY.json").read_text())
+PACKAGED_POLICY = json.loads((Path(__file__).resolve().parents[1] / "agents" / "linux" / "src" / "pockethost_agent" / "ROLE_CAPABILITY_POLICY.json").read_text())
 
 
 class LinuxAgentTests(unittest.TestCase):
+    def test_packaged_role_policy_matches_protocol(self):
+        self.assertEqual(POLICY, PACKAGED_POLICY)
+
     def test_identity_is_stable_and_private(self):
         with tempfile.TemporaryDirectory() as directory:
             key, device_id, public = load_or_create_identity(Path(directory))
@@ -84,7 +88,11 @@ class LinuxAgentTests(unittest.TestCase):
             self.assertTrue(store.claim_job("job-1"))
             self.assertFalse(store.claim_job("job-1"))
             store.complete_job("job-1", {"ok": True})
-            self.assertEqual(0, store.recover_interrupted_jobs())
+            self.assertTrue(store.enqueue_once("job-2", "idempotency-0002", job))
+            self.assertTrue(store.claim_job("job-2"))
+            self.assertEqual(1, store.recover_interrupted_jobs())
+            state = store.db.execute("SELECT state FROM jobs WHERE job_id='job-2'").fetchone()[0]
+            self.assertEqual("QUEUED", state)
             self.assertEqual(0o600, (Path(directory) / "state.sqlite3").stat().st_mode & 0o777)
             state = store.db.execute("SELECT state FROM jobs WHERE job_id='job-1'").fetchone()[0]
             self.assertEqual("SUCCEEDED", state)
