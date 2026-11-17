@@ -17,6 +17,7 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - Optional LAN binding and access from a second device on the same Wi-Fi.
 - Cloudflare Tunnel public ingress for an owner-configured custom hostname, using an encrypted tunnel token and an outbound-only Android connector.
 - First-party AssayFlux Relay gateway, deployed by the owner on a public VPS/server, with DNS TXT hostname proof and an authenticated outbound host session.
+- Minimal owner-facing Relay setup surface for host/site registration, hostname binding, DNS TXT challenge display and route revocation; the full browser operator console remains v0.2.0.
 - Public HTTP and HTTPS for verified hostnames; valid HTTPS at the edge and HTTP-to-HTTPS redirect by default. Plain HTTP content serving is an explicit owner opt-in.
 - Independent provider controls, health, reconnect, diagnostics and manual provider failover.
 - End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation.
