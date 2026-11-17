@@ -1,8 +1,10 @@
-# Python Runtime Provider — Pocket Host 0.1.0
+# Python Runtime Add-on — Future Runtime Library
+
+**Status: optional future add-on.** Python is not part of the main Pocket Host app or Step 4 and is not required for HTML/CSS/JavaScript/TypeScript website hosting. The current companion integration is an experimental foundation; this document is a future package specification, not a release claim.
 
 ## Placement
 
-Python is an optional customer-language runtime installed on the mobile website-serving node only in 0.1.0. It is not installed on storage, traffic, build or other worker nodes. Build workers may build/test a project and return an immutable artifact; the mobile serving node verifies and runs it.
+When released, Python will be an optional user-downloaded runtime package for the mobile website-serving node. It will not be installed on storage, traffic, build or other worker nodes. Build workers may build/test a project and return an immutable artifact; the mobile serving node verifies and runs it.
 
 ## Current Android provider
 
