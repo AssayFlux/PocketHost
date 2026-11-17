@@ -21,6 +21,9 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.NetworkCheck
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
@@ -89,7 +92,7 @@ internal fun PocketHostOwnerHeader(
                         }
                         DropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
                             DropdownMenuItem(text = { Text("App settings") }, leadingIcon = { Icon(Icons.Outlined.Settings, null) }, onClick = { accountExpanded = false; onNavigate("Settings:General") })
-                            DropdownMenuItem(text = { Text("Security settings") }, leadingIcon = { Icon(Icons.Outlined.Security, null) }, onClick = { accountExpanded = false; onNavigate("Settings:Network") })
+                            DropdownMenuItem(text = { Text("Network & access") }, leadingIcon = { Icon(Icons.Outlined.Security, null) }, onClick = { accountExpanded = false; onNavigate("Settings:Network") })
                             DropdownMenuItem(text = { Text("About Pocket Host") }, leadingIcon = { Icon(Icons.Outlined.Info, null) }, onClick = { accountExpanded = false; onNavigate("Settings:About") })
                         }
                     }
@@ -107,10 +110,10 @@ private val pocketHostNavItems = listOf(
     PocketHostNavItem("Websites & files", "Import, edit, publish and recover sites", Icons.Outlined.FolderOpen, "Sites"),
     PocketHostNavItem("Workbench", "Edit site files and preview changes", Icons.Outlined.Code, "Workbench"),
     PocketHostNavItem("Devices", "Trusted devices and fleet administration", Icons.Outlined.Memory, "Devices"),
-    PocketHostNavItem("Network & tunnels", "LAN access, Relay and Cloudflare", Icons.Outlined.Security, "Settings:Network"),
+    PocketHostNavItem("Network & tunnels", "LAN access, Relay and Cloudflare", Icons.Outlined.NetworkCheck, "Settings:Network"),
     PocketHostNavItem("Runtimes", "Optional Python and Node.js services", Icons.Outlined.Code, "Settings:Runtimes"),
-    PocketHostNavItem("Activity & logs", "Operational events and diagnostics", Icons.Outlined.Info, "Activity"),
-    PocketHostNavItem("Learn", "Guides and operating limits", Icons.Outlined.Info, "Learn"),
+    PocketHostNavItem("Activity & logs", "Operational events and diagnostics", Icons.Outlined.Timeline, "Activity"),
+    PocketHostNavItem("Learn", "Guides and operating limits", Icons.Outlined.School, "Learn"),
     PocketHostNavItem("Settings", "Appearance and device preferences", Icons.Outlined.Settings, "Settings:General"),
     PocketHostNavItem("About", "Version and platform information", Icons.Outlined.Info, "Settings:About")
 )
