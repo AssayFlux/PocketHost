@@ -31,12 +31,14 @@ This roadmap follows the five-step master plan. The mobile command center is the
 - DemonCore gateway and MCU adapters.
 
 ## Step 4 — Mobile website server and language runtimes
-- Rust ingress and static hosting.
-- Runtime Manager with separate signed language packs.
-- Runtime selection and install only on mobile serving node.
-- Per-project/per-component isolation.
+**Partial close boundary:** the built-in web baseline is the default server-app capability: HTML and CSS are served by the bundled Rust engine, and TypeScript authoring/build support belongs in the app's built-in web toolchain. Users must not install a separate language pack to host a basic HTML/CSS/TypeScript website. The current repository already contains the Rust static-serving foundation for HTML/CSS; the TypeScript compile-to-JavaScript integration still requires implementation and acceptance before this baseline can be marked fully verified.
+- Built-in baseline: HTML, CSS, TypeScript-to-JavaScript build support, static assets and site routing.
+- Additional server-side language runtimes remain optional, separately selectable and separately installable packs on the mobile serving node only.
+- Runtime isolation, fault containment and lifecycle are per runtime/project; static serving must survive runtime failure.
 - Build worker artifact handoff and atomic publish approval.
 - Distributed storage and traffic worker integration.
+
+**Step 4 remains open for runtime extensions and publishing/isolation acceptance.** The partial close does not claim Python, Node or any future language runtime is production-ready.
 
 ## Step 5 — Resilience and release
 - Independent Local Network, AssayFlux Relay and Cloudflare providers.
