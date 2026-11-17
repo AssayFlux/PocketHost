@@ -1,0 +1,22 @@
+{
+  "schema": "pockethost.runtime-package/1.0",
+  "package_id": "com.assayflux.pockethost.runtime.julia",
+  "language": "Julia",
+  "distribution": "Julia",
+  "version": "0.0.0-planned",
+  "status": "planned",
+  "description": "Scientific and numerical computing",
+  "targets": [],
+  "artifact": null,
+  "sha256": null,
+  "signature": null,
+  "sbom": null,
+  "license": null,
+  "permissions": [],
+  "resource_profile": null,
+  "dependencies": [],
+  "install_strategy": "versioned-side-by-side",
+  "health_check": null,
+  "rollback": true,
+  "notes": "Catalog placeholder only. No downloadable artifact is published. Build, sign and validate for each supported Android ABI before changing status to available."
+}
