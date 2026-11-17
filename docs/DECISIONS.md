@@ -1,10 +1,10 @@
 # Pocket Host 0.1.0 — Architecture Decisions
 
-## ADR-001 — Mobile command center with selectable server role
+## ADR-001 — Exactly two mobile operating modes
 
-**Decision:** Android/iPhone mobile app is the primary owner command center. Mobile has two modes: Server only and Command Center + Server. The roles are independently controlled.
+**Decision:** the mobile device always has the website-serving role enabled. The user chooses exactly one of two modes: **Server only** or **Command Center + Server**. Server only exposes website-serving controls and cannot enroll, approve, assign or revoke fleet devices. Command Center + Server adds the complete fleet command center. There is no standalone Command Center-only mode.
 
-**Reason:** mobile is readily available, but hosting and fleet control have different lifecycle and permission requirements.
+**Reason:** the user wants the phone to remain the website-serving node, with fleet management as an optional additional capability. The two modes must be unambiguous and mutually exclusive.
 
 ## ADR-002 — Explicit verified device integration
 
