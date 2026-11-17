@@ -36,6 +36,11 @@ class PocketHostNavigationAccessibilityTest {
         val visitorSiteId = "ui-visitor-" + System.nanoTime()
         val visitorHostname = "ui-" + System.nanoTime() + ".local"
         val visitorSiteRoot = File(context.filesDir, "ui-visitor-site-${System.nanoTime()}")
+        val owner = com.assayflux.pockethost.management.HostAccountStore.list(context).firstOrNull { it.role == "OWNER" }
+            ?: com.assayflux.pockethost.management.HostAccountStore.create(
+                context, "uiowner", "PocketHost-UI-Owner-Password-42".toCharArray(), "OWNER"
+            )
+        PocketHostOwnerSession.username = owner.username
         val device = UiDevice.getInstance(instrumentation)
         val screenshotDir = File(checkNotNull(context.getExternalFilesDir(null)), "screenshots")
         assertTrue(screenshotDir.mkdirs() || screenshotDir.isDirectory)
