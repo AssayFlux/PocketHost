@@ -49,7 +49,7 @@ The mobile device's two modes are operating modes, not separate external worker 
 
 ## Repository components
 
-- `app/` — Android application: website-serving foundation, local management API, remote-control integration and mobile UI. Two-mode enforcement and complete verified fleet workflows remain incomplete.
+- `app/` — Android application: website-serving foundation, local management API, remote-control integration, persisted two-mode selector and a manual cryptographic device-trust workspace. Authenticated transport and end-to-end fleet workflows remain incomplete.
 - `runtime-worker/` — separate Android runtime companion for Python/Node integration. Package separation does not yet provide per-project OS-level isolation.
 - `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
 - `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
@@ -71,7 +71,8 @@ The repository currently contains foundations, specifications and partial implem
 8. [Security Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
 9. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
 10. [Competitive Landscape and Product Gap Analysis](docs/COMPETITIVE_LANDSCAPE.md)
-11. [Documentation Index](docs/INDEX.md)
+11. [Step 2 Device Trust Implementation](docs/STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
+12. [Documentation Index](docs/INDEX.md)
 
 ## Five-step delivery plan and current position
 
@@ -79,8 +80,8 @@ Pocket Host is being delivered in five gated steps. The architecture and documen
 
 | Step | Scope | Current position |
 |---|---|---|
-| 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Specification baseline drafted; gate not closed.** Core contracts and the two-mode decision are documented. Protocol simulations, threat-model review and contract conformance tests remain. |
-| 2. Mobile command center | Android modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **In progress / incomplete.** Android application foundation exists. Two-mode enforcement and end-to-end verified enrollment/fleet role workflows are not accepted. Native iOS app is not present. |
+| 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Contract implementation delivered; automated gate evidence pending.** Machine-readable schemas, default-deny role/job policies, trust simulations and CI validation are committed. Production trust code is Step 2. |
+| 2. Mobile command center | Android modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **Android trust foundation implemented; gate open.** Persisted Server only / Command Center + Server modes, Android Keystore P-256 identity, signed five-minute challenges, proof-of-possession, scoped signed grants, local encrypted registry and revocation are implemented with instrumentation tests. LAN/BLE/USB/remote transport, control-plane integration, independently installed agent verification and physical-device acceptance remain. Native iOS app is not present. |
 | 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Foundations / mostly planned.** Android foundations and a separate runtime companion exist. Production role agents/installers for Linux, Windows, macOS and SBCs are not delivered. DemonCore integration needs board-level acceptance. |
 | 4. Mobile website server and runtimes | Static serving, selected mobile runtime packs, isolation and verified publishing | **Partial implementation.** Android/Rust serving and Python/Node runtime foundations exist. Companion installation/recovery, per-project isolation, runtime fault containment and the complete artifact approval pipeline still need verification or work. |
 | 5. Resilience and release | Replication, recovery, connectivity, security, physical-device acceptance, signed releases and support evidence | **Not closed.** Tunnel and control-plane foundations exist, but end-to-end resilience, physical-device matrix, security acceptance and release evidence remain. |
