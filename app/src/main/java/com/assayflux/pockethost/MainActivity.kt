@@ -85,6 +85,7 @@ class MainActivity : ComponentActivity() {
             BiometricManager.Authenticators.BIOMETRIC_STRONG
         }
     private var unlocked = mutableStateOf(true)
+    private var ownerAuthenticated = mutableStateOf(PocketHostOwnerSession.username != null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +108,7 @@ class MainActivity : ComponentActivity() {
         val enabled = getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getBoolean("biometric_unlock_enabled", false)
         unlocked = mutableStateOf(!enabled)
+        ownerAuthenticated = mutableStateOf(PocketHostOwnerSession.username != null)
         setContent {
             val appearance = getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             val savedMode = appearance.getString("appearance_mode", null)
@@ -114,8 +116,18 @@ class MainActivity : ComponentActivity() {
             val useDark = when (savedMode) { "Dark" -> true; "Light" -> false; else -> isSystemInDarkTheme() }
             val savedTheme = appearance.getString("appearance_theme", "Classic") ?: "Classic"
             PocketHostTheme(darkTheme = useDark, themeName = savedTheme) {
-                if (unlocked.value) PocketHostDashboard()
-                else BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
+                if (!unlocked.value) {
+                    BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
+                } else if (ownerAuthenticated.value) {
+                    PocketHostDashboard(onSignOut = {
+                        PocketHostOwnerSession.username = null
+                        ownerAuthenticated.value = false
+                    })
+                } else {
+                    PocketHostLoginScreen(this@MainActivity, onAuthenticated = {
+                        ownerAuthenticated.value = true
+                    })
+                }
             }
         }
         if (enabled) authenticateAtLaunch()
@@ -165,7 +177,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PocketHostDashboard() {
+private fun PocketHostDashboard(onSignOut: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Home") }
@@ -545,7 +557,8 @@ private fun PocketHostDashboard() {
                     selectedTab = selectedTab,
                     hosting = hosting,
                     onMenuClick = { scope.launch { drawerState.open() } },
-                    onNavigate = navigate
+                    onNavigate = navigate,
+                    onSignOut = onSignOut
                 )
             }
         ) { innerPadding ->
