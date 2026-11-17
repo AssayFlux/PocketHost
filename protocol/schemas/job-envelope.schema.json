@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pockethost.assayflux.com/protocol/1.0/job-envelope.schema.json",
+  "title": "Pocket Host Typed Job Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "job_id",
+    "idempotency_key",
+    "correlation_id",
+    "owner_id",
+    "target_device_id",
+    "role_grant_id",
+    "kind",
+    "payload",
+    "issued_at",
+    "expires_at",
+    "resource_budget",
+    "signature"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "pockethost.device/1.0"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 128
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "target_device_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "role_grant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "kind": {
+      "enum": [
+        "storage.snapshot",
+        "storage.restore",
+        "backup.create",
+        "backup.verify",
+        "build.compile",
+        "artifact.publish_request",
+        "traffic.route_update",
+        "native.health_check",
+        "edge.telemetry_read"
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "maxProperties": 32
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resource_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeout_seconds",
+        "memory_bytes"
+      ],
+      "properties": {
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storage_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "network_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "ed25519",
+            "ecdsa-p256-sha256"
+          ]
+        },
+        "key_id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "value": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 4096
+        }
+      }
+    }
+  }
+}
