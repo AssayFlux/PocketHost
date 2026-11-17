@@ -164,3 +164,30 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 ## 2026-11-17 authoritative plan update
 
 Use `docs/MASTER_PLAN.md` as the current executable master plan (V2). It supersedes the older gate ordering in this roadmap where they conflict. In particular, the product now targets one host app plus independently installable optional language runtime packs (Python and Node first; additional languages later), with one OS-enforced execution identity per project. A distinct runtime package/UID per language is not project isolation. The V2 plan adds signed runtime manifests, ABI-aware delivery, user-confirmed Android installation, atomic updates/rollback, provider compatibility contracts, product reliability work and explicit evidence requirements. Static hosting must work without any runtime installed. Historical gate notes in this file remain evidence snapshots, not current acceptance claims.
+
+
+## Universal device expansion roadmap
+
+The existing Android gates above remain mandatory and retain their dependencies. The universal device program is an additional staged track, not a reason to mark Android gates complete or divert from critical security fixes. See `docs/UNIVERSAL_DEVICE_FABRIC.md` for detailed acceptance.
+
+| Gate | Scope | Required result |
+|---|---|---|
+| U0 | Portable host/device/service contracts | Versioned Host Agent API, manifests, capability model, identity, telemetry, desired state and offline/revocation semantics |
+| U1 | Linux host | Secure unprivileged service, Rust host core, systemd, static hosting, packaging, updates and rollback on named x86_64/ARM64 targets |
+| U2 | Windows + macOS | Native installer/service/lifecycle, ACL/entitlement/network policy, signed distribution and upgrade acceptance |
+| U3 | SBC + embedded Linux | Exact Raspberry Pi/ARM board profiles, headless setup, thermal/storage/power-loss tests and workload tiers |
+| U4 | DemonCore + MCU edge | DemonCore hardware/security gates first; then authenticated allow-listed DCP adapter and physical MCU acceptance |
+| U5 | Multi-host fleet | Host enrollment/revocation, desired-state reconciliation, multi-component placement, internal service routing and state-aware recovery |
+
+### Capability tiers and promise
+
+- Tier A: full host (Android, Linux, Windows, macOS, capable VPS/server and capable SBC).
+- Tier B: compact edge host (embedded Linux/SBC/mini PC).
+- Tier C: microcontroller service node (bounded device API, telemetry, MQTT/DCP and local control).
+- Tier D: constrained sensor/actuator node (event/device capability only).
+
+Do not advertise every service on every tier. Every device/service/runtime combination requires an explicit compatibility profile and evidence. Raspberry Pi is a single-board computer, not a microcontroller. ESP32-class devices are not assumed to run the full Pocket Host engine or arbitrary customer runtimes.
+
+### DemonCore baseline and dependency
+
+DemonCore's current docs identify an ESP-WROOM-32 4 MiB/no-PSRAM target with MicroPython and DCP v1.0. Its own README marks Phase 1 not hardware-accepted; board confirmation and physical boot/resource tests remain open, app is documentation-only and hub is not implemented. Complete those gates before claiming a working Pocket Host↔DemonCore integration. DCP v1's envelope does not authenticate messages and must not be exposed to public ingress.
