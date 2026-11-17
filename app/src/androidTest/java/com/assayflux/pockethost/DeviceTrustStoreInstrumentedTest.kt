@@ -45,6 +45,18 @@ class DeviceTrustStoreInstrumentedTest {
         proofSigner.update(DeviceTrustStore.enrollmentProofPayload(challenge, candidate))
         val proof = Base64.encodeToString(proofSigner.sign(), Base64.NO_WRAP)
 
+        val alteredMetadataRejected = runCatching {
+            DeviceTrustStore.approveCandidate(
+                context = context,
+                challengeId = challenge.challengeId,
+                candidate = candidate.copy(displayName = "Impersonated worker"),
+                proofSignatureBase64 = proof,
+                role = "storage",
+                approvedCapabilities = capabilities
+            )
+        }.isFailure
+        assertTrue(alteredMetadataRejected)
+
         val escalationRejected = runCatching {
             DeviceTrustStore.approveCandidate(
                 context = context,
