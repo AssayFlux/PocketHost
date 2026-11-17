@@ -8,28 +8,28 @@ Each language is an independent downloadable runtime package. The catalog is not
 
 ## Initial 20-package catalog
 
-| # | Package ID | Language/runtime | Intended use |
+| # | Package ID | Language/runtime | Intended use | Separate manifest file |
 |---:|---|---|---|
-| 1 | `python` | Python (CPython) | Backend services, automation and scripting |
-| 2 | `nodejs` | Node.js (Node.js) | JavaScript server applications and APIs |
-| 3 | `php` | PHP (PHP) | Traditional web applications and CMS backends |
-| 4 | `ruby` | Ruby (CRuby) | Web applications and automation |
-| 5 | `java` | Java (OpenJDK) | Enterprise services and JVM applications |
-| 6 | `dotnet` | C# / .NET (.NET) | Cross-platform APIs and services |
-| 7 | `go` | Go (Go) | Efficient network services and command-line backends |
-| 8 | `rust` | Rust (Rust toolchain) | High-performance services and native components |
-| 9 | `deno` | Deno (Deno) | Secure-by-default TypeScript and JavaScript services |
-| 10 | `bun` | Bun (Bun) | JavaScript and TypeScript server applications |
-| 11 | `lua` | Lua (Lua) | Embedded scripting and lightweight services |
-| 12 | `perl` | Perl (Perl) | Text processing and system automation |
-| 13 | `r` | R (R) | Statistics, analytics and data services |
-| 14 | `julia` | Julia (Julia) | Scientific and numerical computing |
-| 15 | `elixir` | Elixir (BEAM / Elixir) | Concurrent, fault-tolerant services |
-| 16 | `erlang` | Erlang (BEAM / Erlang) | Distributed and highly available systems |
-| 17 | `kotlin-jvm` | Kotlin (JVM) (Kotlin/JVM) | Kotlin server applications |
-| 18 | `swift` | Swift (Swift) | Swift server-side applications |
-| 19 | `dart` | Dart (Dart) | Dart server applications and tooling |
-| 20 | `haskell` | Haskell (GHC) | Typed functional services and applications |
+| 1 | `python` | Python (CPython) | Backend services, automation and scripting | `runtime-library/catalog/python.json` |
+| 2 | `nodejs` | Node.js | JavaScript server applications and APIs | `runtime-library/catalog/nodejs.json` |
+| 3 | `php` | PHP | Traditional web applications and CMS backends | `runtime-library/catalog/php.json` |
+| 4 | `ruby` | Ruby (CRuby) | Web applications and automation | `runtime-library/catalog/ruby.json` |
+| 5 | `java` | Java (OpenJDK) | Enterprise services and JVM applications | `runtime-library/catalog/java.json` |
+| 6 | `dotnet` | C# / .NET | Cross-platform APIs and services | `runtime-library/catalog/dotnet.json` |
+| 7 | `go` | Go | Efficient network services and command-line backends | `runtime-library/catalog/go.json` |
+| 8 | `rust` | Rust | High-performance services and native components | `runtime-library/catalog/rust.json` |
+| 9 | `deno` | Deno | Secure-by-default TypeScript and JavaScript services | `runtime-library/catalog/deno.json` |
+| 10 | `bun` | Bun | JavaScript and TypeScript server applications | `runtime-library/catalog/bun.json` |
+| 11 | `lua` | Lua | Embedded scripting and lightweight services | `runtime-library/catalog/lua.json` |
+| 12 | `perl` | Perl | Text processing and system automation | `runtime-library/catalog/perl.json` |
+| 13 | `r` | R | Statistics, analytics and data services | `runtime-library/catalog/r.json` |
+| 14 | `julia` | Julia | Scientific and numerical computing | `runtime-library/catalog/julia.json` |
+| 15 | `elixir` | Elixir (BEAM) | Concurrent, fault-tolerant services | `runtime-library/catalog/elixir.json` |
+| 16 | `erlang` | Erlang (BEAM) | Distributed and highly available systems | `runtime-library/catalog/erlang.json` |
+| 17 | `kotlin-jvm` | Kotlin/JVM | Kotlin server applications | `runtime-library/catalog/kotlin-jvm.json` |
+| 18 | `swift` | Swift | Swift server-side applications | `runtime-library/catalog/swift.json` |
+| 19 | `dart` | Dart | Dart server applications and tooling | `runtime-library/catalog/dart.json` |
+| 20 | `haskell` | Haskell (GHC) | Typed functional services and applications | `runtime-library/catalog/haskell.json` |
 
 ## Package boundaries
 
