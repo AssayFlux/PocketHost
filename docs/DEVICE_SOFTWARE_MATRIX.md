@@ -36,9 +36,9 @@ Role support is not granted by installation alone. A signed capability profile a
 
 ## 3. Main-app web baseline and future runtime add-ons
 
-The Pocket Host main mobile app includes HTML/CSS static serving and the built-in TypeScript-to-browser-JavaScript build workflow. No extra runtime package or companion APK is required for basic websites.
+The main app includes HTML/CSS/JavaScript static hosting. TypeScript-to-browser-JavaScript compilation is a required built-in feature but the compiler is not yet bundled or verified. Basic static websites require no runtime companion.
 
-The separate `runtime-worker` Android companion APK already integrates CPython 3.11 and Node.js mobile 24.22.1; both are **in progress** and are not required by Step 4. They currently ship together in the companion APK, not as two independent downloads. Independent per-language packages, Android device acceptance and security hardening remain open. The future Runtime Library adds 18 more optional languages, each as its own package. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md).
+The separate `runtime-worker` Android companion APK already integrates CPython 3.11 and Node.js mobile 24.22.1; both are **in progress**, shipped together in one companion APK, and are not required for static websites or Step 4. They currently ship together in the companion APK, not as two independent downloads. Independent per-language packages, Android device acceptance and security hardening remain open. The future Runtime Library is planned to split Python and Node into independent packages and add 18 more optional languages, each as its own package. The current catalog consists of manifests only, not downloadable runtime binaries. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md).
 
 Worker devices execute Pocket Host's signed native node agent and narrowly defined job adapters. They may build source into immutable artifacts, store data, proxy approved traffic or run bounded infrastructure tasks. They do not become arbitrary customer-language runtime hosts by default.
 
