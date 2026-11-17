@@ -93,6 +93,46 @@ class ApplicationBackupCustomRootTest {
     }
 
     @Test
+    fun failedExportDoesNotTruncateExistingDestination() {
+        val suffix = System.nanoTime().toString()
+        val siteRoot = File(context.filesDir, "site")
+        val previousSite = File(context.cacheDir, "site-export-before-$suffix")
+        val hadSite = siteRoot.isDirectory
+        if (hadSite) siteRoot.copyRecursively(previousSite, overwrite = true)
+        val outside = File(context.cacheDir, "outside-export-$suffix.txt")
+        val destination = File(context.cacheDir, "existing-export-$suffix.afphb")
+        val sentinel = "previous-valid-backup-must-survive".toByteArray()
+        try {
+            siteRoot.deleteRecursively()
+            check(siteRoot.mkdirs())
+            File(siteRoot, "index.html").writeText("<h1>site</h1>")
+            outside.writeText("outside private root")
+            java.nio.file.Files.createSymbolicLink(
+                File(siteRoot, "linked-outside.txt").toPath(), outside.toPath()
+            )
+            destination.writeBytes(sentinel)
+
+            val failure = runCatching {
+                ApplicationBackupManager.export(
+                    context, Uri.fromFile(destination), "export-failure-passphrase".toCharArray()
+                )
+            }.exceptionOrNull()
+
+            assertNotNull("A symbolic link in a project must fail backup export.", failure)
+            assertTrue(
+                "A failed archive build must leave the selected destination untouched.",
+                destination.readBytes().contentEquals(sentinel)
+            )
+        } finally {
+            siteRoot.deleteRecursively()
+            if (hadSite && previousSite.isDirectory) previousSite.copyRecursively(siteRoot, overwrite = true)
+            outside.delete()
+            destination.delete()
+            previousSite.deleteRecursively()
+        }
+    }
+
+    @Test
     fun wrongPassphraseAndCiphertextTamperingFailBeforeChangingActiveSite() {
         val suffix = System.nanoTime().toString()
         val siteRoot = File(context.filesDir, "site")
