@@ -2,6 +2,7 @@ package com.assayflux.pockethost
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +25,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 private data class HomeService(val title: String, val subtitle: String, val metric: String, val state: String, val icon: ImageVector, val destination: String)
@@ -65,10 +69,14 @@ internal fun PocketHostHomeScreen(
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val cardWidth = maxWidth * 0.78f
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Spacer(Modifier.width(1.dp))
+            val scrollState = rememberScrollState()
+            val scope = rememberCoroutineScope()
+            val stepPx = with(LocalDensity.current) { (cardWidth + 12.dp).roundToPx() }.coerceAtLeast(1)
+            val activePage = (scrollState.value / stepPx).coerceIn(0, services.lastIndex)
+            Row(Modifier.fillMaxWidth().horizontalScroll(scrollState), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Spacer(Modifier.width((maxWidth - cardWidth - 12.dp) / 2))
                 services.forEachIndexed { index, service ->
-                    Card(onClick = { onOpen(service.destination) }, modifier = Modifier.width(cardWidth).height(224.dp),
+                    Card(onClick = { onOpen(service.destination) }, modifier = Modifier.width(cardWidth).heightIn(min = 224.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(containerColor = if (index == 0) palette.surface else palette.surfaceVariant),
                         elevation = CardDefaults.cardElevation(defaultElevation = if (index == 0) 3.dp else 1.dp)) {
@@ -94,7 +102,17 @@ internal fun PocketHostHomeScreen(
                         }
                     }
                 }
-                Spacer(Modifier.width(1.dp))
+                Spacer(Modifier.width((maxWidth - cardWidth - 12.dp) / 2))
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                services.indices.forEach { index ->
+                    Box(
+                        Modifier.padding(horizontal = 4.dp).size(if (index == activePage) 9.dp else 7.dp)
+                            .clip(CircleShape)
+                            .background(if (index == activePage) palette.primary else palette.outlineVariant)
+                            .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } }
+                    )
+                }
             }
         }
         Text("System information", color = palette.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
