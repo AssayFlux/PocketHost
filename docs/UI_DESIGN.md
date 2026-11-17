@@ -64,3 +64,22 @@ UI acceptance is G8 for every release. Test both mobile modes, all v0.1.0 hostin
 ## Source audit note — current login implementation
 
 The design contract retains the intended login/account experience and owner menu. In the audited Android source, however, MainActivity opens the app's main surface directly unless the optional biometric app-unlock gate is enabled; there is no conventional native username/password login screen yet. Owner/session/passkey login is implemented in the separate browser console. Keep this distinction explicit in UI status and release documentation; do not label the native login page complete until it exists and passes UI acceptance.
+
+
+## Navigation synchronization — 2026-11-17
+
+The Android drawer is the single source of top-level navigation. Its destinations must map one-to-one to real screens or settings sections:
+
+- Home → Home
+- Hosting → Dashboard
+- Websites & files → Sites
+- Workbench → Workbench
+- Devices → Devices (visible only in Command Center + Server mode)
+- Network & tunnels → Settings / Network
+- Runtimes → Settings / Runtimes
+- Activity & logs → Activity
+- Learn → Learn
+- Settings → Settings / General
+- About → Settings / About
+
+Do not add separate drawer shortcuts for Capacity, Backups, Security or Relay when they merely alias an existing destination. Their controls remain inside Hosting, Websites & files, or Network & tunnels. This prevents duplicate highlighted rows and misleading navigation. Remove sample service URLs from user-facing input placeholders; users should enter their own endpoint.
