@@ -57,7 +57,8 @@ internal fun PocketHostOwnerHeader(
     selectedTab: String,
     hosting: Boolean,
     onMenuClick: () -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    onSignOut: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
     var accountExpanded by remember { mutableStateOf(false) }
@@ -94,6 +95,7 @@ internal fun PocketHostOwnerHeader(
                             DropdownMenuItem(text = { Text("App settings") }, leadingIcon = { Icon(Icons.Outlined.Settings, null) }, onClick = { accountExpanded = false; onNavigate("Settings:General") })
                             DropdownMenuItem(text = { Text("Network & access") }, leadingIcon = { Icon(Icons.Outlined.Security, null) }, onClick = { accountExpanded = false; onNavigate("Settings:Network") })
                             DropdownMenuItem(text = { Text("About Pocket Host") }, leadingIcon = { Icon(Icons.Outlined.Info, null) }, onClick = { accountExpanded = false; onNavigate("Settings:About") })
+                            DropdownMenuItem(text = { Text("Sign out") }, leadingIcon = { Icon(Icons.Outlined.Person, null) }, onClick = { accountExpanded = false; onSignOut() })
                         }
                     }
                 }
