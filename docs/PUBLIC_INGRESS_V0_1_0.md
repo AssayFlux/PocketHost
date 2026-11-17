@@ -22,7 +22,7 @@ Local preview and LAN hosting must continue if either public provider or the Int
 - Globally routed IPv6 address with firewall rules permitting the required inbound ports.
 - Another owner-controlled always-on device/network that has one of the above.
 
-The owner's DNS A/AAAA records must resolve to that reachable node. Dynamic IPv4 may use a user-selected DDNS mechanism. If the only available network is behind carrier-grade NAT (CGNAT), has no global IPv6 and offers no inbound port forwarding, that device cannot be the public gateway. A different reachable owner-owned node or the optional Cloudflare Tunnel is then required. DNS records alone cannot bypass CGNAT.
+The owner's DNS A/AAAA records must resolve to that reachable node. If Cloudflare hosts DNS but the owner wants visitors to connect directly to the first-party Relay Node, the hostname should be DNS-only; Cloudflare proxying leaves Cloudflare in the HTTP request path. Dynamic IPv4 may use a user-selected DDNS mechanism. If the only available network is behind carrier-grade NAT (CGNAT), has no global IPv6 and offers no inbound port forwarding, that device cannot be the public gateway. A different reachable owner-owned node or the optional Cloudflare Tunnel is then required. DNS records alone cannot bypass CGNAT.
 
 A phone hosting the website may remain behind CGNAT because it connects outbound to the Relay Node. The Relay Node itself cannot be behind an unreachable NAT if it is expected to accept visitor connections.
 
