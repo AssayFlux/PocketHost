@@ -167,7 +167,7 @@ object DeviceTrustStore {
             .put("approvedAt", nowSeconds)
             .put("revokedAt", 0)
             .put("grant", grantJson(grant))
-        if (existing != null) registry.put(registry.indexOf(existing), record) else registry.put(record)
+        if (existing != null) registry.put((0 until registry.length()).first { registry.getJSONObject(it).optString("deviceId") == candidate.deviceId }, record) else registry.put(record)
         writeRegistry(context, registry)
         pending.remove(challengeId)
         return grant
@@ -210,29 +210,23 @@ object DeviceTrustStore {
             grant.optLong("generation", -1L) == generation
     }
 
-    private fun challengeBytes(value: EnrollmentChallenge): ByteArray = encodeFields(
-        "pockethost.enrollment.v1", value.challengeId, value.ownerDeviceId,
-        value.candidateDeviceId, value.nonce, value.issuedAt.toString(), value.expiresAt.toString()
-    )
+    // Fixed-field compact JSON with lexically ordered keys; matches the Step 1 signed payload profile.
+    private fun challengeBytes(value: EnrollmentChallenge): ByteArray =
+        ("{\"candidateDeviceId\":" + JSONObject.quote(value.candidateDeviceId) +
+            ",\"challengeId\":" + JSONObject.quote(value.challengeId) +
+            ",\"expiresAt\":" + value.expiresAt + ",\"issuedAt\":" + value.issuedAt +
+            ",\"nonce\":" + JSONObject.quote(value.nonce) +
+            ",\"ownerDeviceId\":" + JSONObject.quote(value.ownerDeviceId) + "}").toByteArray(Charsets.UTF_8)
 
-    private fun grantBytes(value: SignedRoleGrant): ByteArray = encodeFields(
-        "pockethost.role-grant.v1", value.deviceId, value.ownerDeviceId, value.role,
-        value.capabilities.joinToString(","), value.generation.toString(),
-        value.issuedAt.toString(), value.expiresAt.toString()
-    )
-
-    private fun encodeFields(vararg fields: String): ByteArray {
-        val output = ByteArrayOutputStream()
-        DataOutputStream(output).use { data ->
-            fields.forEach { field ->
-                val bytes = field.toByteArray(Charsets.UTF_8)
-                data.writeInt(bytes.size)
-                data.write(bytes)
-            }
-        }
-        return output.toByteArray()
+    private fun grantBytes(value: SignedRoleGrant): ByteArray {
+        val capabilities = value.capabilities.sorted().joinToString(",") { JSONObject.quote(it) }
+        return ("{\"capabilities\":[" + capabilities + "]," +
+            "\"deviceId\":" + JSONObject.quote(value.deviceId) +
+            ",\"expiresAt\":" + value.expiresAt + ",\"generation\":" + value.generation +
+            ",\"issuedAt\":" + value.issuedAt +
+            ",\"ownerDeviceId\":" + JSONObject.quote(value.ownerDeviceId) +
+            ",\"role\":" + JSONObject.quote(value.role) + "}").toByteArray(Charsets.UTF_8)
     }
-
     private fun sign(bytes: ByteArray): ByteArray {
         val signer = Signature.getInstance("SHA256withECDSA")
         signer.initSign(signingKeyPair().private)
