@@ -62,6 +62,45 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
 
 **The two-mode rule is fundamental:** website serving remains enabled in both modes. There is no standalone Command Center-only mode.
 
+## PRODUCT CAPABILITIES
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/globe.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>FIRST HOSTING</strong><br>
+      v0.1.0: static website import, local preview and same-Wi-Fi LAN hosting from Android.
+    </td>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/code-2.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>WORKBENCH</strong><br>
+      v0.1.1: isolated editing, preview, diffs, commits, TypeScript build and safe publishing.
+    </td>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/fingerprint.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>DEVICE TRUST</strong><br>
+      v0.2.0: explicit enrollment, signed grants, revocation and bounded worker roles.
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/blocks.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>OPTIONAL RUNTIMES</strong><br>
+      Existing Python 3.11 and Node.js 24.22.1 companion integrations; complete acceptance in v0.1.1.
+    </td>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>VISITOR CONNECTIVITY</strong><br>
+      Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers; public acceptance in v0.2.0.
+    </td>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>CONTROL &amp; EVIDENCE</strong><br>
+      Mandatory G0–G9 release gates, versioned contracts, least privilege and reproducible verification.
+    </td>
+  </tr>
+</table>
+
 ## THE NEW THREE-VERSION PATHWAY
 
 | Version | Milestone | Release outcome |
@@ -100,6 +139,12 @@ The Rust engine has a separate **50 MiB per-file response safety cap**. That is 
 - Complete and verify the existing Python 3.11 and Node.js 24.22.1 integrations in the separate runtime companion.
 - Keep optional runtimes separate from the main app; static hosting must work without them.
 - Add larger-project, quota, crash-recovery and cross-site isolation tests.
+
+## WEBSITE WORKBENCH
+
+Workbench is an initial first-class destination in the Android app. The existing foundation includes a per-site private draft workspace, nested explorer, basic text editor, draft saving, file/folder operations, change detection and local commit snapshots.
+
+The complete development workflow is assigned to **v0.1.1**: editor tabs and unsaved-state protection, isolated preview, per-file diffs, bundled TypeScript compilation, immutable release staging, owner-approved publishing and rollback. Draft saves and commits must never modify the live website. See [Workbench specification](docs/WORKBENCH.md).
 
 ## v0.2.0 — CONNECTED DEVICE FABRIC
 
