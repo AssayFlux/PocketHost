@@ -13,6 +13,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.io.FilterOutputStream
@@ -88,6 +89,7 @@ object ApplicationBackupManager {
 
     @Synchronized
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
+        val stagedArchive = File(context.cacheDir, "pockethost-export-" + UUID.randomUUID() + ".tmp")
         try {
             require(passphrase.size in 12..128) { "Use a backup passphrase between 12 and 128 characters." }
             requireAllRuntimesStopped(context)
@@ -142,30 +144,37 @@ object ApplicationBackupManager {
             val nonce = ByteArray(NONCE_BYTES).also(SecureRandom()::nextBytes)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, deriveKey(passphrase, salt), GCMParameterSpec(128, nonce))
-            val output = context.contentResolver.openOutputStream(destination)
-                ?: throw IOException("Cannot open the selected backup destination.")
-            val header = DataOutputStream(output)
-            header.write(MAGIC)
-            header.write(salt)
-            header.write(nonce)
-            header.flush()
+            FileOutputStream(stagedArchive).use { fileOutput ->
+                val header = DataOutputStream(fileOutput)
+                header.write(MAGIC)
+                header.write(salt)
+                header.write(nonce)
+                header.flush()
 
-            ZipOutputStream(BoundedOutputStream(CipherOutputStream(header, cipher), MAX_ENCRYPTED_BYTES)).use { zip ->
-                val counters = Counters()
-                addTree(zip, site, "site", STATIC_LIMIT, counters)
-                if (includePython) addTree(zip, python, "python", PYTHON_LIMIT, counters)
-                if (includeNode) addTree(zip, node, "node", NODE_LIMIT, counters)
-                routeExport.extraStaticRoots.forEach { extra ->
-                    addTree(zip, extra.root, extra.archivePath, STATIC_LIMIT, counters)
+                ZipOutputStream(BoundedOutputStream(CipherOutputStream(header, cipher), MAX_ENCRYPTED_BYTES)).use { zip ->
+                    val counters = Counters()
+                    addTree(zip, site, "site", STATIC_LIMIT, counters)
+                    if (includePython) addTree(zip, python, "python", PYTHON_LIMIT, counters)
+                    if (includeNode) addTree(zip, node, "node", NODE_LIMIT, counters)
+                    routeExport.extraStaticRoots.forEach { extra ->
+                        addTree(zip, extra.root, extra.archivePath, STATIC_LIMIT, counters)
+                    }
+                    addSmallEntry(zip, "settings.json", settings.toString().toByteArray(Charsets.UTF_8), counters)
+                    addSmallEntry(zip, "routes.json", routeExport.manifest.toString().toByteArray(Charsets.UTF_8), counters)
+                    if (counters.files > MAX_FILES || counters.entries > MAX_ENTRIES || counters.bytes > MAX_TOTAL_BYTES) {
+                        throw IOException("The full app backup exceeds its file, entry or total-size safety limit.")
+                    }
                 }
-                addSmallEntry(zip, "settings.json", settings.toString().toByteArray(Charsets.UTF_8), counters)
-                addSmallEntry(zip, "routes.json", routeExport.manifest.toString().toByteArray(Charsets.UTF_8), counters)
-                if (counters.files > MAX_FILES || counters.entries > MAX_ENTRIES || counters.bytes > MAX_TOTAL_BYTES) {
-                    throw IOException("The full app backup exceeds its file, entry or total-size safety limit.")
-                }
+            }
+            // Do not touch the selected destination until the encrypted archive is complete.
+            val destinationOutput = context.contentResolver.openOutputStream(destination)
+                ?: throw IOException("Cannot open the selected backup destination.")
+            FileInputStream(stagedArchive).use { input ->
+                destinationOutput.use { output -> input.copyTo(output, 64 * 1024) }
             }
             return true
         } finally {
+            stagedArchive.delete()
             passphrase.fill('\u0000')
         }
     }
