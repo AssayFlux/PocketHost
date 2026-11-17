@@ -699,7 +699,7 @@ private fun PocketHostDashboard() {
                                 },
                                 enabled = !hosting
                             ) { Text("Save server settings") }
-                            Text("Engine limits: 16 concurrent connections · 50 MiB maximum file · two Tokio workers.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            Text("Engine limits: 16 concurrent connections · 500 MB maximum file · two Tokio workers.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Keep CPU awake while hosting", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
@@ -1254,7 +1254,7 @@ private fun PocketHostDashboard() {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("CONNECTION & SECURITY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                             Text("Cloudflare provides public HTTPS to this host's local Rust website listener.", color = palette.onSurfaceVariant)
-                            Text("No built-in visitor password yet. Use Cloudflare Access for private sites.", color = palette.onSurfaceVariant)
+                            Text("Private and restricted visitor access is available in hostname routing. Use Cloudflare Access as an additional edge policy if desired.", color = palette.onSurfaceVariant)
                             Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
                             OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
                                 Text("Open backup and restore")
