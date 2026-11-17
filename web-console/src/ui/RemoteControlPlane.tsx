@@ -93,6 +93,8 @@ export function RemoteControlPlane() {
   const [relaySiteId, setRelaySiteId] = useState("static-default");
   const [relayChallenge, setRelayChallenge] = useState<RelayChallenge | null>(null);
   const [passkeyDisplayName, setPasskeyDisplayName] = useState("PocketHost Owner");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
 
   async function exchangeAdminSession(credential: string): Promise<string> {
     const response = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/session", {
@@ -151,6 +153,27 @@ export function RemoteControlPlane() {
     return result.accessToken;
   }
 
+  async function recoverOwnerSession() {
+    setBusy(true);
+    try {
+      const response = await fetch(endpoint.replace(/\/$/, "") + "/v1/admin/passkeys/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: recoveryCodeInput.trim() }),
+        cache: "no-store",
+      });
+      const result = await response.json() as { accessToken?: string; role?: "owner"; error?: string };
+      if (!response.ok || !result.accessToken) throw new Error(result.error || "Owner recovery failed.");
+      setSessionToken(result.accessToken);
+      setSessionRole("owner");
+      setReauthCredential("");
+      setRecoveryCodeInput("");
+      setMessage("Owner recovery succeeded. Enroll a replacement passkey now; the recovery code has been consumed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Owner recovery failed.");
+    } finally { setBusy(false); }
+  }
+
   async function enrollOwnerPasskey() {
     setBusy(true);
     try {
@@ -184,8 +207,9 @@ export function RemoteControlPlane() {
         }),
         cache: "no-store",
       });
-      const result = await response.json() as { error?: string };
+      const result = await response.json() as { error?: string; recoveryCodes?: string[] };
       if (!response.ok) throw new Error(result.error || "Passkey registration failed.");
+      if (result.recoveryCodes?.length) setRecoveryCodes(result.recoveryCodes);
       await authenticateOwnerPasskey();
       setMessage("Owner passkey enrolled. Bootstrap sessions have been revoked; future Owner sign-ins use the passkey.");
     } catch (error) {
@@ -535,6 +559,14 @@ export function RemoteControlPlane() {
         <button disabled={busy || !sessionToken || sessionRole !== "owner" || !passkeyDisplayName.trim()} onClick={() => void enrollOwnerPasskey()}>Enroll owner passkey</button>
         <button disabled={busy || !endpoint.startsWith("https://")} onClick={() => void authenticateOwnerPasskey().then(() => setMessage("Signed in with Owner passkey.")).catch(error => setMessage(error instanceof Error ? error.message : "Passkey sign-in failed."))}>Sign in with passkey</button>
       </div>
+      <label>One-time recovery code<input value={recoveryCodeInput} onChange={event => setRecoveryCodeInput(event.target.value)} autoComplete="off" spellCheck={false} placeholder="Paste one 64-character recovery code" /></label>
+      <button disabled={busy || !endpoint.startsWith("https://") || recoveryCodeInput.trim().length !== 64} onClick={() => void recoverOwnerSession()}>Recover Owner session</button>
+      {recoveryCodes.length > 0 && <div className="notice">
+        <strong>Save these one-time recovery codes offline</strong>
+        <p>Each code can be used once. Enrolling a replacement passkey after recovery rotates this set.</p>
+        <code>{recoveryCodes.join(" · ")}</code>
+        <button onClick={() => void navigator.clipboard.writeText(recoveryCodes.join("\n"))}>Copy recovery codes</button>
+      </div>}
     </div>
     <div className="section-heading"><div><span className="eyebrow">ACCESS CONTROL</span><h2>Team permissions</h2></div><span className="muted-tag">OWNER MANAGED</span></div>
     <div className="resource-panel">

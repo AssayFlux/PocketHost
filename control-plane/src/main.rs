@@ -174,7 +174,7 @@ fn new_token() -> String {
 }
 
 #[derive(Clone, Debug)]
-struct AdminActor { session_id: Uuid, name: String, role: String, authenticated_at: DateTime<Utc> }
+struct AdminActor { session_id: Uuid, name: String, role: String, authenticated_at: DateTime<Utc>, recovery_session: bool }
 
 #[derive(Clone, Debug)]
 struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, bootstrap_hash: Option<String>, user_token_hash: Option<String> }
@@ -331,15 +331,36 @@ async fn finish_owner_passkey_registration(
     }
     sqlx::query("UPDATE owner_auth_policy SET passkey_required=TRUE,updated_at=now() WHERE id=1")
         .execute(&mut *tx).await.map_err(internal)?;
+    // Recovery codes are random 256-bit values, stored only as SHA-256 hashes and
+    // returned exactly once. Rotate them after recovery or when none remain unused.
+    let unused_recovery_codes: i64 = sqlx::query_scalar("SELECT count(*) FROM owner_recovery_codes WHERE consumed_at IS NULL")
+        .fetch_one(&mut *tx).await.map_err(internal)?;
+    let mut recovery_codes = Vec::new();
+    if actor.recovery_session || unused_recovery_codes == 0 {
+        sqlx::query("DELETE FROM owner_recovery_codes")
+            .execute(&mut *tx).await.map_err(internal)?;
+        for _ in 0..10 {
+            let code = new_token();
+            sqlx::query("INSERT INTO owner_recovery_codes(id,code_hash) VALUES($1,$2)")
+                .bind(Uuid::new_v4()).bind(token_hash(&code))
+                .execute(&mut *tx).await.map_err(internal)?;
+            recovery_codes.push(code);
+        }
+    }
     // The bootstrap credential is a recovery/bootstrap path only. Once the first passkey
     // is enrolled, revoke every bootstrap-derived session so it cannot bypass passkey auth.
     sqlx::query("UPDATE control_sessions SET revoked_at=now() WHERE bootstrap_token_hash IS NOT NULL AND revoked_at IS NULL")
         .execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'owner.passkey.register',$2,$3)")
-        .bind(&actor.name).bind(&credential_id).bind(json!({"displayName":display_name}))
+        .bind(&actor.name).bind(&credential_id)
+        .bind(json!({"displayName":display_name,"recoveryCodesIssued":recovery_codes.len()}))
         .execute(&mut *tx).await.map_err(internal)?;
     tx.commit().await.map_err(internal)?;
-    Ok((StatusCode::CREATED, Json(json!({"credentialId":credential_id,"displayName":display_name,"passkeyRequired":true}))))
+    Ok((StatusCode::CREATED, Json(json!({
+        "credentialId":credential_id,"displayName":display_name,"passkeyRequired":true,
+        "recoveryCodes":recovery_codes,
+        "recoveryWarning":"Each recovery code works once. Store these codes offline; they are never shown again."
+    }))))
 }
 
 async fn start_owner_passkey_authentication(
@@ -366,6 +387,44 @@ async fn start_owner_passkey_authentication(
     sqlx::query("INSERT INTO owner_passkey_challenges(id,ceremony,session_id,state,expires_at) VALUES($1,'authentication',NULL,$2,now()+interval '5 minutes')")
         .bind(challenge_id).bind(state).execute(&s.db).await.map_err(internal)?;
     Ok(Json(json!({"challengeId":challenge_id,"publicKey":public_key})))
+}
+
+#[derive(Deserialize)]
+struct OwnerRecoveryRequest { code: String }
+
+async fn recover_owner_session(
+    State(s): State<AppState>, headers: HeaderMap, ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Json(input): Json<OwnerRecoveryRequest>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    ensure_control_plane_host(&headers)?;
+    let client_ip = relay_client_ip(peer.ip(), headers.get("cf-connecting-ip").and_then(|value| value.to_str().ok()));
+    if !allow_admin_session_attempt(client_ip) {
+        return Err((StatusCode::TOO_MANY_REQUESTS, "owner_recovery_rate_limited".into()));
+    }
+    let code = input.code.trim();
+    if code.len() != 64 || !code.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err((StatusCode::UNAUTHORIZED, "invalid_or_consumed_owner_recovery_code".into()));
+    }
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let recovery = sqlx::query("UPDATE owner_recovery_codes SET consumed_at=now() WHERE code_hash=$1 AND consumed_at IS NULL RETURNING id")
+        .bind(token_hash(code)).fetch_optional(&mut *tx).await.map_err(internal)?
+        .ok_or((StatusCode::UNAUTHORIZED, "invalid_or_consumed_owner_recovery_code".into()))?;
+    let recovery_id: Uuid = recovery.get("id");
+    let session_id = Uuid::new_v4();
+    let token = new_token();
+    let expires_at = Utc::now() + chrono::Duration::hours(ADMIN_SESSION_TTL_HOURS);
+    sqlx::query("INSERT INTO control_sessions(id,user_id,name,role,token_hash,bootstrap_token_hash,user_token_hash,expires_at,owner_recovery_id) VALUES($1,NULL,'PocketHost Owner (recovery)','owner',$2,NULL,NULL,$3,$4)")
+        .bind(session_id).bind(token_hash(&token)).bind(expires_at).bind(recovery_id)
+        .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES('PocketHost Owner','session.recovery',$1,$2)")
+        .bind(session_id.to_string()).bind(json!({"recoveryId":recovery_id,"expiresAt":expires_at}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::CREATED, Json(json!({
+        "accessToken":token,"expiresAt":expires_at,"role":"owner",
+        "authenticatedWith":"one_time_recovery_code",
+        "warning":"This recovery code has been consumed. Enroll a replacement passkey and save the newly issued recovery codes."
+    }))))
 }
 
 async fn finish_owner_passkey_authentication(
@@ -446,13 +505,15 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
     ensure_control_plane_host(headers)?;
     let supplied = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "admin_session_required".into()))?;
     let row = sqlx::query(
-        "SELECT s.id,s.name,s.role,s.created_at FROM control_sessions s \
+        "SELECT s.id,s.name,s.role,s.created_at,(s.owner_recovery_id IS NOT NULL) AS recovery_session FROM control_sessions s \
          LEFT JOIN control_users u ON u.id=s.user_id \
          LEFT JOIN owner_passkeys p ON p.credential_id=s.owner_passkey_id \
+         LEFT JOIN owner_recovery_codes rc ON rc.id=s.owner_recovery_id \
          WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() \
-         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NULL) OR \
-              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role AND u.token_hash=s.user_token_hash AND s.bootstrap_token_hash IS NULL AND s.owner_passkey_id IS NULL) OR \
-              (s.user_id IS NULL AND s.role='owner' AND s.bootstrap_token_hash IS NULL AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NOT NULL AND p.revoked_at IS NULL))"
+         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NULL AND s.owner_recovery_id IS NULL) OR \
+              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role AND u.token_hash=s.user_token_hash AND s.bootstrap_token_hash IS NULL AND s.owner_passkey_id IS NULL AND s.owner_recovery_id IS NULL) OR \
+              (s.user_id IS NULL AND s.role='owner' AND s.bootstrap_token_hash IS NULL AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NOT NULL AND s.owner_recovery_id IS NULL AND p.revoked_at IS NULL) OR \
+              (s.user_id IS NULL AND s.role='owner' AND s.bootstrap_token_hash IS NULL AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NULL AND s.owner_recovery_id IS NOT NULL AND rc.consumed_at IS NOT NULL))"
     )
         .bind(token_hash(supplied)).bind(token_hash(&state.admin_token))
         .fetch_optional(&state.db).await.map_err(internal)?;
@@ -461,6 +522,7 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
         name: row.get("name"),
         role: row.get("role"),
         authenticated_at: row.get("created_at"),
+        recovery_session: row.get("recovery_session"),
     }).ok_or((StatusCode::UNAUTHORIZED, "invalid_or_expired_admin_session".into()))
 }
 
@@ -1247,6 +1309,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/passkeys/registration/finish", post(finish_owner_passkey_registration))
         .route("/v1/admin/passkeys/authentication/start", post(start_owner_passkey_authentication))
         .route("/v1/admin/passkeys/authentication/finish", post(finish_owner_passkey_authentication))
+        .route("/v1/admin/passkeys/recovery", post(recover_owner_session))
         .route("/v1/admin/audit", get(list_audit))
         .route("/v1/admin/users", get(list_users).post(create_user))
         .route("/v1/admin/users/:id", axum::routing::delete(revoke_user))

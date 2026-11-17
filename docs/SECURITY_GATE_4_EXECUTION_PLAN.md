@@ -37,9 +37,17 @@ Local loopback management API (Owner session required):
 
 The create response returns the visitor password once. Browser navigation uses HTTP Basic authentication: username is `visitor` for Private, or the invitation name for Restricted. The visitor password is the one-time generated secret.
 
+## Passkey implementation now present in source
+
+- `POST /v1/admin/passkeys/registration/start` and `/finish` implement a server-challenged Owner registration ceremony. Registration state is persisted server-side for five minutes and is bound to the initiating Owner session.
+- `POST /v1/admin/passkeys/authentication/start` and `/finish` implement passkey authentication with required user verification. Challenges are single-use and expire after five minutes; credential state is updated after successful authentication.
+- First enrollment enables `passkey_required`, revokes bootstrap-derived sessions and blocks future bootstrap session exchange. Passkey sessions are explicitly bound to an active credential, so credential revocation invalidates those sessions.
+- The remote console now supports browser WebAuthn enrollment and passkey sign-in. Ten random 256-bit recovery codes are issued once, stored only as SHA-256 hashes, and individually consumed by `POST /v1/admin/passkeys/recovery`. Recovery sessions are short-lived for writes; replacement passkey enrollment rotates the recovery-code set.
+- Recovery session bindings and ceremony state are persisted in migrations `0011` and `0012`. State serialization is enabled only because the challenge objects are stored server-side in PostgreSQL, never in browser storage.
+
 ## Remaining work before Gate 4 closes
 
-1. Implement passkey-first Owner identity using a platform credential / WebAuthn-compatible flow with secure recovery; the existing password + device-approved recovery flow is not a passkey.
+1. Execute end-to-end WebAuthn registration, passkey authentication, single-use recovery, recovery rotation and lost-passkey restoration tests against the deployed HTTPS origin and supported browsers/authenticators.
 2. Implemented source: Rust applies a bounded eight-failure/60-second lockout keyed by site and effective client IP, with bounded bucket storage. Add production telemetry/abuse review and adversarial load validation.
 3. Execute route-by-route instrumentation for the implemented five-minute local Owner step-up and role separation across every mutation route; passkey-first identity remains separate and open.
 4. Verify TLS-proxy trust configuration cannot be forged by a non-loopback peer and test direct LAN rejection.
