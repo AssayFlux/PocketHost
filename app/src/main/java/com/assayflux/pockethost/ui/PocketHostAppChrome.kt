@@ -107,6 +107,7 @@ internal data class PocketHostNavItem(val title: String, val subtitle: String, v
 
 private val pocketHostNavItems = listOf(
     PocketHostNavItem("Home", "Service overview and device centre", Icons.Outlined.Dashboard, "Home"),
+    PocketHostNavItem("Devices", "Verified devices, roles and revocation", Icons.Outlined.Memory, "Devices"),
     PocketHostNavItem("Hosting", "Server lifecycle, port and local access", Icons.Outlined.Language, "Dashboard"),
     PocketHostNavItem("Websites & files", "Projects, import, publish and rollback", Icons.Outlined.FolderOpen, "Sites"),
     PocketHostNavItem("Relay & networking", "Cloudflare tunnel and network settings", Icons.Outlined.NetworkCheck, "Settings:Network"),
@@ -124,6 +125,7 @@ private val pocketHostNavItems = listOf(
 internal fun PocketHostSidebar(
     selectedTab: String,
     selectedSection: String,
+    operatingMode: String,
     onNavigate: (String) -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
@@ -138,7 +140,7 @@ internal fun PocketHostSidebar(
             }
         }
         Text("WORKSPACE", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 4.dp))
-        pocketHostNavItems.forEach { item ->
+        pocketHostNavItems.filter { it.destination != "Devices" || operatingMode == "COMMAND_CENTER_SERVER" }.forEach { item ->
             val selected = when {
                 item.destination == "Home" -> selectedTab == "Home"
                 item.destination.startsWith("Settings:") -> selectedTab == "Settings" && selectedSection == item.destination.substringAfter(":")
