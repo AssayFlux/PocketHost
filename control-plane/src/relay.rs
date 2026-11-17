@@ -23,6 +23,7 @@ pub struct RelayRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RelayResponse {
     pub id: Uuid,
+    pub site_id: String,
     pub status: u16,
     #[serde(default)]
     pub headers: HashMap<String, String>,
@@ -107,7 +108,8 @@ impl RelayHub {
     pub fn complete(&self, device_id: Uuid, response: RelayResponse) -> bool {
         let pending = {
             let mut requests = self.pending.lock().unwrap_or_else(|e| e.into_inner());
-            if requests.get(&response.id).map(|pending| pending.device_id) != Some(device_id) {
+            if requests.get(&response.id).map(|pending| (pending.device_id, pending.site_id.as_str()))
+                != Some((device_id, response.site_id.as_str())) {
                 return false;
             }
             requests.remove(&response.id)
@@ -292,19 +294,37 @@ mod tests {
         let request_id = Uuid::new_v4();
         let response_rx = hub.register_pending(request_id, device, "site-a").unwrap().1;
         assert!(hub.complete(device, RelayResponse {
-            id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
+            id: request_id, site_id: "site-a".into(), status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
         assert_eq!(response_rx.blocking_recv().unwrap().status, 200);
         let other_device = Uuid::new_v4();
         let request_id = Uuid::new_v4();
         let response_rx = hub.register_pending(request_id, device, "site-a").unwrap().1;
         assert!(!hub.complete(other_device, RelayResponse {
-            id: request_id, status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
+            id: request_id, site_id: "site-a".into(), status: 200, headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
         }));
         hub.cancel_pending(request_id);
         assert!(response_rx.blocking_recv().is_err());
         hub.disconnect(device, second);
         assert!(hub.sender(device).is_none());
+    }
+
+    #[test]
+    fn relay_response_must_match_the_pending_site_as_well_as_device_and_request() {
+        let hub = RelayHub::default();
+        let device = Uuid::new_v4();
+        let (_session, _stream) = hub.connect(device);
+        let request_id = Uuid::new_v4();
+        let receiver = hub.register_pending(request_id, device, "site-a").unwrap().1;
+        assert!(!hub.complete(device, RelayResponse {
+            id: request_id, site_id: "site-b".into(), status: 200,
+            headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
+        }));
+        assert!(hub.complete(device, RelayResponse {
+            id: request_id, site_id: "site-a".into(), status: 200,
+            headers: HashMap::new(), body_base64: String::new(), set_cookies: Vec::new()
+        }));
+        assert_eq!(receiver.blocking_recv().unwrap().site_id, "site-a");
     }
 
     #[test]
