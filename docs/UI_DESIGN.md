@@ -136,9 +136,21 @@ The redesign is not complete until:
 
 ## 9. Current implementation and honest gaps
 
-- Existing native entry gate: optional biometric app lock using the existing biometric host; this is not a native username/password account login.
-- Existing management authentication belongs to the management/web-console flow and must not be conflated with visitor authentication.
-- Existing main UI uses a five-destination bottom-navigation shell; it must be replaced by the owner-defined brand/header, hamburger/account controls, service carousel and information centre.
-- Existing Compose feature screens and their state/action contracts are valuable and must be preserved while changing the shell.
-- The earlier classic card refinement is a palette/shape foundation only. It is not the approved final layout.
-- Record actual CI/device evidence and unresolved issues here; never claim visual acceptance based only on source changes.
+**Source implemented on `ui/owner-home-shell` (2026-11-17):**
+- The native entry/locked screen remains the existing optional biometric app lock, with a redesigned branded card and fingerprint action. There is no native username/password account-login API; management-console login is separate.
+- The new home shell is the initial authenticated destination. It has Pocket Host / AssayFlux branding, a hamburger control, an account/app dropdown, and no bottom navigation bar.
+- The hamburger drawer exposes Home, Hosting, Websites & Files, Relay & Networking, Python & Node Runtimes, Security & Access, Capacity & Performance, Backups & Recovery, Activity & Logs, Learn, Settings and About. Destinations are mapped to existing native Dashboard, Sites, Activity, Learn and Settings General/Network/Runtimes/About flows.
+- The home carousel presents Hosting, Websites, Relay & Tunnels, Runtimes, Security, Capacity and Backups as horizontally swipeable cards with adjacent-card previews and page indicators. Service status and metrics are bound to current app state; planned capabilities are not represented as verified.
+- The information centre reads current hosting status, connection count, DeviceTelemetry battery/memory/device/network fields and recent OperationalLog entries. Backup/runtime notes are labelled with their actual limitations.
+- Existing detailed Dashboard, Sites, Activity, Learn and Settings composables and their state/action callbacks remain the implementation destinations. Backups and security-related controls remain within their existing Sites/Settings surfaces.
+- The account dropdown currently provides supported app settings, security settings and About routes; it does not invent a username, profile identity, cloud account, or sign-out capability.
+
+**Still required before UI acceptance:**
+- Compile/package the Android host and run API 26/33/35 instrumentation on the exact branch SHA.
+- Review actual screenshots and accessibility hierarchy for login, home, drawer, account menu, all detail destinations and Settings subsections.
+- Verify carousel centering, swipe/page indicators, navigation/back behaviour, notification data freshness and empty/error/offline states.
+- Verify compact and expanded widths, tablet, landscape, keyboard-visible and large font scaling; complete human TalkBack and contrast review.
+- Confirm biometric cancellation/unavailable/fallback behaviour without bypassing the local app lock.
+- Reconcile any UI test assumptions that still expect the removed bottom-navigation bar.
+
+Source implementation is not proof of successful Android compilation, emulator/device acceptance or release approval.
