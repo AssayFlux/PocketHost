@@ -585,14 +585,19 @@ private fun PocketHostDashboard() {
                 if (selectedTab == "Settings" && settingsSection == "General") {
                     PocketHostSettingsScreen(
                         state = PocketHostGeneralSettingsState(
-                            darkTheme = darkTheme,
+                            appearanceMode = appearanceMode,
+                            selectedTheme = selectedTheme,
                             biometricUnlockEnabled = biometricUnlockEnabled,
                             autoStartOnBoot = autoStartOnBoot
                         ),
                         actions = PocketHostGeneralSettingsActions(
-                            onDarkThemeChange = { enabled ->
-                                darkThemeOverride = enabled
-                                appearancePreferences.edit().putBoolean("dark_theme", enabled).apply()
+                            onAppearanceModeChange = { mode ->
+                                appearanceMode = mode
+                                appearancePreferences.edit().putString("appearance_mode", mode).remove("dark_theme").apply()
+                            },
+                            onThemeChange = { theme ->
+                                selectedTheme = theme
+                                appearancePreferences.edit().putString("appearance_theme", theme).apply()
                             },
                             onBiometricUnlockChange = { enabled ->
                                 if (!enabled) {
