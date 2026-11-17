@@ -1,5 +1,7 @@
 # Android Runtime Provider — Pocket Host 0.1.0
 
+The companion is for optional server-side language runtimes. It is not required for the built-in HTML/CSS static website baseline. TypeScript is a built-in compile-to-JavaScript web toolchain requirement and must be bundled with the mobile server app, not presented as an optional companion runtime. That compiler integration remains pending until packaged and tested.
+
 ## Product role
 
 The Android runtime companion provides the language runtime execution provider for the mobile website-serving node. In 0.1.0, customer-selected Python, Node and future language runtime packs execute only on this designated mobile server. Other enrolled devices perform assigned infrastructure jobs; they do not become arbitrary customer-language runtime hosts.
