@@ -7,11 +7,12 @@ This documentation set follows the new three-version pathway. The former five-st
 2. [Master Plan](MASTER_PLAN.md) — product rules and version boundaries.
 3. [Three-Version Roadmap](ROADMAP.md) — v0.1.0, v0.1.1 and v0.2.0.
 4. [Mandatory Release Gates G0–G9](RELEASE_GATES.md) — common gate definitions and version acceptance matrix.
-5. [Repository Baseline](PROJECT_BASELINE.md) — source-audited inventory.
-6. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
-7. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
-8. [Architecture Decisions](DECISIONS.md) — durable product decisions.
-9. [Product North Star](NORTH_STAR.md) — long-term direction.
+5. [Complete Repository File Inventory](REPOSITORY_BASELINE.md) — every tracked file/directory and detailed source status at the audit snapshot.
+6. [Project Baseline](PROJECT_BASELINE.md) — current module and release status.
+7. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
+8. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
+9. [Architecture Decisions](DECISIONS.md) — durable product decisions.
+10. [Product North Star](NORTH_STAR.md) — long-term direction.
 
 ## v0.1.0 — First Hosting
 - [Static Hosting Baseline](STEP_4_WEB_BASELINE.md)
