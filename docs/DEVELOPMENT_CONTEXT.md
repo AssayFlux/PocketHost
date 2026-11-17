@@ -1,140 +1,36 @@
-# ASSAYFLUX POCKET HOST — DEVELOPMENT CONTEXT
+# Pocket Host 0.1.0 — Engineering Context
 
-**Purpose:** mandatory handoff for every engineering session.  
-**Product authority:** `docs/NORTH_STAR.md`  
-**Evidence authority:** `docs/PROJECT_BASELINE.md` and the dated project status.
+Read [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) before changing system boundaries. Read [MASTER_PLAN.md](MASTER_PLAN.md) for implementation gates.
 
-## Identity and target
+## Non-negotiable architecture
 
-- App: AssayFlux Pocket Host; developer: Designed by AssayFlux.
-- Host package: `com.assayflux.pockethost`.
-- Runtime companion: `com.assayflux.pockethost.worker`.
-- Initial version target: 0.1.0.
-- Native Kotlin + Jetpack Compose.
-- Rust/Tokio/Hyper website engine.
-- TypeScript + React + Vite management console.
-- CPython 3.11 / Chaquopy and Node mobile 24.22.1 in companion package.
-- Android 8 / API 26 minimum; ARMv7/ARM64 target; x86_64 emulator.
-- No Termux, root, mandatory VPS or mandatory remote management.
+- Android and iOS mobile applications are first-class command centers.
+- The phone is not a required runtime dependency or fleet single point of failure.
+- Each host locally supervises its workloads and retains signed desired state and last-known-good release.
+- Components are independent fault domains with their own identity, lifecycle, permissions, health, limits and rollback.
+- Components communicate only through authenticated, encrypted, versioned and bounded contracts.
+- Separate control plane and visitor/service data plane.
+- Local hosting must continue through phone, Internet, control-plane, tunnel and telemetry outages.
+- Static hosting must continue when a language runtime fails.
+- Tunnel providers are independent and may run concurrently.
+- MCU devices expose only board-verified bounded capabilities.
+- Do not advertise support without exact-device evidence.
 
-## Product requirements
+## Repository boundaries
 
-1. The phone is the website origin.
-2. Static hosting is the core baseline and remains independent of optional runtimes and external networking.
-3. Simple and Advanced modes; owner-approved native UI: biometric app-unlock screen followed by branded home, hamburger drawer, account dropdown, service carousel and live information centre. See `docs/UI_DESIGN.md`.
-4. Reuse the owner's existing named Cloudflare Tunnel; never create a duplicate.
-5. Maintain the initial bounded AssayFlux Relay source path as a separate first-party alternative; it is not production-available until DNS/TLS deployment, Android validation and external acceptance pass.
-6. Local Network mode remains available; direct port forwarding is not the default.
-7. Keep website visitor authentication separate from Owner/Operator management authentication.
-8. Never expose the management API through website ingress.
-9. Python/Node remain trusted owner-controlled code until per-project OS isolation and outbound denial pass adversarial acceptance.
-10. No fake live values, unverified capacity claims or unsupported security statements.
+- `app/`: Android application.
+- `runtime-worker/`: Android runtime companion.
+- `rust-engine/`: Rust HTTP website engine.
+- `control-plane/`: optional Rust/PostgreSQL remote fleet service.
+- `web-console/`: secondary browser management client.
+- `DemonCore`: separate MCU firmware and device protocol repository.
 
-## UI contract
+## Implementation rules
 
-Classic, clean and timeless. Navy identity, neutral surfaces, monochrome icon style, card-based information hierarchy, light default and optional dark. No gradients, neon or glass. Preserve existing visual language and screen scope. Every control must reflect a real implemented backend state. Accessibility, responsive layout and screenshot review are release evidence.
-
-## Architecture boundaries
-
-- Kotlin: Android UI, foreground service, permissions, SAF, lifecycle and telemetry.
-- Rust: website ingress, static serving, hostname routing, reverse proxy, admission and engine metrics.
-- Companion broker: signature-protected versioned Binder, project transfer and runtime supervision; must not execute project code in target architecture.
-- Isolated cells: one project per OS identity; planned until production migration and proof complete.
-- Console: TypeScript/React client; no duplicate routing or secret-bearing public API.
-- Cloudflare: optional outbound connector reusing existing named tunnel.
-- AssayFlux Relay: planned independent gateway and Android outbound agent.
-- Control plane: optional remote management only, never website origin.
-
-## Current security truth
-
-The runtime companion has a UID separate from the host app. Python and Node projects still share the companion UID and project storage. Companion INTERNET permission and language-level listener restrictions do not enforce outbound egress denial. The isolated UID, Unix socket and seccomp work is a feasibility probe. Do not describe it as a production sandbox. Do not run untrusted visitor-submitted code.
-
-## Primary implementation sequence
-
-0. Repository truth, architecture freeze and documentation reconciliation.
-1. Complete Python/Node companion lifecycle and Rust end-to-end routing.
-2. Implement per-project OS isolation, descriptor-only storage/network capabilities and adversarial tests.
-3. Build AssayFlux Relay: gateway, enrollment, outbound agent, multiplexed streams, hostname routing and reconnect.
-4. Separate Owner/Operator and visitor authentication, passkeys, site policy and revocation.
-5. Complete Rust fairness, Resource Governor and Capacity Lab.
-6. Fault-test backup, restore, logs, lifecycle and recovery.
-7. Complete onboarding, Dashboard, Sites, Activity, Learn and Settings.
-8. Exact-SHA API 26/33/35, ABI builds, signing, external tests and independent review.
-
-The North Star defines each gate's full exit criteria. Do not reorder security-dependent work or represent proposals as complete.
-
-## 2026-11-16 active Gate 2 implementation note
-
-The isolated-UID probe now closes inherited socket descriptors other than the explicitly brokered visitor listener before applying seccomp, including a socket deliberately duplicated onto standard input. Native setup also rejects any listener which is not an already-listening AF_UNIX SOCK_STREAM socket and lowers NOFILE/NPROC/FSIZE limits while disabling core dumps. Source instrumentation asserts these values. This closes identified egress/resource paths in the probe only; it does not make the probe a production runtime cell. The seccomp policy is still a denylist with an allow fallback, and Python/Node remain in the shared companion UID until their runtimes and storage are migrated.
-
-## 2026-11-16 active Gate 2–4 source status
-
-- Gate 2 probe hardening closes inherited socket descriptors other than the brokered visitor listener before seccomp. The instrumentation source asserts denial of `socket`, `connect` and `bind`, closure of an already-connected inherited TCP socket, and successful brokered Unix-stream accept with peer UID verification. A host-side `RuntimeCellCapabilityBrokerBinder` now reads the actual `Binder.getCallingUid()` and mediates read-only PFD opens and bounded writes; the isolated probe calls it, and the test source checks host-UID spoof rejection plus read/write capability use. The registry/broker now immediately revokes grants when a lease is marked dead, and instrumentation source asserts zero grants remain before another file access. The Binder path and death callback are still probe-only, not wired into production cell startup/lifecycle. These Android tests have not been run; APK/native compilation remains deferred to Gate 8.
-- Android API research: isolated services have no permissions; multiple instances through `bindIsolatedService` are API 29+, so API 26–28 require fixed declared slots. Chaquopy's Android platform extracts runtime assets under app-private files and uses app-private HOME/cache paths; NodeHostingService uses companion `filesDir` and `noBackupFilesDir`. Do not move either runtime into an isolated UID without descriptor-rooted storage and runtime-specific bootstrap adaptation.
-- Primary platform references: [Android isolated service semantics](https://developer.android.com/guide/topics/manifest/service-element#isolated), [Android isolated-app SELinux policy](https://android.googlesource.com/platform/system/sepolicy/+/refs/heads/main/private/isolated_app_all.te), [Chaquopy runtime startup and asset extraction](https://chaquo.com/chaquopy/doc/current/android.html), and [Chaquopy's separate-process limitation](https://chaquo.com/chaquopy/doc/current/faq.html#how-do-i-interrupt-a-python-call). Android explicitly grants isolated apps access to app-data files only when already open and passed over Binder; Chaquopy's standard `AndroidPlatform` expects app context and writes/extracts runtime data to app-private storage. The current native seccomp policy is also a denylist with an allow fallback, not a syscall allowlist. The next valid Stage 2 design must move runtime bootstrap/storage to descriptor-rooted cell-owned storage, add a real cell supervisor and per-slot death/revocation lifecycle, and validate no inherited sockets or ambient egress before migrating Python and Node.
-- Gate 3 has a bounded HTTP Relay implementation: owner DNS TXT hostname proof, verified host/device/site registry, authenticated outbound Android SSE stream, bounded visitor request/response forwarding, exact enabled local site-ID resolution, correct local Host routing, preservation of multiple Set-Cookie values and WWW-Authenticate challenges, per-site/client visitor-auth throttling, exact trusted-proxy IP handling, atomic active-session request registration and pending-request cancellation on stream replacement/disconnect, and immediate stream revocation on device token rotation/deletion. DNSSEC, TLS/certificate lifecycle, streaming/WebSocket support and deployment/soak tests remain open. It supports 8 MiB request/response bodies, a 45-second request deadline and four local concurrent requests per device. It does not yet support WebSocket upgrades, streaming downloads/SSE or end-to-end HTTP/2 multiplexing; public DNS/TLS deployment and soak tests remain open.
-- Gate 4 remote admin uses 12-hour hashed server-side sessions; expiry, explicit revoke, user revoke and token-rotation revocation have PostgreSQL coverage. Remote write operations require a session issued within five minutes; the console re-exchanges its in-memory bootstrap/team credential on HTTP 428 and revokes the superseded session. Local sensitive Owner mutations also require a five-minute login/device-approved pairing window. Local site modes Public/Private/Restricted use one-time 256-bit visitor credentials stored as SHA-256 hashes, Owner invite/revoke API and Rust Basic-auth enforcement. Protected sites require HTTPS at a trusted proxy; visitor credentials are removed before proxying to customer runtimes. Passkey-first Owner identity and executed Android/native integration tests remain open.
-
-## Latest non-Android verification — 2026-11-16
-
-- Quality workflow 43851733175 completed success on exact implementation SHA 06fa7dea1ed2481b30c680fd1a22ff083d48d203.
-- All six jobs passed: Rust, control-plane/PostgreSQL migrations, Python runtime, Node runtime, TypeScript console and Gradle wrapper.
-- Control-plane PostgreSQL tests cover admin sessions, user/device token rotation and revocation, Relay hostname registry state, bounded Relay pending quotas and DNS TXT parser behavior.
-- Rust tests cover visitor authentication throttling and site access behavior.
-- This workflow does not compile Android Kotlin/C++ or execute instrumentation. The owner-directed Gate 8 restriction remains active; do not build/test Android before Gates 0–7 implementation is complete.
-
-## Build and test discipline
-
-- Use the checksum-verified Gradle 8.9 wrapper (`./gradlew`) and committed dependency lockfiles.
-- Inspect manifests, permissions and ABI filters before changing packaging.
-- Quality CI and Android integration CI are separate evidence sources.
-- Every result is tied to exact SHA, workflow, API level, test counts, failures and skips.
-- A compile pass is not runtime acceptance; emulator pass is not physical-device acceptance.
-- Never weaken production policy to satisfy a test harness.
-- Do not claim an APK is valid unless its exact artifact is downloaded and inspected for package metadata, ABI and signature.
-
-## Secrets and release
-
-Never commit keystores, passwords, tokens, private keys or tunnel credentials. Use Android Keystore for device-bound secrets where supported. Logs and support bundles must redact secrets. Backups exclude device-bound credentials. Release host and companion APKs must share the signer certificate because the Binder permission is signature-protected.
-
-## Handoff rule
-
-Before each task: inspect current `main`, recent commits, relevant source, workflow and docs. Implement on the authorized branch, add regression tests, update docs in the same change set, run relevant checks, then report exactly what changed and what remains. Never ask the owner to perform device tests while source/build/CI work remains incomplete; physical-device acceptance belongs at the appropriate release gate.
-
-
-## Build sequencing — current Owner instruction (2026-11-16)
-
-- `docs/NORTH_STAR.md` is authoritative for product scope, gate order and acceptance criteria.
-- The Owner explicitly pulled intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation forward into Gates 2–4 so security changes are compiled and exercised as they land. This supersedes the earlier manual-only / Gate 8-only sequencing statements in historical notes.
-- Keep running the relevant Android integration workflow on source changes to `app/**`, `runtime-worker/**`, `rust-engine/**` and its build inputs. Run the quality workflow for the non-Android Rust, control-plane, Python, Node, console and dependency checks.
-- Gate 8 still owns final signed release artifacts, physical ARMv7/ARM64 acceptance, external Cloudflare/Relay connectivity, full release provenance and independent security review. Intermediate debug APK or emulator success does not close Gate 8.
-- Do not claim Android compilation, emulator or physical-device acceptance until the corresponding exact-SHA workflow evidence is complete and inspected.
-- Build inputs: Rust 1.88.0, Gradle wrapper 8.9 with checksum, Java 17, SDK 35, Build Tools 35.0.0, NDK 27.2.12479018, CMake 3.22.1, cargo-ndk 4.1.2, Python 3.11 and committed Cargo/Gradle/npm lockfiles.
-
-
-## Owner-approved Android UI update — 2026-11-17
-
-The previous five-destination bottom-navigation UI contract is superseded by `docs/UI_DESIGN.md`. The hamburger drawer is the primary app navigation and maps every feature to the existing Dashboard, Sites, Activity, Learn and Settings implementations. Do not remove feature logic when replacing navigation. Native app unlock remains the existing optional biometric gate; no native username/password login is implemented. See current `docs/PROJECT_BASELINE.md` for source and acceptance status.
-
-
-## Pocket Host Design Language V1 — authoritative owner correction (2026-11-17)
-
-Use `docs/UI_DESIGN.md` as the single source of truth. Important dashboard rules: service cards are tall portrait rectangles (not square or landscape); only the service carousel scrolls horizontally; the dashboard never vertically scrolls; the information centre is fixed/non-scrolling and shows four or five compact information-rich bars at once. Do not implement a vertically scrolling notification feed. The bars should use monochrome icons, useful metrics, meaningful graphs/progress indicators and truthful state.
-
-V1 also specifies the branded local biometric app-unlock screen, calligraphic Pocket Host wordmark, elegant display/readable body typography, the complete hamburger drawer, a separate user/account dropdown, minimal monochrome icons, ten classic palettes and persisted System/Light/Dark modes. Design the drawer and user menu as first-class surfaces; do not invent profile/session actions. Feature pages inherit the design tokens but use their own task-appropriate layouts. All measurements and acceptance rules are in `docs/UI_DESIGN.md`.
-
-
-## Universal device fabric — mandatory architecture context (2026-11-17)
-
-Pocket Host is now planned as a cross-platform distributed self-hosting ecosystem. Android remains the first host and its existing reliability/security gates remain mandatory. Read `docs/UNIVERSAL_DEVICE_FABRIC.md` before changing host architecture.
-
-- Target hosts: Android phones/tablets, Linux, Windows, macOS, VPS/dedicated servers, capable ARM/x86 SBCs and embedded Linux.
-- Target edge nodes: ESP32-class and other MCUs through bounded, explicit device capabilities; constrained sensors may contribute events/telemetry only.
-- Do not promise every service on every device. Use capability tiers and signed compatibility profiles.
-- Keep portable Rust/core contracts separate from OS-specific lifecycle, process, filesystem, networking, installer and security adapters.
-- Do not rewrite Kotlin/Compose Android or merge Pocket Host with DemonCore.
-- DemonCore remains the specialised MCU/fleet workstream. Integrate only through a versioned authenticated allow-list adapter after its physical hardware, claim, transport and OTA gates pass.
-- DCP v1.0 is not authentication and its current message/reassembly limit is 4 KiB. Never expose DCP control or GPIO operations through public website ingress.
-- Raspberry Pi is an SBC, not an MCU. ESP32 devices are not assumed to run the full Pocket Host Rust engine, Node or Python.
-- Remote control is optional; existing local hosting must continue during control-plane outage.
-- Do not claim a platform, hardware profile, workload, fleet scale, replication or failover support without exact-SHA/device-specific verification.
+- Preserve platform-native lifecycle and security mechanisms.
+- Prefer versioned contracts and narrow adapters over shared mutable state.
+- Avoid a premature microservices explosion; isolate by process and trust boundary where needed, but keep deployment practical for small devices.
+- No arbitrary remote shell, unrestricted filesystem access or public management API.
+- Use idempotent commands, durable acknowledgements, expiry and explicit owner approval.
+- Every component update must be staged and independently rollback-capable.
+- Record tests and evidence for exact commit SHA and named target.
