@@ -1,53 +1,49 @@
-# WEBSITE DEPLOYMENT — STATIC AND APPLICATION SITES
+# Pocket Host 0.1.0 — Website and Service Deployment
 
-Pocket Host serves the built website output. It does not run your desktop build toolchain.
+## Deployment model
 
-## 1. Supported deployment formats
+A website is a versioned service graph. It may contain a static frontend, multiple runtime components, persistent data services and approved edge-device capabilities. Components may run on one host or multiple compatible hosts.
 
-| Project | Import format | Position |
-|---|---|---|
-| HTML/CSS/browser JavaScript | Folder or ZIP with root index.html | Static hosting |
-| TypeScript | Compiled browser bundle/output | Static hosting of generated output |
-| React/Vue/Svelte/Angular | Framework production output | Static hosting |
-| Vite | Usually dist/ | Static hosting |
-| Next.js | Static export output | Static export only; no Next server |
-| Python | Root wsgi.py exporting application | Embedded WSGI; trusted code only |
-| Node.js | package.json and safe server entry; dependencies bundled | Embedded Node; trusted code only |
-| PHP/Java/Go/Ruby/.NET | Not included | External service or future runtime required |
+## Component manifest
 
-## 2. Static publish workflow
+Every component declares:
+- Stable component and site identity.
+- Runtime/provider and version.
+- OS, architecture, ABI and dependency requirements.
+- Entry point, health/readiness checks and startup policy.
+- CPU, memory, storage, connection and queue budgets.
+- Persistent volumes and backup policy.
+- Required secrets and capability grants.
+- Internal service routes and visitor routes.
+- Update, rollback and compatibility policy.
 
-1. Build the site with its normal framework tools.
-2. Locate the production output directory.
-3. Confirm root `index.html` exists.
-4. Open Pocket Host → Sites → import folder or ZIP.
-5. Wait for validation; reject traversal, unsafe entries and size-limit violations.
-6. Preview locally and test asset paths/client-side routes.
-7. Register hostname and publish staged deployment.
-8. Select Local Network or configured public connector.
-9. For Cloudflare, reuse the existing named tunnel and point its Public Hostname to Rust only.
-10. Verify public HTTPS from a different network and create a backup.
+## Placement
 
-The planned AssayFlux Relay will be another outbound public-connectivity option. It is not implemented and should not be shown as operational.
+The scheduler places a component only on a host whose signed capability profile satisfies the manifest. Placement can be pinned or policy-selected. Resource limits and data locality are considered. A registered device is not automatically eligible.
 
-## 3. SPA routes and assets
+## Deployment lifecycle
 
-The static server supports SPA fallback for missing extensionless paths where configured. Missing asset files with extensions should return 404. Set the correct framework base/public path. Validate nested routes, encoded separators, MIME, HEAD, byte ranges and large streaming files.
+1. Validate manifest, signature, compatibility and policy.
+2. Stage immutable artifacts and data migrations.
+3. Verify hashes, file paths, quotas and publisher identity.
+4. Create isolated component identity and capabilities.
+5. Start in staged state and run health checks.
+6. Atomically activate routes.
+7. Retain last-known-good release for rollback.
+8. Record deployment result and audit event.
 
-## 4. Python WSGI
+## Routing
 
-Provide root `wsgi.py` exporting callable `application(environ, start_response)`. Bundle compatible dependencies; Pocket Host does not automatically run pip. ASGI/WebSockets are not implied. Python is currently trusted-code-only because projects share companion UID and outbound egress is not OS-enforced.
+Visitor traffic enters through Local Network, AssayFlux Relay or Cloudflare Tunnel and terminates at the selected host's website ingress. The site router forwards only declared routes to healthy components. Internal component calls use authenticated service identity and explicit allow-lists. Management and device-control APIs are never visitor routes.
 
-## 5. Node.js
+## Multi-runtime support
 
-Provide `package.json`, a resolvable server entry and prebundled dependencies. On-device npm install, PM2/cluster and arbitrary child-process workflows are not supported. Node is currently trusted-code-only because projects share companion UID and outbound egress is not OS-enforced.
+A single site may use multiple runtime providers. Python, Node, PHP and other languages are supported only when a compatible provider exists for the target OS/architecture and has passed isolation and resource acceptance. Installing a runtime pack does not create an isolated project identity.
 
-## 6. Reliability and security
+## Static-first behavior
 
-- Static serving must continue when optional runtimes stop or crash.
-- Import is staged; failed validation must not replace the active site.
-- Use rollback for deployment updates.
-- Never put management, tunnel or signing secrets in project directories.
-- Do not expose management API as a website hostname.
-- Do not run hostile or visitor-submitted application code.
-- A compile pass or successful local preview is not external HTTPS acceptance.
+Static content is served independently from dynamic runtimes. A Python/Node/runtime crash must not stop static content or sibling components. Site-level health reports component-specific state rather than masking a failed dependency.
+
+## Acceptance
+
+Test invalid manifests, incompatible architecture, missing runtime, signature failure, archive traversal, interrupted deployment, failed health check, rollback, component crash, cross-host routing, host loss, control-plane outage and public-ingress isolation.
