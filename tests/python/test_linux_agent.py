@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -87,7 +88,7 @@ class LinuxAgentTests(unittest.TestCase):
             snapshot_root = Path(directory) / "snapshots"
             (namespace_root / "site-1").mkdir(parents=True)
             (namespace_root / "site-1" / "index.html").write_text("Pocket Host")
-            with __import__("unittest").mock.patch.dict(os.environ, {
+            with patch.dict(os.environ, {
                 "POCKETHOST_STORAGE_ROOT": str(namespace_root),
                 "POCKETHOST_SNAPSHOT_ROOT": str(snapshot_root),
             }):
