@@ -97,6 +97,16 @@ paths:
         "200": { description: Saved and queued }
         "409": { description: Version conflict }
   /v1/admin/devices/{id}/commands:
+    get:
+      summary: Read the latest 50 command states and acknowledgements for a device
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Bounded command history including state, result, delivery attempts and timestamps }
+        "404": { description: Device not found }
     post:
       summary: Queue an allowlisted command for a device
       parameters:
