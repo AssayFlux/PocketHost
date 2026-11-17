@@ -13,6 +13,9 @@ This roadmap follows the five-step master plan. The mobile command center is the
 - DemonCore protocol and safety alignment.
 
 ## Step 2 — Mobile command center
+
+**Android trust foundation committed; end-to-end gate remains open.** Persisted two-mode selection, gated device workspace, P-256 Android Keystore owner identity, signed one-time challenge, proof-of-possession, role-policy-checked signed grants, encrypted registry and generation-based revocation are implemented. Android CI compiles app/test Kotlin without APK packaging and checks role-policy parity. The current flow is manual payload exchange; transport discovery, control-plane integration, agent-side durable verification, owner step-up authentication and physical-device acceptance remain. See [Step 2 implementation record](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md).
+
 - Android and iOS native clients.
 - Device discovery, QR/device ID and one-time verification.
 - Owner approval, role selection, permission review and revocation.
