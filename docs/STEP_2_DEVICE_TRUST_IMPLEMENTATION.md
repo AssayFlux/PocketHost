@@ -44,7 +44,7 @@
 This commit is a real Android trust foundation, not a claim of complete fleet integration.
 
 1. Implement and test LAN discovery and authenticated TLS transport, then BLE and supported USB paths; the current enrollment UI is manual payload exchange and the challenge transport defaults to LAN.
-2. Connect the mobile trust authority to the actual remote control plane and a device-agent protocol endpoint. The current loopback management API and existing remote-control client are separate systems.
+2. Finish connecting the mobile trust authority to the remote control plane and device-agent protocol. A preview Linux worker now polls the existing HTTPS device API for `agent_job` commands and verifies owner-signed job envelopes, but the mobile app still does not register that worker, distribute its role grant, create/queue signed jobs or present remote results through the Command Center. The existing loopback management API and phone remote-control client remain separate systems.
 3. Implement agent-side durable identity/key provisioning, challenge consumption, grant signature verification, generation persistence, renewal and revocation polling on each supported OS.
 4. Upgrade the current app-level biometric/device-credential confirmation to a Keystore key that requires per-use user authentication, and test lockout, cancellation, key invalidation and background transitions.
 5. Add device capability attestation, health/connection state, audit events, role changes and multi-role isolation.
