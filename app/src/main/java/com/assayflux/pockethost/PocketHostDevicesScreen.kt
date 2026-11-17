@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -13,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -135,11 +137,11 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text("REMOTE FLEET CONNECTION", fontWeight = FontWeight.Bold)
                 Text("Use the Control Plane owner/bootstrap credential. It is exchanged for a short-lived session and is not saved by this screen.", color = palette.onSurfaceVariant)
                 OutlinedTextField(controlPlaneEndpoint, { controlPlaneEndpoint = it.trim() }, label = { Text("Control Plane HTTPS URL") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(ownerCredential, { ownerCredential = it.trim() }, label = { Text("Owner / bootstrap credential") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(ownerCredential, { ownerCredential = it.trim() }, label = { Text("Owner / bootstrap credential") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
                 Text(fleetMessage, color = palette.onSurfaceVariant)
                 if (oneTimeToken.isNotBlank()) {
                     Text("ONE-TIME WORKER TOKEN · copy this to the worker's POCKETHOST_CONTROL_TOKEN configuration:", fontWeight = FontWeight.SemiBold)
-                    Text(oneTimeToken, color = palette.primary)
+                    SelectionContainer { Text(oneTimeToken, color = palette.primary) }
                 }
             }
         }
