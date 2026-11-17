@@ -2,6 +2,8 @@
 
 ## Start here
 
+0. [Competitive Landscape and Product Gap Analysis](COMPETITIVE_LANDSCAPE.md) — competitor lessons, Pocket Host differentiation and implementation priorities.
+
 1. [System Architecture](SYSTEM_ARCHITECTURE.md) — normative component model, mobile command center, device fabric, data/control planes and fault containment.
 2. [Master Plan](MASTER_PLAN.md) — five-step implementation plan and release acceptance.
 3. [Host Agent and Role Contract](HOST_AGENT_CONTRACT.md) — verified enrollment, role grants, job lifecycle and transports.
