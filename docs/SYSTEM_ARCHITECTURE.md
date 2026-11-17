@@ -7,18 +7,18 @@
 
 ## 1. Product definition
 
-Pocket Host lets an owner turn supported devices into a coordinated personal service system. The mobile application is the trusted command center. It can also be the website server, or perform both roles at once.
+Pocket Host lets an owner turn supported devices into a coordinated personal service system. The mobile device always serves the website in either mode. The user chooses exactly one of these two modes:
 
-The user chooses one of three mobile modes:
-
-| Mode | Mobile responsibilities | Website serving |
+| Mode | Website serving | Fleet command and device approval |
 |---|---|---|
-| Server | Serve websites from the mobile device and manage its own local services | On |
-| Command Center + Server | Fleet command, device verification and local website hosting | On |
+| Server only | On | Off |
+| Command Center + Server | On | On |
 
-The command-center role and server role are independent switches. Turning off the mobile server role must not disable command-center access to other hosts. Closing the mobile application must not stop workloads that have been handed to autonomous host agents.
+There is no standalone Command Center-only mode. Server only is a serving-only operating mode: it does not discover, enroll, verify, approve, assign or revoke other fleet devices. Command Center + Server provides the complete owner command center and website server together.
 
-**Serving-node rule:** in 0.1.0, customer-selected language runtimes are installed on the mobile website-serving node only. When mobile Server mode is off, a website must be served by static/native capabilities or by an explicitly designated compatible serving arrangement; the system must not silently move customer runtimes onto worker devices. Runtime placement beyond the mobile serving node requires a separately approved architecture revision.
+Switching between modes must not revoke or stop already-authorized worker assignments. Server-only operation must not expose fleet administration APIs or UI. Entering Command Center + Server requires owner authentication and the device-verification controls. Closing the mobile application must not stop workloads already handed to autonomous host agents.
+
+**Serving-node rule:** in 0.1.0, customer-selected language runtimes are installed on the mobile website-serving node only. Runtime placement beyond the mobile serving node requires a separately approved architecture revision.
 
 ## 2. Mobile command center
 
