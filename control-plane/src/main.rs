@@ -1458,17 +1458,23 @@ mod tests {
             admin_token: format!("command-history-owner-{}", new_token()),
             relay: relay::RelayHub::default(),
         };
-        let credentials = HeaderMap::from_iter([(
+        let mut credentials = HeaderMap::from_iter([(
             AUTHORIZATION,
             HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap(),
         )]);
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            credentials.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
         let (_, Json(session)) = create_admin_session(
             State(state.clone()), credentials, ConnectInfo("127.0.0.1:40123".parse().unwrap()),
         ).await.unwrap();
         let token = session["accessToken"].as_str().unwrap();
-        let headers = HeaderMap::from_iter([(
+        let mut headers = HeaderMap::from_iter([(
             AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
         )]);
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
 
         for index in 0..55i64 {
             let command = Uuid::new_v4();
@@ -1482,9 +1488,13 @@ mod tests {
             .execute(&db).await.unwrap();
         }
 
+        let mut unauthenticated_headers = HeaderMap::new();
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            unauthenticated_headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
         let unauthorized_status = list_device_commands(
             State(state.clone()),
-            HeaderMap::new(),
+            unauthenticated_headers,
             Path(device),
         ).await.err().map(|error| error.0);
         assert_eq!(unauthorized_status, Some(StatusCode::UNAUTHORIZED));
