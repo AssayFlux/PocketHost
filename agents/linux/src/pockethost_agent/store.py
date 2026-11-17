@@ -26,7 +26,7 @@ class AgentStore:
         row = self.db.execute("SELECT value FROM agent_state WHERE key='generation'").fetchone()
         return int(row[0]) if row else 0
 
-    def save_grant(self, grant: dict[str, Any]) -> None:
+    def save_grant(self, grant: dict[str, Any], owner_public_key: str) -> None:
         with self.db:
             self.db.execute(
                 "INSERT INTO agent_state(key,value) VALUES('generation',?) "
@@ -37,6 +37,10 @@ class AgentStore:
                 "INSERT INTO agent_state(key,value) VALUES('grant',?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (json.dumps(grant, separators=(",", ":")),),
+            )
+            self.db.execute(
+                "INSERT INTO agent_state(key,value) VALUES('owner_public_key',?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (owner_public_key,)
             )
 
     def enqueue_once(self, job_id: str, idempotency_key: str, envelope: dict[str, Any]) -> bool:
