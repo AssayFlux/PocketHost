@@ -277,3 +277,27 @@ The owner home shell, hamburger drawer, account dropdown, service carousel and i
 The authoritative design is `docs/UI_DESIGN.md`. The V1 dashboard must have tall portrait-rectangular service cards, a horizontally scrolling carousel as its only scrollable dashboard component, and a fixed information centre with four or five compact, information-rich non-scrolling bars. The dashboard itself must not vertically scroll. The login/app-unlock screen, hamburger drawer and separate user/account dropdown are all explicit design deliverables, alongside monochrome icons, ten classic palettes and System/Light/Dark modes.
 
 Treat the UI source implementation as unaccepted until exact-SHA build/test evidence and screenshots/hierarchy are inspected. In particular, verify actual card aspect ratio, fixed dashboard layout, information density, menu design/route correctness, bundled calligraphy font, all theme combinations, font scaling, compact/landscape layouts and accessibility. This note does not claim those checks have passed.
+
+
+## Universal device expansion baseline — 2026-11-17
+
+**Architecture status:** approved direction and documentation plan; no cross-platform host implementation or DemonCore integration is claimed by this update.
+
+Pocket Host is expanding from Android-first hosting toward a distributed cross-platform ecosystem. The target device classes are Android phones/tablets, Linux/Windows/macOS computers, VPS/dedicated servers, Raspberry Pi-class SBCs, embedded Linux and microcontroller/edge devices. Device tiers and service compatibility are specified in `docs/UNIVERSAL_DEVICE_FABRIC.md`.
+
+### Repository audit: AssayFlux/DemonCore
+
+Reviewed the public `main` branch documentation on 2026-11-17:
+- ESP-WROOM-32 38-pin, 4 MiB flash, no PSRAM; pinned MicroPython ESP32_GENERIC firmware target.
+- DCP v1.0 is a bounded UTF-8 JSON device protocol (4,096-byte message/reassembly limit) with initial system/GPIO operations. Its normative document explicitly states that the envelope does not authenticate traffic.
+- DemonCore README records Phase 1 as not hardware-accepted. Physical boot, memory/GC/filesystem measurements, board pinout confirmation and live transport remain outstanding.
+- DemonCore backlog records board verification blocked, claim/provisioning work incomplete, Flutter app workspace documentation-only and hub not implemented.
+- MQTT, ESP-NOW mesh, jobs, OTA and fleet scheduling are planned backlog, not accepted production capability.
+
+### Integration decision
+
+Keep Pocket Host and DemonCore as independent repositories and products. Pocket Host owns general-purpose website/service hosting and host-node management. DemonCore owns MCU firmware, board safety, DCP and constrained edge/fleet operations. Integrate only through a reviewed, versioned, authenticated and allow-listed adapter after DemonCore hardware/security acceptance. No MCU is assumed to execute the full Rust host, Python or Node.
+
+### Evidence status
+
+No Linux, Windows, macOS, Raspberry Pi, MCU interoperability or multi-host deployment tests were run by this documentation change. No firmware, application, hub or runtime code was changed. All expansion targets remain **planned** until their named device profiles pass the verification ladder.
