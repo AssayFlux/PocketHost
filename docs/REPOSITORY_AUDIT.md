@@ -81,13 +81,15 @@ A green quality workflow is useful repository evidence, not proof of:
 - Distinguished the Runtime Library's 20 manifests from actual downloadable runtime packages.
 - Updated the implementation inventory and README to avoid conflating code presence, CI success and device acceptance.
 
+Workbench source added since the initial audit snapshot: `WorkbenchWorkspaceManager.kt`, `PocketHostWorkbenchScreen.kt` and `WorkbenchWorkspaceManagerTest.kt`. The app navigation now exposes Workbench in both operating modes. The first implementation isolates editable drafts from the live website, provides bounded text editing and local immutable commit snapshots. Android integration run [44050320129](https://github.com/AssayFlux/PocketHost/actions/runs/44050320129) compiled the app and instrumentation sources successfully; emulator execution and APK packaging were skipped. This does not establish physical-device acceptance or production deployment readiness.
+
 ## 7. Priority engineering risks
 
 1. **Android lifecycle and device acceptance:** compile success is not runtime acceptance; verify foreground service, Doze, battery saver, screen-off, reboot and process death.
 2. **Runtime isolation:** Python and Node share the companion UID; do not market this as a hostile multi-tenant sandbox.
 3. **Trust integration:** mobile trust store, control plane and Linux agent need a complete authenticated end-to-end lifecycle, including credential delivery, revocation and status.
 4. **Transport gap:** LAN mutual authentication and discovery are incomplete; BLE/USB are not implemented acceptance claims.
-5. **Step 4 gap:** TypeScript compiler, build diagnostics, safe staging, preview and atomic publish must be implemented and tested.
+5. **Step 4 gap:** TypeScript compiler, build diagnostics, Workbench diff/preview, validated release staging, owner-approved atomic publish and rollback must be implemented and tested.
 6. **Visitor ingress:** Relay is bounded HTTP request/response; public deployment, TLS/DNS, abuse controls and external acceptance remain.
 7. **Release engineering:** manual release workflow needs protected signing credentials and verification; no production release should be claimed before the full matrix passes.
 
