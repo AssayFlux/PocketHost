@@ -30,6 +30,9 @@ object WorkbenchWorkspaceManager {
     @Throws(IOException::class)
     fun open(context: Context, projectId: String, liveRoot: File): File {
         validateProjectId(projectId)
+        if (java.nio.file.Files.isSymbolicLink(liveRoot.toPath())) {
+            throw IOException("The selected live website directory cannot be a symbolic link.")
+        }
         val live = liveRoot.canonicalFile
         if (!live.isDirectory || java.nio.file.Files.isSymbolicLink(live.toPath())) {
             throw IOException("The selected live website directory is unavailable or unsafe.")
@@ -97,6 +100,16 @@ object WorkbenchWorkspaceManager {
         val parent = target.parentFile ?: throw IOException("Invalid destination path.")
         if (!parent.mkdirs() && !parent.isDirectory) throw IOException("Could not create the parent folder.")
         atomicWrite(target, bytes, mustNotExist = true)
+        validateTree(root)
+    }
+
+    fun createFolder(context: Context, projectId: String, relativePath: String) {
+        val root = workspaceRoot(context, projectId)
+        val target = resolve(root, relativePath)
+        if (target.exists()) throw IOException("A file or folder already exists at this path.")
+        val parent = target.parentFile ?: throw IOException("Invalid folder path.")
+        if (!parent.isDirectory) throw IOException("Create the parent folder first.")
+        if (!target.mkdir()) throw IOException("Could not create the folder.")
         validateTree(root)
     }
 
@@ -223,17 +236,27 @@ object WorkbenchWorkspaceManager {
     private fun fileDigests(root: File): Map<String, String> {
         if (!root.isDirectory) return emptyMap()
         val result = linkedMapOf<String, String>()
-        fun visit(directory: File) {
+        var entries = 0
+        var files = 0
+        var bytes = 0L
+        fun visit(directory: File, depth: Int) {
+            if (depth > MAX_DEPTH) throw IOException("Website folder nesting is too deep.")
             val children = directory.listFiles() ?: throw IOException("Could not inspect website files.")
             children.forEach { file ->
+                entries++
+                if (entries > MAX_ENTRIES) throw IOException("Website contains too many entries.")
                 if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Symbolic links are not supported in Workbench.")
                 if (isBlockedName(file.name.lowercase())) return@forEach
-                if (file.isDirectory) visit(file)
-                else if (file.isFile) result[file.relativeTo(root).invariantSeparatorsPath] = sha256(file)
-                else throw IOException("Unsupported entry in website tree.")
+                if (file.isDirectory) visit(file, depth + 1)
+                else if (file.isFile) {
+                    files++
+                    bytes += file.length()
+                    if (files > MAX_FILES || bytes > MAX_BYTES) throw IOException("Website exceeds Workbench file or size limits.")
+                    result[file.relativeTo(root).invariantSeparatorsPath] = sha256(file)
+                } else throw IOException("Unsupported entry in website tree.")
             }
         }
-        visit(root)
+        visit(root, 0)
         return result
     }
 
@@ -241,15 +264,19 @@ object WorkbenchWorkspaceManager {
         if (!destination.mkdirs()) throw IOException("Could not create Workbench snapshot.")
         var copiedBytes = 0L
         var copiedFiles = 0
-        fun copyDirectory(from: File, to: File) {
+        var copiedEntries = 0
+        fun copyDirectory(from: File, to: File, depth: Int) {
+            if (depth > MAX_DEPTH) throw IOException("Website folder nesting is too deep.")
             val children = from.listFiles() ?: throw IOException("Could not inspect website files.")
             children.forEach { file ->
+                copiedEntries++
+                if (copiedEntries > MAX_ENTRIES) throw IOException("Website contains too many entries.")
                 if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Symbolic links are not supported in Workbench.")
                 if (isBlockedName(file.name.lowercase())) return@forEach
                 val target = File(to, file.name)
                 if (file.isDirectory) {
                     if (!target.mkdirs()) throw IOException("Could not copy a Workbench folder.")
-                    copyDirectory(file, target)
+                    copyDirectory(file, target, depth + 1)
                 } else if (file.isFile) {
                     copiedFiles++
                     copiedBytes += file.length()
@@ -258,7 +285,7 @@ object WorkbenchWorkspaceManager {
                 } else throw IOException("Unsupported entry in website tree.")
             }
         }
-        copyDirectory(source, destination)
+        copyDirectory(source, destination, 0)
     }
 
     private fun atomicWrite(target: File, bytes: ByteArray, mustNotExist: Boolean = false) {
