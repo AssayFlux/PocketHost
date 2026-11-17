@@ -11,11 +11,11 @@ The operating system may limit background hosting. The app shows only modes supp
 
 1. Install the matching Pocket Host software on the target device.
 2. Open Devices in the mobile command center.
-3. Discover on Wi-Fi/Bluetooth, scan its QR code, enter its device ID/code, or use a supported USB/remote flow.
-4. Compare the device fingerprint, platform, software version and capabilities.
-5. Review the requested role and permissions.
-6. Approve the one-time challenge.
-7. Confirm the device is enrolled and connected.
+3. In the current Android implementation, use the manual enrollment form to enter the candidate device identity and metadata, create the signed challenge, and transfer the proof-request document to the candidate agent.
+4. Verify the returned metadata-bound proof signature and compare the device fingerprint, platform, software version and capabilities.
+5. Review the requested role, capabilities and resource budget.
+6. Confirm owner approval using the app's current biometric/device-credential confirmation flow.
+7. Confirm the device appears in the local registry. This is a local trust foundation, not yet a fully connected LAN discovery or agent lifecycle.
 
 A verification code is short-lived and single-use. It is not a permanent password. Discovery alone never enrolls or trusts a device.
 
@@ -54,7 +54,7 @@ Static websites do not require a language runtime.
 - USB works only on supported hardware and OS APIs.
 - Remote links use authenticated encrypted connections.
 
-Changing transport does not change device identity or permissions.
+LAN discovery and authenticated transport are still being implemented. BLE and USB are planned transport paths, not currently supported end-to-end pairing flows. Changing transport must never change device identity or permissions.
 
 ## 6. Monitor and recover
 
