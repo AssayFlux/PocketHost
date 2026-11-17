@@ -165,7 +165,7 @@ The diagram shows target integration boundaries, not a claim that every connecti
 | TRACK | CURRENT POSITION | OPEN WORK |
 |---|---|---|
 | **STEP 1 · CONTRACTS** | Protocol 1.0 schemas, role/job policies, validator and trust simulations committed | Confirm Alpha CI evidence and complete review |
-| **STEP 2 · MOBILE TRUST** | Android two-mode UI, P-256 owner identity, signed challenge/proof, role grant, encrypted registry and revocation foundation | Authenticated transports, per-use key auth, full control-plane workflow, agent provisioning and physical-device acceptance |
+| **STEP 2 · MOBILE TRUST** | Android two-mode UI, P-256 owner identity, signed challenge/proof, role grant, encrypted registry and revocation foundation | Authenticated transports, per-use key auth, full control-plane provisioning, revocation propagation, agent lifecycle and physical-device acceptance |
 | **STEP 3 · DEVICE AGENTS** | Linux preview package, durable SQLite jobs, HTTPS polling, signed grants/jobs, health and local storage/backup snapshot executors | Full mobile provisioning, grant renewal/revocation, stronger isolation, other OS packages, missing worker roles and hardware acceptance |
 | **STEP 4 · WEB SERVER + WORKBENCH** | Rust static-serving foundation, site import/registry/backup and Android hosting lifecycle | Main-app TypeScript compiler, isolated Workbench/editor/preview/commits, immutable releases, atomic deploy/rollback and physical-device acceptance |
 | **STEP 5 · RESILIENCE** | Control-plane, Relay, Cloudflare, backup and diagnostics foundations exist | External ingress acceptance, restore drills, security review, fault/soak testing and signed release acceptance |
