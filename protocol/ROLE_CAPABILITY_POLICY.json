@@ -1,0 +1,122 @@
+{
+  "protocol": "pockethost.device/1.0",
+  "default_policy": "deny",
+  "roles": {
+    "storage": {
+      "allow": [
+        "storage.read_assigned_namespace",
+        "storage.write_assigned_namespace",
+        "storage.snapshot",
+        "storage.verify"
+      ],
+      "deny": [
+        "process.exec",
+        "network.proxy",
+        "runtime.execute",
+        "management.admin",
+        "device.enroll",
+        "device.grant",
+        "device.revoke",
+        "artifact.activate",
+        "edge.gpio.write"
+      ]
+    },
+    "traffic": {
+      "allow": [
+        "traffic.route.read_assigned",
+        "traffic.proxy.assigned_hosts",
+        "traffic.cache.assigned_public_content"
+      ],
+      "deny": [
+        "management.admin",
+        "runtime.execute",
+        "storage.read_private",
+        "device.enroll",
+        "device.grant",
+        "device.revoke",
+        "artifact.activate",
+        "edge.gpio.write"
+      ]
+    },
+    "build_publish": {
+      "allow": [
+        "build.read_assigned_source",
+        "build.execute_declared_build",
+        "artifact.write_staging",
+        "artifact.verify"
+      ],
+      "deny": [
+        "process.exec_unbounded",
+        "owner.key.read",
+        "device.key.read",
+        "artifact.sign",
+        "artifact.activate",
+        "management.admin",
+        "runtime.execute",
+        "edge.gpio.write"
+      ]
+    },
+    "native_job": {
+      "allow": [
+        "native_job.execute_signed_package",
+        "native_job.read_declared_inputs",
+        "native_job.write_declared_outputs",
+        "native_job.report_health"
+      ],
+      "deny": [
+        "process.exec_unbounded",
+        "runtime.execute",
+        "management.admin",
+        "device.enroll",
+        "device.grant",
+        "device.revoke",
+        "owner.key.read",
+        "edge.gpio.write"
+      ]
+    },
+    "backup_recovery": {
+      "allow": [
+        "backup.read_assigned_namespace",
+        "backup.create_snapshot",
+        "backup.verify_snapshot",
+        "backup.restore_staging"
+      ],
+      "deny": [
+        "process.exec",
+        "network.proxy",
+        "runtime.execute",
+        "management.admin",
+        "device.enroll",
+        "device.grant",
+        "device.revoke",
+        "artifact.activate",
+        "edge.gpio.write"
+      ]
+    },
+    "edge_gateway": {
+      "allow": [
+        "edge.read_claimed_node_telemetry",
+        "edge.invoke_allowlisted_operation",
+        "edge.stage_signed_firmware"
+      ],
+      "deny": [
+        "management.admin",
+        "runtime.execute",
+        "process.exec",
+        "storage.read_private",
+        "artifact.activate",
+        "device.grant",
+        "device.revoke",
+        "gpio.unrestricted"
+      ]
+    }
+  },
+  "invariants": [
+    "capabilities must be a subset of role allow list",
+    "deny list always overrides allow list",
+    "unknown capability is denied",
+    "grant is bound to one device id and monotonically increasing generation",
+    "owner and device identity keys are never shared",
+    "resource budgets are enforced locally"
+  ]
+}
