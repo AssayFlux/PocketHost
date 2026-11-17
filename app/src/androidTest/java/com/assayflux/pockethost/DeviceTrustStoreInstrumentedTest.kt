@@ -104,6 +104,33 @@ class DeviceTrustStoreInstrumentedTest {
     }
 
     @Test
+    fun mobileSignsTypedHealthJobsAndRejectsPayloadTampering() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val owner = DeviceTrustStore.ownerIdentity()
+        val agentKeys = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+        val deviceId = DeviceTrustStore.deviceFingerprint(agentKeys.public.encoded)
+        val capabilities = listOf("native_job.report_health")
+        val challenge = DeviceTrustStore.createChallenge(deviceId)
+        val candidate = DeviceTrustStore.Candidate(
+            deviceId, Base64.encodeToString(agentKeys.public.encoded, Base64.NO_WRAP),
+            "Health worker", "Pocket Host Linux Agent", "Linux", "x86_64", "1.0", capabilities
+        )
+        val signer = Signature.getInstance("SHA256withECDSA")
+        signer.initSign(agentKeys.private)
+        signer.update(DeviceTrustStore.enrollmentProofPayload(challenge, candidate))
+        val proof = Base64.encodeToString(signer.sign(), Base64.NO_WRAP)
+        val grant = DeviceTrustStore.approveCandidate(context, challenge.challengeId, candidate, proof, "native_job", capabilities)
+        val envelope = DeviceTrustStore.createSignedJobEnvelope(
+            context, deviceId, "native.health_check", org.json.JSONObject().put("check_id", "instrumented-health-check")
+        )
+        assertTrue(DeviceTrustStore.verifyJobEnvelope(envelope, owner.second, deviceId, grant.grantId))
+        val tampered = org.json.JSONObject(envelope.toString())
+        tampered.getJSONObject("payload").put("check_id", "tampered")
+        assertFalse(DeviceTrustStore.verifyJobEnvelope(tampered, owner.second, deviceId, grant.grantId))
+        assertFalse(DeviceTrustStore.verifyJobEnvelope(envelope, owner.second, "f".repeat(64), grant.grantId))
+        DeviceTrustStore.revoke(context, deviceId)
+    }
+    @Test
     fun expiredChallengeAndWrongDeviceBindingAreRejected() {
         val owner = DeviceTrustStore.ownerIdentity()
         val candidateId = "a".repeat(64)
