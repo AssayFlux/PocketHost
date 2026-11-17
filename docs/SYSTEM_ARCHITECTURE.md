@@ -1,7 +1,7 @@
 # Pocket Host 0.1.0 — System Architecture
 
 **Product baseline:** 0.1.0  
-**Primary owner interface:** Android or iPhone command-center application  
+**Current owner interface:** Android application; iOS is planned and not present in this repository  
 **Operating model:** mobile-controlled, role-assigned, interconnected device fleet  
 **Core invariant:** device enrollment is explicit; every role is least-privilege; failures remain contained.
 
@@ -62,7 +62,7 @@ A device may be storage-only, build-only or traffic-only. It does not become a g
 ```
                    OWNER
                     |
-        Android / iPhone COMMAND CENTER
+        ANDROID COMMAND CENTER (iOS future target)
           | Command Center + Server mode
           | optional Mobile Server role
           | language runtimes only here
