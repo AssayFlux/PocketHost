@@ -91,11 +91,14 @@ class RuntimeWorkerSeccompTest {
         val address = LocalSocketAddress(socketName)
         val listener = LocalServerSocket(socketName)
         val outboundServer = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
-        val outbound = Os.socket(OsConstants.AF_INET, OsConstants.SOCK_STREAM, OsConstants.IPPROTO_TCP)
-        Os.connect(outbound, InetSocketAddress("127.0.0.1", outboundServer.localPort))
+        // Use the platform Socket implementation to establish the inherited TCP
+        // descriptor. Some API 26 emulator images reject the raw Os.connect address
+        // conversion with EAFNOSUPPORT even though Java's network stack supports IPv4.
+        val outboundSocket = java.net.Socket()
+        outboundSocket.connect(InetSocketAddress(InetAddress.getByName("127.0.0.1"), outboundServer.localPort), 3_000)
         val outboundPeer = outboundServer.accept()
+        val outboundPfd = ParcelFileDescriptor.fromSocket(outboundSocket)
         val listenerPfd = ParcelFileDescriptor.dup(listener.getFileDescriptor())
-        val outboundPfd = ParcelFileDescriptor.dup(outbound)
         val connected = CountDownLatch(1)
         val binderRef = AtomicReference<IBinder?>()
         val serviceConnection = object : ServiceConnection {
