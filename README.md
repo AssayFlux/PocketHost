@@ -52,7 +52,7 @@ The mobile device's two modes are operating modes, not separate external worker 
 ## Repository components
 
 - `app/` — Android application: website-serving foundation, local management API, remote-control integration, persisted two-mode selector and a manual cryptographic device-trust workspace. Authenticated transport and end-to-end fleet workflows remain incomplete.
-- `runtime-worker/` — separate Android runtime companion for Python/Node integration. Package separation does not yet provide per-project OS-level isolation.
+- `runtime-worker/` — existing experimental provider foundation for future optional Python/Node add-ons; not required by the main app and not a completed Runtime Library.
 - `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
 - `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
 - `web-console/` — React/TypeScript/Vite secondary operator client.
@@ -105,10 +105,16 @@ See [Master Plan](docs/MASTER_PLAN.md), [Project Baseline](docs/PROJECT_BASELINE
 
 Run commands from the repository root.
 
-Android application and runtime companion:
+Main Pocket Host Android application:
 
 ```bash
-./gradlew :app:assembleDebug :runtime-worker:assembleDebug
+./gradlew :app:assembleDebug
+```
+
+The separate `runtime-worker` module is an experimental future add-on provider, not part of the main-app Step 4 baseline. Build it independently only when working on that future provider:
+
+```bash
+./gradlew :runtime-worker:assembleDebug
 ```
 
 Rust website engine:
