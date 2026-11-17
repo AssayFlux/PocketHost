@@ -345,6 +345,32 @@ object DeviceTrustStore {
         is Boolean, is Number -> value.toString()
         else -> error("unsupported_signed_json_value")
     }
+    /** Public verifier used by protocol tests and candidate-side integration checks. */
+    fun verifyJobEnvelope(document: JSONObject, ownerPublicKeySpki: String, expectedDeviceId: String, expectedGrantId: String, nowSeconds: Long = System.currentTimeMillis() / 1000L): Boolean = runCatching {
+        require(document.optString("protocol") == "pockethost.device/1.0")
+        require(document.getString("target_device_id") == expectedDeviceId)
+        require(document.getString("role_grant_id") == expectedGrantId)
+        UUID.fromString(document.getString("job_id"))
+        UUID.fromString(document.getString("correlation_id"))
+        require(document.getString("idempotency_key").length in 16..128)
+        require(document.getString("owner_id") == fingerprint(Base64.decode(ownerPublicKeySpki, Base64.NO_WRAP)))
+        val issued = Instant.parse(document.getString("issued_at")).epochSecond
+        val expires = Instant.parse(document.getString("expires_at")).epochSecond
+        require(issued <= nowSeconds && expires > nowSeconds && expires > issued)
+        require(document.getJSONObject("payload").length() <= 32)
+        val budget = document.getJSONObject("resource_budget")
+        require(budget.getLong("timeout_seconds") in 1L..86400L && budget.getLong("memory_bytes") > 0L)
+        val signature = document.getJSONObject("signature")
+        require(signature.optString("algorithm") == "ecdsa-p256-sha256")
+        require(signature.optString("key_id") == document.getString("owner_id"))
+        val unsigned = JSONObject(document.toString()).also { it.remove("signature") }
+        val publicKey = java.security.KeyFactory.getInstance("EC").generatePublic(java.security.spec.X509EncodedKeySpec(Base64.decode(ownerPublicKeySpki, Base64.NO_WRAP)))
+        Signature.getInstance("SHA256withECDSA").run {
+            initVerify(publicKey)
+            update(canonicalJson(unsigned))
+            verify(Base64.decode(signature.getString("value"), Base64.NO_WRAP))
+        }
+    }.getOrDefault(false)
     @Synchronized
     fun revoke(context: Context, deviceId: String, nowSeconds: Long = System.currentTimeMillis() / 1000L): Boolean {
         val registry = readRegistry(context)
