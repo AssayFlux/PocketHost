@@ -2,9 +2,9 @@
 
 ## Serving model
 
-The mobile website-serving node is the final website origin in the 0.1.0 product baseline. The mobile owner selects exactly one of two modes: Server only or Command Center + Server. Server only is a serving-only mode and cannot enroll or assign worker devices. Customer-selected language runtimes are installed on this mobile serving node only.
+The mobile website-serving node is the final website origin in the 0.1.0 product baseline. The mobile owner selects exactly one of two modes: Server only or Command Center + Server. Server only is a serving-only mode and cannot enroll or assign worker devices. Python 3.11 and Node.js 24.22.1 are currently optional runtimes in the separate Android `runtime-worker` companion APK on this serving node; both are in progress. The future independent Runtime Library is post-baseline.
 
-Worker devices support the serving node through assigned infrastructure jobs: storage, traffic proxy/cache, build and publish preparation, backups and approved native backend/job adapters. They do not silently host customer-selected Python/Node/PHP runtime components in this baseline.
+Worker devices support the serving node through assigned infrastructure jobs: storage, traffic proxy/cache, build and publish preparation, backups and approved native backend/job adapters. They do not silently host customer-selected language runtime projects in this baseline.
 
 ## Website composition
 
@@ -17,15 +17,14 @@ A website may contain:
 
 A component declares language/runtime version, resource limits, health check, storage namespace, network permissions, secrets and release compatibility.
 
-## Runtime Manager
+## Current runtime reality and future manager
 
-- Separate signed and versioned runtime packs per language and supported ABI.
-- User explicitly selects which languages and versions to install.
-- No unneeded language runtime is installed.
-- Runtime manager verifies signatures, digests, license, ABI and compatibility.
-- Each project/component executes under a separate OS-enforced identity and scoped brokered capabilities.
-- Runtime process lifecycle, logs, health and resource budgets are independent.
-- Runtime crash does not stop Rust ingress, static files or sibling runtime components.
+- The main app's static HTML/CSS/JavaScript server works without Python or Node.js.
+- Python 3.11 (Chaquopy) and Node.js mobile 24.22.1 (JNI/libnode) are present in the separate `runtime-worker` companion APK; they are currently delivered together, not as independent packages.
+- The app has host-side runtime client/lifecycle integration, but both runtime implementations remain in progress and require Android device acceptance.
+- Both runtimes share the companion application UID. This is not per-project OS isolation; execute only trusted owner-controlled projects until adversarial isolation and egress tests pass.
+- The future Runtime Library will provide one separately signed/downloadable package per language. Its 20 manifests are catalog metadata only; no independent package artifacts or completed Runtime Manager are present.
+- The main-app TypeScript-to-JavaScript compiler is a separate Step 4 requirement and is not yet bundled/verified. It is not a server-side runtime.
 
 ## Build and publish
 
@@ -45,4 +44,4 @@ Storage nodes expose only encrypted, owner-assigned namespaces. Traffic nodes re
 
 ## Acceptance
 
-Test static hosting with no runtimes, multiple selected languages on the mobile serving node, project isolation, runtime crash, worker loss, invalid artifact, build failure, interrupted activation, rollback, storage outage, traffic worker outage and command-center disconnect.
+Test static hosting with the companion absent/stopped, Python/Node lifecycle and companion process failures, trusted-code acknowledgement, cross-project access and network escape, TypeScript compilation once implemented, invalid artifact, build failure, interrupted activation, rollback, storage outage, traffic worker outage and command-center disconnect.
