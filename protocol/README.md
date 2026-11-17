@@ -26,12 +26,18 @@ This directory is the machine-readable, cross-platform contract shared by the An
 5. Authority sends typed jobs referencing the active grant; agent validates signature, expiry, idempotency and local resource limits before execution.
 6. Agent reports bounded observed state and job result. Revocation invalidates the grant generation and active sessions.
 
-## Schemas
+## Schemas and policy
 
 - `schemas/device-hello.schema.json`
+- `schemas/enrollment-challenge.schema.json`
 - `schemas/role-grant.schema.json`
 - `schemas/job-envelope.schema.json`
+- `ROLE_CAPABILITY_POLICY.json` — default-deny role capability allow/deny catalogue
+- `JOB_KIND_POLICY.json` — typed job payload keys and required role mapping
 - `protocol-version.json`
+- [Step 1 trust contract](../docs/STEP_1_TRUST_AND_PROTOCOL.md) — canonicalization, identity, trust ceremony, transport and threat model
+
+Signed envelopes use RFC 8785 JCS canonical bytes with the `signature` member omitted. Device ID is SHA-256 of DER SubjectPublicKeyInfo. Challenge nonce is 256-bit random, owner/device-bound, single-use and expires within five minutes. Implementations must verify signatures and enforce monotonic grant generation locally.
 
 ## Product boundaries
 
