@@ -424,3 +424,10 @@ The authoritative implementation sequence, modular optional-runtime architecture
 
 
 **Connectivity choice:** Pocket Host includes two independent optional public tunnel providers: first-party AssayFlux Relay and Cloudflare Tunnel. Users may use either one or both concurrently, with separate provider health and per-site hostname routing. Local Network-only hosting remains available. Neither tunnel provider is mandatory, and a failure in one must not interrupt the other or local hosting. See the networking North Star and Master Engineering Plan V2.
+
+
+## Universal device vision
+
+Pocket Host is evolving from an Android-first host into a cross-platform self-hosting ecosystem for capable Android phones/tablets, Linux, Windows, macOS, VPSs, servers, Raspberry Pi-class single-board computers and constrained microcontroller/edge devices. Each device receives only the service workloads supported by its measured hardware, OS, network and security capabilities; this is not a promise that every device can run every service.
+
+See [Universal Device Fabric](docs/UNIVERSAL_DEVICE_FABRIC.md) for the architecture, device tiers, portable host contracts, Linux-first expansion, SBC profiles, multi-host placement and security boundaries. [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) remains a separate MCU/fleet project integrated later through an authenticated, allow-listed adapter after its hardware and security gates pass. No DemonCore integration or non-Android host support is claimed as implemented today.
