@@ -8,7 +8,7 @@
 
 ## 1. Product objective
 
-Pocket Host is a modular personal infrastructure platform. The first deliverable is a reliable Android website host: import a static website, serve it locally and over LAN, and make it reachable worldwide through either Cloudflare Tunnel or the first-party AssayFlux Relay using the owner's domain over HTTP/HTTPS. Later releases add safe in-app development and a connected device fabric.
+Pocket Host is a modular personal infrastructure platform. The first deliverable is a reliable Android website host: import a static website, serve it locally and over LAN, and make it reachable worldwide through either optional Cloudflare Tunnel or the owner's own AssayFlux Relay Node using the owner's domain over HTTP/HTTPS. The Relay Node is a separate Termux/Android or Linux product; a paid VPS is not required, but public IPv4/IPv6 reachability is. Later releases add safe in-app development and a connected device fabric.
 
 The old five-step delivery sequence is retired. The new three-version pathway is the only active release roadmap until the owner approves an expansion.
 
@@ -46,10 +46,10 @@ In scope:
 - Local preview, configurable HTTP port and opt-in LAN binding.
 - Access from another device on the same Wi-Fi.
 - Public custom-domain hosting through Cloudflare Tunnel, using an owner-created named tunnel and encrypted Android token storage.
-- First-party AssayFlux Relay gateway deployment, DNS TXT hostname ownership proof, authenticated outbound host session and visitor-only routing to the selected static website.
-- Minimal owner-facing Relay setup surface for registering a host/site, creating a hostname binding, displaying the DNS TXT proof challenge and revoking the route; reuse the existing web-console Relay panel where practical. The full browser operator console remains v0.2.0.
-- Public HTTP and HTTPS entry points for verified custom hostnames; HTTPS certificates are validated at the public edge, and HTTP redirects to HTTPS by default with an explicit owner opt-in for unencrypted HTTP serving.
-- Independent provider status, start/stop, reconnect, diagnostics and manual failover between Cloudflare Tunnel and AssayFlux Relay.
+- Standalone first-party AssayFlux Relay Node installable on Termux/Android and Linux owner hardware, with DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only routing to the selected static website. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability is required.
+- Minimal owner-facing Relay setup surface and Termux/Linux install/start/stop/status flow for registering a host/site, creating a hostname binding, displaying the DNS TXT proof challenge and revoking the route. The existing web-console panel is currently coupled to the fleet control plane; the v0.1.0 setup flow must work independently. The full browser operator console remains v0.2.0.
+- Public HTTP and HTTPS entry points for verified custom hostnames; HTTPS certificates are validated at the public edge and HTTP redirects to HTTPS by default. Plain HTTP content serving is an explicit owner opt-in target; current Relay edge does not implement this option.
+- Independent provider status, start/stop, reconnect and diagnostics for Cloudflare Tunnel and the standalone AssayFlux Relay Node. Same-host manual failover is not automatic and requires DNS/load-balancer changes.
 - External verification from mobile data or an unrelated network, including DNS, TLS, expected site content and management-route isolation.
 - Foreground hosting service, visible notification, start/stop/restart and Android lifecycle behavior.
 - Permission, network, battery and thermal-state feedback.
