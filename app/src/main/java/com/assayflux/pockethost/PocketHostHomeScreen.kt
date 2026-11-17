@@ -73,13 +73,14 @@ internal fun PocketHostHomeScreen(
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val cardWidth = maxWidth * 0.78f
+            val containerWidth = maxWidth
+            val cardWidth = containerWidth * 0.78f
             val scrollState = rememberScrollState()
             val scope = rememberCoroutineScope()
             val stepPx = with(LocalDensity.current) { (cardWidth + 12.dp).roundToPx() }.coerceAtLeast(1)
             val activePage = (scrollState.value / stepPx).coerceIn(0, services.lastIndex)
             Row(Modifier.fillMaxWidth().horizontalScroll(scrollState), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Spacer(Modifier.width((maxWidth - cardWidth - 12.dp) / 2))
+                Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
                 services.forEachIndexed { index, service ->
                     val cardScale by animateFloatAsState(
                         targetValue = if (index == activePage) 1.04f else 0.94f,
