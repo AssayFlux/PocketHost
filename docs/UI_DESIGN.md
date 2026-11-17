@@ -151,6 +151,6 @@ The redesign is not complete until:
 - Verify carousel centering, swipe/page indicators, navigation/back behaviour, notification data freshness and empty/error/offline states.
 - Verify compact and expanded widths, tablet, landscape, keyboard-visible and large font scaling; complete human TalkBack and contrast review.
 - Confirm biometric cancellation/unavailable/fallback behaviour without bypassing the local app lock.
-- Reconcile any UI test assumptions that still expect the removed bottom-navigation bar.
+- Android UIAutomator source has been updated to exercise the drawer destinations, account dropdown, Settings subsections, publishing and visitor-access actions. Execution and screenshot/hierarchy artifact inspection are still pending.
 
 Source implementation is not proof of successful Android compilation, emulator/device acceptance or release approval.

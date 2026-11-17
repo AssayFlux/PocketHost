@@ -195,16 +195,16 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -memory 2048 -cores 2
           emulator-boot-timeout: 1200
           script: adb install runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk && ./gradlew clean :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
-      - name: Collect rendered dashboard from UI instrumentation
+      - name: Collect rendered owner home and navigation from UI instrumentation
         if: always()
         run: |
           set +e
           mkdir -p "$RUNNER_TEMP/pockethost-ui"
           timeout 30s adb wait-for-device || { echo "Emulator unavailable; screenshot skipped."; exit 0; }
           adb logcat -d -v threadtime > "$RUNNER_TEMP/pockethost-ui/full-logcat-api-${{ matrix.api-level }}.txt"
-          adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots/dashboard.png "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
+          adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots/home.png "$RUNNER_TEMP/pockethost-ui/home-api-${{ matrix.api-level }}.png"
           adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots "$RUNNER_TEMP/pockethost-ui/navigation-api-${{ matrix.api-level }}"
-          file "$RUNNER_TEMP/pockethost-ui/dashboard-api-${{ matrix.api-level }}.png"
+          file "$RUNNER_TEMP/pockethost-ui/home-api-${{ matrix.api-level }}.png"
       - name: Upload Android instrumentation reports
         if: always()
         uses: actions/upload-artifact@v4
