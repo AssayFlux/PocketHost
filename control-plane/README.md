@@ -1,60 +1,78 @@
-# Pocket Host — Relay Gateway & Fleet Control Plane
+# Pocket Host — Fleet Control Plane Source
 
-The Rust service has separate management and visitor-ingress listeners. The minimal AssayFlux Relay gateway is a v0.1.0 dependency for owners who choose first-party public hosting; it can be deployed on an owner-controlled public VPS/server. Full fleet coordination (owner sessions, device enrollment, role grants, desired state, leased jobs and worker orchestration) remains v0.2.0. The Android app is the current owner client foundation; an iOS app is planned and is not present in this repository.
+**Release placement:** v0.2.0 fleet control plane.  
+**Current source:** Rust/Axum fleet API and a partially integrated Relay visitor gateway share this executable. This repository directory is not yet the standalone Termux Relay Node product.
 
-The management API does **not** serve website traffic. The separate Relay visitor listener does serve bounded website requests. Neither service is required for local hosting or continued operation of the local website server. Every host persists local configuration and supervises its own services. A control-plane outage delays remote coordination; it must not stop active services.
+## What is present
 
-## Components
+- Rust/Axum management API.
+- PostgreSQL migrations for owner/device state, enrollment, sessions, commands, audit and hostname/site routing.
+- Separate management and visitor HTTP listeners.
+- Relay DNS TXT hostname proof and visitor route handling.
+- In-memory Relay session/pending-request hub.
+- Caddy reverse proxy with on-demand TLS for verified Relay hostnames.
+- Docker Compose with PostgreSQL, the Rust service, public Caddy profile and optional Cloudflare Tunnel profile.
+- Manual SSH-based deployment workflow.
 
-- Rust/Axum API.
-- PostgreSQL identity, device, desired-state, command and audit records.
-- Device enrollment and revocation.
-- Short-lived administrative sessions and role-based access.
-- Leased, expiring, allow-listed commands with durable acknowledgement.
-- Artifact upload and integrity-checked host delivery.
-- Separate visitor Relay listener; visitor ingress has no administrative or device-management routes.
+The visitor listener is separate from the management listener, but the current implementation still shares one process, database and fleet device credential model. The in-memory RelayHub loses active sessions and pending requests on process restart.
 
-## Deploy
+## Current deployment requirements
 
-1. Review `compose.yaml`, `Caddyfile` and the deployment guide at `../docs/CONTROL_PLANE_DEPLOYMENT.md`.
-2. Copy `.env.example` to `.env`.
-3. Configure the dedicated management hostname and exact HTTPS origin of the mobile/web clients.
-4. Generate unique high-entropy Owner and database credentials.
-5. Deploy:
+The existing Compose deployment requires:
+
+- Docker Compose.
+- PostgreSQL.
+- A publicly reachable host/network if visitor traffic is to enter directly.
+- DNS records and TLS edge configuration.
+- `.env` values including `DATABASE_URL`, the control-plane admin token and control hostname.
+
+Example development deployment:
 
 ```sh
+cp .env.example .env
+# Edit .env with unique development credentials.
 docker compose --env-file .env -f compose.yaml up -d --build
 ```
 
-Only the configured edge proxy publishes public ports. PostgreSQL and the API remain on the private container network. Persist and back up database and artifact volumes. Never commit `.env`.
+Never commit `.env`, database credentials, admin tokens or signing keys.
 
-## Mobile and host enrollment
+The GitHub deployment workflow is manual and requires an SSH host, user, path, domain and configured environment secrets. A deployment workflow definition is not evidence that a production instance exists.
 
-The Android Command Center contains a local trust-authority foundation and a preview control-plane client. It can bootstrap/register a worker and queue an owner-signed grant and typed health-check command, but full end-to-end enrollment remains incomplete: device-token delivery is manual, transport is not mutually authenticated, status/acknowledgement UX and revocation propagation are unfinished, and no iOS client is present. The intended production contract is for each host to store its own device-bound credential securely and maintain its own connection, heartbeat, command lease and workload lifecycle.
+## AssayFlux Relay — v0.1.0 target
 
-Host commands are typed, allow-listed, scoped, expiring and idempotent. Hosts validate owner policy and local capability before applying them. The host persists operation start/result before acknowledgement to prevent blind repetition after interruption.
+The first-party Relay must be extracted into a separately installable owner-operated Relay Node:
 
-## Fault-containment contract
+- Termux/Android and Linux targets.
+- No paid VPS, Docker or PostgreSQL prerequisite.
+- Independent Relay host identity and revocable ingress credentials.
+- Durable hostname/site/host binding.
+- Public TLS and HTTP-to-HTTPS redirect by default.
+- Visitor-only forwarding to the registered website origin.
+- Minimal local owner setup, status, start/stop and recovery interface.
 
-- Mobile app termination does not stop host workloads.
-- Control-plane or database outage does not stop active host workloads.
-- Visitor Relay failure does not expose or disable management endpoints.
-- Device revocation closes active control sessions and rejects new requests.
-- Host agent failure is local to that host; unrelated hosts continue.
-- Website visitor ingress and management endpoints use separate listeners/hostnames.
+A public network endpoint is still required: public IPv4 with router port forwarding or globally routed IPv6. A device behind CGNAT without global IPv6 cannot accept inbound visitors. The main website-host phone may remain behind CGNAT because its connection to the Relay Node is outbound.
 
-## AssayFlux Relay — v0.1.0
+## Current Android coupling to remove
 
-The Relay visitor listener accepts only DNS-verified hostnames and forwards bounded visitor requests to the authenticated host agent. It is separate from the management API and uses its own public TLS edge. The current transport is bounded HTTP request/response, not a general-purpose TCP/WebSocket tunnel. The owner must deploy the gateway on a public VPS/server, configure DNS and valid TLS, then verify external reachability, reconnect, limits and security before advertising public availability.
+The current Android `RelayAgent` obtains its endpoint and token from `RemoteControlAgent`; it starts only when remote-control configuration exists. v0.1.0 must give Relay its own configuration, host identity, credential rotation/revocation and lifecycle. Public website hosting must not require fleet enrollment or admin credentials.
 
-Cloudflare Tunnel is an independent v0.1.0 provider and may be used at the same time on a different hostname. Both providers target website ingress only. Full fleet management remains v0.2.0.
+## v0.2.0 fleet control-plane scope
 
-## Security
+- Owner sessions/passkeys and role-based access.
+- Device registration, enrollment, approval, credential rotation and revocation.
+- Desired state and versioned configuration.
+- Typed allow-listed commands with leases, expiry, idempotency and durable acknowledgement.
+- Artifact delivery, checksums, audit, health and database recovery.
+- Linux/Android agent lifecycle and cross-device recovery.
+- Multi-host Relay scheduling, regional scale and advanced failover after the standalone Relay Node is accepted.
 
-- Store API credential hashes, not raw credentials.
-- Use short-lived sessions, role checks, device-bound credentials and revocation.
-- Do not expose PostgreSQL or the raw application listener publicly.
-- Trust forwarded client/protocol headers only from exact configured proxy peers.
-- Never expose arbitrary shell, SQL, filesystem or management operations.
-- Audit sensitive changes.
-- Protect signing keys, secrets, database backups and artifact volumes.
+## Fault-containment requirements
+
+- Mobile app termination must not stop accepted local website hosting.
+- Control-plane/database outage must not stop local hosting or a standalone Relay Node's already-accepted local routing.
+- Visitor Relay failure must not expose or disable management endpoints.
+- Device revocation must close active control sessions and reject new privileged requests.
+- Website visitor ingress and management endpoints must remain separate listeners/hostnames.
+- No arbitrary shell, SQL, filesystem or management operations are exposed to website visitors.
+
+For current source facts and release boundaries, see [Project Baseline](../docs/PROJECT_BASELINE.md), [Repository Deep Audit](../docs/REPOSITORY_AUDIT.md), [AssayFlux Relay](../docs/ASSAYFLUX_RELAY.md) and [Control Plane Deployment](../docs/CONTROL_PLANE_DEPLOYMENT.md).
