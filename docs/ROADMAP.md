@@ -14,7 +14,7 @@ This roadmap follows the five-step master plan. The mobile command center is the
 
 ## Step 2 — Mobile command center
 
-**Android trust foundation implemented; end-to-end gate remains open.** Persisted two-mode selection, gated device workspace, P-256 Keystore identity, metadata-bound challenge proof, role-policy-checked signed grants, encrypted registry and generation revocation exist. A preview Control Plane client can register a worker and queue signed grant/health-check commands. Manual enrollment, credential delivery, transport authentication, live status/acknowledgement UX, revocation propagation, per-use key authentication and physical acceptance remain. See [Step 2 implementation record](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md).
+**Android trust foundation implemented; end-to-end gate remains open.** Persisted two-mode selection, gated device workspace, P-256 Keystore identity, metadata-bound challenge proof, role-policy-checked signed grants, encrypted registry and generation revocation exist. A preview Control Plane client can register a worker and queue signed grant/health-check commands. Manual enrollment, credential delivery, authenticated device transport, remote revocation propagation, per-use key authentication and physical acceptance remain. A bounded latest-50 command-history endpoint and Android acknowledgement/result viewer are now implemented. See [Step 2 implementation record](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md).
 
 - Android and iOS native clients.
 - Device discovery, QR/device ID and one-time verification.
