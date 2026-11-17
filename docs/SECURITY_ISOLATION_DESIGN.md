@@ -23,10 +23,10 @@ Pocket Host must keep website visitors, owner controls, website files, optional 
 - Keep Rust static response cap at 50 MiB per file unless separately reviewed and tested.
 - Bind to loopback by default. LAN binding is explicit opt-in and exposes the website listener to the local network.
 - Never expose management API or device-control endpoints through the visitor listener.
-- Cloudflare Tunnel and Relay credentials are separate from owner/device-management credentials; redact tokens from logs, diagnostics and backups.
-- Require domain ownership proof before Relay hostname activation; revoke hostname bindings and host sessions promptly.
-- Public HTTPS must use a valid edge certificate. HTTP redirects to HTTPS by default; explicit plain-HTTP mode must warn the owner.
-- Relay visitor traffic is bounded by request/body/queue/time limits and rate/abuse controls; it forwards only to the selected website origin.
+- Target: Cloudflare Tunnel and Relay host-ingress credentials are separate from owner/device-management credentials; redact tokens from logs, diagnostics and backups. Current RelayAgent still reuses RemoteControlAgent endpoint/device credentials, so this separation is an open v0.1.0 security requirement.
+- Require domain ownership proof before Relay hostname activation; revoke hostname bindings and host sessions promptly. The current DNS TXT/route foundation exists in the combined control-plane service; independent Termux Relay Node setup is not implemented.
+- Public HTTPS must use a valid edge certificate. HTTP redirects to HTTPS by default. An explicit plain-HTTP mode is a target only; current Relay Caddy configuration has no plain-HTTP content opt-in.
+- Relay visitor traffic is bounded by request/body/queue/time limits and rate/abuse controls; it forwards only to the selected website origin. The current visitor path is bounded HTTP request/response, not arbitrary TCP/WebSocket.
 - Encrypt full-app backups and require a strong passphrase. Keep the current 50 MiB static-site/200 MiB total backup limits distinct from the 500 MB import quota; fail safely and disclose the mismatch.
 
 ## Android platform safety
