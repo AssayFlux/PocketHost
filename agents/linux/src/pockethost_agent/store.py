@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,8 @@ class AgentStore:
     def __init__(self, path: Path):
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.db = sqlite3.connect(path)
+        if os.name == "posix":
+            os.chmod(path, 0o600)
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.executescript("""
@@ -53,6 +56,11 @@ class AgentStore:
             return True
         except sqlite3.IntegrityError:
             return False
+
+    def recover_interrupted_jobs(self) -> int:
+        with self.db:
+            cursor = self.db.execute("UPDATE jobs SET state='QUEUED' WHERE state='RUNNING'")
+            return cursor.rowcount
 
     def claim_job(self, job_id: str) -> bool:
         with self.db:
