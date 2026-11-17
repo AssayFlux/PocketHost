@@ -818,7 +818,7 @@ async fn queue_command(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, Json(input): Json<QueueCommand>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
     let role = admin_write(&headers, &s).await?;
-    const ALLOWED: &[&str] = &["site_action", "tunnel_action", "restart_runtime", "agent_job"];
+    const ALLOWED: &[&str] = &["site_action", "tunnel_action", "restart_runtime", "agent_job", "install_grant"];
     if !ALLOWED.contains(&input.kind.as_str()) {
         return Err((StatusCode::BAD_REQUEST, "unsupported_command".into()));
     }
@@ -1827,9 +1827,10 @@ mod tests {
 
     #[test]
     fn command_allowlist_excludes_arbitrary_shell_execution() {
-        let allowed = ["deploy_site", "site_action", "tunnel_action", "restart_runtime", "agent_job"];
+        let allowed = ["deploy_site", "site_action", "tunnel_action", "restart_runtime", "agent_job", "install_grant"];
         assert!(allowed.contains(&"site_action"));
         assert!(allowed.contains(&"agent_job"));
+        assert!(allowed.contains(&"install_grant"));
         assert!(!allowed.contains(&"shell"));
     }
 }
