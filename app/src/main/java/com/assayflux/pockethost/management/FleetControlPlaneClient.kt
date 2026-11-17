@@ -8,7 +8,7 @@ import java.net.URL
 
 /** Small, HTTPS-only mobile owner client for worker registration and signed command delivery. */
 object FleetControlPlaneClient {
-    data class RegisteredWorker(val controlPlaneId: String, val oneTimeDeviceToken: String)
+    data class RegisteredWorker(val controlPlaneId: String, val oneTimeDeviceToken: String, val grantQueued: Boolean)
     private const val MAX_RESPONSE = 256 * 1024
 
     fun registerWorker(endpoint: String, ownerCredential: String, name: String, grant: JSONObject, ownerPublicKeySpki: String): RegisteredWorker {
@@ -20,11 +20,23 @@ object FleetControlPlaneClient {
             val id = registered.getString("id")
             val token = registered.getString("device_token")
             require(id.matches(Regex("[0-9a-fA-F-]{36}")) && token.length >= 32) { "invalid_device_registration_response" }
-            queueCommand(base, session, id, "install_grant", JSONObject().put("grant", grant).put("owner_public_key_spki", ownerPublicKeySpki))
-            return RegisteredWorker(id, token)
+            val grantQueued = runCatching {
+                queueCommand(base, session, id, "install_grant", JSONObject().put("grant", grant).put("owner_public_key_spki", ownerPublicKeySpki))
+            }.isSuccess
+            return RegisteredWorker(id, token, grantQueued)
         } finally {
             runCatching { request(base, session, "/v1/admin/session", "DELETE", null) }
         }
+    }
+
+    fun queueRoleGrant(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String, grant: JSONObject, ownerPublicKeySpki: String) {
+        val base = validateEndpoint(endpoint)
+        require(controlPlaneDeviceId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid_control_plane_device_id" }
+        val session = exchangeSession(base, ownerCredential)
+        try {
+            queueCommand(base, session, controlPlaneDeviceId, "install_grant",
+                JSONObject().put("grant", grant).put("owner_public_key_spki", ownerPublicKeySpki))
+        } finally { runCatching { request(base, session, "/v1/admin/session", "DELETE", null) } }
     }
 
     fun queueSignedJob(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String, envelope: JSONObject) {
