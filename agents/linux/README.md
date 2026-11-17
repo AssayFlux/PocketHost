@@ -19,15 +19,12 @@ The agent stores its P-256 private identity key with mode 0600 and state under
 
 1. Run `pockethost-agent identity` and transfer the public SPKI identity to the mobile Command Center.
 2. The owner creates a protocol 1.0 enrollment challenge.
-3. Run `pockethost-agent answer-challenge challenge.json`; submit the proof signature to the owner for approval.
+3. Copy the mobile screen's complete challenge + candidate proof-request JSON into `proof-request.json`. Run `pockethost-agent answer-challenge proof-request.json --owner-public-key BASE64_DER_SPKI`; submit the proof signature to the owner for approval. The agent verifies the owner's challenge signature and signs both the challenge and every advertised metadata field.
 4. Export the owner-signed role grant and install it with
    `pockethost-agent install-grant grant.json --owner-public-key BASE64_DER_SPKI`.
 5. Run a supported typed job using `pockethost-agent run-job job.json`.
 
-The first Linux slice implements the cryptographic and durable local agent boundary
-and a native health-check executor. Unsupported job kinds are rejected. It does not
-yet include LAN discovery, a remote enrollment endpoint, background daemon/service
-supervision, package signing or automatic updates. Do not expose it to an untrusted
+The first Linux slice implements the cryptographic and durable local agent boundary, a native health-check executor, and bounded local namespace snapshot/backup verification jobs. Unsupported job kinds are rejected. It does not yet include LAN discovery, a remote enrollment endpoint, network job transport, signed package updates or automatic rollback. Do not expose it to an untrusted
 network or describe it as a production fleet agent until those gates are implemented.
 
 ## Security boundary
