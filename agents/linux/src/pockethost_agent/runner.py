@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 SUPPORTED = {
@@ -37,10 +38,14 @@ def validate_job(envelope: dict[str, Any], grant: dict[str, Any]) -> None:
         raise ValueError("Job payload has missing or unknown properties.")
     if any(not _valid_value(schema[key], value) for key, value in payload.items()):
         raise ValueError("Job payload value is invalid.")
-    issued = envelope.get("issued_at")
-    expires = envelope.get("expires_at")
-    if not isinstance(issued, str) or not isinstance(expires, str):
-        raise ValueError("Job timestamps are required.")
+    try:
+        issued = datetime.fromisoformat(envelope["issued_at"].replace("Z", "+00:00"))
+        expires = datetime.fromisoformat(envelope["expires_at"].replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Job timestamps are invalid.") from error
+    now = datetime.now(timezone.utc)
+    if issued.tzinfo is None or expires.tzinfo is None or issued > now or expires <= now or expires <= issued:
+        raise ValueError("Job is expired or not yet valid.")
 
 
 def execute_job(envelope: dict[str, Any], grant: dict[str, Any]) -> dict[str, Any]:
