@@ -9,6 +9,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 pip install ./agents/linux
 pockethost-agent identity
+sudo sh agents/linux/install-systemd.sh
 ```
 
 The agent stores its P-256 private identity key with mode 0600 and state under
