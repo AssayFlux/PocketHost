@@ -39,6 +39,14 @@ object FleetControlPlaneClient {
         } finally { runCatching { request(base, session, "/v1/admin/session", "DELETE", null) } }
     }
 
+    fun revokeWorker(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String) {
+        val base = validateEndpoint(endpoint)
+        require(controlPlaneDeviceId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid_control_plane_device_id" }
+        val session = exchangeSession(base, ownerCredential)
+        try { request(base, session, "/v1/admin/devices/$controlPlaneDeviceId", "DELETE", null) }
+        finally { runCatching { request(base, session, "/v1/admin/session", "DELETE", null) } }
+    }
+
     fun queueSignedJob(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String, envelope: JSONObject) {
         val base = validateEndpoint(endpoint)
         require(controlPlaneDeviceId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid_control_plane_device_id" }
