@@ -24,7 +24,7 @@ use tokio::sync::{oneshot, OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinSet;
 use tokio_util::io::ReaderStream;
 
-const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
+const MAX_FILE_BYTES: u64 = 500_000_000;
 const MAX_CONNECTIONS: usize = 16;
 const MAX_QUEUED_CONNECTIONS: usize = 32;
 const MAX_PER_SITE_CONNECTIONS: usize = 12;
@@ -624,7 +624,7 @@ async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>
         Err(_) => return Ok(text_response(StatusCode::NOT_FOUND, "text/plain; charset=utf-8", "Not found")),
     };
     if metadata.len() > MAX_FILE_BYTES {
-        return Ok(text_response(StatusCode::PAYLOAD_TOO_LARGE, "text/plain; charset=utf-8", "File exceeds the 50 MB serving limit"));
+        return Ok(text_response(StatusCode::PAYLOAD_TOO_LARGE, "text/plain; charset=utf-8", "File exceeds the 500 MB serving limit"));
     }
     let selected = match req.headers().get(hyper::header::RANGE) {
         Some(value) => match value.to_str().ok().and_then(|v| parse_byte_range(v, metadata.len()).ok()) {
@@ -1028,6 +1028,7 @@ mod tests {
 
     #[test]
     fn http_protocol_fanout_and_header_bounds_are_explicitly_bounded() {
+        assert_eq!(MAX_FILE_BYTES, 500_000_000);
         assert_eq!(MAX_HTTP2_STREAMS_PER_CONNECTION, 8);
         assert_eq!(MAX_HTTP2_PENDING_RESET_STREAMS, 16);
         assert_eq!(MAX_HTTP2_LOCAL_ERROR_RESETS, 64);
