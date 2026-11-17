@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,7 +71,7 @@ internal fun PocketHostOwnerHeader(
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text("Pocket Host", color = palette.onSurface, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    Text("Pocket Host", color = palette.onSurface, fontSize = 22.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold)
                     Text("ASSAYFLUX · YOUR DEVICE, YOUR CONTROL", color = palette.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -132,7 +133,7 @@ internal fun PocketHostSidebar(
                 Box(contentAlignment = Alignment.Center) { Text("AF", color = palette.onPrimary, fontWeight = FontWeight.Bold) }
             }
             Column {
-                Text("Pocket Host", color = palette.onSurface, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text("Pocket Host", color = palette.onSurface, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Text("ASSAYFLUX", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
         }
