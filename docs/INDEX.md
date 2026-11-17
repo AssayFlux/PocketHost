@@ -3,8 +3,7 @@
 ## Start here
 
 0. [Competitive Landscape and Product Gap Analysis](COMPETITIVE_LANDSCAPE.md) — competitor lessons, Pocket Host differentiation and implementation priorities.
-
-1. [System Architecture](SYSTEM_ARCHITECTURE.md) — normative component model, mobile command center, device fabric, data/control planes and fault containment.
+1. [System Architecture](SYSTEM_ARCHITECTURE.md) — normative component model, mobile command center, device fabric and fault containment.
 2. [Master Plan](MASTER_PLAN.md) — five-step implementation plan and release acceptance.
 3. [Host Agent and Role Contract](HOST_AGENT_CONTRACT.md) — verified enrollment, role grants, job lifecycle and transports.
 4. [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md) — installable products, supported roles and transports per device family.
@@ -22,6 +21,8 @@
 
 - [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md)
 - [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
+- [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
+- [Step 3 Device Agents](STEP_3_DEVICE_AGENTS.md)
 - [Runtime Companion](RUNTIME_COMPANION.md)
 - [Runtime Project Storage](RUNTIME_PROJECT_STORAGE.md)
 - [Python Runtime](PYTHON_RUNTIME.md)
@@ -39,7 +40,6 @@
 
 - [Interoperability Protocol](../protocol/README.md) — versioned device hello, one-time enrollment challenge, signed role grants, typed jobs and compatibility rules.
 - [Step 1 Trust and Protocol](STEP_1_TRUST_AND_PROTOCOL.md) — normative trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore contract.
-- [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md` — Mobile trust foundation and remaining integration gates.\n- `STEP_3_DEVICE_AGENTS.md) — Android operating modes, Keystore identity, signed enrollment, role grants, revocation, tests and open integration gates.
 
 ## Repository boundaries
 
@@ -48,4 +48,5 @@
 - Rust website engine: `rust-engine/`
 - Remote control plane: `control-plane/`
 - Browser operator console: `web-console/`
+- Linux node agent preview: `agents/linux/`
 - MCU and edge fleet: [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore)
