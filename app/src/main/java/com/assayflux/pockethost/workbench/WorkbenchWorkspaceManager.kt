@@ -223,6 +223,7 @@ object WorkbenchWorkspaceManager {
             manifest.put("files", files)
             File(staging, "commit.json").writeText(manifest.toString(), Charsets.UTF_8)
             if (!staging.renameTo(destination)) throw IOException("Could not finalize the immutable commit snapshot.")
+            pruneCommitHistory(context, projectId, id)
             return Commit(id, trimmed, createdAt, stats.first, stats.second)
         } finally {
             staging.deleteRecursively()
