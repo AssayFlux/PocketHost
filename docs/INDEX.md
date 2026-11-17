@@ -37,7 +37,8 @@
 
 ## Shared machine-readable contracts
 
-- [Interoperability Protocol](../protocol/README.md) — versioned device hello, signed role grants and typed job envelopes.
+- [Interoperability Protocol](../protocol/README.md) — versioned device hello, one-time enrollment challenge, signed role grants, typed jobs and compatibility rules.
+- [Step 1 Trust and Protocol](STEP_1_TRUST_AND_PROTOCOL.md) — normative trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore contract.
 
 ## Repository boundaries
 
