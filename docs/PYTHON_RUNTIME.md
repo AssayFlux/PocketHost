@@ -1,6 +1,6 @@
 # Python Runtime — Existing Companion Implementation
 
-<badge>IN PROGRESS</badge> Python is already implemented in the repository as an Android runtime companion integration. It is outside the main app's Step 4 scope, but it is not merely a future idea. The current implementation is substantial and has host-side tests; Android device acceptance, production hardening and independent downloadable package distribution remain open.
+**STATUS: IN PROGRESS** Python is already implemented in the repository as an Android runtime companion integration. It is outside the main app's Step 4 scope, but it is not merely a future idea. The current implementation is substantial and has host-side tests; Android device acceptance, production hardening and independent downloadable package distribution remain open.
 
 ## Placement
 
