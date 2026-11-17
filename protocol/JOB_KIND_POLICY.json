@@ -1,0 +1,118 @@
+{
+  "protocol": "pockethost.device/1.0",
+  "default_policy": "deny",
+  "jobs": {
+    "storage.snapshot": {
+      "role": "storage",
+      "required": [
+        "namespace_id",
+        "snapshot_id"
+      ],
+      "properties": {
+        "namespace_id": "uuid",
+        "snapshot_id": "uuid"
+      }
+    },
+    "storage.restore": {
+      "role": "storage",
+      "required": [
+        "namespace_id",
+        "snapshot_id",
+        "restore_id"
+      ],
+      "properties": {
+        "namespace_id": "uuid",
+        "snapshot_id": "uuid",
+        "restore_id": "uuid"
+      }
+    },
+    "backup.create": {
+      "role": "backup_recovery",
+      "required": [
+        "source_namespace",
+        "backup_id"
+      ],
+      "properties": {
+        "source_namespace": "identifier",
+        "backup_id": "uuid"
+      }
+    },
+    "backup.verify": {
+      "role": "backup_recovery",
+      "required": [
+        "backup_id",
+        "expected_sha256"
+      ],
+      "properties": {
+        "backup_id": "uuid",
+        "expected_sha256": "sha256"
+      }
+    },
+    "build.compile": {
+      "role": "build_publish",
+      "required": [
+        "source_ref",
+        "artifact_id",
+        "build_profile"
+      ],
+      "properties": {
+        "source_ref": "content_ref",
+        "artifact_id": "uuid",
+        "build_profile": "identifier"
+      }
+    },
+    "artifact.publish_request": {
+      "role": "build_publish",
+      "required": [
+        "site_id",
+        "release_id",
+        "artifact_sha256"
+      ],
+      "properties": {
+        "site_id": "identifier",
+        "release_id": "uuid",
+        "artifact_sha256": "sha256"
+      }
+    },
+    "traffic.route_update": {
+      "role": "traffic",
+      "required": [
+        "route_id",
+        "hostname",
+        "target_service"
+      ],
+      "properties": {
+        "route_id": "uuid",
+        "hostname": "hostname",
+        "target_service": "identifier"
+      }
+    },
+    "native.health_check": {
+      "role": "native_job",
+      "required": [
+        "check_id"
+      ],
+      "properties": {
+        "check_id": "identifier"
+      }
+    },
+    "edge.telemetry_read": {
+      "role": "edge_gateway",
+      "required": [
+        "node_id",
+        "metrics"
+      ],
+      "properties": {
+        "node_id": "identifier",
+        "metrics": "bounded_string_array"
+      }
+    }
+  },
+  "invariants": [
+    "job kind role must equal active role grant",
+    "payload must contain every required key and no key outside properties",
+    "payload values must satisfy the declared primitive format",
+    "job kind not present in this catalogue is rejected",
+    "job payload never contains arbitrary command or script text"
+  ]
+}
