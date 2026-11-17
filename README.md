@@ -58,12 +58,13 @@ The iOS command center and additional desktop/server/SBC node packages are produ
 1. [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
 2. [Master Plan — five execution steps](docs/MASTER_PLAN.md)
 3. [Host Agent and Role Contract](docs/HOST_AGENT_CONTRACT.md)
-4. [Roadmap](docs/ROADMAP.md)
-5. [Repository Baseline](docs/PROJECT_BASELINE.md)
-6. [Mobile UI Design](docs/UI_DESIGN.md)
-7. [Security Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
-8. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
-9. [Documentation Index](docs/INDEX.md)
+4. [Device Software Matrix](docs/DEVICE_SOFTWARE_MATRIX.md)
+5. [Roadmap](docs/ROADMAP.md)
+6. [Repository Baseline](docs/PROJECT_BASELINE.md)
+7. [Mobile UI Design](docs/UI_DESIGN.md)
+8. [Security Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
+9. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
+10. [Documentation Index](docs/INDEX.md)
 
 ## Build and verification
 
