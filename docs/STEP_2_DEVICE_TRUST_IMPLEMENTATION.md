@@ -19,7 +19,7 @@
 ### Enrollment and approval
 - The mobile app creates a 256-bit, URL-safe, single-use nonce with a five-minute lifetime.
 - The challenge uses the Step 1 `enrollment-challenge.schema.json` field names, UUID challenge ID, protocol version, transport, owner key ID and ECDSA signature.
-- The candidate's advertised SPKI must hash to its claimed device ID.
+- The candidate's advertised SPKI must hash to its claimed device ID. The proof request document binds all displayed metadata and requested capabilities to the candidate signature.
 - The candidate must prove possession by signing the exact canonical unsigned challenge followed by canonical candidate metadata (device fingerprint, SPKI, display name, product, OS, architecture, protocol version and requested capabilities). The Linux agent verifies the owner's challenge signature and signs the same metadata-bound payload; changing an advertised field invalidates the proof.
 - Owner approval is a separate UI action. Discovery or challenge creation alone never adds a device.
 - Requested role capabilities are checked against the frozen Step 1 role allow-list. Unknown roles and capabilities outside that role's allow-list are rejected.
