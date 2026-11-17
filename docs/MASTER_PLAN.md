@@ -56,7 +56,7 @@ Static hosting remains available when runtime packs are absent, broken, updating
 - **Runtime providers:** separately versioned language distributions, adapters and bootstrap contracts.
 - **Execution-cell supervisor:** creates, monitors and destroys per-project isolated processes/UIDs; applies limits and revokes grants on death or lease expiry.
 - **Project cells:** execute only their own project code under constrained storage, network and resource policy.
-- **Relay:** independent public gateway and outbound phone agent; visitor traffic never reaches management APIs.
+- **Tunnel providers:** first-party AssayFlux Relay and Cloudflare Tunnel are independent, optional, first-class connectivity providers. Users can enable either one or both concurrently, globally or per site/hostname where supported. Local-network access remains a separate option. The phone remains the origin; tunnel providers only transport visitor traffic and never expose management APIs.
 - **Control plane:** optional identity/device registry and remote management; never the website origin.
 - **Web console:** owner/operator client, not a second website request router.
 
