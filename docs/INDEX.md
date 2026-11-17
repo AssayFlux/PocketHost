@@ -23,6 +23,7 @@
 - [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
 - [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
 - [Step 3 Device Agents](STEP_3_DEVICE_AGENTS.md)
+- [Step 4 Built-in Web Baseline](STEP_4_WEB_BASELINE.md)
 - [Runtime Companion](RUNTIME_COMPANION.md)
 - [Runtime Project Storage](RUNTIME_PROJECT_STORAGE.md)
 - [Python Runtime](PYTHON_RUNTIME.md)
