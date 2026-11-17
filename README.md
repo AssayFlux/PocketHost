@@ -29,7 +29,8 @@ Other devices use separate, platform-appropriate Pocket Host software. A device 
 - **Role-based workers:** target roles include storage, backup, traffic, build/publish, bounded native backend jobs and edge gateway. Each role is subject to exact platform and hardware acceptance.
 - **Built-in web baseline:** the mobile server app includes HTML/CSS static hosting by default. TypeScript is part of the built-in web toolchain and is compiled to browser JavaScript before publication; its app-bundled compiler integration remains an implementation/acceptance item.
 - **Main-app web baseline:** the Pocket Host app includes HTML/CSS static hosting by default. TypeScript is a built-in main-app toolchain capability and must compile to browser JavaScript before publication; compiler integration remains an implementation/acceptance item.
-- **Future optional runtimes:** 20 separate language add-ons are planned for a future Runtime Library. They will not be bundled with or required by the main app; users download only what they need. See `docs/FUTURE_RUNTIME_LIBRARY.md`.
+- **Existing optional runtimes:** Python 3.11 and Node.js 24.22.1 already have substantial implementations in the separate `runtime-worker` companion APK; both are in progress, not merely planned. They are not required by the main app. Independent per-language package downloads and final Android acceptance remain open.
+- **Future Runtime Library:** 18 additional language runtimes are planned, each as a separate downloadable package. See `docs/FUTURE_RUNTIME_LIBRARY.md`.
 - **Website delivery:** Rust ingress and HTML/CSS static serving are present; TypeScript build integration and the main-app publish pipeline still require hardening and acceptance.
 - **Device transports:** Wi-Fi/LAN is preferred for secure control and bulk transfer; Bluetooth supports discovery/proximity and small control messages; USB is platform/API-specific; remote links use authenticated sessions.
 - **Visitor ingress:** Local Network, AssayFlux Relay and Cloudflare Tunnel are independent connectivity options.
@@ -52,7 +53,7 @@ The mobile device's two modes are operating modes, not separate external worker 
 ## Repository components
 
 - `app/` — Android application: website-serving foundation, local management API, remote-control integration, persisted two-mode selector and a manual cryptographic device-trust workspace. Authenticated transport and end-to-end fleet workflows remain incomplete.
-- `runtime-worker/` — existing experimental provider foundation for future optional Python/Node add-ons; not required by the main app and not a completed Runtime Library.
+- `runtime-worker/` — existing Android companion APK integrating CPython 3.11 (Chaquopy) and Node.js mobile 24.22.1 (JNI); runtime integrations are in progress and not yet independently downloadable packages.
 - `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
 - `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
 - `web-console/` — React/TypeScript/Vite secondary operator client.
@@ -111,7 +112,7 @@ Main Pocket Host Android application:
 ./gradlew :app:assembleDebug
 ```
 
-The separate `runtime-worker` module is an experimental future add-on provider, not part of the main-app Step 4 baseline. Build it independently only when working on that future provider:
+The separate `runtime-worker` module is the existing Python/Node.js runtime companion, not part of the main-app Step 4 baseline. Build it independently from the main app:
 
 ```bash
 ./gradlew :runtime-worker:assembleDebug
