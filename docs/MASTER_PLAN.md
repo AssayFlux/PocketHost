@@ -1,4 +1,4 @@
-# Pocket Host — Master Engineering Plan V2
+# Pocket Host — Master Engineering Plan V3
 
 **Product:** AssayFlux Pocket Host  
 **Version target:** 0.1.x pre-release  
@@ -8,7 +8,7 @@
 
 ## 1. Mission and two completion tracks
 
-Pocket Host turns an ordinary Android phone into a dependable website origin. The product must satisfy two tracks together:
+Pocket Host evolves from an Android-first website host into a cross-platform, distributed self-hosting ecosystem. Android remains the first production host; the architecture must support capable phones, tablets, Linux/Windows/macOS computers, VPSs, servers, ARM single-board computers and constrained microcontroller/edge nodes through explicit capability tiers. The product must satisfy the existing reliability/security tracks and the universal-device expansion together:
 
 1. **Product and Android reliability:** correct navigation, responsive layouts, accessibility, Android lifecycle/settings compliance, trustworthy status, installation, recovery and real-device behaviour.
 2. **Secure modular execution:** optional independently installable language runtimes, per-project operating-system isolation, controlled capabilities, predictable resource use and a stable extension contract.
@@ -59,6 +59,9 @@ Static hosting remains available when runtime packs are absent, broken, updating
 - **Tunnel providers:** first-party AssayFlux Relay and Cloudflare Tunnel are independent, optional, first-class connectivity providers. Users can enable either one or both concurrently, globally or per site/hostname where supported. Local-network access remains a separate option. The phone remains the origin; tunnel providers only transport visitor traffic and never expose management APIs.
 - **Control plane:** optional identity/device registry and remote management; never the website origin.
 - **Web console:** owner/operator client, not a second website request router.
+- **Portable host contracts:** versioned host-agent, service-manifest, runtime-manifest, capability, identity, telemetry and desired-state contracts shared across platform adapters.
+- **Platform host adapters:** Android, Linux, Windows, macOS and embedded Linux adapters own OS-specific lifecycle, filesystem, process, network, packaging and security integration.
+- **Edge fleet adapter:** an optional, authenticated bridge to DemonCore/DCP and other reviewed device protocols. It is not a second website request router and does not turn MCUs into general-purpose hosts.
 
 ## 4. Runtime pack contract
 
@@ -319,3 +322,59 @@ This baseline is not a claim that these issues remain unchanged after this plan'
 - No fake feature, fake status, fabricated telemetry or unsupported security claim.
 - Preserve working code; change architecture deliberately with migration and rollback plans.
 - `main` is the source of truth; commits and verification evidence are traceable.
+
+
+## 7. Universal device fabric expansion
+
+The authoritative device-tier, cross-platform host, edge-node, DemonCore integration and expansion-gate specification is `docs/UNIVERSAL_DEVICE_FABRIC.md`. It extends this plan without weakening Android's existing gates.
+
+### 7.1 Product scope
+
+Pocket Host is a family of cooperating host agents and management clients. It must support:
+- Android phones and tablets as the first host platform.
+- Linux desktops, servers, VPSs and supported ARM/x86 systems.
+- Windows and macOS hosts through native service/lifecycle/security adapters.
+- Raspberry Pi-class and other single-board computers as exact-model, measured profiles.
+- Microcontrollers and constrained devices as edge/device nodes; only devices with sufficient measured capability may be promoted to a constrained service-host profile.
+
+"Any device" means any device that passes a declared hardware/OS capability and security profile. It does not mean every device can run every service.
+
+### 7.2 Device and service capability model
+
+Adopt four capability tiers:
+- Tier A Full Host: Android, desktop/server OS, capable VPS and capable SBC; static and supported dynamic services.
+- Tier B Compact Edge Host: embedded Linux/SBC/mini PC; resource-profiled static, API and selected runtime workloads.
+- Tier C Microcontroller Service Node: ESP32-class MCU; bounded device APIs, telemetry, MQTT/DCP, local control and protocol bridges.
+- Tier D Constrained Device: sensor/actuator/event node; not advertised as a website origin.
+
+Every workload declares architecture, runtime, memory/storage/CPU, network, persistence, security and power requirements. The scheduler places only on compatible nodes. Runtime availability does not imply workload isolation; every host OS needs a separately accepted per-project execution boundary.
+
+### 7.3 Cross-platform implementation boundaries
+
+- Preserve Kotlin/Compose and Android lifecycle ownership on Android.
+- Keep Rust as the portable engine foundation where dependencies and platform security permit.
+- Add narrow OS-specific adapters for systemd/Linux, Windows Service/ACL/firewall, macOS launchd/signing/notarization/entitlements and embedded Linux.
+- Keep management clients independent of host execution: Android app, responsive web console and future desktop clients.
+- Do not rewrite the Android app or Rust engine just to obtain platform parity. Extract versioned contracts first.
+- Do not introduce Kubernetes or a mandatory cloud dependency for phones or small devices.
+
+### 7.4 DemonCore relationship
+
+DemonCore remains a separate specialised MCU/fleet project. Pocket Host integrates through a versioned authenticated edge adapter; it must not import firmware internals or merge repositories. DemonCore owns board profiles, GPIO/peripheral safety, DCP, MCU provisioning and constrained mesh/fleet operations. Pocket Host owns websites, general-purpose workloads, host nodes and public website ingress.
+
+DCP v1.0's JSON envelope is not authentication, is bounded to 4,096 bytes and defines only its initial operation catalogue. Do not expose it over public ingress or enable cross-network commands until DemonCore's claim, authentication, encryption, revocation and physical hardware gates pass. ESP32 devices are not assumed to run Pocket Host's Rust website engine, Node or Python workloads.
+
+Current DemonCore repository documentation records an ESP-WROOM-32 4 MiB/no-PSRAM target and MicroPython firmware. Its Phase 1 is not hardware-accepted; board verification and physical boot/resource tests remain outstanding, the Flutter app workspace is documentation-only, and the hub is not implemented. Treat these as audit findings, not accepted integration capabilities.
+
+### 7.5 Additional expansion gates
+
+The original Gates 0–9 remain in force. The following gates extend them and must not be used to bypass Android security, runtime, UX or release acceptance.
+
+- **U0 — Portable contracts and capability model:** host-agent API, service/runtime manifests, device identity, enrollment/revocation, capability taxonomy, telemetry, desired-state schema, offline behaviour and compatibility tests. Exit only when versioned contracts and threat model pass and Android compatibility is preserved.
+- **U1 — Linux host node:** Rust host core, unprivileged service identity, systemd integration, filesystem/network policy, static hosting, logs, health, signed packages and rollback. Test x86_64 and ARM64; add ARMv7 only when dependencies and resources permit. Validate Raspberry Pi models separately.
+- **U2 — Windows and macOS adapters:** Windows installer/service/ACL/firewall and macOS signed/notarized distribution/launchd/entitlement decisions. Pass named OS/architecture lifecycle, security, network and upgrade tests.
+- **U3 — SBC/embedded Linux profiles:** exact-model Raspberry Pi and other ARM boards; headless onboarding, power-loss-safe updates, thermal/storage monitoring and measured workload profiles.
+- **U4 — DemonCore MCU interoperability:** first complete DemonCore physical hardware, identity, claim, authenticated transport and OTA gates; then implement allow-listed DCP adapter operations, real-board tests and compromised-node containment.
+- **U5 — Multi-host fleet and workload placement:** host registration/revocation, desired-vs-actual state, multi-component/multi-runtime placement, budgets and authenticated internal service routes. Replication/failover requires defined data consistency and restore semantics.
+
+**Expansion exit rule:** no device, runtime, service, fleet scale or availability claim is advertised until its exact compatibility profile and verification evidence are recorded. Full criteria live in `docs/UNIVERSAL_DEVICE_FABRIC.md`.
