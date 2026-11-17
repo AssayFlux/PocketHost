@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pockethost.assayflux.com/protocol/1.0/role-grant.schema.json",
+  "title": "Pocket Host Signed Role Grant",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "grant_id",
+    "owner_id",
+    "device_id",
+    "role",
+    "generation",
+    "capabilities",
+    "denied_capabilities",
+    "resource_budget",
+    "issued_at",
+    "expires_at",
+    "policy_version",
+    "signature"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "pockethost.device/1.0"
+    },
+    "grant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "device_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "role": {
+      "enum": [
+        "storage",
+        "traffic",
+        "build_publish",
+        "native_job",
+        "backup_recovery",
+        "edge_gateway"
+      ]
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{1,95}$"
+      },
+      "maxItems": 64
+    },
+    "denied_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{1,95}$"
+      },
+      "maxItems": 64
+    },
+    "resource_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_millis",
+        "memory_bytes",
+        "storage_bytes",
+        "network_bytes_per_day"
+      ],
+      "properties": {
+        "cpu_millis": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storage_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "network_bytes_per_day": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "allow_battery_operation": {
+          "type": "boolean"
+        }
+      }
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy_version": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "ed25519",
+            "ecdsa-p256-sha256"
+          ]
+        },
+        "key_id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "value": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 4096
+        }
+      }
+    }
+  }
+}
