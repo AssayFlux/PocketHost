@@ -54,7 +54,7 @@ The mobile device's two modes are operating modes, not separate external worker 
 - `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
 - `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
 - `web-console/` — React/TypeScript/Vite secondary operator client.
-- `agents/linux/` — separately installable Linux Node Agent preview with P-256 identity, signed grant/job verification, durable local state and a default-deny health-check executor.
+- `agents/linux/` — separately installable Linux Node Agent preview with P-256 identity, signed grant/job verification, durable local state, a default-deny health-check executor and bounded local storage/backup snapshot jobs.
 - `tests/` and `scripts/` — repository test and engineering support assets.
 - [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — separate MCU firmware, board profiles and device-fleet project.
 
