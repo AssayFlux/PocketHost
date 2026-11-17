@@ -47,6 +47,10 @@ class LinuxAgentTests(unittest.TestCase):
             _, device_id, _ = load_or_create_identity(Path(directory))
             grant, owner_key, owner_private = self.make_grant(device_id)
             verify_role_grant(grant, owner_key, device_id, 1, POLICY)
+            expired = dict(grant)
+            expired["expires_at"] = "2026-11-16T00:00:00Z"
+            with self.assertRaises(ValueError):
+                verify_role_grant(expired, owner_key, device_id, 1, POLICY)
             job = {"protocol": "pockethost.device/1.0", "owner_id": grant["owner_id"], "job_id": "00000000-0000-4000-8000-000000000002"}
             job["signature"] = {"algorithm": "ecdsa-p256-sha256", "key_id": grant["owner_id"], "value": base64.b64encode(owner_private.sign(canonical_json(job), ec.ECDSA(hashes.SHA256()))).decode()}
             verify_job_signature(job, owner_key)
