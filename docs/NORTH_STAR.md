@@ -96,57 +96,49 @@ The separate user/account dropdown exposes only real identity/session actions an
 V1 typography uses a bundled licensed calligraphic wordmark, elegant display headings and readable sans-serif operational text. Use a consistent minimal monochrome icon family. Provide ten coordinated classic palettes (Classic Ivory, Midnight, Forest, Burgundy, Ocean, Graphite, Sandstone, Lavender, Copper and Arctic) and persisted System/Light/Dark appearance modes across the entire app. Detailed dimensions, theme tokens, screen-specific layout, accessibility and acceptance criteria are in `docs/UI_DESIGN.md`.
 
 
-## 5. NETWORKING NORTH STAR — THREE CORE MODES
+## 5. NETWORKING NORTH STAR — USER-SELECTABLE DUAL TUNNEL SYSTEM
 
-Pocket Host must not force every user into one provider. Provide these distinct paths:
+Pocket Host must provide its own first-party tunnel system **and** Cloudflare Tunnel. Users choose either one or operate both simultaneously according to their needs. Neither provider is mandatory. Local Network access is also available independently.
 
-### A. AssayFlux Relay — first-party private tunnel (P0; bounded HTTP source partially implemented, production acceptance open)
-A first-party outbound tunnel for owners who do not want to use Cloudflare and do not want visitors to learn the phone's public IP.
+### A. AssayFlux Relay — first-party tunnel system
+
+A first-party outbound tunnel owned and operated as part of the AssayFlux product. Users who do not want Cloudflare can use AssayFlux Relay alone.
 
 **Target traffic path**
-```text
+```
 Visitor → AssayFlux Relay public gateway → authenticated encrypted device tunnel
         → Pocket Host Rust listener → hostname/site router → website
 ```
 
-The phone initiates and maintains the outbound connection. Visitors connect to the relay's public address, not directly to the phone. This works behind ordinary NAT/CGNAT where outbound connectivity is permitted. It hides the phone's public IP from ordinary visitors, **not from the relay operator, the carrier or the network provider**.
+The phone initiates and maintains the outbound connection. Visitors connect to the Relay public address, not directly to the phone. This supports ordinary NAT/CGNAT where outbound connectivity is permitted. It hides the phone's public IP from ordinary visitors, not from the Relay operator, carrier or network provider.
 
-**Required components**
-1. Public Relay Gateway — TLS termination or encrypted pass-through, hostname routing and bounded ingress.
-2. Android Tunnel Agent — outbound session, heartbeat, network-change detection and reconnect.
-3. Device Enrollment Broker — one-time pairing, device identity, mutual authentication and revocation.
-4. Multiplexed Stream Transport — concurrent visitor streams, flow control, backpressure and bounded buffers.
-5. Domain Registry — verified hostname ownership and device/site binding.
-6. Certificate Manager — domain validation, issuance, renewal and key rotation.
-7. Visitor Access Gateway — public/private/restricted policy enforcement before forwarding.
-8. Relay Operations — health, metrics, abuse prevention, rate limits, quotas, audit and incident response.
+Required components: public gateway; Android tunnel agent; device enrollment and revocation; multiplexed stream transport; verified domain registry; certificate manager; visitor access gateway; abuse prevention, quotas, metrics, audit and incident operations.
 
-**Protocol strategy**
-- Begin with mature TLS-protected HTTP/2 streams or an established reverse-tunnel protocol; use WebSocket/TLS only as a compatibility fallback.
-- Evaluate QUIC/HTTP/3 only after reliable TCP transport, lifecycle and security acceptance.
-- Do not invent a cryptographic protocol.
-- Use mutual TLS or an equivalently reviewed device-authentication design; short-lived credentials and revocation must be first-class.
-- Bound every stream, queue, frame, connection, memory buffer and reconnect loop.
-- Relay commands must be typed, scoped, expiring and replay-resistant. The relay must not become arbitrary remote shell access.
+Use a mature reviewed TLS-protected transport (initially bounded HTTP/2 streams or an established reverse-tunnel protocol); do not invent cryptography. Support flow control, backpressure, bounded buffers, short-lived credentials, mutual device authentication and revocation. Disclose whether TLS terminates at Relay or passes through to the phone.
 
-**Privacy modes**
-- Standard relay: TLS terminates at gateway, which can inspect HTTP traffic. Disclose this trust boundary.
-- End-to-end TLS pass-through: phone terminates website TLS; relay routes opaque encrypted streams. This is a later advanced mode because domain routing, certificate ownership and visitor authentication are more complex.
-- Never imply that a relay hides the phone's IP from the relay itself.
+### B. Cloudflare Tunnel — independent optional provider
 
-### B. Cloudflare Tunnel — existing connector
-- Reuse the owner's existing named tunnel and domain; never create a duplicate.
-- Public Hostname must target the Rust website listener only.
-- Keep Cloudflare Access available for private-site policy.
-- Verify external HTTPS; a running cloudflared process is not proof of public reachability.
+Cloudflare Tunnel remains a first-class supported provider, not a replacement for AssayFlux Relay. Users may select an existing named tunnel or complete an explicit supported setup flow. Never silently create duplicate tunnels or overwrite user configuration. Public hostnames must target the Rust website listener only. Keep Cloudflare Access available for private-site policy. Verify external HTTPS; a running connector alone is not proof of reachability.
 
-### C. Local Network — no public tunnel
-- Serve on the trusted LAN where the device/network permits it.
-- No public DNS or relay is required.
-- Show the current local address and explain that it may change across Wi-Fi networks.
-- Keep LAN exposure opt-in and distinct from public ingress.
+### C. Simultaneous operation — explicitly supported
 
-Direct port-forwarded hosting may be an advanced future option, not the default.
+Users may choose:
+- Local Network only.
+- AssayFlux Relay only.
+- Cloudflare Tunnel only.
+- AssayFlux Relay and Cloudflare Tunnel together.
+
+Both tunnel providers can serve the same site concurrently through separate hostnames, or different sites through their own hostname mappings, where DNS/domain ownership and provider constraints allow it. Detect hostname, DNS, certificate and route conflicts before activation. Never bind two providers ambiguously to one hostname.
+
+Provider health and controls are independent: show each provider's connection, authentication, hostname, TLS/certificate, traffic, latency/error and external reachability state separately. A failure in one provider must not stop the other provider or local hosting. No silent failover or DNS change; any failover policy must be explicit and observable.
+
+### D. Local Network — no public tunnel
+
+Serve on the trusted LAN where the device/network permits it. No public DNS, Cloudflare or Relay account is required. LAN exposure is opt-in and shown separately from public ingress.
+
+### E. Security and routing invariants
+
+All tunnel traffic terminates at the Rust website ingress and site router. No tunnel provider exposes the owner management API, runtime broker, debug endpoints or internal control plane. Visitor authorization is enforced consistently regardless of ingress provider. Each provider has independent credentials, lifecycle, revocation and diagnostics. Tunnel outages never take down local static hosting.
 
 ## 6. AUTHENTICATION NORTH STAR
 
