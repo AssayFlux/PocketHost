@@ -107,7 +107,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
 |---|---|---|
 | **v0.1.0** | First Hosting | Import and host a real static website from Android, locally, over LAN and publicly through the owner's domain |
 | **v0.1.1** | Workbench & Runtime Development | Edit, preview, version and safely publish websites; complete optional Python/Node runtime integration |
-| **v0.2.0** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and harden public ingress |
+| **v0.2.0** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and scale multi-host Relay/failover |
 
 This is the initial roadmap, not the final product boundary. It will be expanded after these three milestones. The old five-step delivery sequence is retired as the release roadmap.
 
@@ -170,6 +170,8 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 |---|---|---|---|
 | Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
 | Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
+| Cloudflare Tunnel | <code>app/.../tunnel/</code> + native connector | Outbound public ingress for custom domains | v0.1.0 |
+| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> | First-party public visitor gateway and authenticated host stream | v0.1.0 |
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
@@ -177,6 +179,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | Python 3.11 | <code>runtime-worker/</code> companion APK | Optional WSGI server runtime | v0.1.1 |
 | Node.js 24.22.1 | <code>runtime-worker/</code> companion APK | Optional server-side JavaScript runtime | v0.1.1 |
 | Device agents and control plane | <code>agents/</code>, <code>control-plane/</code>, <code>protocol/</code> | Connected device fabric | v0.2.0 |
+| Relay scale/failover | <code>control-plane/</code> | Multi-host scheduling and advanced failover | v0.2.0 |
 
 Python and Node.js already have repository implementations in a separate companion APK. They are in progress, currently delivered together and not production-isolated. The future 20-language Runtime Library is a later expansion; catalog manifests are not downloadable runtime binaries.
 
