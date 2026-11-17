@@ -77,6 +77,18 @@ struct CommandView {
     created_at: DateTime<Utc>,
 }
 
+#[derive(Serialize)]
+struct CommandHistoryView {
+    id: Uuid,
+    kind: String,
+    state: String,
+    result: Option<Value>,
+    created_at: DateTime<Utc>,
+    delivered_at: Option<DateTime<Utc>>,
+    acknowledged_at: Option<DateTime<Utc>>,
+    delivery_attempts: i32,
+}
+
 #[derive(Deserialize)]
 struct Heartbeat {
     state: Value,
@@ -716,6 +728,32 @@ async fn list_devices(
     }).collect()))
 }
 
+/// Returns a bounded, read-only command/acknowledgement history for the owner UI.
+async fn list_device_commands(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<Json<Vec<CommandHistoryView>>, (StatusCode, String)> {
+    let _actor = admin(&headers, &s).await?;
+    let exists = sqlx::query("SELECT id FROM devices WHERE id=$1")
+        .bind(id).fetch_optional(&s.db).await.map_err(internal)?;
+    if exists.is_none() {
+        return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
+    }
+    let rows = sqlx::query(
+        "SELECT id,kind,state,result,created_at,delivered_at,acknowledged_at,delivery_attempts \
+         FROM device_commands WHERE device_id=$1 ORDER BY created_at DESC LIMIT 50"
+    ).bind(id).fetch_all(&s.db).await.map_err(internal)?;
+    Ok(Json(rows.into_iter().map(|row| CommandHistoryView {
+        id: row.get("id"),
+        kind: row.get("kind"),
+        state: row.get("state"),
+        result: row.get("result"),
+        created_at: row.get("created_at"),
+        delivered_at: row.get("delivered_at"),
+        acknowledged_at: row.get("acknowledged_at"),
+        delivery_attempts: row.get("delivery_attempts"),
+    }).collect()))
+}
+
 async fn delete_device(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
@@ -1320,9 +1358,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/admin/users/:id/rotate-token", post(rotate_user_token))
         .route("/v1/admin/devices", get(list_devices).post(register_device))
         .route("/v1/admin/devices/:id", axum::routing::delete(delete_device))
+        .route("/v1/admin/devices/:id/commands", get(list_device_commands).post(queue_command))
         .route("/v1/admin/devices/:id/rotate-token", post(rotate_device_token))
         .route("/v1/admin/devices/:id/config", get(get_config).put(put_config))
-        .route("/v1/admin/devices/:id/commands", post(queue_command))
         .route("/v1/admin/devices/:id/artifacts", post(upload_site_archive))
         .route("/v1/admin/devices/:id/relay-sites", get(list_relay_sites).post(create_relay_site))
         .route("/v1/admin/relay-sites/:id/verify", post(verify_relay_site))
