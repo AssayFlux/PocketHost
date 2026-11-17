@@ -135,3 +135,15 @@ This section supersedes the earlier sequencing and verification statements above
 - Gate 4 remains open: passkeys and complete fresh-reauthentication/security acceptance are not implemented/verified.
 - Gates 5–7 remain open pending successful Android instrumentation, inspection of screenshots/hierarchy artifacts, representative device capacity measurements, lifecycle fault testing and human accessibility/onboarding review.
 - Do not interpret APK compilation or a successful quality workflow as release approval, production security acceptance or closure of Gates 2–7.
+
+
+## Verification update — 2026-11-17 00:24 UTC
+
+- Current implementation SHA: `4f7d887ab26935dca0ca19a135b55e4b2f779d92` on `main`.
+- Quality workflow [43983408019](https://github.com/AssayFlux/PocketHost/actions/runs/43983408019) completed successfully; all six jobs passed, including control-plane/PostgreSQL and deployment-profile checks.
+- Android integration workflow [43983407943](https://github.com/AssayFlux/PocketHost/actions/runs/43983407943): cloudflared Android ABI build and ELF verification passed; separate ABI debug APK builds and APK-content verification passed; runtime companion build passed. Artifact `pockethost-debug-apks` was uploaded (GitHub artifact 14285116893).
+- The APK artifact contains `app-arm64-v8a-debug.apk`, `app-armeabi-v7a-debug.apk`, `app-x86_64-debug.apk` and `pockethost-runtime-worker-debug.apk`. These are debug outputs, not signed release packages. The host APKs were extracted and SHA-256 verified for delivery. This is build/package evidence only.
+- At this snapshot, API 26 emulator instrumentation is still running; API 33 and API 35 jobs are queued. No API-matrix pass is claimed. Screenshot/hierarchy and instrumentation report artifacts have not yet been reviewed.
+- Gate 7 source increment: first-publish guidance is now present in the Sites empty state, with a test asserting the first-publish heading, top-level `index.html` guidance and start-hosting direction. This closes that narrow source/documentation task only; terminal-free publication execution and API-matrix execution remain unverified.
+- Gate 2 remains open by owner instruction. Gates 3–7 remain open pending their implementation and evidence gaps; Gate 8 remains open for signed release, physical-device, external connectivity and independent review.
+- Do not infer runtime correctness, release readiness, production isolation or gate closure from successful compilation/APK packaging.
