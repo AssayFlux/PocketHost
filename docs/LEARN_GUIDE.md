@@ -49,10 +49,9 @@ Static websites do not require a language runtime.
 
 ## 5. Connect devices
 
-- Wi-Fi/LAN is preferred for secure control and bulk transfers.
-- Bluetooth supports nearby discovery, pairing and small control messages.
-- USB works only on supported hardware and OS APIs.
-- Remote links use authenticated encrypted connections.
+- Wi-Fi/LAN is the preferred target transport for secure control and bulk transfers; current enrollment is still a manual challenge/proof exchange.
+- Bluetooth discovery/pairing and USB provisioning are planned transport paths, not yet end-to-end supported flows.
+- Remote links use authenticated encrypted connections; the current Linux agent HTTPS bearer preview is not mutual TLS.
 
 LAN discovery and authenticated transport are still being implemented. BLE and USB are planned transport paths, not currently supported end-to-end pairing flows. Changing transport must never change device identity or permissions.
 
