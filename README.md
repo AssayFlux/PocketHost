@@ -193,11 +193,12 @@ The Android module declares min SDK 26, target SDK 35 and native ABI targets arm
 
 ## DEVELOPMENT AND VERIFICATION
 
-Run commands from the repository root. The Android build requires JDK 17, Android SDK/NDK, Rust 1.88 and <code>cargo-ndk</code>. The cloudflared Android native dependency is prepared by the repository build helper.
+Run commands from the repository root. The Android build requires JDK 17, Android SDK/NDK (NDK 27.2.12479018 in CI), Go 1.27.4 for the cloudflared helper, Rust 1.88 and <code>cargo-ndk</code>. Install the Android Rust targets before compiling. The cloudflared Android native dependency is prepared by the repository build helper.
 
 ### Android main app
 
 ~~~bash
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 cargo install cargo-ndk --version 4.1.2 --locked
 bash scripts/build-cloudflared-android.sh
 ./gradlew :app:assembleDebug
