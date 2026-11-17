@@ -2,17 +2,9 @@ name: Protocol contract validation
 
 on:
   push:
-    paths:
-      - "protocol/**"
-      - "scripts/validate-protocol.py"
-      - "tests/test_protocol_contracts.py"
-      - ".github/workflows/protocol-contracts.yml"
+    branches: [Alpha]
   pull_request:
-    paths:
-      - "protocol/**"
-      - "scripts/validate-protocol.py"
-      - "tests/test_protocol_contracts.py"
-      - ".github/workflows/protocol-contracts.yml"
+    branches: [Alpha]
   workflow_dispatch:
 
 permissions:
