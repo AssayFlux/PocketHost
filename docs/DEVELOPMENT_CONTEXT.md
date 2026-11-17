@@ -21,7 +21,7 @@
 
 1. The phone is the website origin.
 2. Static hosting is the core baseline and remains independent of optional runtimes and external networking.
-3. Simple and Advanced modes; five destinations: Dashboard, Sites, Activity, Learn, Settings.
+3. Simple and Advanced modes; owner-approved native UI: biometric app-unlock screen followed by branded home, hamburger drawer, account dropdown, service carousel and live information centre. See `docs/UI_DESIGN.md`.
 4. Reuse the owner's existing named Cloudflare Tunnel; never create a duplicate.
 5. Maintain the initial bounded AssayFlux Relay source path as a separate first-party alternative; it is not production-available until DNS/TLS deployment, Android validation and external acceptance pass.
 6. Local Network mode remains available; direct port forwarding is not the default.
@@ -110,3 +110,8 @@ Before each task: inspect current `main`, recent commits, relevant source, workf
 - Gate 8 still owns final signed release artifacts, physical ARMv7/ARM64 acceptance, external Cloudflare/Relay connectivity, full release provenance and independent security review. Intermediate debug APK or emulator success does not close Gate 8.
 - Do not claim Android compilation, emulator or physical-device acceptance until the corresponding exact-SHA workflow evidence is complete and inspected.
 - Build inputs: Rust 1.88.0, Gradle wrapper 8.9 with checksum, Java 17, SDK 35, Build Tools 35.0.0, NDK 27.2.12479018, CMake 3.22.1, cargo-ndk 4.1.2, Python 3.11 and committed Cargo/Gradle/npm lockfiles.
+
+
+## Owner-approved Android UI update — 2026-11-17
+
+The previous five-destination bottom-navigation UI contract is superseded by `docs/UI_DESIGN.md`. The hamburger drawer is the primary app navigation and maps every feature to the existing Dashboard, Sites, Activity, Learn and Settings implementations. Do not remove feature logic when replacing navigation. Native app unlock remains the existing optional biometric gate; no native username/password login is implemented. See current `docs/PROJECT_BASELINE.md` for source and acceptance status.
