@@ -1,6 +1,7 @@
 # Step 1 — Frozen Contracts, Trust and Product Boundaries
 
-**Status:** contract baseline frozen for implementation; cryptographic implementation and physical acceptance remain downstream gates.  
+**Status:** Step 1 contract gate closed on Alpha CI; cryptographic implementation and physical acceptance remain downstream gates.  
+**Evidence:** [Protocol contract validation #16](https://github.com/AssayFlux/PocketHost/actions/runs/44059614650) — schema/policy validator and all 15 protocol/trust-state simulation tests passed.  
 **Protocol:** `pockethost.device/1.0`  
 **Product:** Pocket Host 0.1.0
 
