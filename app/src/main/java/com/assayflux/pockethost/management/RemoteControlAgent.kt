@@ -85,7 +85,6 @@ object RemoteControlAgent {
         val runGeneration = generation
         running = true
         val app = context.applicationContext
-        RelayAgent.start(app)
         worker = Thread({
             var retryDelay = POLL_INTERVAL_MS
             while (running && generation == runGeneration && !Thread.currentThread().isInterrupted) {
@@ -113,7 +112,6 @@ object RemoteControlAgent {
 
     @Synchronized
     fun stop() {
-        RelayAgent.stop()
         generation += 1
         running = false
         worker?.interrupt()
