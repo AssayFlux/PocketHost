@@ -29,6 +29,20 @@ class RelayAgentHttpFramingTest {
     }
 
     @Test
+    fun rejectsDuplicateLocalHttpFramingHeaders() {
+        val headers = linkedMapOf<String, String>()
+        RelayAgent.addResponseFramingHeader(headers, "Content-Length", "10")
+        assertTrue(runCatching {
+            RelayAgent.addResponseFramingHeader(headers, "content-length", "20")
+        }.isFailure)
+        assertTrue(runCatching {
+            RelayAgent.addResponseFramingHeader(headers, "Transfer-Encoding", "chunked")
+        }.isFailure.not())
+        assertEquals("10", headers["content-length"])
+        assertEquals("chunked", headers["transfer-encoding"])
+    }
+
+    @Test
     fun acceptsOnlyUnambiguousBoundedResponseFraming() {
         val chunked = RelayAgent.validateResponseFraming("chunked", null)
         assertTrue(chunked.chunked)
