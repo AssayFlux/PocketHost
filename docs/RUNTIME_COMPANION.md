@@ -1,100 +1,42 @@
-# RUNTIME COMPANION — HOST, BROKER AND EXECUTION-CELL CONTRACT
+# Android Runtime Provider — Pocket Host 0.1.0
 
-**Current state:** companion package and Binder integration exist in source. Production per-project isolated cells are not implemented/accepted.  
-**Packages:** host `com.assayflux.pockethost`; companion `com.assayflux.pockethost.worker`.
+## Responsibility
 
-## 1. Why the companion exists
+The Android runtime companion packages Python and Node runtime integrations separately from the main Android host application. It is an Android-specific provider adapter. It does not define the cross-platform runtime contract for Linux, Windows or macOS.
 
-Android package UIDs protect host-app-private data from code running under a different package UID. Pocket Host moved CPython/Chaquopy and Node mobile native components out of the host APK into a companion application. This is a host-versus-companion boundary only.
+## Current package boundary
 
-## 2. Current source placement
+- Host package: `com.assayflux.pockethost`.
+- Runtime companion: `com.assayflux.pockethost.worker`.
+- Rust engine and local management API run in the host app.
+- Python and Node runtime services run in the companion package.
+- Host/companion communication uses signature-protected Binder IPC with caller and protocol checks.
 
-| Component | Package/process | Responsibility |
-|---|---|---|
-| Rust HTTP engine | Host UID | Website ingress, static serving, reverse proxy |
-| Management API | Host UID | Authenticated loopback administration |
-| Companion service | Worker UID, `:runtime_worker` | Binder control, project transfer, Python lifecycle |
-| Node service | Worker UID, `:node` | Node mobile 24.22.1 runtime |
+The host and companion require a compatible signing identity for the protected IPC contract.
 
-Python and Node processes share the companion application UID. They are not separate per-project identities.
+## Current execution and security boundary
 
-## 3. Binder contract
+Python and Node projects execute under the companion application's UID. Multiple projects within that package are not isolated from each other by the package boundary. Python/Node language-level restrictions and listener binding are not OS-enforced network isolation.
 
-- Signature-level `BIND_RUNTIME_WORKER` permission.
-- Explicit binding to companion service.
-- Verify calling UID/package and matching app signing certificate.
-- Negotiate protocol version before operations.
-- Keep operations bounded: transfer, lifecycle, status, metrics and shutdown.
-- Handle binder death, rebind, stale companion version and process restart.
-- Never send large project payloads in Binder byte arrays; use bounded file descriptors.
+Therefore:
+- Execute only owner-controlled trusted code.
+- Do not run visitor-submitted or arbitrary third-party code.
+- Do not claim multi-tenant sandboxing or per-project egress denial.
+- Do not store credentials inside project roots.
+- Static website serving remains independent of runtime availability.
 
-Host and companion APKs must be signed with the same certificate.
+## Broker contract
 
-## 4. Project transfer
+The companion is being treated as a trusted runtime provider/broker boundary. Its public operations must remain typed, bounded and versioned: provider discovery, project staging, start/stop, health, metrics and shutdown. Project data transfer uses bounded descriptors/files, path validation, staged extraction and atomic activation. The broker must not receive broad access to unrelated host secrets.
 
-The host creates a bounded archive and transfers a read-only FD. Companion validates entries and extracts into staged companion-owned storage before activation. Current source bounds include archive entry count, per-file and total expanded size limits, traversal rejection and common credential-path filtering. These are import hardening, not a complete secret scanner or sandbox.
+## Target execution-cell contract
 
-Replacement must be atomic where supported; preserve old project on failed import. Do not replace active roots. Log a redacted reason and keep recovery material bounded.
+Each project/component requires a distinct OS-enforced execution identity where the host OS supports it. A cell receives only its own project data, explicit persistent volumes, scoped secrets and approved visitor listener/service capabilities. Network and filesystem restrictions must be enforced below the language runtime and verified against native code.
 
-## 5. Current security limitations
+## Failure behavior
 
-- All companion projects share one UID and app-private storage.
-- Python multi-site hosting can load several projects into one interpreter.
-- Node shares the same companion UID.
-- Companion has INTERNET permission; no OS-enforced per-project egress denial.
-- Loopback services are reachable at network layer and require authentication.
-- Python loopback binding and Node listener preload do not constrain native/outbound sockets.
-
-Only owner-controlled trusted code is permitted. No visitor-submitted or hostile code.
-
-## 6. Target broker/cell architecture
-
-The companion becomes a trusted broker only. It must never import customer modules or execute project code. Each project receives one Android isolated service process/UID and a bounded set of explicit capabilities:
-- Its own project data and scratch descriptors only.
-- A host-created visitor listener capability for Rust-routed requests.
-- No host credentials, account state, sibling descriptors or general network access.
-
-Native policy must install before runtime code and fail closed. Validate descriptor transport and SELinux behavior on API 26/33/35. If the selected filesystem or socket handoff fails, redesign; do not weaken platform security.
-
-Full sequence and adversarial tests: `docs/SECURITY_GATE_2_EXECUTION_PLAN.md`. Relay connectivity is separately specified in `docs/ASSAYFLUX_RELAY.md`.
-
-## Native network-probe hardening (2026-11-16)
-
-The isolated-UID feasibility probe now closes inherited socket descriptors other than the broker-created visitor listener before installing seccomp. Cleanup failure is fail-closed, and the instrumentation source supplies an already-connected TCP socket to verify that the descriptor is closed before the policy is applied. This addresses the generic `read`/`write` egress path for inherited sockets in the probe.
-
-This is **not** production per-project confinement: the probe is not the runtime launcher, the denylist still has an allow fallback, and Python/Node have not been migrated into isolated services. Android API 26/33/35 instrumentation is now required during Gates 2–4; source-only tests are not acceptance.
-
-## 7. Acceptance
-
-- Host and companion APKs install/upgrade together with matching signer.
-- Binder caller and protocol checks reject unauthorized/stale clients.
-- Transfer bounds, corruption, traversal, interruption and rollback tests pass.
-- Python and Node real HTTP requests route through Rust.
-- Companion death/rebind and static-origin continuity pass.
-- Gate 2 per-project isolation passes API 26/33/35 and independent review before untrusted code is considered.
-
-
-## Host/companion lifecycle integration
-
-The host Binder client registers an `IBinder.DeathRecipient`, invalidates dead connections and releases the old binding after a remote transaction failure. A later supervisor command establishes a fresh connection and verifies protocol version 1 before issuing runtime commands. Stop operations are observational when no companion is already connected; they do not start a foreground worker merely to stop an absent runtime.
-
-Project transfer uses a staged directory and a recoverable previous-project rename. On the next transfer, an interrupted commit is reconciled: a previous tree is restored if activation never happened, or a stale previous tree is removed if the new destination is already active. A failed activation restores the previous tree when possible and preserves its backup if restoration itself fails.
-
-Orderly companion shutdown explicitly stops the Node service in its separate process and stops Python before the broker exits. Process death remains recoverable through the host supervisor; Android may not invoke service teardown callbacks after a hard process kill.
-
-The Android instrumentation suite includes:
-- Python WSGI execution under the companion UID and rejection of a transferred `.env` file.
-- A Python request routed through the Rust hostname router and reverse proxy.
-- Node HTTP service routed through the Rust reverse proxy.
-- Companion clean shutdown followed by a fresh Binder connection and protocol negotiation.
-
-These are source-level test definitions until the Android build and API 26/33/35 instrumentation runs required during Gates 2–4 complete successfully on the same SHA. Per-project isolation is not provided by this shared-UID companion; Python and Node remain trusted-code-only.
-
-
-## Gate 1 source implementation update
-
-The host client now registers an `IBinder.DeathRecipient`, invalidates dead connections and cleans up failed binds/protocol negotiation. A later supervisor operation binds a fresh companion and renegotiates protocol version 1. Stop operations are no-ops when the companion is absent; they do not start a foreground service just to stop it.
-
-Orderly broker shutdown stops the Node service in its separate process and stops Python. Project replacement recovers interrupted previous-project backups before accepting another transfer, and failed activation restores the previous project when possible.
-
-Source-level instrumentation now covers Python through Rust, Node through Rust, static-origin continuity after Node stops, and clean companion shutdown/rebind. These Android tests must be executed during Gates 2–4 under the Owner's revised sequence; Gate 8 retains physical-device and release acceptance. Shared companion UID remains a non-sandbox; Python/Node are trusted-code-only.
+- Companion crash must not stop static ingress or unrelated hosts.
+- Runtime process crash must not stop sibling components.
+- Binder death must be reported distinctly from package missing, version mismatch, service start denial and runtime crash.
+- Restart uses bounded backoff and crash-loop detection.
+- Deployment activation is staged and rollback-capable.
