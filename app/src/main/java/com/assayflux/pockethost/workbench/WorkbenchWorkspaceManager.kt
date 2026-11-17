@@ -38,19 +38,35 @@ object WorkbenchWorkspaceManager {
             throw IOException("The selected live website directory is unavailable or unsafe.")
         }
         val workspace = workspaceRoot(context, projectId)
-        if (workspace.exists()) {
-            validateTree(workspace)
-            return workspace
-        }
+        val baseline = baselineRoot(context, projectId)
         val parent = workspace.parentFile ?: throw IOException("Workbench storage is unavailable.")
         if (!parent.exists() && !parent.mkdirs()) throw IOException("Could not create Workbench storage.")
+        if (workspace.exists()) {
+            validateTree(workspace)
+            if (!baseline.exists() && commits(context, projectId).isEmpty()) {
+                val baselineStaging = File(parent, ".baseline-${UUID.randomUUID()}")
+                try {
+                    copyTree(live, baselineStaging)
+                    validateTree(baselineStaging)
+                    if (!baselineStaging.renameTo(baseline)) throw IOException("Could not initialize the Workbench baseline.")
+                } finally {
+                    baselineStaging.deleteRecursively()
+                }
+            }
+            return workspace
+        }
         val staging = File(parent, ".workspace-${UUID.randomUUID()}")
+        val baselineStaging = File(parent, ".baseline-${UUID.randomUUID()}")
         try {
             copyTree(live, staging)
             validateTree(staging)
+            copyTree(live, baselineStaging)
+            validateTree(baselineStaging)
             if (!staging.renameTo(workspace)) throw IOException("Could not initialize the Workbench workspace.")
+            if (!baselineStaging.renameTo(baseline)) throw IOException("Could not initialize the Workbench baseline.")
         } finally {
             staging.deleteRecursively()
+            baselineStaging.deleteRecursively()
         }
         return workspace
     }
@@ -138,16 +154,18 @@ object WorkbenchWorkspaceManager {
         val workspace = workspaceRoot(context, projectId)
         if (!workspace.isDirectory) return emptyList()
         validateTree(workspace)
-        val live = liveRoot.canonicalFile
+        val latestCommit = commits(context, projectId).firstOrNull()
+        val baseline = latestCommit?.let { File(commitsRoot(context, projectId), "${it.id}/snapshot") }
+            ?: baselineRoot(context, projectId)
         val workspaceFiles = fileDigests(workspace)
-        val liveFiles = if (live.isDirectory) fileDigests(live) else emptyMap()
-        return (workspaceFiles.keys + liveFiles.keys).toSortedSet().mapNotNull { path ->
+        val baseFiles = if (baseline.isDirectory) fileDigests(baseline) else emptyMap()
+        return (workspaceFiles.keys + baseFiles.keys).toSortedSet().mapNotNull { path ->
             val w = workspaceFiles[path]
-            val l = liveFiles[path]
+            val b = baseFiles[path]
             when {
-                w == null -> Change(path, "deleted", null, l)
-                l == null -> Change(path, "added", w, null)
-                w != l -> Change(path, "modified", w, l)
+                w == null -> Change(path, "deleted", null, b)
+                b == null -> Change(path, "added", w, null)
+                w != b -> Change(path, "modified", w, b)
                 else -> null
             }
         }
@@ -178,7 +196,8 @@ object WorkbenchWorkspaceManager {
                 .put("created_at", createdAt)
                 .put("file_count", stats.first)
                 .put("total_bytes", stats.second)
-                .put("parent_live_release", "current-live-at-commit")
+                .put("parent_commit", commits(context, projectId).firstOrNull()?.id ?: "initial-live-baseline")
+                .put("live_tree_sha256_at_commit", treeDigest(liveRoot))
             val files = JSONArray()
             fileDigests(File(staging, "snapshot")).toSortedMap().forEach { (path, digest) ->
                 files.put(JSONObject().put("path", path).put("sha256", digest))
@@ -339,6 +358,22 @@ object WorkbenchWorkspaceManager {
     private fun commitsRoot(context: Context, projectId: String): File {
         validateProjectId(projectId)
         return File(File(context.filesDir, "workbench"), "$projectId/commits")
+    }
+
+    private fun baselineRoot(context: Context, projectId: String): File {
+        validateProjectId(projectId)
+        return File(File(context.filesDir, "workbench"), "$projectId/baseline")
+    }
+
+    private fun treeDigest(root: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        fileDigests(root).toSortedMap().forEach { (path, hash) ->
+            digest.update(path.toByteArray(Charsets.UTF_8))
+            digest.update(0.toByte())
+            digest.update(hash.toByteArray(Charsets.US_ASCII))
+            digest.update(0.toByte())
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun validateProjectId(projectId: String) {
