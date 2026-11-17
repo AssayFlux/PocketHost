@@ -211,7 +211,7 @@ object RelayAgent {
         val name = line.substring(0, separator).trim()
         val value = line.substring(separator + 1).trim()
         require(name.isNotEmpty() && value.length <= 8_192 &&
-            name.all { it.isLetterOrDigit() || it == '-' }) {
+            name.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' }) {
             "Invalid local HTTP chunk trailer."
         }
         require(name.lowercase() !in setOf("content-length", "transfer-encoding", "host")) {
