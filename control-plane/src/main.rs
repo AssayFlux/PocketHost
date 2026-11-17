@@ -1407,6 +1407,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn command_history_response_exposes_bounded_audit_fields_in_stable_names() {
+        let now = Utc::now();
+        let item = CommandHistoryView {
+            id: Uuid::nil(),
+            kind: "agent_job".into(),
+            state: "succeeded".into(),
+            result: Some(json!({"status":"ok"})),
+            created_at: now,
+            delivered_at: Some(now),
+            acknowledged_at: Some(now),
+            delivery_attempts: 1,
+        };
+        let value = serde_json::to_value(item).unwrap();
+        assert_eq!(value["kind"], "agent_job");
+        assert_eq!(value["state"], "succeeded");
+        assert_eq!(value["result"]["status"], "ok");
+        assert_eq!(value["delivery_attempts"], 1);
+        assert!(value.get("acknowledged_at").is_some());
+        assert!(value.get("acknowledgedAt").is_none());
+    }
+
+    #[test]
     fn bootstrap_session_is_disabled_once_passkey_policy_is_required() {
         assert!(bootstrap_session_allowed(false));
         assert!(!bootstrap_session_allowed(true));
