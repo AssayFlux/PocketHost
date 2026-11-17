@@ -164,12 +164,21 @@ private fun PocketHostDashboard() {
     var selectedTab by remember { mutableStateOf("Home") }
     var settingsSection by remember { mutableStateOf("General") }
     val appearancePreferences = remember { context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE) }
-    var darkThemeOverride by remember {
-        mutableStateOf<Boolean?>(if (appearancePreferences.contains("dark_theme")) {
-            appearancePreferences.getBoolean("dark_theme", false)
-        } else null)
+    var appearanceMode by remember {
+        mutableStateOf(appearancePreferences.getString("appearance_mode", null) ?: run {
+            if (appearancePreferences.contains("dark_theme")) {
+                if (appearancePreferences.getBoolean("dark_theme", false)) "Dark" else "Light"
+            } else "System"
+        })
     }
-    val darkTheme = darkThemeOverride ?: isSystemInDarkTheme()
+    var selectedTheme by remember {
+        mutableStateOf(appearancePreferences.getString("appearance_theme", "Classic") ?: "Classic")
+    }
+    val darkTheme = when (appearanceMode) {
+        "Dark" -> true
+        "Light" -> false
+        else -> isSystemInDarkTheme()
+    }
     var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
     var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
@@ -486,7 +495,7 @@ private fun PocketHostDashboard() {
         }
     }
 
-    PocketHostTheme(darkTheme = darkTheme) {
+    PocketHostTheme(darkTheme = darkTheme, themeName = selectedTheme) {
         val palette = MaterialTheme.colorScheme
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val navigate: (String) -> Unit = { destination ->
