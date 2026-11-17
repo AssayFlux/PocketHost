@@ -74,7 +74,7 @@ class EnrollmentAuthorityModel:
 class ProtocolSchemaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.schemas, cls.policy = load_contracts()
+        cls.schemas, cls.policy, cls.job_policy = load_contracts()
 
     def test_all_schemas_are_valid_2020_12(self):
         self.assertGreaterEqual(len(self.schemas), 4)
@@ -157,6 +157,13 @@ class ProtocolSchemaTests(unittest.TestCase):
         Draft202012Validator(schema, format_checker=FormatChecker()).validate(sample)
         sample["kind"] = "shell.exec"
         self.assertFalse(Draft202012Validator(schema).is_valid(sample))
+
+    def test_job_payload_contract_is_typed_and_role_bound(self):
+        contract = self.job_policy["jobs"]["storage.snapshot"]
+        self.assertEqual(contract["role"], "storage")
+        self.assertEqual(set(contract["required"]), {"namespace_id", "snapshot_id"})
+        self.assertNotIn("command", contract["properties"])
+        self.assertNotIn("shell.exec", self.job_policy["jobs"])
 
     def test_enrollment_challenge_requires_single_use_and_known_transport(self):
         schema = self.schemas["enrollment-challenge.schema.json"]
