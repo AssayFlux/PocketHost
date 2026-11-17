@@ -35,6 +35,10 @@
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Management API schema](management-api-v1.yaml)
 
+## Shared machine-readable contracts
+
+- [Interoperability Protocol](../protocol/README.md) — versioned device hello, signed role grants and typed job envelopes.
+
 ## Repository boundaries
 
 - Android app: `app/`
