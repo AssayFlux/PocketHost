@@ -46,4 +46,4 @@ if __name__ == "__main__":
     schemas, _, job_policy = load_contracts()
     for name in sorted(schemas):
         print(f"VALID protocol/schemas/{name}")
-    print(f"Validated {len(schemas)} Pocket Host protocol schemas, {len(job_policy["jobs"])} typed job kinds and role policy.")
+    print(f"Validated {len(schemas)} Pocket Host protocol schemas, {len(job_policy['jobs'])} typed job kinds and role policy.")
