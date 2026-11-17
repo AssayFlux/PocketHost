@@ -122,3 +122,19 @@ The previous five-destination bottom-navigation UI contract is superseded by `do
 Use `docs/UI_DESIGN.md` as the single source of truth. Important dashboard rules: service cards are tall portrait rectangles (not square or landscape); only the service carousel scrolls horizontally; the dashboard never vertically scrolls; the information centre is fixed/non-scrolling and shows four or five compact information-rich bars at once. Do not implement a vertically scrolling notification feed. The bars should use monochrome icons, useful metrics, meaningful graphs/progress indicators and truthful state.
 
 V1 also specifies the branded local biometric app-unlock screen, calligraphic Pocket Host wordmark, elegant display/readable body typography, the complete hamburger drawer, a separate user/account dropdown, minimal monochrome icons, ten classic palettes and persisted System/Light/Dark modes. Design the drawer and user menu as first-class surfaces; do not invent profile/session actions. Feature pages inherit the design tokens but use their own task-appropriate layouts. All measurements and acceptance rules are in `docs/UI_DESIGN.md`.
+
+
+## Universal device fabric — mandatory architecture context (2026-11-17)
+
+Pocket Host is now planned as a cross-platform distributed self-hosting ecosystem. Android remains the first host and its existing reliability/security gates remain mandatory. Read `docs/UNIVERSAL_DEVICE_FABRIC.md` before changing host architecture.
+
+- Target hosts: Android phones/tablets, Linux, Windows, macOS, VPS/dedicated servers, capable ARM/x86 SBCs and embedded Linux.
+- Target edge nodes: ESP32-class and other MCUs through bounded, explicit device capabilities; constrained sensors may contribute events/telemetry only.
+- Do not promise every service on every device. Use capability tiers and signed compatibility profiles.
+- Keep portable Rust/core contracts separate from OS-specific lifecycle, process, filesystem, networking, installer and security adapters.
+- Do not rewrite Kotlin/Compose Android or merge Pocket Host with DemonCore.
+- DemonCore remains the specialised MCU/fleet workstream. Integrate only through a versioned authenticated allow-list adapter after its physical hardware, claim, transport and OTA gates pass.
+- DCP v1.0 is not authentication and its current message/reassembly limit is 4 KiB. Never expose DCP control or GPIO operations through public website ingress.
+- Raspberry Pi is an SBC, not an MCU. ESP32 devices are not assumed to run the full Pocket Host Rust engine, Node or Python.
+- Remote control is optional; existing local hosting must continue during control-plane outage.
+- Do not claim a platform, hardware profile, workload, fleet scale, replication or failover support without exact-SHA/device-specific verification.
