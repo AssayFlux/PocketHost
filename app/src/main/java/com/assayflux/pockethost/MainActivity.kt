@@ -555,6 +555,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             topBar = {
                 PocketHostOwnerHeader(
                     selectedTab = selectedTab,
+                    selectedSection = settingsSection,
                     hosting = hosting,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onNavigate = navigate,

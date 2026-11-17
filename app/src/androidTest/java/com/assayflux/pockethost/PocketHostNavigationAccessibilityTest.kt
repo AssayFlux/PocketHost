@@ -47,11 +47,11 @@ class PocketHostNavigationAccessibilityTest {
 
         val expectedContent = linkedMapOf(
             "Home" to Triple("Home", "Your services", "Home"),
-            "Hosting" to Triple("Dashboard", "HOSTING STATUS", "Dashboard"),
-            "Websites & files" to Triple("Sites", "WEBSITE", "Sites"),
+            "Hosting" to Triple("Hosting", "HOSTING STATUS", "Dashboard"),
+            "Websites & files" to Triple("Websites & files", "WEBSITE", "Sites"),
             "Workbench" to Triple("Workbench", "POCKETHOST WORKBENCH", "Workbench"),
             "Devices" to Triple("Devices", "COMMAND CENTER IDENTITY", "Devices"),
-            "Activity & logs" to Triple("Activity", "RECENT OPERATIONS", "Activity"),
+            "Activity & logs" to Triple("Activity & logs", "RECENT OPERATIONS", "Activity"),
             "Learn" to Triple("Learn", "Learn Pocket Host", "Learn"),
             "Settings" to Triple("Settings", "Dark theme", "Settings")
         )
@@ -106,18 +106,18 @@ class PocketHostNavigationAccessibilityTest {
             }
             openDrawerDestination("Settings")
             listOf(
-                "Network" to "CLOUDFLARE TUNNEL",
-                "Runtimes" to "TRUSTED APPLICATION CODE ONLY",
-                "About" to "AssayFlux Pocket Host",
-                "General" to "Dark theme"
-            ).forEach { (section, expectedText) ->
+                Triple("Network", "CLOUDFLARE TUNNEL", "Network & tunnels"),
+                Triple("Runtimes", "TRUSTED APPLICATION CODE ONLY", "Runtimes"),
+                Triple("About", "AssayFlux Pocket Host", "About"),
+                Triple("General", "Dark theme", "Settings")
+            ).forEach { (section, expectedText, expectedHeader) ->
                 val sectionTab = device.wait(Until.findObject(By.text(section)), 10_000)
                 assertTrue("Settings section $section is not reachable", sectionTab != null)
                 sectionTab!!.click()
                 assertTrue("Settings section $section did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 10_000))
                 assertTrue("Settings header changed while selecting $section",
-                    device.wait(Until.hasObject(By.text("Settings")), 5_000))
+                    device.wait(Until.hasObject(By.text(expectedHeader)), 5_000))
                 if (section == "Network") {
                     assertTrue("Visitor access policy controls are missing",
                         device.wait(Until.hasObject(By.textContains("Visitor access")), 10_000))

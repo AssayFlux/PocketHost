@@ -55,12 +55,25 @@ import androidx.compose.ui.unit.sp
 @Composable
 internal fun PocketHostOwnerHeader(
     selectedTab: String,
+    selectedSection: String,
     hosting: Boolean,
     onMenuClick: () -> Unit,
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
+    val headerTitle = when (selectedTab) {
+        "Dashboard" -> "Hosting"
+        "Sites" -> "Websites & files"
+        "Activity" -> "Activity & logs"
+        "Settings" -> when (selectedSection) {
+            "Network" -> "Network & tunnels"
+            "Runtimes" -> "Runtimes"
+            "About" -> "About"
+            else -> "Settings"
+        }
+        else -> selectedTab
+    }
     var accountExpanded by remember { mutableStateOf(false) }
     Surface(color = palette.background) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -81,7 +94,7 @@ internal fun PocketHostOwnerHeader(
                         Icon(Icons.Outlined.Menu, contentDescription = null, tint = palette.primary)
                     }
                     Column(Modifier.weight(1f).padding(start = 5.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(if (selectedTab == "Home") "Home" else selectedTab, color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(headerTitle, color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                             Box(Modifier.size(7.dp).clip(CircleShape).background(if (hosting) palette.primary else palette.outline))
                             Text(if (hosting) "Hosting running" else "Hosting stopped", color = palette.onSurfaceVariant, fontSize = 10.sp)
