@@ -34,7 +34,7 @@ This roadmap follows the five-step master plan. The mobile command center is the
 
 ## Step 4 — Main Pocket Host mobile website server
 
-**TypeScript compiler is specified but not present in the main Android dependency graph.** React/Vite are only the separate browser console.
+**Workbench first implementation is present:** the app has a Workbench navigation destination, private per-site draft workspace, nested explorer, basic editor, file/folder operations, change detection and local commit snapshots. It does not yet preview or deploy. **TypeScript compiler is specified but not present in the main Android dependency graph.** React/Vite are only the separate browser console.
 **Partial close boundary:** Step 4 is the main Pocket Host application and its built-in web-serving stack only. HTML and CSS are served by the bundled Rust engine. The required built-in TypeScript authoring/build capability must compile to browser JavaScript before publication; the compiler is not yet bundled or verified. The existing repository contains the Rust static-serving foundation; TypeScript compiler integration and acceptance remain implementation work.
 - Built-in main-app baseline: HTML, CSS, browser JavaScript, TypeScript-to-JavaScript build support, static assets and site routing.
 - Main-app website lifecycle, secure staging, preview and atomic publish approval.
