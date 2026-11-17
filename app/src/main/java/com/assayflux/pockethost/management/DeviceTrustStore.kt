@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import com.assayflux.pockethost.diagnostics.OperationalLog
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -273,6 +274,8 @@ object DeviceTrustStore {
         if (existing != null) registry.put((0 until registry.length()).first { registry.getJSONObject(it).optString("deviceId") == candidate.deviceId }, record) else registry.put(record)
         writeRegistry(context, registry)
         pending.remove(challengeId)
+        OperationalLog.record(context, "INFO", "DEVICE_ENROLLED",
+            "Approved device ${candidate.deviceId} for role ${role} at grant generation ${generation}.")
         return grant
     }
 
@@ -285,6 +288,8 @@ object DeviceTrustStore {
             .remove("grant")
         writeRegistry(context, registry)
         pending.entries.removeAll { it.value.candidateDeviceId == deviceId }
+        OperationalLog.record(context, "WARN", "DEVICE_REVOKED",
+            "Revoked device ${deviceId}; previous grant generations are no longer authorized.")
         return true
     }
 
