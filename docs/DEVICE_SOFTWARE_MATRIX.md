@@ -34,11 +34,13 @@ Legend: **Target** means a planned role subject to hardware/OS acceptance; **Con
 
 Role support is not granted by installation alone. A signed capability profile and physical/OS acceptance are required.
 
-## 3. Mobile runtime placement
+## 3. Main-app web baseline and future runtime add-ons
 
-In 0.1.0, customer-selected language runtimes are installed and executed only on the designated mobile website-serving node. The Android runtime companion is the initial implementation provider. Each language is a separate signed/versioned pack and can be installed or removed independently.
+The Pocket Host main mobile app includes HTML/CSS static serving and the built-in TypeScript-to-browser-JavaScript build workflow. No extra runtime package or companion APK is required for basic websites.
 
-Worker devices execute Pocket Host's signed native node agent and narrowly defined job adapters. They may build source into immutable artifacts, store data, proxy approved traffic or run bounded infrastructure tasks. They do not host arbitrary customer-selected Python/Node/PHP projects in this baseline.
+Optional server-side language runtimes are **future add-ons**, outside Step 4. The planned Runtime Library contains 20 independent packages; each language has its own downloadable, signed/versioned package and is installed only when the user chooses it. The main app remains useful with zero optional runtimes installed. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md).
+
+Worker devices execute Pocket Host's signed native node agent and narrowly defined job adapters. They may build source into immutable artifacts, store data, proxy approved traffic or run bounded infrastructure tasks. They do not become arbitrary customer-language runtime hosts by default.
 
 ## 4. Package requirements
 
