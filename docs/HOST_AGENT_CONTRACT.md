@@ -1,184 +1,114 @@
-# Pocket Host 0.1.0 — Host Agent Contract
+# Pocket Host 0.1.0 — Host Agent and Role Contract
 
-**Contract family:** Pocket Host Host Agent API  
-**Contract version:** 1.0  
+**Contract:** Host Agent API 1.0  
 **Product baseline:** 0.1.0  
-**Transport:** authenticated HTTPS for control-plane exchange; authenticated encrypted peer channels for direct host-to-host data paths.
+**Purpose:** securely enroll devices and assign bounded, independently managed jobs from a mobile command center.
 
-## 1. Purpose
+## 1. Principals and identity
 
-The Host Agent Contract connects the Android/iOS command center, optional remote control plane, host agents, website components and edge gateways without sharing unrestricted process or filesystem access.
+- `owner_id`: user/team.
+- `mobile_client_id`: Android/iOS command-center installation.
+- `device_id`: stable enrolled device identity.
+- `device_instance_id`: current agent installation/boot instance.
+- `role_grant_id`: one approved role assignment.
+- `job_id`: individual job.
+- `service_id` / `component_id`: website deployment identity.
+- `edge_node_id`: MCU identity.
 
-A mobile client issues owner-authorized intent. The target host validates and applies that intent locally. The host agent is the authority for local observed state and service lifecycle.
+Device keys are unique and revocable. Use hardware-backed, non-exportable keys where available; clearly label software-backed fallback. Never reuse owner keys, device keys, runtime keys or firmware-signing keys.
 
-## 2. Identity separation
+## 2. Enrollment and verification
 
-Every message identifies its principal and target:
-- `owner_id`: account/team owner namespace.
-- `client_id`: mobile/browser control client installation.
-- `host_id`: stable enrolled host identity.
-- `host_instance_id`: current host-agent installation/boot identity.
-- `service_id` and `component_id`: deployed workload identities.
-- `edge_node_id`: MCU/device identity managed through an edge gateway.
+1. Candidate installs the correct signed node software.
+2. Candidate creates a key pair and short-lived enrollment challenge.
+3. Candidate displays device ID/fingerprint and one-time verification code or QR.
+4. Mobile discovers candidate via LAN/BLE/USB-supported channel or manual remote enrollment.
+5. Mobile verifies proof of possession over an authenticated encrypted channel.
+6. Owner reviews device identity, measured capabilities, software provenance and requested role.
+7. Owner explicitly approves exact role and permission set.
+8. Registry issues a scoped revocable credential bound to device key and role grant.
 
-A host key is unique to that host and revocable. A client key is not a host key. A service identity is not an owner credential. Restoring a backup must not clone a host identity.
+Codes are one-time, short-lived, rate-limited and bound to the candidate key/challenge. They are not long-term passwords. Discovery, IP, MAC, BLE name, QR content or physical proximity alone never authorizes a device. Revocation invalidates active sessions and queued unstarted jobs.
 
-## 3. Common message metadata
+## 3. Transport contract
 
-All commands/events use a versioned envelope:
-- `contract_version`
-- `message_id` (unique identifier)
-- `correlation_id` (request/response correlation)
-- `idempotency_key` for mutating operations
-- `issued_at` and `expires_at`
-- `owner_id`, `actor_id`, `target_host_id`
-- `scope` and requested capability
-- `payload` validated against the operation schema
+- Wi-Fi/LAN: authenticated encrypted session; preferred for bulk data.
+- BLE: discovery, proximity and small control/pairing messages; never assume bulk transfer capacity.
+- USB: use only documented OS-supported APIs and explicit device permission. Android USB host/accessory capabilities vary by hardware; iOS generic arbitrary device control is not assumed.
+- Remote: authenticated outbound HTTPS or peer channel with short-lived credentials.
 
-Reject unknown required versions, malformed fields, expired messages, oversized payloads and unauthorized scopes. Unknown optional fields may be ignored only when the contract version explicitly permits it.
+Every transport maps to the same device identity and authorization model. Switching transport must not create a new trusted identity or bypass role policy.
 
-## 4. Host registration and enrollment
+## 4. Device capability profile
 
-Enrollment is owner-approved:
-1. Host creates or receives a short-lived one-use challenge.
-2. Mobile client discovers or scans the candidate host.
-3. Candidate displays its device identity fingerprint and capability summary.
-4. Owner approves exact identity, role and requested capabilities.
-5. Host proves possession of its device-bound private key.
-6. Registry binds host identity to owner/team and issues a scoped revocable credential.
-7. Host records enrollment and current policy locally.
+Signed profile includes OS/firmware, version, architecture, ABI, CPU, memory, storage, filesystem, network interfaces, power, battery, thermal limits, isolation mechanisms, supported role IDs, transport support, agent version and update capability. Every value carries source, timestamp and validity. Unknown means unsupported for automatic placement.
 
-Discovery mechanisms (mDNS/DNS-SD, BLE, QR, manual address) are hints only. No network location or device name grants trust.
+## 5. Role grant
 
-## 5. Capability profile
+A role grant includes:
+- role ID and target device ID;
+- owner approval record and policy version;
+- explicit capabilities and denied capabilities;
+- data namespaces, routes and peer identities;
+- resource, power, storage and network budgets;
+- expiry/renewal policy;
+- artifact and software compatibility;
+- health checks, restart, update and rollback policy.
 
-A host advertises a signed profile containing:
-- OS/firmware and version.
-- CPU architecture, ABI and instruction features.
-- RAM, storage, filesystem and accelerators.
-- Network interfaces and supported connectivity adapters.
-- Power, battery, thermal and lifecycle constraints where available.
-- Runtime provider IDs, versions and compatibility ranges.
-- Service types, isolation mechanisms and resource ceilings.
-- Agent version, contract range, update channel and signature identity.
+Roles include storage, traffic, build/publish, native backend/job, backup/recovery, edge gateway and mobile website server. A device can hold multiple roles only when the OS isolation and resource budget support them. Each role is independently pauseable and revocable.
 
-Capability fields include value, source, timestamp and validity. Unknown is not equivalent to zero or supported.
+## 6. Job envelope
 
-## 6. Desired and observed state
+Every job contains contract version, message/job ID, idempotency key, correlation ID, owner/actor, target device, role grant, operation type, artifact digest, input/output references, permissions, budgets, issued/expiry times and audit metadata.
 
-The control plane stores desired state with a monotonically increasing generation and signed policy. Each host stores the latest accepted desired state and reports observed state.
+Commands are typed and allow-listed. No arbitrary shell, unrestricted script, arbitrary filesystem path, SQL or generic process execution. Device validates policy, signature, expiry, capability, resource budget and role grant before accepting.
 
-Host state includes:
-- accepted desired generation;
-- observed generation;
-- active deployment/component release IDs;
-- service health and lifecycle;
-- resource budgets and actual usage;
-- host-agent and provider versions;
-- last successful reconciliation time;
-- degraded reason and recovery status.
-
-A host applies only an authenticated, unexpired and policy-compatible generation. A newer generation supersedes older pending intent. If the control plane is unavailable, the host continues the last accepted generation and reports stale status after reconnection.
-
-## 7. Command lifecycle
-
-Commands are typed and allow-listed. No arbitrary shell, SQL, script, filesystem path or generic process-execution command exists.
-
-State machine:
+## 7. Job lifecycle
 
 ```
-queued -> leased -> started -> succeeded
-                    |-> failed
-                    |-> interrupted
+proposed -> owner-approved -> queued -> leased -> running
+                                      |-> succeeded
+                                      |-> failed
+                                      |-> interrupted
 queued/leased -> expired or cancelled
 ```
 
-- Delivery is at-least-once; exactly-once side effects are not assumed.
-- Every mutation has an idempotency key and durable result record.
-- Host validates actor, scope, expiry, capability, resource budget and local policy.
-- Host persists start/result before acknowledgement.
-- Uncertain operations are reported as interrupted and require reconciliation, not blind replay.
-- Owner-sensitive operations require explicit approval and reauthentication.
-- Revocation closes sessions and invalidates outstanding leases.
+Delivery is at-least-once. Mutations must be idempotent. Persist state before acknowledgement. On uncertain interruption, reconcile observed state; never blindly replay destructive work.
 
-## 8. Core operation families
+## 8. Desired and observed state
 
-- `host.inspect`: capability, health and status.
-- `host.configure`: apply versioned, allow-listed host settings.
-- `host.update`: stage and verify a signed host/provider update.
-- `service.deploy`: stage signed service/component release.
-- `service.lifecycle`: start, stop, restart, drain and rollback.
-- `service.inspect`: health, logs and resource status.
-- `network.configure`: enable/disable approved ingress providers and site routes.
-- `storage.backup`, `storage.restore`: scoped backup/restore workflows.
-- `edge.invoke`: call an explicitly allow-listed edge capability through its gateway.
-- `host.revoke`: invalidate host identity and access.
+The mobile client/control plane proposes desired role state with monotonic generation. The target device stores accepted state durably and reconciles locally. The device reports observed state, health, resource use, last reconciliation, degraded reason and current artifact version.
 
-Each family has a strict JSON schema, maximum payload size, rate limit, timeout, audit policy and required capability. The first implementation may support only a subset.
+If the phone or control plane is unavailable, the device continues only its last owner-approved assignments within their local policy and lease. It does not accept new privileged work from an unknown peer.
 
-## 9. Events and telemetry
+## 9. Role-specific capability boundaries
 
-Host agents publish bounded events:
-- enrollment, heartbeat and revocation;
-- capability changes;
-- desired-state accepted/rejected/reconciled;
-- service deployment, health and lifecycle;
-- resource pressure and admission changes;
-- tunnel provider connection/route/certificate state;
-- backup/update/rollback result;
-- security and audit events.
+- Storage: named encrypted namespaces; no execution or visitor ingress by default.
+- Traffic: exact hostname/site routes and bounded proxy/cache; no management/runtime/MCU endpoints.
+- Build/publish: scoped source inputs and output artifact namespace; cannot sign or activate without approved signing and serving-node verification.
+- Native backend/job: signed fixed-purpose packages and declared APIs; not arbitrary customer language runtime hosting.
+- Backup: encrypted snapshot/restore capability; no live unrestricted filesystem browsing.
+- Mobile website server: Rust ingress and owner-selected language runtime packs.
+- Edge gateway: board-specific allow-listed DCP/MCU operations only.
 
-Telemetry is advisory and never blocks the service request path. Sampling and retention are bounded. Missing values remain unknown. Sensitive data, source code, secrets and raw visitor payloads are not emitted by default.
+## 10. Events and telemetry
 
-## 10. Direct host-to-host interconnection
+Publish bounded enrollment, role-change, job lifecycle, capability, health, resource, update, backup, route, runtime and security events. Telemetry must not block workloads. Never emit secrets, private keys, raw visitor bodies or customer source by default.
 
-Direct peer communication is optional and authenticated:
-- Registry or control plane provides peer identity and connection hints.
-- Peers authenticate using host-bound credentials and standard encrypted transport.
-- Each peer connection is scoped to named service identities and capabilities.
-- The host firewall/OS policy enforces permitted routes.
-- Direct LAN transport is preferred when reachable; an authenticated relay path may be used when permitted.
-- Peer discovery never authorizes access.
-- Peer loss triggers bounded retry and explicit degraded state.
-- No host receives another host's owner credential or unrestricted filesystem access.
+## 11. Failure containment
 
-## 11. Offline behavior and leases
+- Mobile app/control-plane loss does not stop accepted local jobs.
+- One role failure does not stop other roles on the device where isolation supports it.
+- One device loss does not corrupt sibling devices.
+- Transport loss does not change trust or grant new permissions.
+- A stale/revoked role cannot accept new work.
+- Telemetry loss does not block service work.
+- Device restart recovers from durable accepted state and verifies artifacts before resuming.
 
-- A host may continue its last accepted configuration while offline.
-- New owner-sensitive changes require a valid authorization path.
-- Commands expire; they are not applied after their validity window.
-- The host must have a bounded offline policy and maximum credential/authorization lease.
-- If the lease expires, only explicitly permitted local workloads continue; privileged fleet changes remain disabled.
-- Reconnection reconciles by generation and idempotency key.
-- The mobile client can operate locally over an authenticated LAN connection without the public control plane.
+## 12. Compatibility
 
-## 12. Failure isolation
+Contract versions use major/minor compatibility. Devices advertise supported ranges. Breaking changes require an overlap and migration window. Every agent package declares OS/architecture, permissions, supported roles, protocol range and rollback path.
 
-- Control-plane loss does not stop host supervision.
-- Mobile client loss does not stop host workloads.
-- One host agent failure does not affect another host.
-- One service component failure does not affect sibling components.
-- One peer link failure does not corrupt desired state or other links.
-- Telemetry/event delivery failure does not block service traffic.
-- Relay/tunnel failure does not expose management or stop local ingress.
+## 13. Acceptance
 
-## 13. Compatibility and rollout
-
-- Contract versions use explicit major/minor semantics.
-- Breaking changes require a new major contract version and an overlap window.
-- Hosts advertise supported ranges and reject incompatible commands.
-- Roll out control plane, mobile client and host-agent changes with compatibility tests.
-- Configuration schemas carry their own versions and migration functions.
-- Updates are canary-first, staged and rollback-capable.
-
-## 14. Acceptance
-
-- Forged, replayed, expired, wrong-scope and revoked commands are rejected.
-- Duplicate command delivery produces one logical side effect.
-- Host restart during every command state recovers deterministically.
-- Phone and control-plane outages leave existing services running.
-- LAN discovery cannot enroll or authorize a host.
-- Direct peer traffic cannot exceed granted service capabilities.
-- Host capability profile matches measured device resources.
-- Desired/observed generation reconciliation is deterministic.
-- Host, service, provider and peer failures remain isolated.
+Test fake/expired/replayed code, wrong key, wrong owner, role escalation, revoked device, duplicate jobs, power loss during each lifecycle stage, transport switching, phone outage, control-plane outage, storage exhaustion, resource pressure, malicious artifact, unauthorized peer and role-specific privilege boundaries.
