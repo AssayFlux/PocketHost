@@ -4,7 +4,7 @@
   "language": "Node.js",
   "distribution": "Node.js",
   "version": "0.0.0-planned",
-  "status": "planned",
+  "status": "in-progress",
   "description": "JavaScript server applications and APIs",
   "targets": [],
   "artifact": null,
@@ -18,5 +18,10 @@
   "install_strategy": "versioned-side-by-side",
   "health_check": null,
   "rollback": true,
-  "notes": "Catalog placeholder only. No downloadable artifact is published. Build, sign and validate for each supported Android ABI before changing status to available."
+  "notes": "Node.js mobile 24.22.1 is integrated through JNI/libnode for arm64-v8a, armeabi-v7a and x86_64. Existing implementation includes process lifecycle, readiness monitoring, heap bounds and metrics preload smoke test. Complete Android device acceptance, native security hardening and independent signed package distribution before status becomes available.",
+  "existing_implementation": {
+    "location": "runtime-worker/",
+    "distribution": "Currently included together in the runtime-worker companion APK; not yet an independently downloadable package.",
+    "acceptance": "Android device/API matrix, physical-device lifecycle and security acceptance remain open."
+  }
 }
