@@ -15,5 +15,8 @@ pockethost-agent = "pockethost_agent.cli:main"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.package-data]
+pockethost_agent = ["ROLE_CAPABILITY_POLICY.json"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
