@@ -113,7 +113,7 @@ internal fun PocketHostHomeScreen(
             HomeInfoCard(Icons.Outlined.Timeline, "No recent events", "There are no recorded operational events yet.",
                 "New service and system events will appear here.", onClick = { onOpen("Activity") })
         } else recentEvents.take(3).forEach { event ->
-            HomeInfoCard(Icons.Outlined.Timeline, event.code, event.message, event.level, onClick = { onOpen("Activity") })
+            HomeInfoCard(Icons.Outlined.Timeline, event.event, event.message, event.level, onClick = { onOpen("Activity") })
         }
     }
 }
