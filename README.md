@@ -54,6 +54,7 @@ The mobile device's two modes are operating modes, not separate external worker 
 - `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
 - `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
 - `web-console/` — React/TypeScript/Vite secondary operator client.
+- `agents/linux/` — separately installable Linux Node Agent preview with P-256 identity, signed grant/job verification, durable local state and a default-deny health-check executor.
 - `tests/` and `scripts/` — repository test and engineering support assets.
 - [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — separate MCU firmware, board profiles and device-fleet project.
 
@@ -72,7 +73,8 @@ The repository currently contains foundations, specifications and partial implem
 9. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
 10. [Competitive Landscape and Product Gap Analysis](docs/COMPETITIVE_LANDSCAPE.md)
 11. [Step 2 Device Trust Implementation](docs/STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
-12. [Documentation Index](docs/INDEX.md)
+12. [Step 3 Device Agents](docs/STEP_3_DEVICE_AGENTS.md)
+13. [Documentation Index](docs/INDEX.md)
 
 ## Five-step delivery plan and current position
 
@@ -82,7 +84,7 @@ Pocket Host is being delivered in five gated steps. The architecture and documen
 |---|---|---|
 | 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Contract implementation delivered; automated gate evidence pending.** Machine-readable schemas, default-deny role/job policies, trust simulations and CI validation are committed. Production trust code is Step 2. |
 | 2. Mobile command center | Android modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **Android trust foundation implemented; gate open.** Persisted Server only / Command Center + Server modes, Android Keystore P-256 identity, signed five-minute challenges, proof-of-possession, scoped signed grants, local encrypted registry and revocation are implemented with instrumentation tests. LAN/BLE/USB/remote transport, control-plane integration, independently installed agent verification and physical-device acceptance remain. Native iOS app is not present. |
-| 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Foundations / mostly planned.** Android foundations and a separate runtime companion exist. Production role agents/installers for Linux, Windows, macOS and SBCs are not delivered. DemonCore integration needs board-level acceptance. |
+| 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Linux preview foundation committed; gate open.** Independent package, P-256 identity, grant/job signature checks, durable state and one default-deny health-check job are implemented and CI-tested. Authenticated transport, daemon supervision, cgroups, role adapters, signed updates and other platform packages remain open. See `docs/STEP_3_DEVICE_AGENTS.md`. |
 | 4. Mobile website server and runtimes | Static serving, selected mobile runtime packs, isolation and verified publishing | **Partial implementation.** Android/Rust serving and Python/Node runtime foundations exist. Companion installation/recovery, per-project isolation, runtime fault containment and the complete artifact approval pipeline still need verification or work. |
 | 5. Resilience and release | Replication, recovery, connectivity, security, physical-device acceptance, signed releases and support evidence | **Not closed.** Tunnel and control-plane foundations exist, but end-to-end resilience, physical-device matrix, security acceptance and release evidence remain. |
 
