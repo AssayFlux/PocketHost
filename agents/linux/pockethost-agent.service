@@ -1,0 +1,34 @@
+[Unit]
+Description=Pocket Host Linux Node Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=pockethost-agent
+StateDirectoryMode=0700
+Environment=POCKETHOST_AGENT_HOME=/var/lib/pockethost-agent
+ExecStart=/opt/pockethost-agent/bin/pockethost-agent serve
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=32
+LimitNOFILE=256
+ReadWritePaths=/var/lib/pockethost-agent
+
+[Install]
+WantedBy=multi-user.target
