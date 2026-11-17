@@ -9,6 +9,7 @@ DynamicUser=yes
 StateDirectory=pockethost-agent
 StateDirectoryMode=0700
 Environment=POCKETHOST_AGENT_HOME=/var/lib/pockethost-agent
+EnvironmentFile=-/etc/pockethost-agent.env
 ExecStart=/opt/pockethost-agent/bin/pockethost-agent serve
 Restart=on-failure
 RestartSec=5
