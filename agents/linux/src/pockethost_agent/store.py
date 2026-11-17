@@ -54,5 +54,26 @@ class AgentStore:
         except sqlite3.IntegrityError:
             return False
 
+    def claim_job(self, job_id: str) -> bool:
+        with self.db:
+            cursor = self.db.execute(
+                "UPDATE jobs SET state='RUNNING' WHERE job_id=? AND state='QUEUED'", (job_id,)
+            )
+            return cursor.rowcount == 1
+
+    def complete_job(self, job_id: str, result: dict[str, Any]) -> None:
+        with self.db:
+            self.db.execute(
+                "UPDATE jobs SET state='SUCCEEDED', result=? WHERE job_id=? AND state='RUNNING'",
+                (json.dumps(result, separators=(",", ":")), job_id),
+            )
+
+    def fail_job(self, job_id: str, reason: str) -> None:
+        with self.db:
+            self.db.execute(
+                "UPDATE jobs SET state='FAILED', result=? WHERE job_id=? AND state='RUNNING'",
+                (json.dumps({"error": reason[:256]}, separators=(",", ":")), job_id),
+            )
+
     def close(self) -> None:
         self.db.close()
