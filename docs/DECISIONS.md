@@ -18,7 +18,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-004 — First release is static hosting
 
-**Decision:** v0.1.0 includes the main Android app, Rust static server, folder/ZIP import, local preview, optional LAN hosting, foreground lifecycle, backup/recovery and physical-device acceptance. It does not require Workbench, TypeScript compilation, Python/Node or public ingress.
+**Decision:** v0.1.0 includes the main Android app, Rust static server, folder/ZIP import, local preview, optional LAN hosting, Cloudflare Tunnel, first-party AssayFlux Relay, custom-domain HTTP/HTTPS, foreground lifecycle, backup/recovery and physical-device/external-network acceptance. It does not require Workbench, TypeScript compilation, Python/Node or the full fleet control plane.
 
 ## ADR-005 — Website import capacity
 
@@ -56,11 +56,21 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-013 — Control plane is optional for local hosting
 
-**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Public ingress providers are independent and are assigned to v0.2.0 acceptance.
+**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.2.0.
 
 ## ADR-014 — Evidence defines release status
 
 **Decision:** code presence, documentation, UI presence, compilation or a simulated environment cannot close a gate that requires an installable artifact, physical device or external network. Every release stores exact commit, build, artifact digest, target, test result and reviewer.
+
+## ADR-016 — Public visitor ingress ships in v0.1.0
+
+**Decision:** v0.1.0 includes two independent public website ingress paths: Cloudflare Tunnel and the first-party AssayFlux Relay. Both must support owner-verified custom hostnames and HTTP/HTTPS from external networks. HTTPS is valid at the edge; HTTP redirects to HTTPS by default, and plain HTTP content serving is an explicit owner opt-in.
+
+**Reason:** the first hosting release must be capable of serving the owner's real domain from any visitor device, not only localhost or the same Wi-Fi network. This does not make the full device control plane a v0.1.0 dependency.
+
+## ADR-017 — Relay gateway is a visitor-only service
+
+**Decision:** the v0.1.0 Relay deployment may reuse the existing control-plane repository/service foundation but exposes a separate visitor listener and a minimal host/site registration path. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.2.0.
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
