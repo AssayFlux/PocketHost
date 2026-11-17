@@ -5,7 +5,7 @@
 <p align="center"><strong>YOUR DEVICES. YOUR SERVICES. YOUR CONTROL.</strong></p>
 <p align="center">Build personal infrastructure from the devices you own.</p>
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Cinzel+Decorative&weight=600&size=18&pause=1600&color=B18B5E&center=true&vCenter=true&width=900&lines=PERSONAL+INFRASTRUCTURE%2C+BUILT+FROM+YOUR+DEVICES;ONE+MOBILE+SERVER%2C+AN+INTERCONNECTED+DEVICE+FABRIC;VERIFY+EVERY+DEVICE;ASSIGN+BOUNDED+ROLES;SERVE+YOUR+WEBSITES;LOCAL+FIRST%2C+REMOTE+WHEN+YOU+CHOOSE;ENGINEERED+FOR+CONTROL%2C+RESILIENCE+AND+EVIDENCE" alt="Pocket Host principles">
+  <img src="https://readme-typing-svg.demolab.com?font=Cinzel+Decorative&weight=600&size=39&pause=1600&color=BC4A3C&center=true&vCenter=true&width=900&lines=PERSONAL+INFRASTRUCTURE%2C+BUILT+FROM+YOUR+DEVICES;ONE+MOBILE+SERVER%2C+AN+INTERCONNECTED+DEVICE+FABRIC;VERIFY+EVERY+DEVICE;ASSIGN+BOUNDED+ROLES;SERVE+YOUR+WEBSITES;LOCAL+FIRST%2C+REMOTE+WHEN+YOU+CHOOSE;ENGINEERED+FOR+CONTROL%2C+RESILIENCE+AND+EVIDENCE" alt="Pocket Host principles">
 </p>
 
 <p align="center">
