@@ -4,7 +4,7 @@ This roadmap follows the five-step master plan. The mobile command center is the
 
 ## Step 1 — Contracts and trust
 - Normative device/role/job model.
-- Mobile modes: Command Center, Server, Both.
+- Mobile modes: Server only and Command Center + Server; no standalone Command Center-only mode.
 - Device identity, verification code, enrollment and revocation.
 - Wi-Fi, BLE, USB and remote transport constraints.
 - Runtime-centralization and build/publish handoff.
