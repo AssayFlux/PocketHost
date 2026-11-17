@@ -1,143 +1,288 @@
-# AssayFlux Pocket Host 0.1.0
-
+<!-- POCKETHOST · ASSAYFLUX -->
 <p align="center">
-  <img src="Assets/Pocket Host Logo.png" alt="Pocket Host" width="420">
+  <img src="Assets/Pocket Host Logo.png" alt="AssayFlux Pocket Host" width="100%">
+</p>
+<p align="center"><strong>YOUR DEVICES. YOUR SERVICES. YOUR CONTROL.</strong></p>
+<p align="center">Build personal infrastructure from the devices you own.</p>
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Cinzel+Decorative&weight=600&size=18&pause=1600&color=B18B5E&center=true&vCenter=true&width=900&lines=PERSONAL+INFRASTRUCTURE%2C+BUILT+FROM+YOUR+DEVICES;ONE+MOBILE+SERVER%2C+AN+INTERCONNECTED+DEVICE+FABRIC;VERIFY+EVERY+DEVICE;ASSIGN+BOUNDED+ROLES;SERVE+YOUR+WEBSITES;LOCAL+FIRST%2C+REMOTE+WHEN+YOU+CHOOSE;ENGINEERED+FOR+CONTROL%2C+RESILIENCE+AND+EVIDENCE" alt="Pocket Host principles">
 </p>
 
-<p align="center"><strong>Your devices. Your services. Your control.</strong></p>
-<p align="center">Build a personal infrastructure from the devices you own.</p>
+<p align="center">
+  <a href="https://github.com/AssayFlux/PocketHost/blob/Alpha/LICENSE"><img src="https://img.shields.io/github/license/AssayFlux/PocketHost?style=flat-square&label=LICENSE&labelColor=302A35&color=9B6A7A"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml"><img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/quality.yml?branch=Alpha&style=flat-square&label=QUALITY%20CI&labelColor=263B38&color=739B83"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/stargazers"><img src="https://img.shields.io/github/stars/AssayFlux/PocketHost?style=flat-square&label=STARS&labelColor=45372D&color=C69B58"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/forks"><img src="https://img.shields.io/github/forks/AssayFlux/PocketHost?style=flat-square&label=FORKS&labelColor=263C50&color=7399B5"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/issues"><img src="https://img.shields.io/github/issues/AssayFlux/PocketHost?style=flat-square&label=ISSUES&labelColor=49344B&color=A98AB8"></a>
+  <a href="https://github.com/AssayFlux/PocketHost/commits/Alpha"><img src="https://img.shields.io/github/last-commit/AssayFlux/PocketHost/Alpha?style=flat-square&label=LAST%20COMMIT&labelColor=493B32&color=B88C72"></a>
+  <img src="https://img.shields.io/badge/DEFAULT%20BRANCH-Alpha-78649A?style=flat-square">
+  <img src="https://img.shields.io/badge/RELEASE-PRE--RELEASE-B18B5E?style=flat-square">
+</p>
 
-## What is Pocket Host?
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-Kotlin-578A69?style=flat-square&logo=android&logoColor=white">
+  <img src="https://img.shields.io/badge/Jetpack_Compose-UI-6E75A6?style=flat-square&logo=jetpackcompose&logoColor=white">
+  <img src="https://img.shields.io/badge/Rust-Website_Engine-B47752?style=flat-square&logo=rust&logoColor=white">
+  <img src="https://img.shields.io/badge/Python-3.11_Runtime-416B83?style=flat-square&logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/Node.js-24.22.1_Runtime-548B65?style=flat-square&logo=nodedotjs&logoColor=white">
+  <img src="https://img.shields.io/badge/React-Operator_Console-527D9C?style=flat-square&logo=react&logoColor=white">
+  <img src="https://img.shields.io/badge/TypeScript-Web_Console-647E9B?style=flat-square&logo=typescript&logoColor=white">
+  <img src="https://img.shields.io/badge/Vite-Console_Build-8B789C?style=flat-square&logo=vite&logoColor=white">
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Architecture-Modular-78649A?style=flat-square">
+  <img src="https://img.shields.io/badge/Trust-Explicit_Enrollment-527C72?style=flat-square">
+  <img src="https://img.shields.io/badge/Serving-Static_First-657F70?style=flat-square">
+  <img src="https://img.shields.io/badge/Protocol-pockethost.device%2F1.0-9B7955?style=flat-square">
+  <img src="https://img.shields.io/badge/License-Apache--2.0-9B6A7A?style=flat-square">
+</p>
 
-Pocket Host is a mobile-first personal infrastructure builder. It is designed to let an owner connect supported devices, verify each device, grant it specific roles and combine their capabilities into a coordinated service system.
+## ABOUT POCKET HOST
 
-The mobile device has exactly two operating modes:
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure project. It is designed to let an owner use a phone as a website server and, when desired, as the command center for a verified network of other devices.
 
-- **Server only:** the mobile device serves websites. Fleet discovery, device approval and role assignment are unavailable.
-- **Command Center + Server:** the same mobile device serves websites and administers the verified device fleet.
+A desktop, laptop, server, NAS or supported single-board computer can eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Devices are separate products for their respective platforms and connect through shared versioned contracts. A device is never trusted merely because it appears on the network.
 
-Website serving stays enabled in both modes. There is no standalone Command Center-only mode. Only Command Center + Server can approve external devices and grant or revoke fleet roles.
+Pocket Host is a pre-release engineering project. The repository contains substantial working foundations, but the complete device fabric, platform matrix and release acceptance are not finished.
 
-Other devices use separate, platform-appropriate Pocket Host software. A device is not trusted or assigned work just because it appears on the network.
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="https://api.iconify.design/lucide/server.svg?color=%23800020" width="30" height="30" alt="Server">
+      <br><strong>SERVER ONLY</strong><br>
+      Serve websites from the mobile device. Fleet discovery, approval and role administration stay unavailable.
+    </td>
+    <td align="center" width="50%">
+      <img src="https://api.iconify.design/lucide/network.svg?color=%23800020" width="30" height="30" alt="Command center">
+      <br><strong>COMMAND CENTER + SERVER</strong><br>
+      Serve websites and administer the verified device fleet from the same mobile device.
+    </td>
+  </tr>
+</table>
 
-## Core architecture
+**The two-mode rule is fundamental:** website serving remains enabled in both modes. There is no standalone Command Center-only mode.
 
-- **Mobile serving node:** the website-serving role remains on the designated mobile device in both operating modes.
-- **Mobile fleet administration:** available only in Command Center + Server mode. Android is the current application foundation; native iOS is a planned deliverable, not present in this repository.
-- **Separate node software:** platform-specific Android, Linux, Windows, macOS and supported SBC agents are planned as separate installable products. Production desktop/SBC installers are not yet delivered.
-- **Verified device fabric:** explicit device identity, short-lived enrollment challenge, owner approval, scoped role grants, revocation and audit.
-- **Role-based workers:** target roles include storage, backup, traffic, build/publish, bounded native backend jobs and edge gateway. Each role is subject to exact platform and hardware acceptance.
-- **Main-app web baseline:** HTML, CSS and browser JavaScript hosting are included by default. A separate built-in TypeScript compiler must compile website source to browser JavaScript; compiler bundling and acceptance remain open. React/Vite are not part of the Android app.
-- **Operator console:** React + TypeScript + Vite remain isolated in `web-console/` and build independently from the Android application.
-- **Existing optional runtimes:** Python 3.11 and Node.js 24.22.1 already have substantial implementations in the separate `runtime-worker` companion APK; both are in progress, not merely planned. They are not required by the main app. Independent per-language package downloads and final Android acceptance remain open.
-- **Future Runtime Library:** 18 additional language runtimes are planned, each as a separate downloadable package. See `docs/FUTURE_RUNTIME_LIBRARY.md`.
-- **Website delivery:** Rust ingress and HTML/CSS static serving are present; TypeScript build integration and the main-app publish pipeline still require hardening and acceptance.
-- **Device transports:** Wi-Fi/LAN is preferred for secure control and bulk transfer; Bluetooth supports discovery/proximity and small control messages; USB is platform/API-specific; remote links use authenticated sessions.
-- **Visitor ingress:** Local Network, AssayFlux Relay and Cloudflare Tunnel are independent connectivity options.
-- **DemonCore:** separate MCU firmware and edge-device integration through board-aware adapters.
+## PRODUCT CAPABILITIES
 
-## Device roles
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/globe.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>WEBSITE HOSTING</strong><br>
+      HTML, CSS and browser JavaScript static serving through the Rust engine. Built-in TypeScript compilation is a Step 4 requirement and is not yet bundled/verified.
+    </td>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/fingerprint.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>DEVICE TRUST</strong><br>
+      P-256 identity, signed short-lived enrollment challenges, metadata-bound proof, role grants and revocation foundation.
+    </td>
+    <td align="center" width="33%">
+      <img src="https://api.iconify.design/lucide/workers.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>DEVICE WORKERS</strong><br>
+      Linux preview agent with durable jobs, HTTPS polling and default-deny health/storage/backup snapshot operations.
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/blocks.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>OPTIONAL RUNTIMES</strong><br>
+      Python 3.11 and Node.js 24.22.1 already exist in a separate Android companion APK; both are in progress.
+    </td>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>VISITOR CONNECTIVITY</strong><br>
+      Local Network, AssayFlux Relay and Cloudflare Tunnel are independent ingress options.
+    </td>
+    <td align="center">
+      <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
+      <strong>CONTROL &amp; EVIDENCE</strong><br>
+      Versioned contracts, least-privilege policies, audit foundations, bounded operations and CI validation.
+    </td>
+  </tr>
+</table>
 
-| Role | Example device |
-|---|---|
-| Mobile Server / Command Center + Server | Supported Android phone or tablet |
-| Storage / Backup | NAS, PC, server, Raspberry Pi |
-| Traffic | Linux server, SBC, eligible desktop |
-| Build / Publish | Desktop, laptop, server |
-| Native Backend / Jobs | Approved server or SBC worker |
-| Edge Gateway | Raspberry Pi, embedded Linux |
-| MCU / Sensor / Actuator | DemonCore-supported boards, ESP32-class devices |
+## TECHNOLOGY BOUNDARIES
 
-The mobile device's two modes are operating modes, not separate external worker roles. iOS is planned as a mobile command client; always-on iOS website hosting is not promised. Role assignment is capability-aware and explicitly approved. A device is eligible only for roles supported by its measured OS, architecture, hardware, resources, transport and security capabilities.
+The tools have separate responsibilities. They are not one giant Android bundle.
 
-## Repository components
+| Technology | Lives in | Responsibility | Status |
+|---|---|---|---|
+| HTML / CSS / browser JavaScript | Main Android app + Rust engine | Default static website hosting | Foundation implemented |
+| TypeScript compiler | Main Android app | Compile user website TypeScript into browser JavaScript | Required by Step 4; not yet implemented/verified |
+| React + TypeScript + Vite | <code>web-console/</code> | Separate browser operator console | Present; builds in CI |
+| Python 3.11 | <code>runtime-worker/</code> companion APK | Optional server-side WSGI runtime | Existing integration; in progress |
+| Node.js mobile 24.22.1 | <code>runtime-worker/</code> companion APK | Optional server-side JavaScript runtime | Existing integration; in progress |
+| Future 20-language Runtime Library | <code>runtime-library/catalog/</code> | Independently downloadable server-side runtime packs | Catalog manifests only; future work |
 
-- `app/` — Android application: website-serving foundation, local management API, remote-control integration, persisted two-mode selector and a manual cryptographic device-trust workspace. Authenticated transport and end-to-end fleet workflows remain incomplete.
-- `runtime-worker/` — existing Android companion APK integrating CPython 3.11 (Chaquopy) and Node.js mobile 24.22.1 (JNI); runtime integrations are in progress and not yet independently downloadable packages.
-- `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
-- `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
-- `web-console/` — React/TypeScript/Vite secondary operator client.
-- `agents/linux/` — separately installable Linux Node Agent preview with P-256 identity, signed grant/job verification, durable local state, a default-deny health-check executor and bounded local storage/backup snapshot jobs.
-- `tests/` and `scripts/` — repository test and engineering support assets.
-- [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — separate MCU firmware, board profiles and device-fleet project.
+**Important distinctions**
+- The main app must serve static websites without the runtime companion.
+- Python and Node.js are already in the repository. They currently ship together in the separate companion APK and share its application UID. This is not a per-project hostile-code sandbox; use trusted owner-controlled code only until isolation tests pass.
+- The future Runtime Library will split Python and Node into independent signed packages and add 18 planned languages. The JSON manifests are not downloadable runtime binaries.
+- React, TypeScript and Vite dependencies for the operator console are not bundled into the Android app.
+- The main app's built-in TypeScript compiler is a separate website-authoring feature, not Node.js and not a server-side runtime.
 
-The repository currently contains foundations, specifications and partial implementations. It does not yet contain a native iOS app or production Linux, Windows, macOS and SBC node-agent installers.
+See [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md), [Step 4 Web Baseline](docs/STEP_4_WEB_BASELINE.md) and [Future Runtime Library](docs/FUTURE_RUNTIME_LIBRARY.md).
 
-## Normative and planning documents
+## SYSTEM ARCHITECTURE
 
-1. [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
-2. [Master Plan — five execution steps](docs/MASTER_PLAN.md)
-3. [Host Agent and Role Contract](docs/HOST_AGENT_CONTRACT.md)
-4. [Device Software Matrix](docs/DEVICE_SOFTWARE_MATRIX.md)
-5. [Roadmap](docs/ROADMAP.md)
-6. [Repository Baseline](docs/PROJECT_BASELINE.md)
-7. [Mobile UI Design](docs/UI_DESIGN.md)
-8. [Security Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
-9. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
-10. [Competitive Landscape and Product Gap Analysis](docs/COMPETITIVE_LANDSCAPE.md)
-11. [Step 2 Device Trust Implementation](docs/STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
-12. [Step 3 Device Agents](docs/STEP_3_DEVICE_AGENTS.md)
-13. [Documentation Index](docs/INDEX.md)
+~~~mermaid
+flowchart TB
+    OWNER["OWNER"] --> MOBILE["ANDROID POCKET HOST"]
+    MOBILE --> MODE{"OPERATING MODE"}
+    MODE -->|"Server only"| SERVER["WEBSITE SERVER"]
+    MODE -->|"Command Center + Server"| COMMAND["FLEET COMMAND CENTER"]
+    COMMAND --> TRUST["DEVICE IDENTITY · OWNER APPROVAL · ROLE GRANTS"]
+    TRUST --> AGENTS["SEPARATE DEVICE AGENTS"]
+    AGENTS --> STORAGE["STORAGE / BACKUP"]
+    AGENTS --> TRAFFIC["TRAFFIC / GATEWAY"]
+    AGENTS --> BUILD["BUILD / PUBLISH"]
+    AGENTS --> JOBS["BOUNDED NATIVE JOBS"]
+    SERVER --> RUST["RUST HTTP INGRESS"]
+    RUST --> STATIC["HTML · CSS · JAVASCRIPT"]
+    RUST --> COMPANION["OPTIONAL RUNTIME COMPANION"]
+    COMPANION --> PY["PYTHON 3.11"]
+    COMPANION --> NODE["NODE.JS 24.22.1"]
+    SERVER --> INGRESS["LOCAL NETWORK / ASSAYFLUX RELAY / CLOUDFLARE"]
+    COMMAND --> CONTROL["OPTIONAL RUST CONTROL PLANE"]
+    CONSOLE["REACT · TYPESCRIPT · VITE CONSOLE"] --> CONTROL
+    EDGE["DEMONCORE · MCU"] --> AGENTS
+~~~
 
-## Five-step delivery plan and current position
+The diagram shows target integration boundaries, not a claim that every connection or role is production-ready. Current implementation and acceptance status are listed below.
 
-Pocket Host is being delivered in five gated steps. The architecture and documentation define the target; a step is complete only when its implementation, security checks and named-device acceptance evidence pass.
+## REPOSITORY STATUS
 
-| Step | Scope | Current position |
+| TRACK | CURRENT POSITION | OPEN WORK |
 |---|---|---|
-| 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Contract implementation delivered; automated gate evidence pending.** Machine-readable schemas, default-deny role/job policies, trust simulations and CI validation are committed. Production trust code is Step 2. |
-| 2. Mobile command center | Android modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **Android trust foundation implemented; gate open.** Persisted Server only / Command Center + Server modes, Android Keystore P-256 identity, signed five-minute challenges, proof-of-possession, scoped signed grants, local encrypted registry and revocation are implemented with instrumentation tests. LAN/BLE/USB/remote transport, control-plane integration, independently installed agent verification and physical-device acceptance remain. Native iOS app is not present. |
-| 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Linux preview foundation committed; gate open.** Independent package, P-256 identity, grant/job signature checks, durable state and one default-deny health-check job are implemented and CI-tested. Authenticated transport, daemon supervision, cgroups, role adapters, signed updates and other platform packages remain open. See `docs/STEP_3_DEVICE_AGENTS.md`. |
-| 4. Main-app website server | Built-in HTML/CSS/JavaScript serving and TypeScript compilation, site lifecycle and verified publishing | **Partial close.** HTML/CSS static serving is bundled in the main app. TypeScript compiler bundling is specified but not yet implemented/verified. Main-app site lifecycle and publishing acceptance remain open. Optional language add-ons are a future plan, not a Step 4 dependency. See `docs/STEP_4_WEB_BASELINE.md`. |
-| 5. Resilience and release | Replication, recovery, connectivity, security, physical-device acceptance, signed releases and support evidence | **Not closed.** Tunnel and control-plane foundations exist, but end-to-end resilience, physical-device matrix, security acceptance and release evidence remain. |
+| **STEP 1 · CONTRACTS** | Protocol 1.0 schemas, role/job policies, validator and trust simulations committed | Confirm Alpha CI evidence and complete review |
+| **STEP 2 · MOBILE TRUST** | Android two-mode UI, P-256 owner identity, signed challenge/proof, role grant, encrypted registry and revocation foundation | Authenticated transports, per-use key auth, full control-plane workflow, agent provisioning and physical-device acceptance |
+| **STEP 3 · DEVICE AGENTS** | Linux preview package, durable SQLite jobs, HTTPS polling, signed grants/jobs, health and local storage/backup snapshot executors | Full mobile provisioning, grant renewal/revocation, stronger isolation, other OS packages, missing worker roles and hardware acceptance |
+| **STEP 4 · WEB SERVER** | Rust static-serving foundation, site import/registry/backup and Android hosting lifecycle | Main-app TypeScript compiler, secure staging/preview/atomic publish and physical-device acceptance |
+| **STEP 5 · RESILIENCE** | Control-plane, Relay, Cloudflare, backup and diagnostics foundations exist | External ingress acceptance, restore drills, security review, fault/soak testing and signed release acceptance |
+| **FUTURE RUNTIME LIBRARY** | Python and Node.js runtime foundations; 20 catalog manifests | Independent package artifacts, Runtime Manager, security/lifecycle acceptance and 18 additional runtimes |
 
-### What “complete” means
+No step is considered complete solely because documentation, source code or a successful compile exists. See [Master Plan](docs/MASTER_PLAN.md) and [Repository Baseline](docs/PROJECT_BASELINE.md).
 
-- A document, design, interface or repository folder is not proof that a capability is implemented.
-- A successful compile is not proof that a device role, transport or platform is supported.
-- Each gate requires automated tests plus acceptance on its named OS, hardware and workload.
-- Unsupported platforms and roles remain labelled planned or conditional until evidence is recorded.
-- The mobile device has exactly two modes: **Server only** and **Command Center + Server**. Both serve websites; only the combined mode administers the fleet.
-- Accepted worker jobs must have defined local lifecycle and recovery behavior; the mobile app or optional remote control plane must not be treated as the only runtime authority for work already accepted by a worker.
+## ANDROID APPLICATION
 
-See [Master Plan](docs/MASTER_PLAN.md), [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md), [Project Baseline](docs/PROJECT_BASELINE.md), [Roadmap](docs/ROADMAP.md) and [Competitive Landscape](docs/COMPETITIVE_LANDSCAPE.md) for detailed scope, evidence requirements and product positioning.
+The current Android app is a Kotlin/Jetpack Compose application with a native Rust website engine. Its repository includes:
+- Website hosting foreground service and boot/recovery hooks.
+- Site import from folder, ZIP and individual files; site registry and preview flow.
+- Site/application backup and interrupted-operation recovery foundations.
+- Local management API and remote control agent.
+- Owner/account and biometric confirmation foundations.
+- Device trust store and Command Center device screen.
+- Capacity, telemetry, metrics and operational logs.
+- Cloudflare Tunnel integration and AssayFlux Relay client foundation.
+- Runtime companion client, trust acknowledgement and project transfer.
 
-## Build and verification
+The Android module declares min SDK 26, target SDK 35 and native ABI targets arm64-v8a, armeabi-v7a and x86_64. Declared build targets are not a substitute for device acceptance.
 
-Run commands from the repository root.
+## DEVICE SOFTWARE
 
-Main Pocket Host Android application:
+| Device | Software | Repository status |
+|---|---|---|
+| Android phone/tablet | Pocket Host main app | Implemented foundation; device acceptance open |
+| Android runtime provider | Separate runtime companion APK | Python + Node integrations in progress |
+| Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
+| Windows | Native worker agent | Planned |
+| macOS | Native worker agent | Planned |
+| Raspberry Pi / SBC | Board/OS-specific agent or gateway | Planned; no board certified |
+| iOS | Mobile client | Planned; no iOS source project here |
+| DemonCore / MCU | Separate firmware and board profiles | External project; Pocket Host adapter acceptance open |
 
-```bash
+## DEVELOPMENT AND VERIFICATION
+
+Run commands from the repository root. The Android build requires JDK 17, Android SDK/NDK, Rust 1.88 and <code>cargo-ndk</code>. The cloudflared Android native dependency is prepared by the repository build helper.
+
+### Android main app
+
+~~~bash
+cargo install cargo-ndk --version 4.1.2 --locked
+bash scripts/build-cloudflared-android.sh
 ./gradlew :app:assembleDebug
-```
+~~~
 
-The separate `runtime-worker` module is the existing Python/Node.js runtime companion, not part of the main-app Step 4 baseline. Build it independently from the main app:
+### Optional Python/Node runtime companion
 
-```bash
+~~~bash
 ./gradlew :runtime-worker:assembleDebug
-```
+~~~
 
-Rust website engine:
+This builds a separate companion APK. It is not required for static website hosting.
 
-```bash
+### Rust website engine
+
+~~~bash
 cargo test --manifest-path rust-engine/Cargo.toml --locked
-```
+~~~
 
-Remote control plane:
+### Python runtime and Linux agent tests
 
-```bash
-cargo test --manifest-path control-plane/Cargo.toml --locked
-```
+~~~bash
+python -m pip install -e agents/linux
+PYTHONPATH=agents/linux/src python -m unittest discover -s tests/python -v
+~~~
 
-Browser console:
+### Node.js runtime smoke test
 
-```bash
-cd web-console && npm ci && npm run build
-```
+~~~bash
+node tests/node/metrics-smoke.cjs
+~~~
 
-These are build/test entry points, not a claim that every command has passed in the current checkout or that the product is release-ready. A successful build does not prove a device role, transport or platform is supported. Use the named acceptance matrix and record evidence for each target.
+### Browser operator console
 
-## License
+~~~bash
+cd web-console
+npm ci
+npm run build
+~~~
 
-Apache License 2.0. See [LICENSE](LICENSE).
+### Protocol contracts
+
+~~~bash
+python -m pip install jsonschema==4.23.0
+python scripts/validate-protocol.py
+python -m unittest discover -s tests -p 'test_protocol_contracts.py' -v
+~~~
+
+### CI evidence
+
+The [Pocket Host quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) checks Rust, Python/Linux agent, browser console, Node metrics, Gradle wrapper and control-plane configuration/tests. The latest quality run at the previous documentation snapshot passed: [run 44046355538](https://github.com/AssayFlux/PocketHost/actions/runs/44046355538). CI does not by itself prove Android runtime execution, physical-device behavior, external public reachability or production security.
+
+The Android integration workflow has compile-only and manual APK/emulator paths. APK packaging and emulator tests are not automatic on every push. No production APK, signed release or device certification is claimed by this README.
+
+## DOCUMENTATION
+
+| Document | Purpose |
+|---|---|
+| [System Architecture](docs/SYSTEM_ARCHITECTURE.md) | Normative system boundaries, topology and trust |
+| [Master Plan](docs/MASTER_PLAN.md) | Five-step implementation plan |
+| [Roadmap](docs/ROADMAP.md) | Milestones and gate definitions |
+| [Repository Baseline](docs/PROJECT_BASELINE.md) | Source-audited implementation inventory |
+| [Device Software Matrix](docs/DEVICE_SOFTWARE_MATRIX.md) | Platform/role support boundaries |
+| [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md) | React/Vite, TypeScript compiler and runtime separation |
+| [Step 1 — Protocol](docs/STEP_1_TRUST_AND_PROTOCOL.md) | Schemas, signing and threat model |
+| [Step 2 — Mobile Trust](docs/STEP_2_DEVICE_TRUST_IMPLEMENTATION.md) | Android enrollment and owner trust foundation |
+| [Step 3 — Device Agents](docs/STEP_3_DEVICE_AGENTS.md) | Linux agent and remaining platform work |
+| [Step 4 — Web Baseline](docs/STEP_4_WEB_BASELINE.md) | Main-app static hosting and TypeScript compiler requirements |
+| [Future Runtime Library](docs/FUTURE_RUNTIME_LIBRARY.md) | Twenty optional server-side runtime catalog |
+| [Security and Isolation](docs/SECURITY_ISOLATION_DESIGN.md) | Threats, privilege boundaries and acceptance |
+| [Website Deployment](docs/WEBSITE_DEPLOYMENT.md) | Site lifecycle, runtime placement and publishing |
+| [Control Plane](docs/CONTROL_PLANE_DEPLOYMENT.md) | Optional remote fleet coordination |
+| [AssayFlux Relay](docs/ASSAYFLUX_RELAY.md) | First-party visitor ingress provider |
+| [Cloudflare Tunnel](docs/CLOUDFLARE_TUNNEL.md) | Independent public ingress provider |
+| [Release Signing](docs/RELEASE_SIGNING.md) | Signing, SBOM and release provenance |
+| [Documentation Index](docs/INDEX.md) | Full document catalogue |
+
+## PROJECT IDENTITY
+
+<p align="center">
+  <img src="https://img.shields.io/badge/ASSAYFLUX-Personal_Infrastructure-800020?style=flat-square">
+  <img src="https://img.shields.io/badge/PRODUCT-Pocket_Host-78649A?style=flat-square">
+  <img src="https://img.shields.io/badge/DEFAULT_BRANCH-Alpha-527C72?style=flat-square">
+  <img src="https://img.shields.io/badge/STATUS-Engineering_Pre--Release-B18B5E?style=flat-square">
+  <img src="https://img.shields.io/badge/VALIDATION-Before_Claims-657F70?style=flat-square">
+</p>
+
+Pocket Host is licensed under the [Apache License 2.0](LICENSE).
