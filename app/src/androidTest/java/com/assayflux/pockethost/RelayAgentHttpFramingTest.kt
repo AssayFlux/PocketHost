@@ -29,6 +29,16 @@ class RelayAgentHttpFramingTest {
     }
 
     @Test
+    fun chunkTrailersRejectMalformedAndFramingOverrides() {
+        RelayAgent.validateChunkTrailer("x-checksum: abc123")
+        assertTrue(runCatching { RelayAgent.validateChunkTrailer("not-a-header") }.isFailure)
+        assertTrue(runCatching { RelayAgent.validateChunkTrailer("Content-Length: 0") }.isFailure)
+        assertTrue(runCatching { RelayAgent.validateChunkTrailer("Transfer-Encoding: chunked") }.isFailure)
+        assertTrue(runCatching { RelayAgent.validateChunkTrailer("Host: attacker.test") }.isFailure)
+        assertTrue(runCatching { RelayAgent.validateChunkTrailer("x-note: " + "a".repeat(8_193)) }.isFailure)
+    }
+
+    @Test
     fun rejectsDuplicateLocalHttpFramingHeaders() {
         val headers = linkedMapOf<String, String>()
         RelayAgent.addResponseFramingHeader(headers, "Content-Length", "10")
