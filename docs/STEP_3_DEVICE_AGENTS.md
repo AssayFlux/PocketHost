@@ -8,7 +8,7 @@ A separately installable Python package now exists at `agents/linux`. It is deli
 
 Implemented:
 - Independent P-256 device identity with SHA-256 SPKI device ID and private key file mode 0600.
-- Protocol 1.0 enrollment challenge proof signing.
+- Protocol 1.0 enrollment challenge proof signing after verifying the owner's P-256 challenge signature; proof binds all advertised candidate metadata and requested capabilities.
 - Owner-signed role grant verification, including target device, owner fingerprint/key ID, P-256 signature, validity window, generation floor, role capability allow-list and resource budget shape.
 - Durable SQLite WAL/FULL assignment and generation state with restrictive local file permissions.
 - Durable queued/running/succeeded/failed job transitions, idempotency-key uniqueness and interrupted-job recovery on service restart.
