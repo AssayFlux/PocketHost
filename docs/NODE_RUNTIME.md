@@ -1,6 +1,6 @@
 # Node.js Runtime — Existing Companion Implementation
 
-<badge>IN PROGRESS</badge> Node.js is already implemented in the repository as a native Android runtime companion integration. It is outside the main app's Step 4 scope, but it is not merely a future idea. Native integration, lifecycle controls and host-side smoke tests exist; Android device acceptance, production hardening and independent downloadable package distribution remain open.
+**STATUS: IN PROGRESS** Node.js is already implemented in the repository as a native Android runtime companion integration. It is outside the main app's Step 4 scope, but it is not merely a future idea. Native integration, lifecycle controls and host-side smoke tests exist; Android device acceptance, production hardening and independent downloadable package distribution remain open.
 
 ## Placement
 
