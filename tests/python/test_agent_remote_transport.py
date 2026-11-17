@@ -159,6 +159,10 @@ class RemoteTransportTests(unittest.TestCase):
             self.assertTrue(client.acknowledge.call_args.args[1])
             self.assertEqual(1, store.get_generation())
             self.assertEqual(grant["grant_id"], json.loads(store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()[0])["grant_id"])
+            client.reset_mock()
+            process_command(client, store, device_id, {"id": str(uuid.uuid4()), "kind": "install_grant", "payload": {"grant": grant, "owner_public_key_spki": base64.b64encode(owner_der).decode("ascii")}})
+            self.assertTrue(client.acknowledge.call_args.args[1])
+            self.assertEqual("grant_already_installed", client.acknowledge.call_args.args[2]["status"])
             wrong = dict(grant)
             wrong["generation"] = 2
             wrong["device_id"] = "c" * 64
