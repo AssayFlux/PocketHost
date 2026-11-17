@@ -47,7 +47,7 @@ The drawer routes into the existing Hosting/Dashboard, Websites/Sites, Relay & N
 
 ## ABOUT THE PROJECT
 
-**AssayFlux Pocket Host** is a phone-first website hosting system. An Android device stores and serves the website; its native Rust engine handles HTTP ingress, hostname routing, static delivery and reverse-proxy traffic. Optional connectivity services make a locally hosted site reachable beyond the phone's network.
+**AssayFlux Pocket Host** is an Android-first website hosting system evolving into a cross-platform self-hosting ecosystem. Today, the Android device is the first host and its Rust engine handles HTTP ingress, hostname routing, static delivery and reverse-proxy traffic. The architecture is being extended to Linux, Windows, macOS, capable servers/SBCs and constrained edge devices through explicit platform and capability profiles.
 
 The product is designed for people who want to publish a website from hardware they already own, while retaining understandable controls over hosting, networking, resource use and recovery.
 
@@ -150,7 +150,7 @@ Technology badges identify components present in the repository. They are not a 
 
 ~~~mermaid
 flowchart TB
-    VISITOR["Website visitor"] --> EDGE["Public edge<br/>Cloudflare today · AssayFlux Relay planned"]
+    VISITOR["Website visitor"] --> EDGE["Public edge<br/>Cloudflare integration · AssayFlux Relay bounded HTTP source"]
     EDGE -->|"forwarded website traffic"| RUST["Rust · Tokio · Hyper<br/>Android website listener"]
     RUST --> ROUTER["Hostname and site router"]
     ROUTER --> STATIC["Static site files"]
@@ -166,7 +166,7 @@ flowchart TB
     BROKER --> WORKERS["Python and Node workers<br/>shared companion UID today"]
 
     ANDROID -. optional heartbeat .-> CP["Optional Axum / PostgreSQL<br/>remote control plane"]
-    RELAY["AssayFlux Relay<br/>planned gateway and device agent"] -. future path .-> EDGE
+    RELAY["AssayFlux Relay<br/>bounded HTTP source; deployment pending"] -. future path .-> EDGE
 ~~~
 
 ### Responsibility boundaries
@@ -194,7 +194,7 @@ For local hosting, the connector is not required. The phone remains the origin i
 |---|---|---|
 | **Local network** | Makes a site available to devices on the owner's trusted LAN | Local hosting path; device and network acceptance required |
 | **Cloudflare Tunnel** | Uses the owner's existing outbound tunnel and domain | Integration exists; verify the named tunnel and external HTTPS |
-| **AssayFlux Relay** | First-party outbound tunnel and public visitor gateway | **Planned — not implemented** |
+| **AssayFlux Relay** | First-party outbound tunnel and public visitor gateway | Partial bounded HTTP path in source; external deployment and acceptance open |
 | **Direct public ingress** | Owner-managed DNS, firewall and port forwarding | Advanced future option; not the default |
 
 ### AssayFlux Relay — first-party connectivity direction
@@ -396,6 +396,7 @@ Read the project in this order:
 8. <code>docs/RUNTIME_COMPANION.md</code>, <code>docs/PYTHON_RUNTIME.md</code> and <code>docs/NODE_RUNTIME.md</code> — runtime integration.
 9. <code>docs/SECURITY_GATE_2_EXECUTION_PLAN.md</code> and <code>docs/SECURITY_ISOLATION_DESIGN.md</code> — isolation and adversarial acceptance.
 10. <code>docs/CLOUDFLARE_TUNNEL.md</code> and <code>docs/ASSAYFLUX_RELAY.md</code> — current and planned public connectivity.
+11. <code>docs/UNIVERSAL_DEVICE_FABRIC.md</code> — cross-platform hosts, SBCs, MCU/edge nodes and multi-host placement.
 11. <code>docs/ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md</code> and <code>docs/SITE_BACKUP.md</code> — capacity and recovery.
 12. <code>docs/RELEASE_SIGNING.md</code> and <code>docs/COMPLETION_MILESTONE.md</code> — signed release and production definition of done.
 
@@ -420,10 +421,10 @@ The repository is distributed under the Apache License 2.0. Third-party runtimes
 
 ## Current engineering plan
 
-The authoritative implementation sequence, modular optional-runtime architecture, security model and gate acceptance criteria are maintained in [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) (Master Engineering Plan V2). Pocket Host uses one required host app and optional independently installable language runtime packs; static hosting does not require any runtime. Package separation by language is not per-project isolation. See the master plan before implementing or reporting gate completion.
+The authoritative implementation sequence, modular optional-runtime architecture, security model, universal device fabric and gate acceptance criteria are maintained in [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) (Master Engineering Plan V3). Pocket Host uses one required host app and optional independently installable language runtime packs; static hosting does not require any runtime. Package separation by language is not per-project isolation. See the master plan before implementing or reporting gate completion.
 
 
-**Connectivity choice:** Pocket Host includes two independent optional public tunnel providers: first-party AssayFlux Relay and Cloudflare Tunnel. Users may use either one or both concurrently, with separate provider health and per-site hostname routing. Local Network-only hosting remains available. Neither tunnel provider is mandatory, and a failure in one must not interrupt the other or local hosting. See the networking North Star and Master Engineering Plan V2.
+**Connectivity choice:** Pocket Host includes two independent optional public tunnel providers: first-party AssayFlux Relay and Cloudflare Tunnel. Users may use either one or both concurrently, with separate provider health and per-site hostname routing. Local Network-only hosting remains available. Neither tunnel provider is mandatory, and a failure in one must not interrupt the other or local hosting. See the networking North Star and Master Engineering Plan V3.
 
 
 ## Universal device vision
