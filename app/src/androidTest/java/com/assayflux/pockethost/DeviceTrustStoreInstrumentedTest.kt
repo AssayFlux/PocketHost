@@ -130,6 +130,39 @@ class DeviceTrustStoreInstrumentedTest {
         assertFalse(DeviceTrustStore.verifyJobEnvelope(envelope, owner.second, "f".repeat(64), grant.grantId))
         DeviceTrustStore.revoke(context, deviceId)
     }
+
+    @Test
+    fun enrollmentRejectsOversizedAndMalformedCandidateMetadata() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val keys = KeyPairGenerator.getInstance("EC").apply {
+            initialize(ECGenParameterSpec("secp256r1"))
+        }.generateKeyPair()
+        val deviceId = DeviceTrustStore.deviceFingerprint(keys.public.encoded)
+        val challenge = DeviceTrustStore.createChallenge(deviceId)
+        val capabilities = List(65) { "storage.read_assigned_namespace" }
+        val candidate = DeviceTrustStore.Candidate(
+            deviceId,
+            Base64.encodeToString(keys.public.encoded, Base64.NO_WRAP),
+            "Worker",
+            "Pocket Host test agent",
+            "Android",
+            "arm64-v8a",
+            "1.0",
+            capabilities
+        )
+        val signer = Signature.getInstance("SHA256withECDSA")
+        signer.initSign(keys.private)
+        signer.update(DeviceTrustStore.enrollmentProofPayload(challenge, candidate))
+        val proof = Base64.encodeToString(signer.sign(), Base64.NO_WRAP)
+        val rejected = runCatching {
+            DeviceTrustStore.approveCandidate(
+                context, challenge.challengeId, candidate, proof,
+                "storage", listOf("storage.read_assigned_namespace")
+            )
+        }.isFailure
+        assertTrue("More than 64 advertised capabilities must be rejected.", rejected)
+    }
+
     @Test
     fun expiredChallengeAndWrongDeviceBindingAreRejected() {
         val owner = DeviceTrustStore.ownerIdentity()
