@@ -65,7 +65,7 @@ internal fun PocketHostHomeScreen(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Your services", color = palette.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Your services", color = palette.onSurface, style = MaterialTheme.typography.headlineMedium)
                 Text("Swipe to explore Pocket Host", color = palette.onSurfaceVariant, fontSize = 12.sp)
             }
             Surface(color = palette.primaryContainer, shape = RoundedCornerShape(50)) {
@@ -99,7 +99,7 @@ internal fun PocketHostHomeScreen(
                                         Icon(service.icon, contentDescription = null, tint = palette.onPrimaryContainer)
                                     }
                                 }
-                                Text(service.title, color = palette.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text(service.title, color = palette.onSurface, style = MaterialTheme.typography.titleLarge)
                                 Text(service.subtitle, color = palette.onSurfaceVariant, fontSize = 12.sp)
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -133,7 +133,7 @@ internal fun PocketHostHomeScreen(
                 }
             }
         }
-        Text("System information", color = palette.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("System information", color = palette.onSurface, style = MaterialTheme.typography.headlineMedium)
         HomeInfoCard(Icons.Outlined.Dashboard, "Hosting status", status, "Active connections: $activeConnections", onClick = { onOpen("Dashboard") })
         val batteryValue = deviceTelemetry.opt("batteryPercent")
         val battery = if (batteryValue == null || batteryValue == JSONObject.NULL) "Unavailable" else "$batteryValue%"
@@ -144,7 +144,7 @@ internal fun PocketHostHomeScreen(
             "Validated internet: ${if (deviceTelemetry.optBoolean("networkValidated")) "Yes" else "No / unknown"}", onClick = { onOpen("Settings:Network") })
         HomeInfoCard(Icons.Outlined.Storage, "Runtime & backup safety", "Python ${if (pythonHosting) "running" else "stopped"} · Node ${if (nodeHosting) "running" else "stopped"}",
             "Runtime projects remain trusted-code-only; backup tools are available in Sites.", onClick = { onOpen("Settings:Runtimes") })
-        Text("Recent activity", color = palette.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("Recent activity", color = palette.onSurface, style = MaterialTheme.typography.headlineMedium)
         if (recentEvents.isEmpty()) {
             HomeInfoCard(Icons.Outlined.Timeline, "No recent events", "There are no recorded operational events yet.",
                 "New service and system events will appear here.", onClick = { onOpen("Activity") })
