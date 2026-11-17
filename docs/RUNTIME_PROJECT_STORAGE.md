@@ -1,9 +1,35 @@
-# Runtime project storage boundary
+# Pocket Host 0.1.0 — Project Storage Contract
 
-Host-side Python and Node project roots are validated as canonical descendants of Pocket Host's private `files`, `cache`, `noBackup` or `codeCache` directories before transfer.
+## Ownership
 
-The host packages the selected project into a bounded ZIP archive and passes a read-only file descriptor over the signature-protected, versioned companion Binder API. The companion validates each archive entry, rejects path traversal and common credential paths, enforces per-file and total extracted-size limits, and extracts into its own private `files/projects/<site-id>` directory using a staging-and-rename update.
+Every website component has a stable project identity and a dedicated data namespace. The host supervisor owns metadata and policy. A runtime cell receives only its own project files, explicitly granted persistent volumes and short-lived scoped capabilities.
 
-Current bounds: 10,000 entries, 64 MiB per extracted file and 256 MiB total extracted project size. Symlinked source entries are rejected. Common `.env*`, credential, SSH/cloud credential and private-key files are excluded or rejected. This is a practical transfer filter, not a comprehensive secret scanner.
+## Android provider behavior
 
-Python and Node execute under the companion app UID, not the host UID. The companion UID still has access to all projects within the companion package; per-site filesystem isolation and enforceable network-egress controls remain incomplete. Only owner-controlled trusted code may execute. Do not store credentials in runtime project folders or expose arbitrary third-party code.
+The Android host validates project roots as canonical descendants of approved app-private storage. Project transfer to the runtime companion uses bounded archives and a read-only descriptor over the protected Binder contract. The companion validates entries, rejects traversal and unsafe paths, enforces file/count/expanded-size limits, and extracts into a staged component directory before activation.
+
+The companion package UID is shared by its projects today; therefore storage placement and archive validation do not provide per-project OS isolation. Only owner-trusted code may execute until distinct per-project isolation and egress denial pass adversarial tests.
+
+## Cross-platform storage contract
+
+Each host adapter declares:
+- Project root and volume identity.
+- Read/write/execute permissions.
+- Quotas and inode/file-count limits.
+- Persistence and backup policy.
+- Encryption-at-rest capability.
+- Snapshot and restore support.
+- Atomic deployment activation and rollback.
+- Data locality and replication constraints.
+
+Do not assume Android private storage, Linux paths, Windows ACLs, macOS sandbox containers and MCU flash have identical semantics.
+
+## Security requirements
+
+- No shared writable project roots.
+- No parent-directory or sibling-project access.
+- Secrets are stored separately and injected as scoped capabilities.
+- Reject symlinks, traversal, duplicate paths, special files and archive bombs.
+- Enforce quotas before extraction and during runtime.
+- Preserve last-known-good release if staging fails.
+- Do not clone device identity or device-bound secrets during restore.
