@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pockethost.assayflux.com/protocol/1.0/enrollment-challenge.schema.json",
+  "title": "Pocket Host One-Time Enrollment Challenge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "challenge_id",
+    "owner_id",
+    "device_id",
+    "challenge_nonce",
+    "issued_at",
+    "expires_at",
+    "single_use",
+    "transport",
+    "signature"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "pockethost.device/1.0"
+    },
+    "challenge_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "device_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "challenge_nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "single_use": {
+      "const": true
+    },
+    "transport": {
+      "enum": [
+        "lan",
+        "ble",
+        "usb",
+        "remote_https"
+      ]
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "ed25519",
+            "ecdsa-p256-sha256"
+          ]
+        },
+        "key_id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "value": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 4096
+        }
+      }
+    }
+  }
+}
