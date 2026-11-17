@@ -15,15 +15,16 @@
 
 ## 2. Mobile operating modes
 
-A prominent mode control exposes exactly two choices:
+A prominent mode control exposes exactly two mutually exclusive choices:
 
-- **Server:** serve websites from this mobile device. Fleet-management controls remain available for local service operations; no remote fleet command role is implied.
-- **Server only:** serve websites; hide fleet enrollment, device approvals and role assignment.
-- **Command Center + Server:** manage and verify the fleet while serving websites on the same mobile device.
+- **Server only:** serve websites from this mobile device. Show website status, domains, runtime manager, local server settings and serving health. Hide fleet discovery, device enrollment, device approvals, role assignment, worker management and fleet command controls.
+- **Command Center + Server:** serve websites and provide the complete fleet command center, including device discovery, verification, owner approvals, role assignment, jobs, monitoring and recovery.
 
-Show the active mode, capability limitations, battery/thermal impact and whether a website-serving process is running. Switching between the two modes must not revoke or stop already-authorized worker assignments. Server only must not expose command-center operations; entering Command Center + Server requires owner authentication.
+There is no Command Center-only mode. Both modes include the mobile website server. The distinction is whether fleet command capabilities are enabled.
 
-iOS displays Server mode only if a supported implementation can satisfy the OS lifecycle and distribution requirements; never imply arbitrary always-on hosting.
+Switching modes must not revoke or stop already-authorized worker assignments. Entering Command Center + Server requires owner authentication. Switching to Server only removes access to fleet administration on this phone but does not erase enrolled devices or cancel their accepted autonomous work.
+
+iOS displays only capabilities that pass its platform lifecycle and distribution requirements; never imply arbitrary always-on hosting.
 
 ## 3. Home and navigation
 
