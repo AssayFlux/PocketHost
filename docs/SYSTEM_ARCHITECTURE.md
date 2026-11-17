@@ -153,7 +153,7 @@ Workbench is the owner-facing website development workspace in the mobile app. I
 
 The serving path must point only at an immutable active release. Workbench edits a separate per-site workspace. Its local commits capture durable snapshots and diffs; a commit is not automatically a production deployment. A staged release is validated, previewed and health-checked, then explicitly approved by the owner before an atomic active-release switch. Failed or interrupted activation restores the previous known-good release. Visitors continue receiving the current release during editing and preview.
 
-Workbench must preserve site boundaries, reject traversal and symlink escapes, exclude secrets/private metadata from public artifacts, bound file/build/storage resources and audit publish/rollback. The current SiteFileManager edits the deployed site tree and is only a foundation; it is not the isolated Workbench architecture. Normative details and acceptance are in [WORKBENCH.md](WORKBENCH.md).
+Workbench must preserve site boundaries, reject traversal and symlink escapes, exclude secrets/private metadata from public artifacts, bound file/build/storage resources and audit publish/rollback. The initial `WorkbenchWorkspaceManager` + Compose screen now provide a private per-site draft workspace, bounded nested explorer/text editing, change detection and local commit snapshots. They do not yet provide isolated preview, TypeScript build, owner-approved release activation or rollback. The legacy SiteFileManager still edits the deployed site tree and is not a substitute for this workspace model. Normative target behavior and acceptance are in [WORKBENCH.md](WORKBENCH.md).
 
 ## 9. Data and traffic roles
 
