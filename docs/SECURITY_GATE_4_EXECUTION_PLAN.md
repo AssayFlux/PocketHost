@@ -14,10 +14,12 @@
 - PostgreSQL CI covers viewer authorization, session expiry/revocation, account revocation, token-rotation invalidation and the five-minute remote write reauthentication window.
 - Device credential rotation is Owner-only; the role predicate rejects Editor and Viewer.
 
-### Local Owner step-up
-- Sensitive Owner mutations are rejected with HTTP 428 when the session's last credential check is older than five minutes.
-- The local console now presents a fresh Owner login prompt on that response, exchanges the Owner password for a new session, and best-effort revokes the superseded session. The user retries the interrupted action after reauthentication.
-- This is fresh password authentication, not passkey-first identity or biometric-bound cryptographic step-up. Full route-by-route instrumentation remains open.
+### Owner passkey step-up
+- Sensitive writes are rejected with HTTP 428 when the server-side session was authenticated more than five minutes ago.
+- The remote console handles this response by invoking WebAuthn with user verification and exchanging the fresh assertion for a new credential-bound Owner session before retrying the write.
+- Before the first passkey enrollment, the bootstrap credential remains available for initial setup and five-minute reauthentication. The first successful passkey registration enables the database passkey-required policy and revokes all bootstrap-derived sessions. Subsequent bootstrap session exchanges fail closed.
+- Lost-device recovery uses ten one-time random 256-bit codes. Only SHA-256 hashes are stored. Each code is atomically consumed once and creates a 12-hour recovery session; the next passkey enrollment rotates the recovery set. Recovery is rate-limited and audited.
+- This provides WebAuthn user-verification step-up, but it is not a claim that every authenticator performs biometric verification specifically: authenticators may satisfy user verification using biometrics or a device PIN/passcode. Route-by-route instrumentation and real browser/authenticator acceptance remain open.
 
 ### Site visitor access
 - Each local site has a separate `accessMode`: `public`, `private` or `restricted`.
@@ -49,7 +51,7 @@ The create response returns the visitor password once. Browser navigation uses H
 
 1. Execute end-to-end WebAuthn registration, passkey authentication, single-use recovery, recovery rotation and lost-passkey restoration tests against the deployed HTTPS origin and supported browsers/authenticators.
 2. Implemented source: Rust applies a bounded eight-failure/60-second lockout keyed by site and effective client IP, with bounded bucket storage. Add production telemetry/abuse review and adversarial load validation.
-3. Execute route-by-route instrumentation for the implemented five-minute local Owner step-up and role separation across every mutation route; passkey-first identity remains separate and open.
+3. Execute route-by-route instrumentation for five-minute WebAuthn Owner step-up and role separation across every mutation route.
 4. Verify TLS-proxy trust configuration cannot be forged by a non-loopback peer and test direct LAN rejection.
 5. Execute Android instrumentation tests for site mode changes, visitor creation/rotation/revocation, browser 401 challenge, cross-site credential isolation, runtime proxy stripping and backup secret exclusion.
 6. Run adversarial cross-site token reuse and revoked-token tests against the real native server and physical Android device.
