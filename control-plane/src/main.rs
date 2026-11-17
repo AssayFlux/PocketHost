@@ -437,8 +437,11 @@ async fn finish_owner_passkey_authentication(
     let state: PasskeyAuthentication = serde_json::from_value(row.get("state")).map_err(internal)?;
     let credential: PublicKeyCredential = serde_json::from_value(input.credential).map_err(internal)?;
     let credential_id = hex::encode(credential.get_credential_id());
-    let row = sqlx::query("SELECT credential FROM owner_passkeys WHERE credential_id=$1 AND revoked_at IS NULL")
-        .bind(&credential_id).fetch_optional(&s.db).await.map_err(internal)?
+    // Serialize authentications per credential so concurrent assertions cannot both
+    // validate against the same stored signature counter.
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let row = sqlx::query("SELECT credential FROM owner_passkeys WHERE credential_id=$1 AND revoked_at IS NULL FOR UPDATE")
+        .bind(&credential_id).fetch_optional(&mut *tx).await.map_err(internal)?
         .ok_or((StatusCode::UNAUTHORIZED, "unknown_or_revoked_owner_passkey".into()))?;
     let mut passkey: Passkey = serde_json::from_value(row.get("credential")).map_err(internal)?;
     let result = owner_webauthn()?.finish_passkey_authentication(&credential, &state).map_err(internal)?;
@@ -447,7 +450,6 @@ async fn finish_owner_passkey_authentication(
     let session_id = Uuid::new_v4();
     let token = new_token();
     let expires_at = Utc::now() + chrono::Duration::hours(ADMIN_SESSION_TTL_HOURS);
-    let mut tx = s.db.begin().await.map_err(internal)?;
     sqlx::query("UPDATE owner_passkeys SET credential=$2,last_used_at=now() WHERE credential_id=$1 AND revoked_at IS NULL")
         .bind(&credential_id).bind(updated_credential).execute(&mut *tx).await.map_err(internal)?;
     sqlx::query("INSERT INTO control_sessions(id,user_id,name,role,token_hash,bootstrap_token_hash,user_token_hash,expires_at,owner_passkey_id) VALUES($1,NULL,'PocketHost Owner','owner',$2,NULL,NULL,$3,$4)")
@@ -1403,6 +1405,47 @@ mod tests {
         let cascaded: i64 = sqlx::query_scalar("SELECT count(*) FROM relay_sites WHERE id=$1")
             .bind(site).fetch_one(&db).await.unwrap();
         assert_eq!(cascaded, 0, "Deleting a device must remove its hostname routes.");
+    }
+
+    #[tokio::test]
+    async fn owner_recovery_codes_are_single_use_and_bind_the_recovery_session() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let recovery_id = Uuid::new_v4();
+        let code = new_token();
+        sqlx::query("INSERT INTO owner_recovery_codes(id,code_hash) VALUES($1,$2)")
+            .bind(recovery_id).bind(token_hash(&code)).execute(&db).await.unwrap();
+        let state = AppState {
+            db: db.clone(),
+            admin_token: "owner-test-token-0123456789abcdef".into(),
+            relay: relay::RelayHub::default(),
+        };
+        let mut headers = HeaderMap::new();
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
+        let peer = ConnectInfo("203.0.113.222:40000".parse().unwrap());
+        let (status, Json(body)) = recover_owner_session(
+            State(state.clone()), headers.clone(), peer, Json(OwnerRecoveryRequest { code: code.clone() }),
+        ).await.unwrap();
+        assert_eq!(status, StatusCode::CREATED);
+        let session_token = body["accessToken"].as_str().unwrap();
+        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {session_token}")).unwrap());
+        let actor = admin(&headers, &state).await.unwrap();
+        assert_eq!(actor.role, "owner");
+        assert!(actor.recovery_session);
+
+        let replay = recover_owner_session(
+            State(state), HeaderMap::new(),
+            ConnectInfo("203.0.113.222:40000".parse().unwrap()),
+            Json(OwnerRecoveryRequest { code }),
+        ).await.unwrap_err();
+        assert_eq!(replay.0, StatusCode::UNAUTHORIZED);
+        sqlx::query("DELETE FROM control_sessions WHERE id=$1")
+            .bind(actor.session_id).execute(&db).await.unwrap();
+        sqlx::query("DELETE FROM owner_recovery_codes WHERE id=$1")
+            .bind(recovery_id).execute(&db).await.unwrap();
     }
 
     #[tokio::test]
