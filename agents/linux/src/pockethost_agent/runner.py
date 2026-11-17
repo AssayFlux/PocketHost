@@ -38,6 +38,19 @@ def validate_job(envelope: dict[str, Any], grant: dict[str, Any]) -> None:
         raise ValueError("Job payload has missing or unknown properties.")
     if any(not _valid_value(schema[key], value) for key, value in payload.items()):
         raise ValueError("Job payload value is invalid.")
+    job_budget = envelope.get("resource_budget")
+    grant_budget = grant.get("resource_budget", {})
+    if not isinstance(job_budget, dict) or not {"timeout_seconds", "memory_bytes"}.issubset(job_budget):
+        raise ValueError("Job resource budget is missing required limits.")
+    if (not isinstance(job_budget["timeout_seconds"], int) or not 1 <= job_budget["timeout_seconds"] <= 86400
+            or not isinstance(job_budget["memory_bytes"], int) or job_budget["memory_bytes"] < 1):
+        raise ValueError("Job resource budget is invalid.")
+    if job_budget["memory_bytes"] > grant_budget.get("memory_bytes", 0):
+        raise ValueError("Job memory request exceeds the active role grant.")
+    if job_budget.get("storage_bytes", 0) > grant_budget.get("storage_bytes", 0):
+        raise ValueError("Job storage request exceeds the active role grant.")
+    if job_budget.get("network_bytes", 0) > grant_budget.get("network_bytes_per_day", 0):
+        raise ValueError("Job network request exceeds the active role grant.")
     try:
         issued = datetime.fromisoformat(envelope["issued_at"].replace("Z", "+00:00"))
         expires = datetime.fromisoformat(envelope["expires_at"].replace("Z", "+00:00"))
