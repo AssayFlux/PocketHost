@@ -48,6 +48,17 @@ class PocketHostDashboardUiSmokeTest {
                     hierarchy.takeIf { it.isFile }?.readText()?.take(6_000),
                 homeVisible
             )
+            val accountMenu = device.wait(Until.findObject(By.desc("Open account and app menu")), 10_000)
+            assertTrue("Account dropdown control is missing", accountMenu != null)
+            accountMenu!!.click()
+            assertTrue("Account dropdown settings route is missing",
+                device.wait(Until.hasObject(By.text("App settings")), 5_000))
+            assertTrue("Account dropdown security route is missing",
+                device.wait(Until.hasObject(By.text("Security settings")), 5_000))
+            assertTrue("Account dropdown About route is missing",
+                device.wait(Until.hasObject(By.text("About Pocket Host")), 5_000))
+            device.pressBack()
+
         }
 
         assertTrue("Home screenshot is empty", screenshot.isFile && screenshot.length() > 10_000)
