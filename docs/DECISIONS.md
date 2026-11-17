@@ -97,3 +97,16 @@ Distinguish implemented, automated-tested, emulator-verified, device-verified, e
 ## Changing a decision
 
 Submit a PR updating this file, North Star, Master Plan and affected implementation docs. Explain why the old decision no longer serves the product, migration/security impact and acceptance tests. User-confirmed product intent takes precedence over contributor assumptions.
+
+
+### ADR-018 — Universal device fabric with explicit capability tiers
+
+**Date:** 2026-11-17
+
+**Context:** The owner expanded Pocket Host from Android-only hosting to an ecosystem where capable phones, tablets, PCs, servers, SBCs and constrained devices can contribute hosting or edge capabilities. AssayFlux/DemonCore already targets ESP32 MCU firmware and a device fleet protocol.
+
+**Decision:** Evolve Pocket Host into a cross-platform distributed self-hosting ecosystem. Preserve Android as the first production host. Define portable versioned contracts and add Linux first, then Windows/macOS, SBC profiles, authenticated MCU/edge interoperability and multi-host placement. Use four capability tiers (full host, compact edge host, microcontroller service node, constrained device) and expose only workloads each exact device profile has passed. Keep DemonCore as a separate specialised MCU/fleet project and integrate through an authenticated, allow-listed adapter only after its own hardware/security acceptance.
+
+**Alternatives:** Keep Android-only; merge DemonCore into Pocket Host; treat every MCU as a general website host; rewrite all platforms around one UI/runtime. These were rejected because they either constrain the product or erase important hardware/security boundaries.
+
+**Consequences:** No claim that every device runs every service. Raspberry Pi is treated as an SBC; ESP32-class devices are bounded edge nodes, not general Python/Node hosts by default. DCP v1 is not authentication and must not be publicly exposed. Cross-platform, MCU and multi-host features remain planned until device-specific verification passes. Detailed design is in `docs/UNIVERSAL_DEVICE_FABRIC.md`.
