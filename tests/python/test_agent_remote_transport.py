@@ -134,6 +134,40 @@ class RemoteTransportTests(unittest.TestCase):
             self.assertEqual("SUCCEEDED", row[0])
             store.close()
 
+    def test_owner_signed_role_grant_is_installed_only_for_matching_device(self):
+        with tempfile.TemporaryDirectory() as directory:
+            device_id = "b" * 64
+            owner = ec.generate_private_key(ec.SECP256R1())
+            owner_der = owner.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+            owner_id = public_key_id(owner_der)
+            now = datetime.now(timezone.utc)
+            stamp = lambda value: value.isoformat().replace("+00:00", "Z")
+            grant = {
+                "protocol": "pockethost.device/1.0", "grant_id": str(uuid.uuid4()),
+                "owner_id": owner_id, "device_id": device_id, "role": "native_job",
+                "generation": 1, "capabilities": ["native_job.report_health"],
+                "denied_capabilities": [],
+                "resource_budget": {"cpu_millis": 100, "memory_bytes": 8388608, "storage_bytes": 0, "network_bytes_per_day": 0, "allow_battery_operation": False},
+                "issued_at": stamp(now - timedelta(seconds=1)),
+                "expires_at": stamp(now + timedelta(hours=1)), "policy_version": "1.0",
+            }
+            grant_sig = owner.sign(canonical_json(grant), ec.ECDSA(hashes.SHA256()))
+            grant["signature"] = {"algorithm": "ecdsa-p256-sha256", "key_id": owner_id, "value": base64.b64encode(grant_sig).decode("ascii")}
+            client = Mock()
+            store = AgentStore(Path(directory) / "agent.sqlite3")
+            process_command(client, store, device_id, {"id": str(uuid.uuid4()), "kind": "install_grant", "payload": {"grant": grant, "owner_public_key_spki": base64.b64encode(owner_der).decode("ascii")}})
+            self.assertTrue(client.acknowledge.call_args.args[1])
+            self.assertEqual(1, store.get_generation())
+            self.assertEqual(grant["grant_id"], json.loads(store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()[0])["grant_id"])
+            wrong = dict(grant)
+            wrong["generation"] = 2
+            wrong["device_id"] = "c" * 64
+            client.reset_mock()
+            process_command(client, store, device_id, {"id": str(uuid.uuid4()), "kind": "install_grant", "payload": {"grant": wrong, "owner_public_key_spki": base64.b64encode(owner_der).decode("ascii")}})
+            self.assertFalse(client.acknowledge.call_args.args[1])
+            self.assertEqual(1, store.get_generation())
+            store.close()
+
     def test_invalid_owner_signature_is_never_enqueued(self):
         client = Mock()
         with tempfile.TemporaryDirectory() as directory:
