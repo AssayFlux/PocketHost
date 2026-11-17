@@ -39,6 +39,7 @@
 
 - [Interoperability Protocol](../protocol/README.md) — versioned device hello, one-time enrollment challenge, signed role grants, typed jobs and compatibility rules.
 - [Step 1 Trust and Protocol](STEP_1_TRUST_AND_PROTOCOL.md) — normative trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore contract.
+- [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md) — Android operating modes, Keystore identity, signed enrollment, role grants, revocation, tests and open integration gates.
 
 ## Repository boundaries
 
