@@ -78,13 +78,14 @@ The iOS command-center app and additional desktop/server host agents are defined
 ## Version 0.1.0 documentation
 
 1. [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
-2. [Master Plan](docs/MASTER_PLAN.md)
-3. [Roadmap](docs/ROADMAP.md)
-4. [Baseline inventory](docs/PROJECT_BASELINE.md)
-5. [Mobile and product UI design](docs/UI_DESIGN.md)
-6. [Security isolation](docs/SECURITY_ISOLATION_DESIGN.md)
-7. [Remote control acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
-8. [Documentation index](docs/INDEX.md)
+2. [Host Agent Contract](docs/HOST_AGENT_CONTRACT.md)
+3. [Master Plan](docs/MASTER_PLAN.md)
+4. [Roadmap](docs/ROADMAP.md)
+5. [Baseline inventory](docs/PROJECT_BASELINE.md)
+6. [Mobile and product UI design](docs/UI_DESIGN.md)
+7. [Security isolation](docs/SECURITY_ISOLATION_DESIGN.md)
+8. [Remote control acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
+9. [Documentation index](docs/INDEX.md)
 
 ## Build and verification
 
