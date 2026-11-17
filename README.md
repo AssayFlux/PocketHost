@@ -113,7 +113,7 @@ This is the initial roadmap, not the final product boundary. It will be expanded
 
 ## v0.1.0 — FIRST HOSTING
 
-The first release has one primary promise: **a website imported into Pocket Host can be served correctly by the Android phone.**
+The first release has one primary promise: **a website imported into Pocket Host can be served correctly by the Android phone locally, over LAN and publicly through the owner's domain.**
 
 - Main Android application with the bundled Rust static website engine.
 - Website import from a folder or ZIP.
