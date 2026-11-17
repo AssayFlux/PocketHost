@@ -83,13 +83,13 @@ class LinuxAgentTests(unittest.TestCase):
                 device_key, request, base64.b64encode(owner_der).decode()
             ))
             unsigned = {key: value for key, value in challenge.items() if key != "signature"}
-            payload = canonical_json(unsigned) + b"\\n" + canonical_json(candidate)
+            payload = canonical_json(unsigned) + b"\n + canonical_json(candidate)
             device_key.public_key().verify(proof, payload, ec.ECDSA(hashes.SHA256()))
             altered = dict(candidate)
             altered["display_name"] = "Different device name"
             with self.assertRaises(InvalidSignature):
                 device_key.public_key().verify(
-                    proof, canonical_json(unsigned) + b"\\n" + canonical_json(altered),
+                    proof, canonical_json(unsigned) + b"\n + canonical_json(altered),
                     ec.ECDSA(hashes.SHA256())
                 )
 
