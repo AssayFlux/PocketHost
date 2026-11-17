@@ -69,7 +69,7 @@ Required areas: multi-site Explorer, Editor with unsaved changes, isolated Previ
 
 Publishing validates paths and content, performs bounded build steps, creates an immutable staged release and digest, previews/health-checks it, presents a diff, requires owner approval, atomically activates it and preserves a last-known-good release. Failure or process death must not leave a partially deployed site. TypeScript is supported only after the main-app compiler is bundled and verified. See [Workbench specification](WORKBENCH.md) for the full contract and acceptance checklist.
 
-Current SiteFileManager provides bounded file listing/edit/create/upload/rename/delete primitives but currently targets the deployed site tree; the Websites & Files screen disables many operations while hosting. This is not yet a production-safe isolated Workbench and must not be described as completed.
+Current SiteFileManager provides bounded file listing/edit/create/upload/rename/delete primitives but currently targets the deployed site tree; the Websites & Files screen disables many operations while hosting. A separate WorkbenchWorkspaceManager foundation has been added for isolated workspace copies, path-bounded text operations, content-digest change detection and immutable local commit snapshots. It is not yet connected to the app UI or deployment pipeline. This is not yet a production-safe isolated Workbench and must not be described as completed.
 
 ## 7. Step 4 partial-close definition
 
