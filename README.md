@@ -175,7 +175,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
-| React + TypeScript + Vite | <code>web-console/</code> | Separate browser operator console | v0.2.0 scope |
+| React + TypeScript + Vite | <code>web-console/</code> | Minimal Relay hostname setup UI in v0.1.0; full operator console in v0.2.0 | v0.1.0 / v0.2.0 |
 | Python 3.11 | <code>runtime-worker/</code> companion APK | Optional WSGI server runtime | v0.1.1 |
 | Node.js 24.22.1 | <code>runtime-worker/</code> companion APK | Optional server-side JavaScript runtime | v0.1.1 |
 | Device agents and control plane | <code>agents/</code>, <code>control-plane/</code>, <code>protocol/</code> | Connected device fabric | v0.2.0 |
