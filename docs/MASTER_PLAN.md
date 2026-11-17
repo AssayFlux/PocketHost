@@ -29,8 +29,8 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 
 ## Product software deliverables
 
-- Android mobile command-center application with optional local website-server role.
-- iOS mobile command-center application; hosting claims are constrained by Apple's platform rules.
+- Android mobile application with the website-server role always enabled and a selectable fleet-administration layer: Server only or Command Center + Server.
+- iOS mobile application follows the same two-mode product contract only where website serving passes platform lifecycle acceptance; otherwise do not advertise an unsupported server mode or silently introduce a Command Center-only product.
 - Android worker/host agent and optional server runtime pack manager.
 - Linux host/worker agent packages.
 - Windows host/worker agent installer and service.
