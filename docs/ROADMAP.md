@@ -16,11 +16,11 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - Local phone preview and configurable port.
 - Optional LAN binding and access from a second device on the same Wi-Fi.
 - Cloudflare Tunnel public ingress for an owner-configured custom hostname, using an encrypted tunnel token and an outbound-only Android connector.
-- First-party AssayFlux Relay gateway, deployed by the owner on a public VPS/server, with DNS TXT hostname proof and an authenticated outbound host session.
-- Minimal owner-facing Relay setup surface for host/site registration, hostname binding, DNS TXT challenge display and route revocation; the full browser operator console remains v0.2.0.
-- Public HTTP and HTTPS for verified hostnames; valid HTTPS at the edge and HTTP-to-HTTPS redirect by default. Plain HTTP content serving is an explicit owner opt-in.
+- First-party AssayFlux Relay Node, separately installable on owner-controlled Termux/Android and Linux hardware, with DNS TXT hostname proof and an independent authenticated outbound host session. No paid VPS is required; the gateway device must have public IPv4 with port forwarding or globally routed IPv6.
+- Minimal owner-facing Relay setup surface and standalone Termux/Linux install/start/stop/status tooling, hostname binding, DNS TXT challenge display and route revocation; the full fleet operator console remains v0.2.0.
+- Public HTTP and HTTPS for verified hostnames; valid HTTPS at the edge and HTTP-to-HTTPS redirect by default. Plain HTTP content serving is an explicit owner opt-in target; current Relay edge only redirects HTTP and has no plain-HTTP opt-in.
 - Independent provider controls, health, reconnect, diagnostics and manual provider failover.
-- End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation.
+- End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation for Cloudflare and the standalone self-hosted Relay Node.
 - Foreground service, persistent notification, start/stop/restart and Android lifecycle behavior.
 - Clear permission, network, battery and thermal-state handling.
 - Existing encrypted full-app backup/restore, interrupted-activation recovery and basic diagnostics. Current backup capacity is below the 500 MB import limit and must be aligned or explicitly documented before release.
@@ -39,7 +39,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 7. Stop/restart hosting; background and foreground the app; test network change and process/device restart.
 8. Create and restore an encrypted website backup.
 9. Verify the custom domain from an independent network over HTTP and HTTPS through each configured provider; record DNS/TLS, response headers, content, provider status and management-route isolation.
-10. Record the source SHA, APK artifact digest, relay deployment digest, device/Android version, logs and G0–G9 results.
+10. Record the source SHA, APK and Relay Node artifact digests, public network topology, device/Android version, logs and G0–G9 results.
 
 ## v0.1.1 — Workbench & Runtime Development
 
