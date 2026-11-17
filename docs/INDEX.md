@@ -16,6 +16,7 @@
 
 - [Mobile Design System](UI_DESIGN.md) — Android/iOS command center, branding, themes, navigation and accessibility.
 - [Learn Guide](LEARN_GUIDE.md) — user-facing operating guidance.
+- [Workbench](WORKBENCH.md) — GitHub-inspired website workspace, safe editing, preview, local commits, atomic publishing and rollback contract.
 
 ## Engineering and security
 
