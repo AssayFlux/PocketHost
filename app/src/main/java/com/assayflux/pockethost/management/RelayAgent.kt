@@ -204,6 +204,21 @@ object RelayAgent {
             line.append(next.toChar())
         }
     }
+    internal fun validateChunkTrailer(line: String) {
+        if (line.isEmpty()) return
+        val separator = line.indexOf(':')
+        require(separator > 0) { "Malformed local HTTP chunk trailer." }
+        val name = line.substring(0, separator).trim()
+        val value = line.substring(separator + 1).trim()
+        require(name.isNotEmpty() && value.length <= 8_192 &&
+            name.all { it.isLetterOrDigit() || it == '-' }) {
+            "Invalid local HTTP chunk trailer."
+        }
+        require(name.lowercase() !in setOf("content-length", "transfer-encoding", "host")) {
+            "Forbidden local HTTP chunk trailer."
+        }
+    }
+
     internal fun addResponseFramingHeader(headers: MutableMap<String, String>, name: String, value: String) {
         val normalized = name.lowercase()
         require(normalized == "transfer-encoding" || normalized == "content-length") {
@@ -355,17 +370,7 @@ object RelayAgent {
                                         throw IllegalStateException("Local HTTP chunk trailers exceed their limit.")
                                     }
                                     if (trailer.isEmpty()) break
-                                    val separator = trailer.indexOf(':')
-                                    require(separator > 0) { "Malformed local HTTP chunk trailer." }
-                                    val name = trailer.substring(0, separator).trim()
-                                    val value = trailer.substring(separator + 1).trim()
-                                    require(name.isNotEmpty() && value.length <= 8_192 &&
-                                        name.all { it.isLetterOrDigit() || it == '-' }) {
-                                        "Invalid local HTTP chunk trailer."
-                                    }
-                                    require(name.lowercase() !in setOf("content-length", "transfer-encoding", "host")) {
-                                        "Forbidden local HTTP chunk trailer."
-                                    }
+                                    validateChunkTrailer(trailer)
                                 }
                                 break
                             }
