@@ -1,8 +1,8 @@
-# Optional PocketHost Remote Control Plane deployment
+# Pocket Host 0.1.0 — Optional Fleet Control Plane
 
-## Important: this is not the phone's website server
+## Responsibility boundary
 
-The Android phone remains the website origin and connects directly to Cloudflare Tunnel. The control plane is a **separate optional management service** for remote device registration, heartbeat, queued commands, team roles and audit history. It does not serve website traffic and is not required for local hosting or the phone's Cloudflare Tunnel connection.
+The control plane is an **optional fleet coordination service** for identity, device enrollment, heartbeat, desired state, queued commands, team roles and audit history. It does not serve website traffic and does not supervise host workloads. Android and iOS are the primary command-center clients. Host agents persist their own state and continue the last authorized configuration when this service is unavailable.
 
 The current deployment workflow uses a Linux host with Docker Compose. This is an additional infrastructure requirement only if the owner chooses to deploy the optional remote-management feature. Do not treat a VPS as a prerequisite for the core PocketHost phone-hosting product.
 
@@ -43,7 +43,7 @@ Put these only in GitHub Actions secrets/variables. Never paste private keys, to
 1. Review `control-plane/compose.yaml` and `.github/workflows/deploy-control-plane.yml`.
 2. Populate the required host, SSH, database and Owner-token variables/secrets.
 3. Configure the exact allowed console origin. The deployment workflow writes POCKETHOST_CONTROL_API_HOST from POCKETHOST_CONTROL_DOMAIN; this is the dedicated API hostname and is distinct from POCKETHOST_CONTROL_HOST, which is the SSH host/IP.
-4. For Cloudflare mode, route the dedicated management hostname to `http://control-plane:8080`. For each verified Relay visitor hostname, route it to `http://control-plane:8081`; the visitor listener contains no admin or device-management routes. The phone's outbound management/Relay agent connects to the dedicated hostname on port 8080. Add POCKETHOST_CONTROL_TUNNEL_TOKEN as a GitHub Actions secret. The phone's independent Cloudflare website hostname must continue to target the phone's Rust listener, not this service.
+4. For Cloudflare mode, route the dedicated management hostname to `http://control-plane:8080`. For each verified Relay visitor hostname, route it to `http://control-plane:8081`; the visitor listener contains no admin or device-management routes. Each host's outbound management/Relay agent connects to the dedicated hostname on port 8080. Add POCKETHOST_CONTROL_TUNNEL_TOKEN as a GitHub Actions secret. The phone's independent Cloudflare website hostname must continue to target the phone's Rust listener, not this service.
 5. If the optional tunnel secret is absent, the workflow uses the Caddy public-TLS profile and requires inbound TCP 80/443.
 6. Run **Actions → Deploy PocketHost Control Plane → Run workflow**.
 7. Confirm `https://<control-plane-domain>/health` returns HTTP 200, admin/device API calls work only on the dedicated management hostname, a Relay visitor hostname cannot access `/v1/admin` or `/v1/device` endpoints, CORS preflight succeeds for the console origin and no unintended ports are reachable.
@@ -63,3 +63,13 @@ The workflow does not create DNS records, configure Cloudflare Access, deploy th
 ## Production limitation
 
 The existence of this workflow and backend source does not mean the control plane is deployed. The Cloudflare Tunnel profile removes the inbound-port requirement but still needs a configured hostname route, a Linux Docker host, owner-controlled secrets and end-to-end pairing/command-recovery acceptance. Compose reserves `172.31.240.10` for Caddy and `172.31.240.11` for cloudflared as exact trusted proxy peers. Check `POCKETHOST_DOCKER_SUBNET` for overlap with the host LAN/VPN; if changed, update `POCKETHOST_TRUSTED_PROXY_IPS` to the corresponding static proxy addresses. Never trust the whole Docker/private subnet. Neither ingress mode is production-approved until the live service and phone agent are tested together.
+
+
+## Fleet availability contract
+
+- Control-plane outage blocks new remote enrollment and may delay remote commands; it must not stop active workloads or erase local host state.
+- Each host validates command scope, expiry, idempotency and owner authorization before applying changes.
+- Commands are durably acknowledged only after the target host records the result.
+- Device revocation invalidates the device's remote credentials and sessions; local recovery requires explicit owner re-enrollment.
+- Android and iOS clients are replaceable control clients. No mobile installation is the sole holder of fleet identity or desired state.
+- Public website visitor listeners remain separate from the management hostname and API.
