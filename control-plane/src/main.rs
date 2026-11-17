@@ -666,6 +666,42 @@ async fn device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (Statu
     row.map(|r| r.get("id")).ok_or((StatusCode::UNAUTHORIZED, "invalid_device_token".into()))
 }
 
+async fn relay_device_id(headers: &HeaderMap, state: &AppState) -> Result<Uuid, (StatusCode, String)> {
+    ensure_control_plane_host(headers)?;
+    let token = bearer(headers).ok_or((StatusCode::UNAUTHORIZED, "relay_host_credential_required".into()))?;
+    let row = sqlx::query("SELECT id FROM devices WHERE relay_token_hash = $1")
+        .bind(token_hash(token)).fetch_optional(&state.db).await.map_err(internal)?;
+    row.map(|row| row.get("id"))
+        .ok_or((StatusCode::UNAUTHORIZED, "invalid_relay_host_credential".into()))
+}
+
+async fn rotate_relay_device_token(
+    State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    if !role_can_rotate_device_credential(&actor.role) {
+        return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
+    }
+    let token = new_token();
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let updated = sqlx::query("UPDATE devices SET relay_token_hash=$2 WHERE id=$1")
+        .bind(id).bind(token_hash(&token)).execute(&mut *tx).await.map_err(internal)?;
+    if updated.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "device_not_found".into()));
+    }
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
+        .bind(&actor.name).bind("relay.host_credential.rotate").bind(id.to_string())
+        .bind(json!({"previous_relay_credential_revoked":true}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    s.relay.revoke_device(id);
+    Ok((StatusCode::OK, Json(json!({
+        "deviceId": id,
+        "relay_token": token,
+        "warning": "This dedicated website-ingress credential is separate from the fleet device token. The previous Relay credential is revoked immediately and this value is shown only once."
+    }))))
+}
+
 async fn audit(s: &AppState, actor: &str, action: &str, target: &str, details: Value) -> Result<(), (StatusCode, String)> {
     sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,$2,$3,$4)")
         .bind(actor).bind(action).bind(target).bind(details).execute(&s.db).await.map_err(internal)?;
@@ -1182,7 +1218,7 @@ async fn delete_relay_site(
 async fn relay_device_stream(
     State(s): State<AppState>, headers: HeaderMap,
 ) -> Result<Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>>, (StatusCode, String)> {
-    let device = device_id(&headers, &s).await?;
+    let device = relay_device_id(&headers, &s).await?;
     let (session_id, receiver) = s.relay.connect(device);
     let guard = Arc::new(relay::RelaySessionGuard::new(s.relay.clone(), device, session_id));
     let stream = tokio_stream::wrappers::ReceiverStream::new(receiver).map(move |message| {
@@ -1198,7 +1234,7 @@ async fn relay_device_stream(
 async fn relay_device_response(
     State(s): State<AppState>, headers: HeaderMap, Path(id): Path<Uuid>, Json(response): Json<relay::RelayResponse>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let device = device_id(&headers, &s).await?;
+    let device = relay_device_id(&headers, &s).await?;
     if response.id != id { return Err((StatusCode::BAD_REQUEST, "relay_response_id_mismatch".into())); }
     if !(200..=599).contains(&response.status) { return Err((StatusCode::BAD_REQUEST, "invalid_relay_response_status".into())); }
     if response.headers.len() > 64 ||
@@ -1368,6 +1404,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/relay/tls-check", get(relay_tls_check))
         .route("/v1/device/relay/stream", get(relay_device_stream))
         .route("/v1/device/relay/responses/:id", post(relay_device_response))
+        .route("/v1/admin/devices/:id/relay-token", post(rotate_relay_device_token))
         .route("/v1/device/commands", get(poll_commands))
         .route("/v1/device/artifacts/:artifact", get(download_artifact))
         .route("/v1/device/heartbeat", post(heartbeat))
