@@ -14,7 +14,7 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class PocketHostDashboardUiSmokeTest {
     @Test
-    fun dashboardLaunchesAndProducesReviewableScreenshot() {
+    fun ownerHomeLaunchesAndProducesReviewableScreenshot() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         context.getSharedPreferences("pockethost_state", 0).edit()
@@ -25,8 +25,8 @@ class PocketHostDashboardUiSmokeTest {
         val externalFiles = checkNotNull(context.getExternalFilesDir(null)) { "App external files directory is unavailable" }
         val screenshotDir = File(externalFiles, "screenshots")
         assertTrue("Screenshot directory could not be created", screenshotDir.mkdirs() || screenshotDir.isDirectory)
-        val screenshot = File(screenshotDir, "dashboard.png")
-        val hierarchy = File(screenshotDir, "dashboard-hierarchy.xml")
+        val screenshot = File(screenshotDir, "home.png")
+        val hierarchy = File(screenshotDir, "home-hierarchy.xml")
         screenshot.delete()
         hierarchy.delete()
 
@@ -40,16 +40,17 @@ class PocketHostDashboardUiSmokeTest {
             // emulators. Wait for the app window and its destination semantics rather
             // than treating a delayed first frame as a missing screen.
             device.waitForWindowUpdate(context.packageName, 30_000)
-            val dashboardVisible = device.wait(Until.hasObject(By.text("Dashboard")), 60_000) ||
-                device.wait(Until.hasObject(By.desc("Dashboard")), 5_000)
+            val homeVisible = device.wait(Until.hasObject(By.text("Your services")), 60_000) &&
+                device.wait(Until.hasObject(By.desc("Open app navigation")), 5_000) &&
+                device.wait(Until.hasObject(By.desc("Open account and app menu")), 5_000)
             assertTrue(
-                "Dashboard destination did not render. Accessibility hierarchy: " +
+                "Owner home did not render its service carousel and menu controls. Accessibility hierarchy: " +
                     hierarchy.takeIf { it.isFile }?.readText()?.take(6_000),
-                dashboardVisible
+                homeVisible
             )
         }
 
-        assertTrue("Dashboard screenshot is empty", screenshot.isFile && screenshot.length() > 10_000)
+        assertTrue("Home screenshot is empty", screenshot.isFile && screenshot.length() > 10_000)
         assertTrue("Dashboard accessibility hierarchy was not captured", hierarchy.isFile && hierarchy.length() > 100)
     }
 }
