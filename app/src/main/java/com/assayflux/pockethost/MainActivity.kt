@@ -692,7 +692,7 @@ private fun PocketHostDashboard() {
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("REMOTE CONTROL PLANE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this phone to your independently hosted PocketHost backend.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            Text(if (remoteControlConfigured) "Device is configured for outbound remote management." else "Connect this Android host to your Pocket Host fleet control plane.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                             OutlinedTextField(
                                 value = controlPlaneEndpoint,
                                 onValueChange = { controlPlaneEndpoint = it },
@@ -715,7 +715,7 @@ private fun PocketHostDashboard() {
                                         remoteControlConfigured = true
                                         controlPlaneToken = ""
                                         if (hosting) RemoteControlAgent.start(context)
-                                        status = if (hosting) "Remote control connected. This phone will poll the backend while hosting is active." else "Remote connection saved securely. The agent starts when hosting starts."
+                                        status = if (hosting) "Remote control connected. This host agent will poll the control plane while its host service is active." else "Remote connection saved securely. The agent starts when hosting starts."
                                     }.onFailure { status = it.message ?: "Could not configure remote control." }
                                 }, enabled = controlPlaneEndpoint.isNotBlank() && controlPlaneToken.length >= 32) {
                                     Text("Save remote connection")
@@ -727,7 +727,7 @@ private fun PocketHostDashboard() {
                                     status = "Remote control credentials removed from this device."
                                 }, enabled = remoteControlConfigured) { Text("Disconnect") }
                             }
-                            Text("The device makes outbound HTTPS requests only. The backend cannot open inbound ports or execute arbitrary shell commands on this phone.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            Text("This host agent makes outbound HTTPS requests only. The control plane cannot open inbound ports or execute arbitrary shell commands on the host.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                     }
                 }
@@ -1221,7 +1221,7 @@ private fun PocketHostDashboard() {
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("CONNECTION & SECURITY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Cloudflare provides public HTTPS; the phone origin remains local HTTP.", color = palette.onSurfaceVariant)
+                            Text("Cloudflare provides public HTTPS to this host's local Rust website listener.", color = palette.onSurfaceVariant)
                             Text("No built-in visitor password yet. Use Cloudflare Access for private sites.", color = palette.onSurfaceVariant)
                             Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
                             OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
@@ -1241,7 +1241,7 @@ private fun PocketHostDashboard() {
                             Text("ABOUT", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                             Text("AssayFlux Pocket Host", color = palette.onSurface, fontWeight = FontWeight.Bold)
                             Text("Version 0.1.0 · Designed by AssayFlux", color = palette.onSurfaceVariant)
-                            Text("Native Android website hosting powered by Rust, Kotlin and optional trusted Python/Node runtimes.", color = palette.onSurfaceVariant)
+                            Text("Android host agent powered by Rust and Kotlin, with optional trusted Python/Node runtime providers.", color = palette.onSurfaceVariant)
                         }
                     }
                 }
@@ -1258,7 +1258,7 @@ private fun PocketHostDashboard() {
                         Text("${if (deviceTelemetry.isNull("batteryPercent")) "Battery unknown" else deviceTelemetry.optInt("batteryPercent").toString() + "% battery"}  ·  ${deviceTelemetry.optString("batteryTemperatureC", "Temp unavailable")}°C  ·  ${deviceTelemetry.optString("networkTransport", "Network unknown")}", color = palette.onSurfaceVariant, fontSize = 13.sp)
                         if ((!deviceTelemetry.isNull("batteryPercent") && deviceTelemetry.optInt("batteryPercent") < 20) ||
                             deviceTelemetry.optString("thermalLabel").uppercase() in listOf("SEVERE", "CRITICAL", "EMERGENCY", "SHUTDOWN")) {
-                            Text("Device protection warning: battery is low or thermal pressure is high. Reduce hosting load and allow the phone to cool.", color = palette.error, fontWeight = FontWeight.SemiBold)
+                            Text("Host protection warning: battery is low or thermal pressure is high. Reduce workload and allow the device to cool.", color = palette.error, fontWeight = FontWeight.SemiBold)
                         }
                         val localSiteUrl = if (allowLan && lanAddress != null) "http://$lanAddress:${portText.toIntOrNull() ?: 8080}/" else "http://127.0.0.1:${portText.toIntOrNull() ?: 8080}/"
                         Text(localSiteUrl, color = palette.onSurface, fontFamily = FontFamily.Monospace)
@@ -1292,7 +1292,7 @@ private fun PocketHostDashboard() {
                                     .putBoolean("allow_lan", enabled).apply()
                             }, enabled = !hosting)
                         }
-                        Text(if (allowLan) "LAN mode enabled · port $portText · ${lanAddress ?: "Connect to Wi-Fi to view this phone’s address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text(if (allowLan) "LAN mode enabled · port $portText · ${lanAddress ?: "Connect to Wi-Fi to view this host’s LAN address"} · restart hosting after changing this setting." else "Loopback only · LAN and public access disabled.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedButton(
                             onClick = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },
                             enabled = hosting
