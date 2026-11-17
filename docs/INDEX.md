@@ -13,6 +13,10 @@ This index is the navigation map for the repository's engineering, product and o
 7. `docs/PHASE_0_STATUS.md` — current Stage 0/1 implementation and verification status.
 8. `docs/PROJECT_STATUS_2026-11-16.md` — historical source/CI snapshot.
 
+## Universal device fabric
+
+- `docs/UNIVERSAL_DEVICE_FABRIC.md` — cross-platform hosts, device tiers, Raspberry Pi/SBC profiles, MCU/edge model, DemonCore integration, service placement and expansion gates.
+
 ## Architecture and runtime
 
 - `docs/RUNTIME_COMPANION.md` — host/companion packages, Binder protocol, transfer and lifecycle.
