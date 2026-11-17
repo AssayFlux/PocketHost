@@ -35,6 +35,8 @@ This inventory is the complete recursive Git tree at the snapshot commit. The ba
 |---|---|
 | `.github/workflows/` | Quality, protocol validation, Android integration, dependency-lock, signed-release and control-plane deployment workflows |
 | `Assets/` | Nine large design SVG files; not Android runtime resources |
+
+The nine SVGs under `Assets/` total approximately 115.6 MB. The root-level `Pocket Host 1.svg` is an exact duplicate of `Assets/Pocket Host 1.svg` (same Git blob SHA, 14,353,338 bytes). These are design/reference assets, not Android runtime resources; their size is a repository-footprint concern.
 | `agents/linux/` | Python Linux node-agent package, CLI, HTTPS polling client, trust, role/job validation, SQLite store, service installer |
 | `app/` | Main Android Kotlin/Compose application, screens, services, site storage/import/backup, local management API, device trust, Cloudflare integration and Workbench |
 | `control-plane/` | Rust/Axum fleet API and Relay visitor listener, PostgreSQL migrations, Docker Compose, Caddy and deployment configuration |
