@@ -37,9 +37,11 @@ The Android app, runtime companion, Rust website engine, control plane and brows
 - Raspberry Pi/SBC: no named board profile is accepted by this baseline.
 - MCU: DemonCore firmware/protocol foundation exists; each board and secure fleet capability requires physical acceptance.
 
-## Architectural acceptance status
+## Component separation assessment
 
-This document inventories repository foundations, not production certification. Platform, runtime, security, tunnel, fleet and device support must be claimed only against named target tests and release evidence.
+The repository contains logical modules, but not every module is yet an independent operating-system fault domain. The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated within the Android application package/process; the Rust engine is a native library hosted by that app. The runtime companion is a separate package, but Python and Node projects share its application UID. The remote control plane is separately deployable, and the browser console is a separate client. These boundaries are implementation facts, not proof that all desired isolation and failure-containment guarantees already pass.
+
+The 0.1.0 architecture requires independent supervisors, process identities, resource budgets, health and rollback for components according to their platform capabilities. The mobile command center must not be required for workloads to continue. Platform, runtime, security, tunnel, fleet and device support must be claimed only against named target tests and release evidence.
 
 ## Normative specifications
 
