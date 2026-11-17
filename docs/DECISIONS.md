@@ -2,7 +2,7 @@
 
 ## ADR-001 — Mobile command center with selectable server role
 
-**Decision:** Android/iPhone mobile app is the primary owner command center. Mobile has three modes: Command Center, Server, and Command Center + Server. The roles are independently controlled.
+**Decision:** Android/iPhone mobile app is the primary owner command center. Mobile has two modes: Server only and Command Center + Server. The roles are independently controlled.
 
 **Reason:** mobile is readily available, but hosting and fleet control have different lifecycle and permission requirements.
 
