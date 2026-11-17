@@ -1343,6 +1343,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn passkey_sessions_are_owner_only_and_revocation_invalidates_them() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let credential_id = format!("ci-{}", Uuid::new_v4());
+        sqlx::query("INSERT INTO owner_passkeys(credential_id,credential,display_name) VALUES($1,$2,'CI passkey')")
+            .bind(&credential_id).bind(json!({"test":"not-a-real-authenticator"}))
+            .execute(&db).await.unwrap();
+        let state = AppState {
+            db: db.clone(),
+            admin_token: "owner-test-token-0123456789abcdef".into(),
+            relay: relay::RelayHub::default(),
+        };
+        let session_id = Uuid::new_v4();
+        let token = new_token();
+        sqlx::query("INSERT INTO control_sessions(id,name,role,token_hash,expires_at,owner_passkey_id) VALUES($1,'PocketHost Owner','owner',$2,now()+interval '1 hour',$3)")
+            .bind(session_id).bind(token_hash(&token)).bind(&credential_id)
+            .execute(&db).await.unwrap();
+        let mut headers = HeaderMap::from_iter([(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        )]);
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
+        let actor = admin(&headers, &state).await.unwrap();
+        assert_eq!(actor.role, "owner");
+        assert_eq!(actor.session_id, session_id);
+
+        sqlx::query("UPDATE owner_passkeys SET revoked_at=now() WHERE credential_id=$1")
+            .bind(&credential_id).execute(&db).await.unwrap();
+        assert_eq!(admin(&headers, &state).await.unwrap_err().0, StatusCode::UNAUTHORIZED);
+        sqlx::query("DELETE FROM control_sessions WHERE id=$1").bind(session_id).execute(&db).await.unwrap();
+        sqlx::query("DELETE FROM owner_passkeys WHERE credential_id=$1").bind(&credential_id).execute(&db).await.unwrap();
+    }
+
+    #[tokio::test]
     async fn postgres_migrations_support_revocable_viewer_accounts_and_audit() {
         let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
         let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
