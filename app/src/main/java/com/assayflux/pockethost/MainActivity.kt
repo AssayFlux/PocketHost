@@ -168,6 +168,10 @@ private fun PocketHostDashboard() {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Home") }
     var settingsSection by remember { mutableStateOf("General") }
+    var operatingMode by remember {
+        mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            .getString("operating_mode", "SERVER_ONLY") ?: "SERVER_ONLY")
+    }
     val appearancePreferences = remember { context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE) }
     var appearanceMode by remember {
         mutableStateOf(appearancePreferences.getString("appearance_mode", null) ?: run {
@@ -519,6 +523,7 @@ private fun PocketHostDashboard() {
                     PocketHostSidebar(
                         selectedTab = selectedTab,
                         selectedSection = settingsSection,
+                        operatingMode = operatingMode,
                         onNavigate = navigate
                     )
                 }
@@ -542,6 +547,27 @@ private fun PocketHostDashboard() {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                 if (selectedTab == "Home") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("MOBILE OPERATING MODE", color = palette.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Website serving stays available in both modes. Fleet administration is enabled only in Command Center + Server.", color = palette.onSurfaceVariant)
+                            Text(if (operatingMode == "COMMAND_CENTER_SERVER") "Command Center + Server" else "Server only", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = {
+                                    operatingMode = "SERVER_ONLY"
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putString("operating_mode", operatingMode).apply()
+                                    if (selectedTab == "Devices") selectedTab = "Home"
+                                }, modifier = Modifier.weight(1f)) { Text("Server only") }
+                                Button(onClick = {
+                                    operatingMode = "COMMAND_CENTER_SERVER"
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putString("operating_mode", operatingMode).apply()
+                                }, modifier = Modifier.weight(1f)) { Text("Command Center + Server") }
+                            }
+                            if (operatingMode == "COMMAND_CENTER_SERVER") {
+                                OutlinedButton(onClick = { selectedTab = "Devices" }, modifier = Modifier.fillMaxWidth()) { Text("Manage trusted devices") }
+                            }
+                        }
+                    }
                     PocketHostHomeScreen(
                         hosting = hosting,
                         status = status,
@@ -556,6 +582,9 @@ private fun PocketHostDashboard() {
                         recentEvents = recentEvents,
                         onOpen = navigate
                     )
+                }
+                if (selectedTab == "Devices" && operatingMode == "COMMAND_CENTER_SERVER") {
+                    PocketHostDevicesScreen(context = context)
                 }
                 if (selectedTab == "Learn") {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
