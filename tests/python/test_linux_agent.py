@@ -140,6 +140,7 @@ class LinuxAgentTests(unittest.TestCase):
             with patch.dict(os.environ, {
                 "POCKETHOST_STORAGE_ROOT": str(namespace_root),
                 "POCKETHOST_SNAPSHOT_ROOT": str(snapshot_root),
+                "POCKETHOST_ALLOWED_NAMESPACES": "site-1",
             }):
                 grant = {
                     "grant_id": "00000000-0000-4000-8000-000000000001",
@@ -164,11 +165,15 @@ class LinuxAgentTests(unittest.TestCase):
                 grant["role"] = "backup_recovery"
                 grant["capabilities"] = ["backup.verify_snapshot"]
                 job["kind"] = "backup.verify"
-                job["payload"] = {"snapshot_id": "snapshot-1"}
+                job["payload"] = {"namespace_id": "site-1", "snapshot_id": "snapshot-1"}
                 verified = execute_job(job, grant)
                 self.assertTrue(verified["verified"])
                 job["resource_budget"]["storage_bytes"] = 8192
                 with self.assertRaises(ValueError):
+                    execute_job(job, grant)
+                job["resource_budget"]["storage_bytes"] = 4096
+                job["payload"]["namespace_id"] = "other-site"
+                with self.assertRaises(PermissionError):
                     execute_job(job, grant)
 
     def test_durable_generation_and_idempotency(self):
