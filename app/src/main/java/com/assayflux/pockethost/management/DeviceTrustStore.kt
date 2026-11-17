@@ -224,8 +224,8 @@ object DeviceTrustStore {
     private fun challengeBytes(value: EnrollmentChallenge): ByteArray {
         val issued = Instant.ofEpochSecond(value.issuedAt).toString()
         val expires = Instant.ofEpochSecond(value.expiresAt).toString()
-        return ("{\"challenge_nonce\":" + JSONObject.quote(value.nonce) +
-            ",\"challenge_id\":" + JSONObject.quote(value.challengeId) +
+        return ("{\"challenge_id\":" + JSONObject.quote(value.challengeId) +
+            ",\"challenge_nonce\":" + JSONObject.quote(value.nonce) +
             ",\"device_id\":" + JSONObject.quote(value.candidateDeviceId) +
             ",\"expires_at\":" + JSONObject.quote(expires) +
             ",\"issued_at\":" + JSONObject.quote(issued) +
@@ -357,11 +357,11 @@ object DeviceTrustStore {
     }
 
     private val ROLE_CAPABILITIES = mapOf(
-        "storage" to setOf("storage.namespace.read", "storage.namespace.write", "storage.snapshot.create"),
-        "traffic" to setOf("traffic.route.serve", "traffic.cache.read", "traffic.cache.write"),
-        "build_publish" to setOf("build.source.read", "build.artifact.write"),
-        "native_job" to setOf("job.fixed.execute", "job.status.report"),
-        "backup_recovery" to setOf("backup.snapshot.read", "backup.snapshot.write", "backup.restore.stage"),
-        "edge_gateway" to setOf("edge.profile.read", "edge.operation.execute")
+        "storage" to setOf("storage.read_assigned_namespace", "storage.write_assigned_namespace", "storage.snapshot", "storage.verify"),
+        "traffic" to setOf("traffic.route.read_assigned", "traffic.proxy.assigned_hosts", "traffic.cache.assigned_public_content"),
+        "build_publish" to setOf("build.read_assigned_source", "build.execute_declared_build", "artifact.write_staging", "artifact.verify"),
+        "native_job" to setOf("native_job.execute_signed_package", "native_job.read_declared_inputs", "native_job.write_declared_outputs", "native_job.report_health"),
+        "backup_recovery" to setOf("backup.read_assigned_namespace", "backup.create_snapshot", "backup.verify_snapshot", "backup.restore_staging"),
+        "edge_gateway" to setOf("edge.read_claimed_node_telemetry", "edge.invoke_allowlisted_operation", "edge.stage_signed_firmware")
     )
 }
