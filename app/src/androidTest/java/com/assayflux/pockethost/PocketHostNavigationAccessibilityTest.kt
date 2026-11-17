@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PocketHostNavigationAccessibilityTest {
     @Test
-    fun allFiveDestinationsExposeLabelsAndRenderTheirOwnScreen() {
+    fun drawerDestinationsExposeLabelsAndRenderTheirOwnScreen() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val statePreferences = context.getSharedPreferences("pockethost_state", 0)
@@ -37,12 +37,21 @@ class PocketHostNavigationAccessibilityTest {
         assertTrue(screenshotDir.mkdirs() || screenshotDir.isDirectory)
 
         val expectedContent = linkedMapOf(
-            "Sites" to "WEBSITE",
-            "Activity" to "RECENT OPERATIONS",
-            "Learn" to "Learn Pocket Host",
-            "Settings" to "Dark theme",
-            "Dashboard" to "HOSTING STATUS"
+            "Home" to Triple("Home", "Your services", "Home"),
+            "Hosting" to Triple("Dashboard", "HOSTING STATUS", "Dashboard"),
+            "Websites & files" to Triple("Sites", "WEBSITE", "Sites"),
+            "Activity & logs" to Triple("Activity", "RECENT OPERATIONS", "Activity"),
+            "Learn" to Triple("Learn", "Learn Pocket Host", "Learn"),
+            "Settings" to Triple("Settings", "Dark theme", "Settings")
         )
+        fun openDrawerDestination(label: String) {
+            val menu = device.wait(Until.findObject(By.desc("Open app navigation")), 10_000)
+            assertTrue("Hamburger navigation control is missing", menu != null)
+            menu!!.click()
+            val destination = device.wait(Until.findObject(By.text(label)), 10_000)
+            assertTrue("Drawer destination $label is missing", destination != null)
+            destination!!.click()
+        }
         try {
             assertTrue(visitorSiteRoot.mkdirs())
             File(visitorSiteRoot, "index.html").writeText("<h1>UI visitor policy test</h1>")
@@ -55,18 +64,14 @@ class PocketHostNavigationAccessibilityTest {
                 enabled = true
             ))
             ActivityScenario.launch(MainActivity::class.java).use {
-            expectedContent.forEach { (destinationName, expectedText) ->
-                val accessibleDestination = device.wait(
-                    Until.findObject(By.desc(destinationName)), 20_000
-                )
-                assertTrue("Navigation icon for $destinationName has no accessible label",
-                    accessibleDestination != null)
-                accessibleDestination!!.click()
-                assertTrue("Top bar did not reflect $destinationName",
-                    device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  $destinationName")), 15_000))
+            expectedContent.forEach { (destinationName, expected) ->
+                val (headerName, expectedText, screenshotName) = expected
+                if (destinationName != "Home") openDrawerDestination(destinationName)
+                assertTrue("Header did not reflect $headerName",
+                    device.wait(Until.hasObject(By.text(headerName)), 15_000))
                 assertTrue("$destinationName screen did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 15_000))
-                if (destinationName == "Sites") {
+                if (destinationName == "Websites & files") {
                     assertTrue("Folder publishing action is missing",
                         device.wait(Until.hasObject(By.text("Choose website folder")), 10_000))
                     assertTrue("ZIP publishing action is missing",
@@ -75,10 +80,10 @@ class PocketHostNavigationAccessibilityTest {
                         device.wait(Until.hasObject(By.text("Export encrypted full app backup")), 10_000))
                 }
                 assertTrue("Could not capture $destinationName screenshot",
-                    device.takeScreenshot(File(screenshotDir, "navigation-${destinationName.lowercase()}.png")))
-                device.dumpWindowHierarchy(File(screenshotDir, "navigation-${destinationName.lowercase()}-hierarchy.xml"))
+                    device.takeScreenshot(File(screenshotDir, "navigation-${screenshotName.lowercase()}.png")))
+                device.dumpWindowHierarchy(File(screenshotDir, "navigation-${screenshotName.lowercase()}-hierarchy.xml"))
             }
-            device.wait(Until.findObject(By.desc("Settings")), 10_000)!!.click()
+            openDrawerDestination("Settings")
             listOf(
                 "Network" to "CLOUDFLARE TUNNEL",
                 "Runtimes" to "TRUSTED APPLICATION CODE ONLY",
@@ -91,7 +96,7 @@ class PocketHostNavigationAccessibilityTest {
                 assertTrue("Settings section $section did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 10_000))
                 assertTrue("Settings header changed while selecting $section",
-                    device.wait(Until.hasObject(By.text("ASSAYFLUX  ·  Settings")), 5_000))
+                    device.wait(Until.hasObject(By.text("Settings")), 5_000))
                 if (section == "Network") {
                     assertTrue("Visitor access policy controls are missing",
                         device.wait(Until.hasObject(By.textContains("Visitor access")), 10_000))
@@ -130,7 +135,10 @@ class PocketHostNavigationAccessibilityTest {
         try {
             registry.edit().putString("sites", "[]").commit()
             ActivityScenario.launch(MainActivity::class.java).use {
-                val sites = device.wait(Until.findObject(By.desc("Sites")), 20_000)
+                val menu = device.wait(Until.findObject(By.desc("Open app navigation")), 20_000)
+                assertTrue("Hamburger navigation control is missing", menu != null)
+                menu!!.click()
+                val sites = device.wait(Until.findObject(By.text("Websites & files")), 20_000)
                 assertTrue("Sites navigation destination is not accessible", sites != null)
                 sites!!.click()
                 assertTrue("First-publish guidance is missing",
