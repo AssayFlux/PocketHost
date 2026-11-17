@@ -84,7 +84,11 @@ jobs:
           python-version: "3.11"
       - name: Check Python syntax
         run: python -m py_compile runtime-worker/src/main/python/pockethost_runtime.py examples/python-wsgi/wsgi.py
-      - name: Test WSGI lifecycle
+      - name: Install Linux node agent and test dependencies
+        run: python -m pip install -e agents/linux
+      - name: Test runtime and Linux agent
+        env:
+          PYTHONPATH: agents/linux/src
         run: python -m unittest discover -s tests/python -v
 
   console:
