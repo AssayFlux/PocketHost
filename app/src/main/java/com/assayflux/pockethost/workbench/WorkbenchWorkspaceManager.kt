@@ -286,6 +286,9 @@ object WorkbenchWorkspaceManager {
         id.matches(Regex("commit-[0-9]{10,}-[0-9a-fA-F]{8}"))
 
     private fun validateTree(root: File): Pair<Int, Long> {
+        if (!root.isDirectory || java.nio.file.Files.isSymbolicLink(root.toPath())) {
+            throw IOException("Workbench tree root is unavailable or unsafe.")
+        }
         val canonicalRoot = root.canonicalFile
         var files = 0
         var entries = 0
@@ -316,7 +319,10 @@ object WorkbenchWorkspaceManager {
     }
 
     private fun fileDigests(root: File): Map<String, String> {
-        if (!root.isDirectory) return emptyMap()
+        if (!root.exists()) return emptyMap()
+        if (!root.isDirectory || java.nio.file.Files.isSymbolicLink(root.toPath())) {
+            throw IOException("Website tree root is unavailable or unsafe.")
+        }
         val result = linkedMapOf<String, String>()
         var entries = 0
         var files = 0
@@ -343,6 +349,9 @@ object WorkbenchWorkspaceManager {
     }
 
     private fun copyTree(source: File, destination: File) {
+        if (!source.isDirectory || java.nio.file.Files.isSymbolicLink(source.toPath())) {
+            throw IOException("Source website tree is unavailable or unsafe.")
+        }
         if (!destination.mkdirs()) throw IOException("Could not create Workbench snapshot.")
         var copiedBytes = 0L
         var copiedFiles = 0
