@@ -109,6 +109,10 @@ Publish bounded enrollment, role-change, job lifecycle, capability, health, reso
 
 Contract versions use major/minor compatibility. Devices advertise supported ranges. Breaking changes require an overlap and migration window. Every agent package declares OS/architecture, permissions, supported roles, protocol range and rollback path.
 
-## 13. Acceptance
+## 13. Machine-readable protocol source
+
+The normative JSON Schemas are maintained in [`protocol/`](../protocol/README.md). Implementations must validate device hello, role grant and job envelope messages against the versioned schemas. This prose contract explains lifecycle and security semantics; the schemas define the wire shape. Changes require compatibility review and CI schema validation.
+
+## 14. Acceptance
 
 Test fake/expired/replayed code, wrong key, wrong owner, role escalation, revoked device, duplicate jobs, power loss during each lifecycle stage, transport switching, phone outage, control-plane outage, storage exhaustion, resource pressure, malicious artifact, unauthorized peer and role-specific privilege boundaries.
