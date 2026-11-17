@@ -17,7 +17,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 - React/Vite is the separate web-console app. Raw React/TypeScript source is not built by v0.1.0; import its built static output.
 - Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
 - Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
-- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.2.0 work. Cloudflare Tunnel and single-host AssayFlux Relay public acceptance are mandatory v0.1.0 work.
+- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.2.0 work. Cloudflare Tunnel and a standalone owner-operated AssayFlux Relay Node (Termux/Android + Linux target) are mandatory v0.1.0 work. No paid VPS is required, but public IPv4/IPv6 reachability is.
 - Every version must pass G0–G9. See RELEASE_GATES.md.
 
 ## Repository boundaries
@@ -29,7 +29,8 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 | runtime-worker/ | Optional Python/Node Android companion |
 | web-console/ | Separate React/TypeScript/Vite browser client |
 | agents/ | Platform-specific device agents |
-| control-plane/ | Optional remote fleet coordination |
+| control-plane/ | Optional remote fleet coordination; current Relay gateway is coupled here and must be extracted |
+| Relay Node (planned) | Standalone Termux/Linux owner-operated public visitor gateway; not present in current source |
 | protocol/ | Shared versioned device contracts |
 | runtime-library/catalog/ | Future language catalog metadata |
 | scripts/ | Build and validation helpers |
@@ -52,4 +53,4 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 
 ## Current next actions
 
-Close the v0.1.0 hosting path: align and test 500 MB import/backup quotas, verify local and LAN serving, implement/accept Cloudflare Tunnel and the first-party Relay gateway, verify the owner's domain over external HTTP/HTTPS, exercise service lifecycle and recovery, package the main APK and complete physical-device acceptance.
+Close the v0.1.0 hosting path: resolve/document the 500 MB import versus backup limits, verify local and LAN serving, complete Cloudflare Tunnel and the standalone Termux/Linux Relay Node, decouple RelayAgent from RemoteControlAgent credentials, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK and Relay Node, and complete physical-device/external-network acceptance.
