@@ -247,7 +247,32 @@ internal fun PocketHostDevicesScreen(context: Context) {
                                 activity.confirmBiometricUnlock { confirmed ->
                                     if (confirmed) {
                                         runCatching { DeviceTrustStore.revoke(context, device.deviceId) }
-                                            .onSuccess { refresh++; message = "Device revoked; prior grant generation is no longer accepted." }
+                                            .onSuccess {
+                                                refresh++
+                                                if (controlPlaneId.isNotBlank() && ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://")) {
+                                                    message = "Local grant revoked. Revoking the worker's remote device token…"
+                                                    scope.launch {
+                                                        val remoteResult = runCatching {
+                                                            withContext(Dispatchers.IO) {
+                                                                FleetControlPlaneClient.revokeWorker(controlPlaneEndpoint, ownerCredential, controlPlaneId)
+                                                            }
+                                                        }
+                                                        if (remoteResult.isSuccess) {
+                                                            fleetMap.remove(device.deviceId)
+                                                            fleetMapText = fleetMap.toString()
+                                                            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                                                .edit().putString("fleet_device_map", fleetMapText).apply()
+                                                            message = "Local grant and remote worker token revoked."
+                                                        } else {
+                                                            message = "Local grant revoked, but remote token revocation failed. Use Retry remote revocation below."
+                                                        }
+                                                    }
+                                                } else {
+                                                    message = if (controlPlaneId.isNotBlank()) {
+                                                        "Local grant revoked. Enter the Control Plane owner credential to revoke the remote worker token."
+                                                    } else "Device revoked locally; no remote Control Plane record was linked."
+                                                }
+                                            }
                                             .onFailure { message = it.message ?: "Could not revoke device." }
                                     } else {
                                         message = "Owner authentication failed or was cancelled; device access remains unchanged."
@@ -255,6 +280,27 @@ internal fun PocketHostDevicesScreen(context: Context) {
                                 }
                             }
                         }) { Text("Verify owner and revoke access") }
+                        } else {
+                            val revokedRemoteId = fleetMap.optString(device.deviceId)
+                            if (revokedRemoteId.isNotBlank()) OutlinedButton(
+                                enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
+                                onClick = {
+                                    scope.launch {
+                                        val result = runCatching {
+                                            withContext(Dispatchers.IO) {
+                                                FleetControlPlaneClient.revokeWorker(controlPlaneEndpoint, ownerCredential, revokedRemoteId)
+                                            }
+                                        }
+                                        if (result.isSuccess) {
+                                            fleetMap.remove(device.deviceId)
+                                            fleetMapText = fleetMap.toString()
+                                            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                                .edit().putString("fleet_device_map", fleetMapText).apply()
+                                            fleetMessage = "Remote worker token revoked and control-plane device record deleted."
+                                        } else fleetMessage = result.exceptionOrNull()?.message ?: "Remote revocation failed."
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()
+                            ) { Text("Retry remote revocation") }
                         }
                     }
                 }
