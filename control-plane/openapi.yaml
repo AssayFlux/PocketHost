@@ -112,7 +112,7 @@ paths:
               type: object
               required: [kind, payload]
               properties:
-                kind: { type: string, enum: [site_action, tunnel_action, restart_runtime, agent_job] }
+                kind: { type: string, enum: [site_action, tunnel_action, restart_runtime, agent_job, install_grant] }
                 payload: { type: object }
       responses:
         "202": { description: Command queued }
