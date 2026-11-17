@@ -159,3 +159,8 @@ Do not copy stale estimates forward. The canonical weighted score and evidence a
 - API 26 emulator instrumentation remained in progress at the snapshot; API 33 and API 35 were queued. The matrix is not accepted until all three finish successfully and reports/screenshots/hierarchy artifacts are inspected.
 - Gate 7 first-publish guidance is implemented in the Sites empty state and an instrumentation assertion has been added for the heading, top-level `index.html` and start-hosting guidance. This is a narrow source increment, not closure of first-publication acceptance; execution, human accessibility and visual review remain open.
 - Gates 2–7 remain open. APK packaging and source-level UI tests do not close them.
+
+
+## 2026-11-17 authoritative plan update
+
+Use `docs/MASTER_PLAN.md` as the current executable master plan (V2). It supersedes the older gate ordering in this roadmap where they conflict. In particular, the product now targets one host app plus independently installable optional language runtime packs (Python and Node first; additional languages later), with one OS-enforced execution identity per project. A distinct runtime package/UID per language is not project isolation. The V2 plan adds signed runtime manifests, ABI-aware delivery, user-confirmed Android installation, atomic updates/rollback, provider compatibility contracts, product reliability work and explicit evidence requirements. Static hosting must work without any runtime installed. Historical gate notes in this file remain evidence snapshots, not current acceptance claims.
