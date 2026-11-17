@@ -67,7 +67,7 @@ The quality workflow includes:
 - Gradle wrapper validation.
 - Control-plane tests, database migrations and deployment configuration checks.
 
-The quality run for the toolchain-boundary documentation commit completed successfully: [GitHub Actions run 44046355538](https://github.com/AssayFlux/PocketHost/actions/runs/44046355538). This is repository CI evidence, not proof of Android runtime behavior or physical-device acceptance.
+Historical CI evidence: quality run [44046355538](https://github.com/AssayFlux/PocketHost/actions/runs/44046355538) completed successfully across six jobs at the earlier main-branch snapshot. Alpha branch workflows have since been reconfigured; consult the live Alpha workflow history for current evidence. CI is not proof of Android runtime behavior or physical-device acceptance.
 
 The Android integration workflow has compiled app and instrumentation sources in earlier runs. Emulator and APK packaging jobs were skipped in the compile-only run. The release workflow is manual and has not established a signed production release in this audit. No APK is claimed as built or physically tested here.
 
