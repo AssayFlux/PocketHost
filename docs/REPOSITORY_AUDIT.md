@@ -47,7 +47,7 @@ Cloudflare source includes an Android `cloudflared` process runner, encrypted An
 
 AssayFlux Relay source includes an outbound Android SSE agent, bounded local HTTP forwarding, a Rust visitor gateway, DNS TXT hostname verification, separate visitor/control listeners and a Caddy TLS edge. The Android Relay agent currently starts from the remote-control agent configuration and uses its relay device token; this coupling and the user-facing Relay configuration flow must be verified or separated for v0.1.0 so public website hosting does not accidentally require full fleet administration. The gateway requires a public VPS/server, PostgreSQL and a correctly configured TLS reverse proxy. Current transport is bounded HTTP request/response, not general TCP/WebSocket or unlimited streaming.
 
-No independent-network public acceptance has been recorded by this source audit. Verify both providers, the owner's real domain, HTTP/HTTPS behavior, correct site routing, visitor/admin isolation, reconnect and provider independence before release.
+No independent-network public acceptance has been recorded by this source audit. Verify both providers, the owner's real domain, HTTP/HTTPS behavior, correct site routing, visitor/admin isolation, reconnect and provider independence before release. The browser console already contains a Relay hostname registration panel in `web-console/src/ui/RemoteControlPlane.tsx`; however, the full web-console is otherwise a later-release component. v0.1.0 must package and verify this minimal setup surface (or an equivalent owner UI) without pulling the full fleet console into the first release.
 
 ### Static engine
 
