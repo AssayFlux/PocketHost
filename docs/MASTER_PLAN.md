@@ -45,7 +45,7 @@ Detailed ownership and fault behavior are in SYSTEM_ARCHITECTURE.md.
 
 ### G0 — Architecture and contracts
 - Freeze component boundaries and threat model.
-- Define host-agent API, device identity, enrollment, service manifests, runtime manifests, capability profiles, desired state, events and audit schemas.
+- Define host-agent API (see HOST_AGENT_CONTRACT.md), device identity, enrollment, service manifests, runtime manifests, capability profiles, desired state, events and audit schemas.
 - Define compatibility negotiation, offline behavior and revocation.
 - Specify Android/iOS mobile command-center parity.
 - Define failure domains and recovery guarantees.
