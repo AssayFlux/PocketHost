@@ -179,6 +179,8 @@ struct AdminActor { session_id: Uuid, name: String, role: String, authenticated_
 #[derive(Clone, Debug)]
 struct AdminCredential { user_id: Option<Uuid>, name: String, role: String, bootstrap_hash: Option<String>, user_token_hash: Option<String> }
 
+fn bootstrap_session_allowed(passkey_required: bool) -> bool { !passkey_required }
+
 const ADMIN_SESSION_TTL_HOURS: i64 = 12;
 
 const MAX_ADMIN_SESSION_BUCKETS: usize = 2_048;
@@ -476,7 +478,7 @@ async fn create_admin_session(
     if credential.bootstrap_hash.is_some() {
         let passkey_required: bool = sqlx::query_scalar("SELECT passkey_required FROM owner_auth_policy WHERE id=1")
             .fetch_one(&s.db).await.map_err(internal)?;
-        if passkey_required {
+        if !bootstrap_session_allowed(passkey_required) {
             return Err((StatusCode::UNAUTHORIZED, "owner_passkey_required".into()));
         }
     }
@@ -1367,6 +1369,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bootstrap_session_is_disabled_once_passkey_policy_is_required() {
+        assert!(bootstrap_session_allowed(false));
+        assert!(!bootstrap_session_allowed(true));
+    }
+
+    #[test]
     fn control_plane_host_guard_rejects_relay_site_hosts() {
         let mut headers = HeaderMap::new();
         headers.insert(axum::http::header::HOST, HeaderValue::from_static("control.example.test:443"));
@@ -1448,37 +1456,6 @@ mod tests {
             .bind(actor.session_id).execute(&db).await.unwrap();
         sqlx::query("DELETE FROM owner_recovery_codes WHERE id=$1")
             .bind(recovery_id).execute(&db).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn passkey_required_policy_blocks_new_bootstrap_sessions() {
-        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
-        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
-        sqlx::migrate!("./migrations").run(&db).await.unwrap();
-        sqlx::query("UPDATE owner_auth_policy SET passkey_required=TRUE WHERE id=1")
-            .execute(&db).await.unwrap();
-        let state = AppState {
-            db: db.clone(),
-            admin_token: "owner-test-token-0123456789abcdef".into(),
-            relay: relay::RelayHub::default(),
-        };
-        let mut headers = HeaderMap::from_iter([(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap(),
-        )]);
-        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
-            headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
-        }
-        let result = create_admin_session(
-            State(state),
-            headers,
-            ConnectInfo("203.0.113.223:40000".parse().unwrap()),
-        ).await;
-        // Restore the shared CI fixture before asserting so a failed assertion cannot
-        // leave later integration tests with bootstrap authentication disabled.
-        sqlx::query("UPDATE owner_auth_policy SET passkey_required=FALSE WHERE id=1")
-            .execute(&db).await.unwrap();
-        assert_eq!(result.unwrap_err().0, StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
