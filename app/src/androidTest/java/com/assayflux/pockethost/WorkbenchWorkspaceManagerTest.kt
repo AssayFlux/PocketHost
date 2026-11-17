@@ -119,6 +119,33 @@ class WorkbenchWorkspaceManagerTest {
         }
     }
 
+
+    @Test
+    fun commitHistoryRetainsOnlyBoundedRecentSnapshots() {
+        val id = projectId()
+        val live = File(context.cacheDir, "$id-live")
+        val storage = File(context.filesDir, "workbench/$id")
+        try {
+            assertTrue(live.mkdirs())
+            File(live, "index.html").writeText("version-0")
+            WorkbenchWorkspaceManager.open(context, id, live)
+            val created = mutableListOf<String>()
+            repeat(12) { version ->
+                WorkbenchWorkspaceManager.writeText(context, id, "index.html", "version-${version + 1}")
+                created += WorkbenchWorkspaceManager.commit(context, id, "Version ${version + 1}", live).id
+            }
+            val history = WorkbenchWorkspaceManager.commits(context, id)
+            assertEquals("History must retain at most ten commits.", 10, history.size)
+            assertTrue("The newest commit must remain available.", File(storage, "commits/${created.last()}/snapshot/index.html").isFile)
+            assertFalse("The oldest commit should be pruned.", File(storage, "commits/${created.first()}").exists())
+            assertEquals("The current commit is the new change baseline.", emptyList<WorkbenchWorkspaceManager.Change>(),
+                WorkbenchWorkspaceManager.changes(context, id, live))
+        } finally {
+            live.deleteRecursively()
+            storage.deleteRecursively()
+        }
+    }
+
     @Test
     fun projectIdsCannotEscapeWorkbenchStorage() {
         val error = runCatching {
