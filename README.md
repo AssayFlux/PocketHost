@@ -27,8 +27,8 @@ Other devices use separate, platform-appropriate Pocket Host software. A device 
 - **Separate node software:** platform-specific Android, Linux, Windows, macOS and supported SBC agents are planned as separate installable products. Production desktop/SBC installers are not yet delivered.
 - **Verified device fabric:** explicit device identity, short-lived enrollment challenge, owner approval, scoped role grants, revocation and audit.
 - **Role-based workers:** target roles include storage, backup, traffic, build/publish, bounded native backend jobs and edge gateway. Each role is subject to exact platform and hardware acceptance.
-- **Built-in web baseline:** the mobile server app includes HTML/CSS static hosting by default. TypeScript is part of the built-in web toolchain and is compiled to browser JavaScript before publication; its app-bundled compiler integration remains an implementation/acceptance item.
-- **Main-app web baseline:** the Pocket Host app includes HTML/CSS static hosting by default. TypeScript is a built-in main-app toolchain capability and must compile to browser JavaScript before publication; compiler integration remains an implementation/acceptance item.
+- **Main-app web baseline:** HTML, CSS and browser JavaScript hosting are included by default. A separate built-in TypeScript compiler must compile website source to browser JavaScript; compiler bundling and acceptance remain open. React/Vite are not part of the Android app.
+- **Operator console:** React + TypeScript + Vite remain isolated in `web-console/` and build independently from the Android application.
 - **Existing optional runtimes:** Python 3.11 and Node.js 24.22.1 already have substantial implementations in the separate `runtime-worker` companion APK; both are in progress, not merely planned. They are not required by the main app. Independent per-language package downloads and final Android acceptance remain open.
 - **Future Runtime Library:** 18 additional language runtimes are planned, each as a separate downloadable package. See `docs/FUTURE_RUNTIME_LIBRARY.md`.
 - **Website delivery:** Rust ingress and HTML/CSS static serving are present; TypeScript build integration and the main-app publish pipeline still require hardening and acceptance.
@@ -100,7 +100,7 @@ Pocket Host is being delivered in five gated steps. The architecture and documen
 - The mobile device has exactly two modes: **Server only** and **Command Center + Server**. Both serve websites; only the combined mode administers the fleet.
 - Accepted worker jobs must have defined local lifecycle and recovery behavior; the mobile app or optional remote control plane must not be treated as the only runtime authority for work already accepted by a worker.
 
-See [Master Plan](docs/MASTER_PLAN.md), [Project Baseline](docs/PROJECT_BASELINE.md), [Roadmap](docs/ROADMAP.md) and [Competitive Landscape](docs/COMPETITIVE_LANDSCAPE.md) for detailed scope, evidence requirements and product positioning.
+See [Master Plan](docs/MASTER_PLAN.md), [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md), [Project Baseline](docs/PROJECT_BASELINE.md), [Roadmap](docs/ROADMAP.md) and [Competitive Landscape](docs/COMPETITIVE_LANDSCAPE.md) for detailed scope, evidence requirements and product positioning.
 
 ## Build and verification
 
