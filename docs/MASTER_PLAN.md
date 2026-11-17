@@ -179,7 +179,7 @@ Exit:
 - External visitor can reach a verified site through Relay; management endpoints are unreachable.
 - Certificate renewal, revocation, device deletion and network changes work.
 - Load/soak and abuse tests meet published limits.
-- Cloudflare Tunnel and local-only hosting remain independent alternatives.
+- Cloudflare Tunnel and AssayFlux Relay remain independently selectable and may run concurrently; local-network-only hosting is a third independent mode. Failure in one provider must not interrupt the other provider or local hosting.
 
 ### Gate 5 — Identity, owner and visitor access
 **Purpose:** distinct and revocable authorization boundaries.
