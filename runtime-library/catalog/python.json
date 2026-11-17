@@ -3,7 +3,7 @@
   "package_id": "com.assayflux.pockethost.runtime.python",
   "language": "Python",
   "distribution": "CPython",
-  "version": "0.0.0-planned",
+  "version": "0.0.0-in-progress",
   "status": "in-progress",
   "description": "Backend services, automation and scripting",
   "targets": [],
