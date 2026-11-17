@@ -1,13 +1,13 @@
-# CLOUDFLARE TUNNEL — EXISTING CONNECTOR GUIDE
+# Cloudflare Tunnel — Provider Specification 0.1.0
 
-**Status:** Android cloudflared integration exists in source; external hostname verification is not recorded as complete.  
-**Owner context:** the domain and named Cloudflare Tunnel are already configured. Reuse them; never create a duplicate.
+**Product version:** 0.1.0  
+**Provider role:** independent public visitor-ingress adapter for eligible Pocket Host host nodes. Reuse them; never create a duplicate.
 
 ## 1. Purpose
 
-Cloudflare Tunnel is one optional public-connectivity path. The Android phone remains the website origin and Rust remains the website listener. The tunnel creates outbound connectivity from the phone; it does not provide Pocket Host capacity control, visitor identity by itself or an uptime guarantee.
+Cloudflare Tunnel is one optional public-connectivity path. The selected Pocket Host host node is the website origin and its website ingress is the only allowed tunnel destination. The tunnel creates outbound connectivity from the phone; it does not provide Pocket Host capacity control, visitor identity by itself or an uptime guarantee.
 
-AssayFlux Relay is a separate first-party alternative. A bounded HTTP request/response path is now implemented in source, but it is not deployed or production-approved. WebSocket/streaming, TLS lifecycle, DNSSEC and external acceptance remain open. Local Network mode remains independent of both.
+AssayFlux Relay is a separate first-party provider and may operate concurrently with Cloudflare Tunnel. A bounded HTTP request/response path is now implemented in source, but it is not deployed or production-approved. WebSocket/streaming, TLS lifecycle, DNSSEC and external acceptance remain open. Local Network mode remains independent of both.
 
 ## 2. Current connector integration
 
@@ -20,7 +20,7 @@ AssayFlux Relay is a separate first-party alternative. A bounded HTTP request/re
 - Tunnel token is passed through the intended environment channel, not command-line arguments.
 - Token is encrypted at rest with AES-256-GCM and an Android Keystore key.
 
-The Android binary is built from upstream source for this project; do not describe it as an official Cloudflare Android release.
+The current cloudflared build helper targets Android ABIs. Other host platforms require their own verified cloudflared packages and lifecycle adapters.
 
 ## 3. Connect the existing named tunnel
 
@@ -43,14 +43,14 @@ The Android binary is built from upstream source for this project; do not descri
 | External HTTPS verified | Independent client reaches expected site over valid TLS | Long-term uptime |
 | Visitor access secured | Cloudflare Access or site policy blocks unauthorized visitors | Management API is safe unless separately tested |
 
-## 5. Networking choice in Pocket Host
+## 5. Provider independence and mobile control
 
 - **Cloudflare Tunnel:** use existing named tunnel and account.
-- **AssayFlux Relay:** planned first-party option for users who do not want Cloudflare. Phone will establish outbound authenticated tunnel to AssayFlux gateway. Visitors see relay IP, not phone IP; relay operator can observe source IP and, in standard TLS-termination mode, HTTP content.
+- **AssayFlux Relay:** independent first-party provider. Each eligible host establishes its own authenticated outbound session; provider health, hostnames and credentials are independent of Cloudflare.
 - **Local Network:** LAN-only hosting without public edge.
 - **Direct hosting:** advanced owner-managed networking; not recommended as default.
 
-The four choices must be independent. A relay outage must not stop local hosting or Cloudflare mode.
+The mobile command center can configure and observe providers across enrolled hosts. Local Network, AssayFlux Relay and Cloudflare Tunnel are independent; Relay and Cloudflare may run concurrently. Failure in one must not stop the others.
 
 ## 6. Security and operations
 
