@@ -5,10 +5,11 @@
 1. [System Architecture](SYSTEM_ARCHITECTURE.md) — normative component model, mobile command center, device fabric, data/control planes and fault containment.
 2. [Master Plan](MASTER_PLAN.md) — five-step implementation plan and release acceptance.
 3. [Host Agent and Role Contract](HOST_AGENT_CONTRACT.md) — verified enrollment, role grants, job lifecycle and transports.
-4. [Roadmap](ROADMAP.md) — sequenced milestones.
-5. [Project Baseline](PROJECT_BASELINE.md) — repository implementation inventory and version identity.
-6. [Development Context](DEVELOPMENT_CONTEXT.md) — rules for contributors and coding agents.
-7. [Architecture Decisions](DECISIONS.md) — accepted product and engineering decisions.
+4. [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md) — installable products, supported roles and transports per device family.
+5. [Roadmap](ROADMAP.md) — sequenced milestones.
+6. [Project Baseline](PROJECT_BASELINE.md) — repository implementation inventory and version identity.
+7. [Development Context](DEVELOPMENT_CONTEXT.md) — rules for contributors and coding agents.
+8. [Architecture Decisions](DECISIONS.md) — accepted product and engineering decisions.
 
 ## Product and mobile UX
 
