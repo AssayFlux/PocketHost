@@ -84,6 +84,8 @@ class LinuxAgentTests(unittest.TestCase):
             self.assertTrue(store.claim_job("job-1"))
             self.assertFalse(store.claim_job("job-1"))
             store.complete_job("job-1", {"ok": True})
+            self.assertEqual(0, store.recover_interrupted_jobs())
+            self.assertEqual(0o600, (Path(directory) / "state.sqlite3").stat().st_mode & 0o777)
             state = store.db.execute("SELECT state FROM jobs WHERE job_id='job-1'").fetchone()[0]
             self.assertEqual("SUCCEEDED", state)
             store.close()
