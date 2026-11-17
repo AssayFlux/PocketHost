@@ -22,6 +22,7 @@ class PocketHostNavigationAccessibilityTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val statePreferences = context.getSharedPreferences("pockethost_state", 0)
+        val previousOperatingMode = statePreferences.getString("operating_mode", "SERVER_ONLY") ?: "SERVER_ONLY"
         statePreferences.edit()
             .putBoolean("biometric_unlock_enabled", false)
             .putBoolean("python_enabled", false)
@@ -71,6 +72,14 @@ class PocketHostNavigationAccessibilityTest {
                 enabled = true
             ))
             ActivityScenario.launch(MainActivity::class.java).use {
+            val firstDrawer = device.wait(Until.findObject(By.desc("Open app navigation")), 10_000)
+            assertTrue("Hamburger navigation control is missing", firstDrawer != null)
+            firstDrawer!!.click()
+            listOf("Capacity & performance", "Backups & recovery", "Security & access", "Relay & tunnels").forEach { legacy ->
+                assertFalse("Legacy duplicate navigation entry $legacy is still visible",
+                    device.hasObject(By.text(legacy)))
+            }
+            device.pressBack()
             expectedContent.forEach { (destinationName, expected) ->
                 val (headerName, expectedText, screenshotName) = expected
                 if (destinationName != "Home") openDrawerDestination(destinationName)
@@ -128,6 +137,7 @@ class PocketHostNavigationAccessibilityTest {
             }
         } finally {
             registryPreferences.edit().putString("sites", previousRegistry).commit()
+            statePreferences.edit().putString("operating_mode", previousOperatingMode).commit()
             visitorSiteRoot.deleteRecursively()
         }
     }
