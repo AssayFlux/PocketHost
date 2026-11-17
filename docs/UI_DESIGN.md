@@ -17,18 +17,20 @@
 
 Classic, clean, timeless and operational. Light theme is default; dark theme is optional. Preserve existing icon style and use monochrome icons. Cards are the main grouping primitive. No gradients, neon or glass effects.
 
-Active navy palette:
-- Background `#F7F7F5`
-- Cards `#FFFFFF`
-- Primary text `#1C1C1C`
-- Secondary text `#6B6B6B`
-- Accent navy `#1F3A5F`
-- Success `#2E7D32`
-- Warning `#B26A00`
-- Error `#C62828`
-- Border `#E2E2DE`
+Active classic navy palette:
+- Background / page canvas `#F5F3EE` (warm paper)
+- Cards / primary surfaces `#FFFEFC`
+- Primary text `#20252B`
+- Secondary text `#626A73`
+- Accent navy `#243B5A`
+- Muted slate `#64748B`
+- Warm brass accent `#9A7044` (sparingly)
+- Success `#34764A`
+- Warning `#9A7044`
+- Error `#B6423B`
+- Border `#DEDAD1`
 
-Use system sans-serif for body and monospace for hostnames, addresses, ports and logs. 8dp spacing grid, 12dp card radius, 1dp borders, restrained shadow. Tap targets >=48dp and body text >=14sp. Motion is subtle and short; respect reduced-motion preferences.
+Use system sans-serif for body and monospace for hostnames, addresses, ports and logs. Follow an 8dp spacing grid, 16dp standard card radius (20dp for prominent feature panels), subtle 1dp borders and restrained elevation. Keep cards clearly separated from the warm page canvas. Tap targets >=48dp and body text >=14sp. Motion is subtle and short; respect reduced-motion preferences.
 
 ## 3. Navigation
 
@@ -124,3 +126,13 @@ UI completion is not production acceptance without screenshot and accessibility 
 - The Settings/Network UIAutomator flow now seeds a temporary registered static site, verifies hostname-route and visitor-policy controls, switches the site to Private, issues the one-time shared visitor credential, confirms the credential is registered, revokes it, and confirms the credential is removed.
 - The Sites destination smoke test also verifies folder import, ZIP import and encrypted backup export entry points without requiring a terminal. These are source test definitions; they still require successful API 26/33/35 execution and artifact review.
 
+
+
+## Classic card refinement — 2026-11-17
+
+- The native Material 3 theme now uses a warm paper canvas, near-white cards, confident navy actions, slate secondary text and a restrained brass accent.
+- Dark mode uses a coordinated warm charcoal/slate palette rather than a separate visual language.
+- Shared app chrome has clearer brand hierarchy, a readable Running/Stopped service pill and a persistent five-destination navigation bar with explicit selected-state colours.
+- Dashboard, Sites, Activity and Settings card corners are standardized at 16dp; theme shape tokens cover 8dp, 12dp, 16dp, 20dp and 24dp surfaces.
+- Keep all operational claims tied to actual service/backend state. Visual polish must not make Relay, public reachability, runtime isolation or external HTTPS appear more ready than they are.
+- Visual and accessibility acceptance still requires CI/device screenshots, TalkBack traversal, contrast/font scaling and compact/landscape review.
