@@ -45,11 +45,12 @@ class RelayAgentHttpFramingTest {
         assertTrue(runCatching {
             RelayAgent.addResponseFramingHeader(headers, "content-length", "20")
         }.isFailure)
-        assertTrue(runCatching {
-            RelayAgent.addResponseFramingHeader(headers, "Transfer-Encoding", "chunked")
-        }.isFailure.not())
+        RelayAgent.addResponseFramingHeader(headers, "Transfer-Encoding", "chunked")
         assertEquals("10", headers["content-length"])
         assertEquals("chunked", headers["transfer-encoding"])
+        assertTrue(runCatching {
+            RelayAgent.validateResponseFraming(headers["transfer-encoding"], headers["content-length"])
+        }.isFailure)
     }
 
     @Test
