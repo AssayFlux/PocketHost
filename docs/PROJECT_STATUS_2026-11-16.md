@@ -171,3 +171,12 @@ This evidence update supersedes the earlier statement that API 26 instrumentatio
 - Android integration run [43991190237](https://github.com/AssayFlux/PocketHost/actions/runs/43991190237), SHA `ce28d9d0f4c6270b4f9b2fbd8834aceea4608ac3`, was still in progress when checked; do not treat its API 26/33/35 tests as passing. The run was triggered before the mesh-plan documentation commit; the latest main tree must receive a complete API matrix before Android acceptance can close.
 - A detailed future architecture and phased acceptance plan for the requested Android Wi-Fi hosting mesh is recorded in `docs/ANDROID_DEVICE_MESH_PLAN.md` (commit `2af7aef59a8874a55cef9f5c14cb11a49347695a`). This is a design plan only; no mesh implementation or device-to-device acceptance is claimed.
 - Gates 3–8 remain open. External deployment, TLS/DNS ownership, physical devices, signed release credentials, and independent security review cannot be inferred from source or emulator success. Gate 2 remains intentionally open.
+
+
+## Owner-directed UI redesign addendum — 2026-11-17
+
+The owner supplied two authoritative layout sketches: (1) login/app-unlock screen and (2) post-authentication home screen. The current design specification is `docs/UI_DESIGN.md`; it supersedes the five-destination bottom-navigation visual layout described in this historical snapshot.
+
+The implementation branch adds a warm-neutral/navy branded shell, hamburger navigation drawer, account dropdown, horizontal service-card carousel and system-information/recent-activity cards. Drawer destinations are mapped to existing native feature screens and Settings subsections; they do not imply that planned Relay or per-project runtime isolation has passed its engineering gates. The native login remains the existing optional biometric app lock; no unsupported username/password login is represented as functional.
+
+This is a source implementation update, not a completed Android acceptance claim. Exact-SHA Android build/instrumentation, API 26/33/35 screenshot review, TalkBack, font scaling, landscape and compact-screen verification remain required.
