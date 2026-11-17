@@ -109,3 +109,30 @@ jobs:
             app/build/outputs/apk/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
+
+      # Publish each installable Android product independently so users can
+      # download only the package intended for the device they are configuring.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-server-command-center-arm64
+          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-server-command-center-arm32
+          path: app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-server-command-center-x86-64
+          path: app/build/outputs/apk/release/app-x86_64-release.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-runtime-companion
+          path: app/build/outputs/apk/release/pockethost-runtime-worker-release.apk
+          if-no-files-found: error
+          retention-days: 30
