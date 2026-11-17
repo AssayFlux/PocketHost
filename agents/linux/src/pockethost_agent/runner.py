@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 SUPPORTED = {
-    "native.health_check": ("native_job", {"check_id": "identifier"}),
+    "native.health_check": ("native_job", "native_job.report_health", {"check_id": "identifier"}),
 }
 
 
@@ -30,9 +30,11 @@ def validate_job(envelope: dict[str, Any], grant: dict[str, Any]) -> None:
     kind = envelope.get("kind")
     if kind not in SUPPORTED:
         raise ValueError("Job kind has no installed executor; default deny.")
-    required_role, schema = SUPPORTED[kind]
+    required_role, required_capability, schema = SUPPORTED[kind]
     if grant.get("role") != required_role:
         raise ValueError("Job kind is not permitted by the active role.")
+    if required_capability not in grant.get("capabilities", []):
+        raise ValueError("Active role grant does not include the required capability.")
     payload = envelope.get("payload")
     if not isinstance(payload, dict) or set(payload) != set(schema):
         raise ValueError("Job payload has missing or unknown properties.")
