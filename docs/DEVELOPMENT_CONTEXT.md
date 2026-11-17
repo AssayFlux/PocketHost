@@ -9,7 +9,7 @@ Read [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md), [MASTER_PLAN.md](MASTER_P
 - Every external device must be cryptographically verified and explicitly approved by the mobile command center.
 - Separate software/firmware is built for each supported OS, architecture and board.
 - Device roles are assigned explicitly: Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery and Edge Gateway.
-- In 0.1.0 customer-selected language runtimes execute only on the mobile website-serving node. Worker devices run bounded infrastructure jobs and signed fixed-purpose native tasks.
+- Python and Node.js currently execute through the separate Android `runtime-worker` companion on the mobile serving node; they are in-progress optional runtimes, not main-app dependencies. The future Runtime Library is post-baseline. Worker devices run bounded infrastructure jobs and signed fixed-purpose native tasks.
 - Wi-Fi/LAN is preferred for control and bulk transfer; BLE is for discovery/small control; USB is only supported through documented platform APIs; remote channels are authenticated.
 - Discovery, IP, MAC, Bluetooth visibility, QR or a pairing code alone never grants ongoing trust.
 - Hosts persist approved assignments and continue local work during mobile/control-plane outages.
@@ -22,14 +22,14 @@ Read [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md), [MASTER_PLAN.md](MASTER_P
 1. Freeze architecture, threat model, identity, role, job and transport contracts.
 2. Implement mobile command center, device verification and role assignment.
 3. Deliver autonomous platform-specific node agents and worker roles.
-4. Deliver mobile website serving, selected language runtime packs and verified publishing.
+4. Deliver main-app HTML/CSS/JavaScript hosting, built-in TypeScript-to-JavaScript compilation, site lifecycle and verified publishing. Python/Node optional server runtimes remain separate companion software; the wider Runtime Library is post-baseline.
 5. Complete fleet resilience, connectivity, security, physical-device acceptance and signed releases.
 
 Do not skip contract and threat-model approval to start incompatible platform implementations.
 
 ## Repository boundaries
 
-- `app/`: Android mobile command center and optional mobile host.
+- `app/`: Android mobile website server, owner UI and optional command-center layer.
 - `runtime-worker/`: Android language runtime companion.
 - `rust-engine/`: Rust website ingress and routing engine.
 - `control-plane/`: optional remote identity, registry, command and audit service.
