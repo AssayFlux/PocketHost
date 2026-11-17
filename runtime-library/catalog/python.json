@@ -4,7 +4,7 @@
   "language": "Python",
   "distribution": "CPython",
   "version": "0.0.0-planned",
-  "status": "planned",
+  "status": "in-progress",
   "description": "Backend services, automation and scripting",
   "targets": [],
   "artifact": null,
@@ -18,5 +18,10 @@
   "install_strategy": "versioned-side-by-side",
   "health_check": null,
   "rollback": true,
-  "notes": "Catalog placeholder only. No downloadable artifact is published. Build, sign and validate for each supported Android ABI before changing status to available."
+  "notes": "CPython 3.11 is integrated through Chaquopy. Existing implementation includes a loopback WSGI host, bounded request handling, multi-host routing, metrics and Binder lifecycle controls. Host-side tests exist. Complete Android device acceptance, security hardening and independent signed package distribution before status becomes available.",
+  "existing_implementation": {
+    "location": "runtime-worker/",
+    "distribution": "Currently included together in the runtime-worker companion APK; not yet an independently downloadable package.",
+    "acceptance": "Android device/API matrix, physical-device lifecycle and security acceptance remain open."
+  }
 }
