@@ -5,6 +5,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiScrollable
+import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import com.assayflux.pockethost.sites.SiteRegistry
 import java.io.File
@@ -48,6 +50,8 @@ class PocketHostNavigationAccessibilityTest {
             val menu = device.wait(Until.findObject(By.desc("Open app navigation")), 10_000)
             assertTrue("Hamburger navigation control is missing", menu != null)
             menu!!.click()
+            val scrollableDrawer = UiScrollable(UiSelector().scrollable(true)).setAsVerticalList()
+            scrollableDrawer.scrollTextIntoView(label)
             val destination = device.wait(Until.findObject(By.text(label)), 10_000)
             assertTrue("Drawer destination $label is missing", destination != null)
             destination!!.click()

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -124,7 +126,7 @@ internal fun PocketHostSidebar(
     onNavigate: (String) -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Surface(color = palette.primary, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(42.dp)) {
                 Box(contentAlignment = Alignment.Center) { Text("AF", color = palette.onPrimary, fontWeight = FontWeight.Bold) }

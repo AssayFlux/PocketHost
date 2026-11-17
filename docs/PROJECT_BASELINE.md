@@ -265,3 +265,8 @@ Update this file with exact evidence whenever the baseline changes.
 - `PocketHostNavigationAccessibilityTest` now traverses the hamburger drawer destinations (Home, Hosting, Websites & Files, Activity & Logs, Learn, Settings), preserves Settings subsection and visitor-credential checks, and captures the new screen hierarchy/screenshots.
 - `PocketHostDashboardUiSmokeTest` now asserts the owner home carousel, hamburger control and account dropdown routes.
 - Android integration artifact collection now retrieves `home.png` alongside the navigation screenshots and hierarchy. Source-level test updates are not passing evidence until API 26/33/35 runs complete and artifacts are inspected.
+
+
+## Current main UI integration — 2026-11-17
+
+The owner home shell, hamburger drawer, account dropdown, service carousel and information centre are merged into main. Android UIAutomator source has been updated to traverse drawer destinations, test account menu routes and preserve visitor/publishing flows. A further small update applies Android system appearance by default and makes the biometric panel scroll on compact/large-font layouts. Current exact-SHA Android integration evidence is still required before visual acceptance.

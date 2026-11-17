@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -105,8 +106,10 @@ class MainActivity : ComponentActivity() {
             .getBoolean("biometric_unlock_enabled", false)
         unlocked = mutableStateOf(!enabled)
         setContent {
-            if (unlocked.value) PocketHostDashboard()
-            else BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
+            PocketHostTheme(darkTheme = isSystemInDarkTheme()) {
+                if (unlocked.value) PocketHostDashboard()
+                else BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
+            }
         }
         if (enabled) authenticateAtLaunch()
     }
@@ -160,7 +163,13 @@ private fun PocketHostDashboard() {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Home") }
     var settingsSection by remember { mutableStateOf("General") }
-    var darkTheme by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("dark_theme", false)) }
+    val appearancePreferences = remember { context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE) }
+    var darkThemeOverride by remember {
+        mutableStateOf<Boolean?>(if (appearancePreferences.contains("dark_theme")) {
+            appearancePreferences.getBoolean("dark_theme", false)
+        } else null)
+    }
+    val darkTheme = darkThemeOverride ?: isSystemInDarkTheme()
     var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
     var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
@@ -568,9 +577,8 @@ private fun PocketHostDashboard() {
                         ),
                         actions = PocketHostGeneralSettingsActions(
                             onDarkThemeChange = { enabled ->
-                                darkTheme = enabled
-                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                    .putBoolean("dark_theme", enabled).apply()
+                                darkThemeOverride = enabled
+                                appearancePreferences.edit().putBoolean("dark_theme", enabled).apply()
                             },
                             onBiometricUnlockChange = { enabled ->
                                 if (!enabled) {
