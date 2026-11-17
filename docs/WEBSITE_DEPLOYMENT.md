@@ -26,6 +26,14 @@ A component declares language/runtime version, resource limits, health check, st
 - The future Runtime Library will provide one separately signed/downloadable package per language. Its 20 manifests are catalog metadata only; no independent package artifacts or completed Runtime Manager are present.
 - The main-app TypeScript-to-JavaScript compiler is a separate Step 4 requirement and is not yet bundled/verified. It is not a server-side runtime.
 
+## Workbench and live release separation
+
+Workbench is the editing and release-review surface for a site. It keeps a distinct workspace from the active immutable release. Visitors continue to receive the active release while the owner edits, saves, previews and commits. A local commit is not itself a deployment.
+
+Publishing validates and stages an immutable artifact, previews and health-checks it, presents a diff and requires explicit owner approval before atomic activation. A failed build or interrupted activation must preserve or restore the previous known-good release. Rollback is an audited activation of a prior immutable release. See [Workbench specification](WORKBENCH.md).
+
+The current SiteFileManager targets the deployed site tree and is not sufficient as the final Workbench data model. SiteImporter release activation/recovery code must be inspected and tested before being relied on for this workflow.
+
 ## Build and publish
 
 1. Owner chooses source and target release.
