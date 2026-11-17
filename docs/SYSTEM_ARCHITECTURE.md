@@ -1,324 +1,215 @@
 # Pocket Host 0.1.0 — System Architecture
 
-**Product version:** 0.1.0  
-**Architecture status:** baseline specification  
-**Primary interface:** Android and iOS mobile command-center applications  
-**Primary principle:** independent components, authenticated interconnection, local autonomy
+**Product baseline:** 0.1.0  
+**Primary owner interface:** Android or iPhone command-center application  
+**Operating model:** mobile-controlled, role-assigned, interconnected device fleet  
+**Core invariant:** device enrollment is explicit; every role is least-privilege; failures remain contained.
 
 ## 1. Product definition
 
-Pocket Host is a mobile-first, distributed self-hosting system. A user manages a personal or team fleet from an Android or Apple mobile phone. The fleet may contain phones, tablets, desktop computers, laptops, servers, VPSs, single-board computers, embedded Linux devices and constrained microcontrollers.
+Pocket Host lets an owner turn supported devices into a coordinated personal service system. The mobile application is the trusted command center. It can also be the website server, or perform both roles at once.
 
-The mobile application is the owner's command center: it discovers and enrolls devices, configures services, deploys workloads, monitors health, approves sensitive actions and coordinates the fleet. It is not a mandatory runtime dependency for workloads already running on host devices.
+The user chooses one of three mobile modes:
 
-Every device is assigned capabilities based on its actual hardware, operating system, network, storage, power and security properties. A device is offered only workloads it can safely support.
+| Mode | Mobile responsibilities | Website serving |
+|---|---|---|
+| Command Center | Discover, verify, assign, configure, monitor and recover fleet devices | Off |
+| Server | Serve websites from the mobile device and manage its own local services | On |
+| Command Center + Server | All command-center duties plus local website hosting | On |
+
+The command-center role and server role are independent switches. Turning off the mobile server role must not disable command-center access to other hosts. Closing the mobile application must not stop workloads that have been handed to autonomous host agents.
+
+**Serving-node rule:** in 0.1.0, customer-selected language runtimes are installed on the mobile website-serving node only. When mobile Server mode is off, a website must be served by static/native capabilities or by an explicitly designated compatible serving arrangement; the system must not silently move customer runtimes onto worker devices. Runtime placement beyond the mobile serving node requires a separately approved architecture revision.
 
 ## 2. Mobile command center
 
-### 2.1 Android and iOS are first-class control clients
+Android and iOS are first-class command clients using the same versioned contracts and fleet model.
 
-The product's primary human interface is mobile:
-- **Pocket Host for Android:** native Kotlin/Jetpack Compose application.
-- **Pocket Host for iOS:** native Swift/SwiftUI application, with the same versioned control API and interaction model.
-- Both clients manage the same fleet, accounts, device identities, services, deployments, access policy, tunnels, backups, alerts and audit history.
-- Both support local-network discovery/pairing and remote management through authenticated device/control-plane connections.
-- Mobile clients are control clients. A mobile operating system's background execution rules determine whether that phone can also act as a host.
+Responsibilities:
+- Owner authentication, device discovery and explicit enrollment approval.
+- Issue and revoke device verification challenges and role grants.
+- Assign, change, pause and remove device jobs.
+- Select website language runtimes and versions for the mobile serving node.
+- Configure site releases, storage, traffic distribution, tunnels and backups.
+- Observe health, capacity, connectivity, deployment and audit state.
+- Approve sensitive actions, firmware updates and destructive operations.
 
-### 2.2 Controller independence
+The mobile app is not a fleet-wide single point of failure. Enrolled nodes retain their signed local assignments and continue already-authorized work during phone, Internet or control-plane outages. A replacement phone recovers owner authority through account recovery and device re-enrollment.
 
-The phone is the primary command center, not the system's single point of failure:
-- Hosts persist their desired configuration, active release, secrets and service state locally.
-- Hosts supervise and restart their own services.
-- The phone may disconnect, reboot, lose battery or uninstall the app without stopping independent workloads on other hosts.
-- A host can continue its last owner-authorized configuration while offline.
-- Remote commands are queued with expiry, idempotency keys, authorization scope and durable acknowledgement.
-- Sensitive changes require an authenticated owner action and are applied by the target host.
-- A new phone can recover control through account/device recovery and explicit re-enrollment; no single phone holds irreplaceable fleet authority.
+iOS is a first-class command center. iOS background execution restrictions mean arbitrary always-on hosting is not promised; Server mode is shown only where the OS and device capabilities actually support the required workload.
 
-### 2.3 Mobile capability boundaries
+## 3. Device roles and assignments
 
-Android may run supported host workloads under its foreground-service, package, thermal, battery and storage constraints. iOS is primarily a fleet-control client: iOS background execution and app lifecycle restrictions mean it must not be promised as an always-on arbitrary website server. It may offer local discovery, pairing, monitoring and owner-authorized control while active, plus supported notification/background refresh features where Apple's platform permits them.
+A physical device may receive multiple compatible roles, but each role is an independent, revocable job with its own identity, permissions, resource budget, health and lifecycle.
 
-## 3. System topology
+| Role | Purpose | Typical devices |
+|---|---|---|
+| Command Center | Owner approvals and fleet orchestration | Android/iPhone |
+| Mobile Website Server | Final website ingress, static files and selected language runtimes | Supported Android phone/tablet |
+| Storage Node | Encrypted object/file storage, snapshots and replication | PC, NAS, server, SBC |
+| Traffic Node | Approved reverse proxy, cache, relay or traffic distribution | Linux server, SBC, eligible desktop |
+| Build/Publish Worker | Build, test, package, sign and stage immutable releases | Desktop, laptop, server |
+| Backend/Job Worker | Fixed-purpose native services, queues, scheduled jobs and approved adapters | Linux/Windows/macOS/server |
+| Backup/Recovery Node | Encrypted backup copies and restore staging | NAS, server, SBC |
+| Edge Gateway | Protocol translation and controlled MCU access | Raspberry Pi, embedded Linux |
+| MCU/Device Node | Telemetry, sensor/actuator operations and bounded edge tasks | DemonCore, ESP32-class boards |
+
+The user assigns jobs from the mobile command center. The scheduler checks signed capabilities, OS support, available capacity, power/thermal state, trust level, network reachability and required data locality. It must refuse unsupported assignments rather than guess.
+
+A device may be storage-only, build-only or traffic-only. It does not become a general-purpose runtime host merely because it is enrolled.
+
+## 4. System topology
 
 ```
-             ANDROID COMMAND CENTER       iOS COMMAND CENTER
-                       |                         |
-                       +---- authenticated ------+
-                             control API
-                                  |
-                   OPTIONAL REMOTE CONTROL PLANE
-                 identity · registry · queue · audit
-                    (never required for local hosting)
-                                  |
-        +-------------------------+--------------------------+
-        |                         |                          |
-   HOST NODE A               HOST NODE B                EDGE GATEWAY
- Android / Linux             Windows / macOS             Linux SBC
- ARM / x86 / SBC              Server / VPS               DemonCore
-        |                         |                          |
-   Host supervisor           Host supervisor              DCP adapter
-        |                         |                          |
-   Service cells             Service cells                MCU fleet
-        |                         |                          |
-   Runtime providers          Runtime providers             ESP32 etc.
-        +-------------------------+--------------------------+
-                                  |
-                         SERVICE DATA PLANE
-            authenticated, scoped, bounded node-to-node links
+                   OWNER
+                    |
+        Android / iPhone COMMAND CENTER
+          | Command Center role
+          | optional Mobile Server role
+          | language runtimes only here
+          |
+    enrollment + signed role assignments
+          |
+    +-----+-----------+-----------+----------------+
+    |                 |           |                |
+ Storage node    Traffic node  Build/publish   Backend/job
+    |                 |           |             worker
+    +-----------------+-----------+----------------+
+                      |
+              authenticated data plane
+                      |
+        Mobile website server / site ingress
+                      |
+            site router and runtime adapters
+                      |
+       static + Python + Node + selected runtimes
+                      |
+        Local / AssayFlux Relay / Cloudflare
+                      |
+                   Visitors
 
-Visitors -> Local ingress / AssayFlux Relay / Cloudflare Tunnel
-          -> selected host's website ingress -> site router
-          -> static content or isolated service component
+ Raspberry Pi / edge gateway -> DemonCore / MCU devices
 ```
 
-Control plane and data plane are separate:
-- **Control plane:** identity, enrollment, desired state, policy, scheduling intent, command delivery and audit.
-- **Data plane:** visitor requests, internal service calls, replication, artifact transfer and edge-device messages.
-- Public visitor ingress never exposes owner management, device administration, runtime brokers, debug interfaces or MCU control APIs.
+Traffic workers can proxy or cache approved traffic, but the final website ingress and customer runtime execution remain on the designated mobile serving node in this baseline. A traffic node cannot gain access to runtime control, owner management or arbitrary host ports.
 
-## 4. Component model and fault domains
+## 5. Device integration and trust
 
-Each component owns its state, lifecycle, resource budget, health endpoint and versioned interface. Components communicate through authenticated APIs or bounded messages. No component receives unrestricted access to another component's files, credentials or process.
+All integrations are initiated or explicitly approved by the mobile command center.
 
-| Component | Responsibility | Failure containment |
-|---|---|---|
-| Mobile command center | Owner interaction, approvals, fleet view | App failure does not stop hosts |
-| Identity and enrollment | Users, roles, device keys, pairing, revocation | Identity outage blocks new authorization; existing local workloads continue |
-| Fleet registry/control plane | Device records, desired state, queued commands, audit | Optional; hosts continue cached authorized state |
-| Host agent | Local reconciliation, supervisor, health and update | One host failure does not stop other hosts |
-| Website ingress | HTTP/TLS listener, hostname and site routing | One listener/site failure does not crash host supervisor |
-| Site component cell | One deployable application component | Cell crash/OOM/restart is isolated to that cell |
-| Runtime provider | Language distribution and process adapter | Runtime failure does not stop static hosting or other runtimes |
-| Storage provider | Site data, persistent volumes, backup snapshots | Volume/site failure is scoped; immutable release and backup recovery retained |
-| Tunnel provider | Public visitor connectivity | Provider failure does not stop local ingress or another provider |
-| Edge gateway | DCP/MQTT/BLE/Wi-Fi/mesh translation | Gateway failure does not stop website hosts |
-| MCU node | Sensor, actuator and bounded edge action | Node failure does not stop gateway or unrelated devices |
-| Observability | Metrics, logs, traces and alerts | Telemetry outage must not block service request paths |
+### Supported transport choices
 
-### 4.1 Isolation rules
+- **Wi-Fi / LAN:** preferred for discovery, control and bulk transfer where the network is trusted. Use mutually authenticated encrypted sessions.
+- **Bluetooth LE:** discovery, proximity checks, short pairing exchanges and small control messages. It is not a bulk storage/build transport.
+- **Bluetooth Classic:** optional where both platforms and device APIs support the required profile.
+- **USB data cable:** direct provisioning, diagnostics and bulk transfer only through supported Android USB host/accessory or platform-approved interfaces. Do not assume generic USB control on iOS.
+- **Remote network:** authenticated outbound connections and the optional control plane/relay when devices are not on the same LAN.
 
-- One host agent per host device, with OS-specific least privilege.
-- One independently supervised execution cell per website component (and per tenant/project boundary where required).
-- Each cell receives only its own project data and explicitly granted capabilities.
-- Runtime packages may be reused as immutable software, but runtime processes and project state are isolated.
-- Website ingress is a separate component from the runtime broker.
-- Tunnel connectors are separate from website application processes.
-- Management credentials are never mounted into customer application cells.
-- MCU device operations are exposed through explicit capabilities, never arbitrary remote shell or unrestricted GPIO.
-- A process boundary alone is not claimed as a security boundary unless OS isolation and adversarial tests prove it.
+Transport discovery is not trust. A device name, MAC address, IP address, QR code or Bluetooth visibility does not authorize integration.
 
-## 5. Interconnected device fabric
+### Enrollment ceremony
 
-### 5.1 Device classes
+1. Candidate device installs the matching Pocket Host node software.
+2. Candidate creates a hardware-backed key where supported and displays a short-lived device ID/fingerprint and one-time verification code.
+3. Mobile command center scans/discovers the candidate and verifies the challenge over the candidate's authenticated channel.
+4. Owner confirms the device identity, displayed capabilities, requested role and permissions.
+5. The command center approves the exact role grant and issues a device-bound, scoped, revocable credential.
+6. Candidate records the grant and reports its accepted role and policy.
+7. The owner can inspect, pause, change or revoke that grant at any time.
 
-| Class | Examples | Role |
-|---|---|---|
-| Mobile command center | Android phone, iPhone | Fleet control and owner approval |
-| Mobile host | Supported Android phone/tablet | Static and supported dynamic hosting within OS limits |
-| Desktop host | Linux, Windows, macOS PC/laptop | Website, API and application workloads |
-| Server host | VPS, dedicated server, home server | Always-on and higher-capacity workloads |
-| Single-board host | Raspberry Pi, other ARM/x86 SBC | Compact Linux hosting and edge gateway |
-| Microcontroller node | ESP32, RP2040-class and other supported MCUs | Telemetry, device APIs, control and bounded edge tasks |
-| Constrained node | Sensor, actuator, tiny wireless device | Measurements and events |
+Verification codes are short-lived, single-use pairing proofs, not permanent passwords. Device identity is bound to a cryptographic key and registry record. A copied code cannot enroll another device after expiry or use.
 
-A Raspberry Pi is a single-board computer, not a microcontroller. An ESP32-class MCU is not assumed to run general-purpose Node/Python workloads or the full host engine.
+Unknown, unapproved or revoked devices cannot join the trusted data plane, receive jobs, access storage or proxy traffic.
 
-### 5.2 Capability discovery
+## 6. Communication and job contracts
 
-Every host reports a signed, versioned capability profile:
-- OS/firmware and version; CPU architecture, ABI and instruction features.
-- RAM, storage, filesystem and available accelerators.
-- Network interfaces, reachable peers and ingress support.
-- Power source, battery, thermal and lifecycle constraints where available.
-- Supported runtime/provider versions and service types.
-- Isolation mechanisms, security posture and update capability.
+All devices implement a versioned host-agent contract. Commands are typed, allow-listed, scoped, expiring, idempotent and audited. No arbitrary shell, unrestricted filesystem, generic process execution or open-ended remote script command is exposed.
 
-Unknown capability values remain unknown. The scheduler must not infer support from a device name.
+Each job includes:
+- job and assignment IDs, target device ID and owner/team;
+- role, requested capabilities and explicit permission set;
+- artifact digest and signed publisher identity where applicable;
+- resource, storage, network, power and time budgets;
+- input/output data locations and retention rules;
+- health/readiness checks, retry policy and rollback behavior;
+- issued/expiry times, idempotency key and audit correlation.
 
-### 5.3 Device tiers
+The device validates every job locally before accepting it. It persists accepted assignment state and reports desired versus observed state. Delivery is at-least-once; operations must be idempotent. Unknown or incompatible contract versions are rejected safely.
 
-- **Full host:** general-purpose OS and sufficient resources for static and accepted application workloads.
-- **Compact host:** resource-limited SBC/embedded Linux with a narrower tested workload catalog.
-- **Microcontroller edge node:** bounded device APIs, telemetry, protocol bridges and control operations.
-- **Constrained node:** sensor/actuator/event capability only.
+## 7. Website serving and runtime model
 
-The tier is a measured profile, not a permanent label. Battery, heat, network, memory and storage pressure can dynamically reduce available capability.
+The mobile website server is the final serving node in this baseline:
+- Rust ingress and static website delivery are foundational.
+- Python, Node and other supported language runtimes are separately selectable installable runtime packs.
+- User installs only the runtimes needed by the website.
+- A website can use several installed runtimes, but each project/component receives a distinct OS-enforced execution identity and isolated data/capabilities.
+- Runtime processes are supervised independently; static delivery remains available if a language runtime fails.
+- Worker devices may build, validate, stage, cache, store or distribute immutable artifacts, but do not execute customer-selected language runtimes in 0.1.0.
+- Publishing is a staged, verified, atomic activation on the mobile serving node. A build worker cannot publish directly without owner-authorized approval and serving-node verification.
 
-## 6. Workloads and multi-runtime websites
+Runtime packs must declare language/version, ABI, platform compatibility, dependencies, license, digest, signature, health check, resource limits and rollback path. No runtime is installed automatically without owner consent.
 
-A website is a deployment composed of independently managed components. One website may include:
-- Static frontend.
-- Python API.
-- Node.js realtime service.
-- PHP or another accepted runtime component.
-- Database, queue, scheduled task or object-storage dependency when an adapter is supported.
-- Edge-device integration through a scoped service capability.
+## 8. Data and traffic roles
 
-Each component declares runtime/version, architecture, CPU/memory/storage budget, persistence, network needs, health check and security capabilities. A site router maps hostname/path/service routes to healthy components. Components may run on one host or multiple compatible hosts. Inter-component calls are authenticated and explicitly allow-listed.
+Storage nodes hold only explicitly assigned encrypted datasets or object namespaces. Keys are scoped and not shared with unrelated roles. Replication and backup are distinct from the live authoritative serving copy.
 
-Runtime packs are versioned and reusable. Runtime process instances, secrets, filesystem mounts and network permissions remain scoped to each component. A language pack being installed does not mean its execution is isolated.
+Traffic nodes receive only explicit site/hostname routes and bounded proxy/cache capabilities. They do not terminate into management APIs, runtime brokers, device administration or MCU control. Cache policy must respect private/no-store content and owner configuration.
 
-## 7. Device interconnection and networking
+Build/publish nodes receive source and build inputs only for the authorized job. Signing keys remain in protected signing infrastructure or approved secure device storage; a generic worker must never receive owner identity keys.
 
-### 7.1 Control connectivity
+Backend/job workers in this baseline execute approved native worker packages and bounded job adapters. They do not become arbitrary Python/Node hosting nodes. This preserves the user's central runtime placement rule while allowing useful distributed support work.
 
-- Local LAN discovery is a hint only; discovery never grants trust.
-- Pairing uses short-lived one-time challenges and explicit owner approval.
-- Each host owns a non-exportable device identity key where supported.
-- Host-to-host and client-to-host control uses authenticated encrypted transport.
-- The optional control plane brokers discovery across networks but does not own the only copy of desired state.
-- Direct LAN links may be used when available; an authenticated relay path may be used when direct connectivity is unavailable.
-- Every command has a typed schema, scope, expiry, idempotency key and audit record.
+## 9. DemonCore and microcontrollers
 
-### 7.2 Website ingress
+Raspberry Pi and other capable SBCs can run an edge gateway. DemonCore and supported MCU nodes connect through a board-aware adapter with:
+- per-board identity and firmware version;
+- signed firmware and verified OTA updates;
+- allow-listed sensor, actuator and GPIO capabilities;
+- explicit safe-state and physical safety policy;
+- rate, duty-cycle and timeout limits;
+- audit and revocation.
 
-The owner may independently enable:
-- Local Network ingress.
-- First-party AssayFlux Relay.
-- Cloudflare Tunnel.
-- Multiple supported providers concurrently.
+MCUs are not assumed to run general-purpose website runtimes. A gateway failure must not stop the mobile website server or unrelated nodes.
 
-Each provider has independent credentials, lifecycle, hostname routes, health and diagnostics. One provider's failure must not interrupt another provider or local hosting. Provider routing targets only the website ingress.
+## 10. Connectivity providers
 
-### 7.3 Offline and degraded modes
+Local Network, first-party AssayFlux Relay and Cloudflare Tunnel remain independent visitor connectivity providers. Users may enable either provider or both. Each has independent credentials, hostnames, route health and revocation. Provider failure does not stop local serving or another provider.
 
-- Existing services continue from local state when the command-center phone is unavailable.
-- Hosts continue last-known-good deployments if the remote control plane is unavailable.
-- New remote enrollment and sensitive changes may be unavailable during identity/control-plane outages.
-- A disconnected host is not reported as healthy; its state is shown as stale/unreachable.
-- No silent failover or credential weakening is allowed.
-- Reconnection reconciles versioned desired state with observed state and resolves conflicts explicitly.
+All public routes terminate at the approved website ingress. Traffic worker routing is separately granted. Management and device-control endpoints are never visitor routes.
 
-## 8. Independent failure and recovery
+## 11. Fault domains and autonomy
 
-Each component implements:
-- Separate process/service lifecycle where its platform supports it.
-- Health/readiness/liveness reporting.
-- Bounded CPU, memory, disk, request, queue and connection limits.
-- Timeouts, cancellation, circuit breakers and backpressure.
-- Durable local state and atomic configuration/release activation.
-- Last-known-good rollback.
-- Restart policy with crash-loop detection and rate limiting.
-- Structured logs and scoped metrics.
-- Explicit degraded mode and operator-visible reason.
+- Command-center app failure does not stop accepted jobs on enrolled nodes.
+- Mobile Server role can stop without disabling the command-center role.
+- One worker failure does not stop other workers.
+- Storage, traffic, build and backend jobs have independent queues and credentials.
+- A runtime crash does not stop static serving or other runtimes.
+- A build failure does not alter the active website release.
+- A tunnel failure does not stop local hosting or another tunnel.
+- A device revocation removes its access without revoking unrelated devices.
+- Telemetry and control-plane outages do not block local service request paths.
+- The host agent applies resource limits, backpressure and bounded retries locally.
 
-A supervisor must not restart the whole host because one site, runtime, tunnel or telemetry exporter fails. Updates are staged per component and rolled back independently. Shared infrastructure (identity, database, ingress) receives its own availability and recovery plan.
+## 12. Compatibility and honest support
 
-## 9. Security model
+Every platform has a separate installable product:
+- Android: mobile command center and optional mobile host/worker agent.
+- iOS: mobile command center; hosting only if a supported OS capability and acceptance test permit it.
+- Linux, Windows and macOS: native host/worker agent installers.
+- Raspberry Pi/SBC: board/OS/architecture-specific host or gateway image/package.
+- MCU: firmware and board-specific DemonCore adapter.
 
-- Distinguish human owner, team member, mobile client, host device, service component, visitor and MCU identities.
-- Default-deny network and filesystem access; grant scoped, revocable capabilities.
-- Use short-lived credentials, device-bound keys, rotation and immediate revocation.
-- Never put fleet-wide secrets in firmware, images or runtime packs.
-- Sign host agents, runtime packs, deployment manifests, firmware and update metadata.
-- Enforce project isolation with OS-level mechanisms and test native escape paths.
-- Keep management, visitor and device-control network planes separate.
-- Record sensitive actions in tamper-evident audit storage.
-- Treat LAN, mDNS, BLE advertisements and device names as untrusted.
-- MCU operations require board-specific safe pin/peripheral profiles and explicit policy.
-- Never invent cryptographic protocols; use reviewed standard TLS and established secure provisioning mechanisms.
+A platform is supported only for tested roles, transports, OS versions and hardware. Unsupported USB, Bluetooth, background execution, filesystem, isolation or firmware features are not advertised.
 
-## 10. Mobile user experience
+## 13. Acceptance invariants
 
-The mobile command center is the primary product surface:
-- Fleet overview with live/stale/offline state and health summaries.
-- Device onboarding through QR, nearby discovery and manual secure pairing.
-- Device detail with capabilities, resource use, workloads and diagnostics.
-- Website/service deployment wizard and per-component controls.
-- Runtime catalog and compatibility-aware installation.
-- Network and tunnel provider configuration.
-- Access, team, secrets and approval controls.
-- Backup, restore, updates and recovery.
-- Notifications for failure, degraded service, security events and pending approvals.
-- Offline local control where the phone can directly reach a host.
-- Accessible, responsive Android and iOS design using the Pocket Host design system.
-
-A browser console is a secondary operator surface, not a replacement for the mobile command center.
-
-## 11. Platform implementation boundaries
-
-- Android: Kotlin/Compose app and host adapter; obey foreground service, battery, package, thermal and storage rules.
-- iOS: Swift/SwiftUI control client; use supported background APIs and never promise persistent arbitrary hosting.
-- Linux: Rust host core plus systemd, filesystem, networking, package and security adapters.
-- Windows: native service lifecycle, ACL, firewall, installer, signing and update adapters.
-- macOS: launchd, signing/notarization, entitlements, filesystem and network adapters.
-- SBC/embedded Linux: exact board profiles, thermal/power/storage recovery and headless onboarding.
-- MCU: DemonCore firmware/DCP or other board-specific agent; bounded capabilities only.
-
-Portable Rust code is reused where dependencies and security models allow. OS-specific behavior stays behind explicit adapters.
-
-## 12. AssayFlux DemonCore integration
-
-DemonCore remains a specialised MCU and edge-device firmware/fleet project. Pocket Host integrates through a versioned authenticated adapter. DemonCore owns board profiles, GPIO safety, DCP, provisioning, MCU firmware, transports and OTA. Pocket Host owns mobile fleet control, general-purpose host nodes, websites and public visitor ingress.
-
-DCP messages are not authentication. Cross-network operations require claimed device identity, authenticated/encrypted transport, replay protection, scoped authorization, revocation and signed OTA. Public visitor routes must never reach DCP administration or GPIO control.
-
-A capable Linux SBC may run a Pocket Host host agent and a DemonCore gateway as separate supervised services. Failure or compromise of one must not grant access to the other.
-
-## 13. Version and compatibility policy
-
-The baseline release is 0.1.0. Each independently deployed component declares:
-- Product version and build provenance.
-- API/protocol version range.
-- Required host-agent capabilities.
-- Runtime/ABI/OS/board compatibility.
-- Signed artifact digest and update channel.
-- Configuration schema version and migration policy.
-
-Components may release independently. Breaking protocol changes require explicit version negotiation and staged compatibility. Fleet upgrades are canary-first and rollback-capable.
-
-## 14. Delivery sequence
-
-### 0.1.0 — System foundation
-- Freeze this system model and common contracts.
-- Establish Android and iOS mobile command-center product specifications.
-- Define host agent, device identity, service manifest, capability profile, desired-state and event schemas.
-- Define fault domains, offline behavior, security threat model and upgrade compatibility.
-- Keep local hosting autonomous and management APIs private.
-
-### 0.1.x — Mobile fleet control
-- Complete Android command-center navigation, fleet overview, pairing and local management.
-- Build the iOS command-center client against the same API contract.
-- Implement host enrollment, device registry, revocation, heartbeat, typed command queue and audit.
-- Verify mobile app outage does not stop independent hosts.
-
-### 0.2.x — Independent host services
-- Refactor host supervision, ingress, runtime providers, storage and tunnels into independently supervised modules.
-- Implement component health, resource budgets, circuit breakers and rollback.
-- Complete per-project execution isolation on supported host platforms.
-- Keep static hosting independent of dynamic runtime availability.
-
-### 0.3.x — Linux and SBC hosts
-- Linux x86_64 and ARM64 host agent.
-- Raspberry Pi-class exact-model profiles.
-- Headless onboarding, secure updates, power-loss recovery and remote mobile control.
-
-### 0.4.x — Desktop hosts
-- Windows and macOS host agents.
-- Native installers, service lifecycle, security and recovery acceptance.
-
-### 0.5.x — Edge and microcontroller fabric
-- Complete DemonCore device identity, authenticated transport, board safety and OTA acceptance.
-- Integrate through the Pocket Host edge adapter.
-- Add additional boards only with exact hardware profiles and physical test evidence.
-
-### 0.6.x — Multi-host deployments
-- Multi-component, multi-runtime placement across compatible hosts.
-- Authenticated internal service routes and content-addressed deployment.
-- Stateful replication and failover only after consistency and recovery acceptance.
-
-### 1.0.0 — Production platform
-- Independent security review, documented support matrix, signed stable releases, upgrade/rollback, backup/restore, abuse controls, monitoring, incident response and public service-level commitments.
-
-## 15. Acceptance principles
-
-- No component is declared implemented from documentation or source presence alone.
-- Every supported OS, ABI, board and runtime combination has exact-device evidence.
-- Mobile control center outage does not interrupt autonomous workloads.
-- A crash in one service cell does not interrupt sibling cells, static hosting or unrelated hosts.
-- Tunnel provider failure does not interrupt local ingress or another provider.
-- Control plane outage does not erase local state or stop running services.
-- Device revocation takes effect within a defined bounded interval.
-- Recovery and rollback are tested under interruption, low storage, network loss and corrupted artifacts.
-- Security claims require adversarial testing and independent review.
+- Owner approves exact device identity and role before it joins the trusted fleet.
+- Expired/replayed verification codes and revoked identities are rejected.
+- Mobile Command Center, Server and combined modes can be switched independently without corrupting accepted worker jobs.
+- Phone/app/control-plane loss leaves authorized jobs running according to local policy.
+- A storage-only node cannot execute jobs or proxy traffic.
+- A traffic-only node cannot access management or runtime broker endpoints.
+- Build workers cannot activate a release without serving-node verification and authorized deployment.
+- Customer-selected language runtimes execute only on the designated mobile serving node in this baseline.
+- One worker, runtime, storage provider, tunnel or MCU failure remains isolated.
+- Every job, role change, credential issue/revocation and release activation is auditable.
