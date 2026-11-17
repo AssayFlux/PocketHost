@@ -43,6 +43,7 @@ class WorkbenchWorkspaceManagerTest {
             assertNotNull(commit.id)
             val snapshot = File(projectStorage, "commits/${commit.id}/snapshot/index.html")
             assertEquals("<h1>draft</h1>", snapshot.readText())
+            assertTrue("A successful commit must reset the change baseline.", WorkbenchWorkspaceManager.changes(context, id, live).isEmpty())
             WorkbenchWorkspaceManager.writeText(context, id, "index.html", "<h1>later edit</h1>")
             assertEquals("Commit snapshots are immutable.", "<h1>draft</h1>", snapshot.readText())
             assertEquals(1, WorkbenchWorkspaceManager.commits(context, id).size)
