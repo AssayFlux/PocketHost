@@ -14,7 +14,7 @@
 | Area | Existing foundation | 0.1.0 role |
 |---|---|---|
 | Android app | Kotlin, Jetpack Compose, AndroidX | Website server in both modes; fleet command center in combined mode |
-| Android runtime companion | Separate Android package; Python/Node integration | Language runtime provider on mobile serving node |
+| Android runtime companion | Separate experimental Android package; Python/Node integration | Existing prototype foundation for future optional add-ons; not required by main app or Step 4 |
 | Rust engine | Tokio/Hyper native library | Mobile website ingress and routing |
 | Remote management API | Android loopback API | Local mobile management |
 | Remote control agent | Android agent polling configured control plane | Host connection foundation |
@@ -34,7 +34,7 @@
 
 ## Current implementation boundaries
 
-The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated in the Android app package/process; the Rust engine is a native library hosted by the app. The runtime companion is a separate package. Python and Node projects share its application UID, so this package boundary alone is not per-project isolation. The control plane is separately deployable and the browser console is a separate client.
+The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated in the main Android app package/process; the Rust engine is a native library hosted by the app. The runtime companion is a separate experimental package for future optional add-ons. Python and Node projects share its application UID, so this package boundary alone is not per-project isolation. The control plane is separately deployable and the browser console is a separate client.
 
 The repository contains useful foundations, not yet the full device-fabric implementation. The following must not be inferred from the architecture documents:
 - end-to-end multi-device pairing and worker-consumed role grants are not complete; the Android implementation is a manual local trust-authority foundation and is not yet connected to the control plane or independent agents;
