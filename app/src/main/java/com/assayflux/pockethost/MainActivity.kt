@@ -907,7 +907,6 @@ private fun PocketHostDashboard() {
                             value = relayEndpointText,
                             onValueChange = { relayEndpointText = it },
                             label = { Text("Your Relay HTTPS endpoint") },
-                            placeholder = { Text("https://relay.example.com") },
                             singleLine = true,
                             enabled = relayStatus !in setOf("CONNECTED", "CONNECTING"),
                             modifier = Modifier.fillMaxWidth()
