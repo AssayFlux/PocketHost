@@ -97,6 +97,29 @@ class WorkbenchWorkspaceManagerTest {
     }
 
     @Test
+    fun nestedFoldersAndFileOperationsStayInsideDraftWorkspace() {
+        val id = projectId()
+        val live = File(context.cacheDir, "$id-live")
+        val storage = File(context.filesDir, "workbench/$id")
+        try {
+            assertTrue(live.mkdirs())
+            File(live, "index.html").writeText("<h1>live</h1>")
+            val workspace = WorkbenchWorkspaceManager.open(context, id, live)
+            WorkbenchWorkspaceManager.createFolder(context, id, "assets")
+            WorkbenchWorkspaceManager.createText(context, id, "assets/theme.css", "body { color: navy; }")
+            assertEquals("body { color: navy; }", WorkbenchWorkspaceManager.readText(context, id, "assets/theme.css"))
+            WorkbenchWorkspaceManager.rename(context, id, "assets/theme.css", "assets/site.css")
+            assertTrue(File(workspace, "assets/site.css").isFile)
+            WorkbenchWorkspaceManager.deleteFile(context, id, "assets/site.css")
+            assertFalse(File(workspace, "assets/site.css").exists())
+            assertFalse(File(live, "assets").exists())
+        } finally {
+            live.deleteRecursively()
+            storage.deleteRecursively()
+        }
+    }
+
+    @Test
     fun projectIdsCannotEscapeWorkbenchStorage() {
         val error = runCatching {
             WorkbenchWorkspaceManager.open(context, "../outside", context.filesDir)
