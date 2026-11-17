@@ -32,7 +32,7 @@ Workbench is the editing and release-review surface for a site. It keeps a disti
 
 Publishing validates and stages an immutable artifact, previews and health-checks it, presents a diff and requires explicit owner approval before atomic activation. A failed build or interrupted activation must preserve or restore the previous known-good release. Rollback is an audited activation of a prior immutable release. See [Workbench specification](WORKBENCH.md).
 
-The current SiteFileManager targets the deployed site tree and is not sufficient as the final Workbench data model. SiteImporter release activation/recovery code must be inspected and tested before being relied on for this workflow.
+The current `WorkbenchWorkspaceManager` and `PocketHostWorkbenchScreen` provide a first-pass per-site draft workspace, nested explorer, basic text editing, change summary and local commit snapshots. These do not yet implement preview or production deployment. The existing SiteFileManager still targets the deployed site tree and is not sufficient as the final Workbench data model. SiteImporter release activation/recovery code must be inspected and tested before being relied on for this workflow. Android integration run [44050320129](https://github.com/AssayFlux/PocketHost/actions/runs/44050320129) compiled app and instrumentation sources, but emulator tests were skipped.
 
 ## Build and publish
 
