@@ -1,135 +1,100 @@
 # Pocket Host 0.1.0 — Master Plan
 
-**Release baseline:** 0.1.0  
 **Canonical branch:** main  
-**Product form:** mobile-first distributed self-hosting ecosystem  
-**Primary command center:** Android and iOS mobile applications  
-**System architecture:** [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)
+**Product baseline:** 0.1.0  
+**Primary owner interface:** Android or iPhone mobile command center  
+**System form:** mobile-controlled, role-assigned device fabric
 
 ## Product objective
 
-Enable people to use the devices they own as interconnected, independently operating hosts for websites and services, all managed primarily from an Android or Apple mobile phone.
+Let a user install the appropriate Pocket Host software on different devices, verify each device through a mobile command center, assign it a bounded job and combine those devices into a resilient personal service system. The mobile device can independently act as Command Center, Website Server, or both.
 
-The phone is the primary command center, not a central runtime dependency. Each host must continue its already-authorized workloads if the phone, app, Internet connection or optional control plane becomes unavailable.
+## Non-negotiable decisions
 
-## Non-negotiable design rules
+1. The mobile application is the primary owner command center.
+2. Mobile has three modes: Command Center only, Server only, and Command Center + Server.
+3. A device must be explicitly verified and approved by the command center before integration.
+4. Every device has a stable cryptographic identity, short-lived enrollment challenge and revocable role grants.
+5. Different device classes receive separate installable software/firmware built for their OS, architecture and hardware.
+6. Users assign jobs such as storage, traffic, build/publish, native backend jobs, backup and edge gateway.
+7. Runtime placement is centralized: customer-selected language runtime packs execute only on the mobile website-serving node in 0.1.0. Worker devices do not silently become general-purpose language runtime hosts.
+8. Static serving is independent of optional language runtimes.
+9. Wi-Fi/LAN is the preferred high-bandwidth transport; Bluetooth is for discovery/proximity/small control; USB is used only where the OS and hardware expose supported APIs; remote links use authenticated encrypted sessions.
+10. Discovery is never authorization. Verification code, device identity, role grant and credential binding are all required.
+11. Each host, role, job, storage namespace, traffic route, runtime and MCU adapter has separate permissions, health, resource limits and recovery.
+12. Control plane and mobile app are not required for already-authorized local jobs to continue.
+13. Local Network, AssayFlux Relay and Cloudflare Tunnel remain independent, optionally simultaneous visitor ingress providers.
+14. DemonCore is the MCU/edge integration foundation; SBC gateways and MCU firmware have separate trust and safety boundaries.
+15. A device is supported only for the exact role, transport, OS, board and workload combination that passes acceptance.
 
-1. **Mobile-first management:** Android and iOS are first-class owner command clients. A responsive browser console is secondary.
-2. **Independent components:** each host, service component, runtime, tunnel, storage provider and edge gateway owns its lifecycle, permissions, health, resource limits and recovery.
-3. **Interconnected by contracts:** components communicate through authenticated, encrypted, versioned and bounded APIs/events; no shared unrestricted process or filesystem.
-4. **No single point of failure:** command-center, control-plane, telemetry, tunnel and individual workload failures must not stop unrelated running services.
-5. **Local autonomy:** hosts retain signed desired state and last-known-good deployments; remote management is optional for continued operation.
-6. **Capability truth:** each device advertises measured capabilities. No promise that every device can run every workload.
-7. **Security by OS boundary:** customer code runs in per-project/per-component isolation with scoped storage and network capabilities. A language package boundary alone is not isolation.
-8. **Separate control and data planes:** visitor ingress cannot reach management, runtime brokers or MCU control.
-9. **No silent failover:** degraded state, route changes, credential revocation and recovery are visible and auditable.
-10. **Evidence-based support:** every platform, architecture, board, runtime and service combination requires verification.
+## Product software deliverables
 
-## Product components
+- Android mobile command-center application with optional local website-server role.
+- iOS mobile command-center application; hosting claims are constrained by Apple's platform rules.
+- Android worker/host agent and optional server runtime pack manager.
+- Linux host/worker agent packages.
+- Windows host/worker agent installer and service.
+- macOS host/worker agent installer and service.
+- Raspberry Pi and other SBC packages/images, architecture and board-specific.
+- DemonCore/MCU firmware and edge adapters.
+- Optional remote fleet control plane and secondary browser console.
+- Separately installable language runtime packs for the mobile serving node.
 
-- Android mobile command center (Kotlin/Compose).
-- iOS mobile command center (Swift/SwiftUI).
-- Optional browser operator console.
-- Optional remote control plane for identity, enrollment, desired state, command delivery and audit.
-- Platform host agents: Android, Linux, Windows, macOS and embedded Linux.
-- Host supervisor and independent website/service components.
-- Rust website ingress and site router.
-- Runtime providers and per-component execution cells.
-- Storage, backup and deployment providers.
-- Independent ingress connectors: Local Network, AssayFlux Relay and Cloudflare Tunnel.
-- Edge gateway and DemonCore adapter for MCU fleets.
+## Five-step execution plan
 
-Detailed ownership and fault behavior are in SYSTEM_ARCHITECTURE.md.
+### STEP 1 — Freeze contracts, trust and product boundaries
+- Make SYSTEM_ARCHITECTURE.md normative.
+- Freeze device identity, enrollment, verification code, role grant, host-agent and job schemas.
+- Define mobile operating modes and role/permission matrix.
+- Define transports and platform limitations: Wi-Fi, BLE, USB and remote.
+- Define runtime centralization, artifact handoff, storage and traffic contracts.
+- Threat model replay, rogue devices, stolen phones, malicious workers, compromised storage, supply chain and MCU safety.
+- Align DemonCore interop and version compatibility.
+**Exit:** schemas reviewed; threat model and trust ceremony tested with protocol simulations; no implementation begins against ambiguous contracts.
 
-## Version 0.1.0 baseline gates
+### STEP 2 — Mobile command center and verified device integration
+- Build Android and iOS fleet experiences with identical core capabilities.
+- Implement discovery, QR/device-ID verification, one-time code, owner approval, secure key binding, role assignment and revocation.
+- Implement Wi-Fi/LAN control first, BLE pairing/control second, USB only for verified platform paths.
+- Show device capabilities, health, assigned job, permissions, connection and audit history.
+- Implement Command Center / Server / Both mobile modes as separate role controls.
+**Exit:** unknown devices cannot join; replay/expired codes fail; role changes and revocation work; mobile app outage does not stop accepted jobs.
 
-### G0 — Architecture and contracts
-- Freeze component boundaries and threat model.
-- Define host-agent API (see HOST_AGENT_CONTRACT.md), device identity, enrollment, service manifests, runtime manifests, capability profiles, desired state, events and audit schemas.
-- Define compatibility negotiation, offline behavior and revocation.
-- Specify Android/iOS mobile command-center parity.
-- Define failure domains and recovery guarantees.
+### STEP 3 — Autonomous device software and role workers
+- Build separate signed installers/agents for Android, Linux, Windows and macOS.
+- Build Raspberry Pi/SBC packages and gateway images.
+- Implement durable local assignment state, supervisor, resource budgets, health, updates and rollback.
+- Deliver first worker roles: storage, backup, build/publish, traffic proxy/cache and bounded native backend jobs.
+- Add DemonCore edge gateway and MCU enrollment/capability adapters.
+- Ensure each role has separate scoped credentials, queue and data namespace.
+**Exit:** each supported role passes device-specific lifecycle, reboot, network-loss, resource-pressure and isolation tests; one worker cannot compromise sibling roles.
 
-### G1 — Mobile command center
-- Android fleet overview, onboarding, QR pairing, host details, service deployment and operations.
-- iOS command-center application using the same contracts.
-- Local LAN control and remote control.
-- Secure recovery and device replacement.
-- Verify the app can be unavailable without affecting host workloads.
+### STEP 4 — Mobile website server, runtimes and publishing pipeline
+- Make mobile Server role independent of Command Center role.
+- Harden Rust ingress, static serving and site routing.
+- Build separately installable, signed, versioned language runtime packs.
+- User chooses and installs only required runtimes on the mobile serving node.
+- Execute each website component with a separate OS-enforced identity and scoped storage/network.
+- Build workers produce immutable artifacts; serving node verifies, stages, health-checks and atomically activates them.
+- Add distributed storage and traffic workers without moving customer runtime execution off the mobile serving node.
+**Exit:** static hosting works with no runtime installed; multiple installed languages can serve one website; runtime failure does not stop static or sibling runtimes; build worker cannot bypass activation approval.
 
-### G2 — Host agent and supervisor
-- Durable local desired state, independent service lifecycle, health and resource budgets.
-- Reconciliation, restart policy, circuit breakers, bounded queues and graceful shutdown.
-- Signed updates, staged activation and per-component rollback.
-- Host remains operational while command plane is unavailable.
+### STEP 5 — Fleet resilience, connectivity and release acceptance
+- Integrate Local Network, AssayFlux Relay and Cloudflare Tunnel as independent selectable providers.
+- Add cross-device replication, encrypted backups, restore and device replacement.
+- Add capacity-aware assignment, backpressure, fairness, observability and fleet audit.
+- Test phone loss, worker loss, storage loss, tunnel outage, network partitions, stale credentials, rogue devices, update rollback and MCU gateway failure.
+- Publish signed software for each supported platform and board, support matrix, SBOM, provenance and upgrade/recovery guides.
+**Exit:** end-to-end fleet scenario passes on named physical devices; security and recovery review complete; no unsupported platform or role is claimed.
 
-### G3 — Website and service components
-- Rust ingress, hostname/site routing and static delivery.
-- Multi-component websites with Python, Node and later runtime adapters.
-- Per-component health, secrets, storage, resource budgets and internal routes.
-- Static delivery independent of runtime failures.
+## Dependency order
 
-### G4 — Security isolation
-- Distinct OS-enforced execution identity per project/component as supported by host OS.
-- Brokered filesystem and network capabilities.
-- Deny-by-default inter-component communication.
-- Adversarial native-code, credential, path, network and resource-exhaustion tests.
-- MCU operations have explicit board-level capability and authorization policies.
+Step 1 is the contract gate. Step 2 establishes the trusted control path. Step 3 creates useful autonomous workers. Step 4 centralizes website runtime execution and publishing. Step 5 hardens the distributed system and releases it.
 
-### G5 — Connectivity
-- Local Network, AssayFlux Relay and Cloudflare Tunnel are independent selectable providers.
-- Providers may run concurrently with separate hostnames/routes.
-- Independent health, credentials, revocation and diagnostics.
-- Only website ingress is exposed; management plane remains private.
-- Failure of one provider leaves other providers and local hosting intact.
+Parallel work is permitted only after the relevant contract and compatibility tests are frozen. A successful compile, simulated device or documentation update alone never closes a step.
 
-### G6 — Storage, backup and recovery
-- Per-site/component data ownership and quotas.
-- Immutable deployment releases and atomic activation.
-- Encrypted backups, integrity verification, restore rehearsal and rollback.
-- One component's storage exhaustion must not corrupt unrelated services.
+## Release and evidence policy
 
-### G7 — Linux and SBC hosts
-- Linux x86_64 and ARM64 host agent.
-- Exact Raspberry Pi and other SBC capability profiles.
-- Headless installation, systemd lifecycle, secure updates, thermal/power/storage management.
-- Mobile enrollment and remote operation.
+Every component release records product/component version, source SHA, target OS/architecture/board, contract compatibility, artifact digest, signature identity, SBOM, permissions, install/upgrade/rollback path and test evidence. Device roles and platform support are marked supported only after named acceptance tests.
 
-### G8 — Windows and macOS hosts
-- Native installers and service lifecycle.
-- OS-specific ACL/entitlement, firewall, signing and update policy.
-- Mobile command-center parity.
-
-### G9 — DemonCore and edge devices
-- DemonCore board identity, safe pin profile, provisioning, authenticated transport and signed OTA.
-- Pocket Host edge adapter with allow-listed DCP capabilities.
-- ESP32 and other MCUs remain bounded edge nodes unless a board-specific workload profile proves more.
-- Gateway and MCU failures remain isolated from website hosts.
-
-### G10 — Multi-host services
-- Host registration, revocation and compatibility-aware placement.
-- Multi-runtime service graphs across eligible hosts.
-- Authenticated internal service routing and signed artifact transfer.
-- Stateless replication first; stateful failover only with tested consistency, backup and recovery.
-
-### G11 — Release acceptance
-- Exact-SHA CI, OS/device/ABI/board matrix and physical-device verification.
-- Threat-model review, adversarial isolation tests and independent security review.
-- Upgrade, rollback, restore, network partition and power-loss tests.
-- Published support matrix and operational runbooks.
-
-## Implementation order
-
-1. G0 contracts and threat model.
-2. G1 mobile command center and G2 autonomous host supervisor in parallel only after interfaces are frozen.
-3. G3 website components and G4 security isolation.
-4. G5–G6 connectivity and recovery.
-5. G7 Linux/SBC, then G8 Windows/macOS.
-6. G9 DemonCore integration after MCU security acceptance.
-7. G10 distributed workloads and G11 release acceptance.
-
-## Release policy
-
-0.1.0 is the architecture and engineering baseline, not a claim that every listed platform is production-ready. Components version independently but declare compatibility with the system contracts. Every release must carry build provenance, artifact digest, protocol compatibility, supported device matrix and rollback instructions.
-
-No milestone closes because documentation or source code exists. Each gate closes only with repeatable evidence on an exact commit and named target devices.
+0.1.0 is the baseline specification and engineering target, not a claim that every platform or five-step deliverable is already implemented.
