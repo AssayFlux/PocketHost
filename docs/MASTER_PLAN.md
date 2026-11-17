@@ -77,15 +77,16 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 - Ensure each role has separate scoped credentials, queue and data namespace.
 **Exit:** each supported role passes device-specific lifecycle, reboot, network-loss, resource-pressure and isolation tests; one worker cannot compromise sibling roles.
 
-### STEP 4 — Mobile website server, runtimes and publishing pipeline
-- Keep Server only and Command Center + Server as explicit modes; do not provide a standalone Command Center-only mode.
-- Harden Rust ingress, static serving and site routing.
-- Build separately installable, signed, versioned language runtime packs.
-- User chooses and installs only required runtimes on the mobile serving node.
-- Execute each website component with a separate OS-enforced identity and scoped storage/network.
+### STEP 4 — Mobile website server, built-in web baseline and optional runtimes
+**Partial-close boundary:** the server app includes the basic web stack by default. HTML and CSS are handled by the bundled Rust static server; TypeScript is a built-in authoring/build capability that must compile to browser JavaScript before publication. A user should not have to install a separate language runtime to publish a basic HTML/CSS/TypeScript website. The current Rust engine already serves HTML/CSS; TypeScript compile integration and its app-bundling/acceptance evidence remain implementation work.
+- Keep Server only and Command Center + Server as explicit modes; both continue serving websites.
+- Keep Rust ingress, static serving, site routing and safe asset delivery in the server app.
+- Add the TypeScript compiler/transpilation toolchain to the server app's built-in web baseline; emit JavaScript artifacts for browser execution. Do not mistake serving `.ts` source as executable JavaScript or describe TypeScript as a server-side runtime.
+- Keep additional server-side language runtimes as separately selectable, signed/versioned packs installed only on the mobile serving node. The owner will add languages separately; do not bundle every language into the base app.
+- Execute optional server-side components with separate OS-enforced identities and scoped storage/network.
 - Build workers produce immutable artifacts; serving node verifies, stages, health-checks and atomically activates them.
 - Add distributed storage and traffic workers without moving customer runtime execution off the mobile serving node.
-**Exit:** static hosting works with no runtime installed; multiple installed languages can serve one website; runtime failure does not stop static or sibling runtimes; build worker cannot bypass activation approval.
+**Partial exit:** HTML/CSS static hosting is available from the bundled server app without installing an optional runtime. **Remaining exit:** TypeScript compilation is bundled and tested; optional runtime installation/removal, per-project isolation, runtime fault containment and approved artifact publishing pass acceptance.
 
 ### STEP 5 — Fleet resilience, connectivity and release acceptance
 - Integrate Local Network, AssayFlux Relay and Cloudflare Tunnel as independent selectable providers.
