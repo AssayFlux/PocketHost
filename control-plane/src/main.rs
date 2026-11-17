@@ -1482,12 +1482,12 @@ mod tests {
             .execute(&db).await.unwrap();
         }
 
-        let unauthorized = list_device_commands(
+        let unauthorized_status = list_device_commands(
             State(state.clone()),
             HeaderMap::new(),
             Path(device),
-        ).await;
-        assert!(matches!(unauthorized, Err((StatusCode::UNAUTHORIZED, _))));
+        ).await.err().map(|error| error.0);
+        assert_eq!(unauthorized_status, Some(StatusCode::UNAUTHORIZED));
 
         let Json(history) = list_device_commands(State(state), headers, Path(device)).await.unwrap();
         assert_eq!(history.len(), 50, "command history must be bounded to 50 rows");
