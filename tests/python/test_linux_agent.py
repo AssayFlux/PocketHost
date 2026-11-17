@@ -81,6 +81,11 @@ class LinuxAgentTests(unittest.TestCase):
             job = {"kind": "native.health_check"}
             self.assertTrue(store.enqueue_once("job-1", "idempotency-0001", job))
             self.assertFalse(store.enqueue_once("job-2", "idempotency-0001", job))
+            self.assertTrue(store.claim_job("job-1"))
+            self.assertFalse(store.claim_job("job-1"))
+            store.complete_job("job-1", {"ok": True})
+            state = store.db.execute("SELECT state FROM jobs WHERE job_id='job-1'").fetchone()[0]
+            self.assertEqual("SUCCEEDED", state)
             store.close()
 
 
