@@ -44,7 +44,7 @@ Each role has its own credential, queue, resource budget, health and audit strea
 
 ## Runtime security
 
-In 0.1.0, customer-selected Python/Node/other language runtimes execute only on the designated mobile website-serving node. Each project/component requires a distinct OS-enforced execution identity, scoped filesystem and network capabilities, resource limits, process supervision and adversarial tests. A separate package or runtime installation is not itself project isolation. Static hosting must remain available if a runtime crashes.
+Python 3.11 and Node.js 24.22.1 currently execute through the separate Android `runtime-worker` companion APK on the mobile website-serving node. Both integrations are in progress and share the companion application UID; therefore the package boundary is not per-project isolation and untrusted customer code must not be treated as sandboxed. The main app's static HTML/CSS/JavaScript serving remains available without the companion. The built-in TypeScript compiler is a separate Step 4 authoring tool, not a server-side runtime. Any future per-language runtime package must prove OS-enforced project isolation, scoped filesystem/network capabilities, resource limits, supervision and adversarial tests.
 
 ## Artifact and update security
 
