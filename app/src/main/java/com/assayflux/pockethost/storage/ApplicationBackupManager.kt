@@ -169,8 +169,8 @@ object ApplicationBackupManager {
             // Do not touch the selected destination until the encrypted archive is complete.
             val destinationOutput = context.contentResolver.openOutputStream(destination)
                 ?: throw IOException("Cannot open the selected backup destination.")
-            FileInputStream(stagedArchive).use { input ->
-                destinationOutput.use { output -> input.copyTo(output, 64 * 1024) }
+            destinationOutput.use { output ->
+                FileInputStream(stagedArchive).use { input -> input.copyTo(output, 64 * 1024) }
             }
             return true
         } finally {
