@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit
 object RelayAgent {
     private const val MAX_BODY_BYTES = 8 * 1024 * 1024
     private const val MAX_EVENT_CHARS = 12 * 1024 * 1024
+    private const val MAX_SSE_LINE_CHARS = 64 * 1024
     @Volatile private var running = false
     @Volatile private var generation = 0L
     @Volatile private var worker: Thread? = null
@@ -106,7 +107,8 @@ object RelayAgent {
             BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8), 16 * 1024).use { reader ->
                 var data = StringBuilder()
                 while (running) {
-                    val line = reader.readLine() ?: throw IllegalStateException("Relay event stream ended.")
+                    val line = readBoundedSseLine(reader, MAX_SSE_LINE_CHARS)
+                        ?: throw IllegalStateException("Relay event stream ended.")
                     if (line.isEmpty()) {
                         if (data.isNotEmpty()) {
                             val payload = data.toString()
@@ -182,6 +184,23 @@ object RelayAgent {
     }
 
 
+    /** Reads one SSE line without allowing BufferedReader.readLine() to allocate an unbounded string. */
+    internal fun readBoundedSseLine(reader: java.io.Reader, maxChars: Int): String? {
+        require(maxChars > 0) { "SSE line limit must be positive." }
+        val line = StringBuilder(minOf(maxChars, 256))
+        while (true) {
+            val next = reader.read()
+            if (next < 0) return if (line.isEmpty()) null else line.toString()
+            if (next == '\n'.code) return line.toString()
+            // CRLF and LF are accepted; ignoring CR also safely handles CR-only input
+            // without letting it bypass the per-line bound.
+            if (next == '\r'.code) continue
+            if (line.length >= maxChars) {
+                throw IllegalStateException("Relay SSE line exceeds its ${maxChars}-character limit.")
+            }
+            line.append(next.toChar())
+        }
+    }
     internal data class ResponseFraming(val chunked: Boolean, val contentLength: Long?)
 
     internal fun validateResponseFraming(transferEncodingInput: String?, contentLengthInput: String?): ResponseFraming {
