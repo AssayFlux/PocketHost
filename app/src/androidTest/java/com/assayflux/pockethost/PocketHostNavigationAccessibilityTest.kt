@@ -28,6 +28,7 @@ class PocketHostNavigationAccessibilityTest {
             .putBoolean("node_enabled", false)
             .putBoolean("tunnel_enabled", false)
             .putBoolean("auto_start_on_boot", false)
+            .putString("operating_mode", "COMMAND_CENTER_SERVER")
             .commit()
         val registryPreferences = context.getSharedPreferences("pockethost_site_registry", 0)
         val previousRegistry = registryPreferences.getString("sites", "[]") ?: "[]"
@@ -42,6 +43,8 @@ class PocketHostNavigationAccessibilityTest {
             "Home" to Triple("Home", "Your services", "Home"),
             "Hosting" to Triple("Dashboard", "HOSTING STATUS", "Dashboard"),
             "Websites & files" to Triple("Sites", "WEBSITE", "Sites"),
+            "Workbench" to Triple("Workbench", "POCKETHOST WORKBENCH", "Workbench"),
+            "Devices" to Triple("Devices", "COMMAND CENTER IDENTITY", "Devices"),
             "Activity & logs" to Triple("Activity", "RECENT OPERATIONS", "Activity"),
             "Learn" to Triple("Learn", "Learn Pocket Host", "Learn"),
             "Settings" to Triple("Settings", "Dark theme", "Settings")
