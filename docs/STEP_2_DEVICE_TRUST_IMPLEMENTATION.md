@@ -29,10 +29,13 @@
 - Candidate-side challenge verification checks owner fingerprint, device binding, protocol, nonce format, transport, single-use flag, expiry and owner signature.
 - Worker-side grant verification checks owner fingerprint, target device, role/capability allow-list, generation floor, resource budget, expiry, policy version and signature.
 - Revocation increments the stored generation, removes the current grant and makes the prior grant fail the local authorization check.
+- Local authorization re-verifies the persisted grant signature, target, role, generation, expiry, capability allow-list and bounded role resource budget.
+- Device approval and revocation require a fresh Android biometric/device-credential confirmation through the existing app authentication flow. This is currently an application-level confirmation gate; the P-256 signing key is not yet configured for per-use Keystore authentication.
+- Approval and revocation are written to the operational audit log.
 - The UI lists approved/revoked devices and exposes explicit revocation.
 
 ### Automated coverage added
-- Android instrumentation coverage exercises owner identity creation, signed challenge verification, wrong-device rejection, capability-escalation rejection, candidate proof-of-possession, signed grant verification, authorization and revocation.
+- Android instrumentation coverage exercises owner identity creation, signed challenge verification, wrong-device rejection, capability-escalation rejection, candidate proof-of-possession, single-use challenge replay rejection, signed grant verification, altered-grant rejection, stale-generation rejection, authorization and revocation.
 - Android integration workflow now checks Kotlin role-policy parity against the shared JSON policy and compiles app and Android instrumentation Kotlin sources on pushes without packaging APKs.
 - APK packaging and emulator APK installation are gated behind an explicit workflow dispatch. The final APK build remains deferred until the five-step implementation is ready.
 
@@ -43,7 +46,7 @@ This commit is a real Android trust foundation, not a claim of complete fleet in
 1. Implement and test LAN discovery and authenticated TLS transport, then BLE and supported USB paths; the current enrollment UI is manual payload exchange and the challenge transport defaults to LAN.
 2. Connect the mobile trust authority to the actual remote control plane and a device-agent protocol endpoint. The current loopback management API and existing remote-control client are separate systems.
 3. Implement agent-side durable identity/key provisioning, challenge consumption, grant signature verification, generation persistence, renewal and revocation polling on each supported OS.
-4. Add owner re-authentication for high-risk role grants and revocation; the current explicit approval UI is not yet bound to a fresh biometric/owner-session check.
+4. Upgrade the current app-level biometric/device-credential confirmation to a Keystore key that requires per-use user authentication, and test lockout, cancellation, key invalidation and background transitions.
 5. Add device capability attestation, health/connection state, audit events, role changes and multi-role isolation.
 6. Implement durable typed job queues, leases, idempotency and cancellation against `JOB_KIND_POLICY.json`.
 7. Add physical Android device tests and transport adversarial tests, including replay, MITM, stale generation, clock rollback, storage corruption, Keystore invalidation and reboot/network-loss recovery.
