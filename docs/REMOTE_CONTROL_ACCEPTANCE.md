@@ -38,7 +38,7 @@ Do not claim generic Linux, Windows, macOS, iOS, SBC or MCU support. Record exac
 
 ## 7. Connectivity
 
-Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers. Test DNS/TLS and visitor access from an independent network. Visitor ingress must not expose management API, control plane, runtime broker or MCU controls.
+Local Network and Cloudflare Tunnel are independent of the fleet control plane. The target standalone AssayFlux Relay Node must also be independent of fleet admin credentials and APIs; current RelayAgent/gateway are still coupled and this is a v0.1.0 prerequisite. Test DNS/TLS and visitor access from an independent network. Visitor ingress must not expose management API, control plane, runtime broker or MCU controls.
 
 ## 8. Security, storage and recovery
 
