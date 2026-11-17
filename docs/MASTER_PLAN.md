@@ -55,6 +55,9 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 **Exit:** schemas reviewed; threat model and trust ceremony tested with protocol simulations; no implementation begins against ambiguous contracts.
 
 ### STEP 2 — Mobile command center and verified device integration
+
+**Android trust foundation committed; gate open.** The mobile app now persists the two operating modes, gates the Devices workspace to Command Center + Server, creates a P-256 Android Keystore owner identity, signs protocol-shaped five-minute enrollment challenges, verifies candidate proof-of-possession, issues schema-shaped role grants with allow-listed capabilities and resource budgets, verifies grants, encrypts the local registry and revokes by generation. Android instrumentation coverage and compile-only CI are added. Current enrollment is manual payload exchange; LAN/BLE/USB/remote transport, remote control-plane integration, independently installed agent verification, owner re-authentication, durable jobs and physical-device acceptance remain open. See [Step 2 implementation record](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md).
+
 - Build Android and iOS fleet experiences with identical core capabilities.
 - Implement discovery, QR/device-ID verification, one-time code, owner approval, secure key binding, role assignment and revocation.
 - Implement Wi-Fi/LAN control first, BLE pairing/control second, USB only for verified platform paths.
