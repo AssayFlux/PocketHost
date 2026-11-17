@@ -5,9 +5,9 @@ concurrency:
 
 on:
   push:
-    branches: [main]
+    branches: [Alpha]
   pull_request:
-    branches: [main]
+    branches: [Alpha]
   workflow_dispatch:
 jobs:
   rust:
