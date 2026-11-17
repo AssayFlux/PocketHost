@@ -42,7 +42,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 3. Keep ZIP compressed-size and expanded-size counters independent and overflow-safe.
 4. Validate paths, entry counts, depth, filenames and file types before activation.
 5. Keep staging separate from active website; preserve last-known-good on failure.
-6. Keep website static serving independent of optional runtimes and public ingress.
+6. Keep website static serving independent of optional runtimes, public ingress and remote fleet control; each provider must fail independently.
 7. Do not expand the Rust per-file response limit merely because total import increased.
 8. Test UI, API, code and docs for every quota change.
 9. Build APK artifacts explicitly; do not call compile-only a build.
