@@ -35,7 +35,7 @@ internal fun PocketHostDevicesScreen(context: Context) {
     var os by remember { mutableStateOf("Linux") }
     var architecture by remember { mutableStateOf("x86_64") }
     var protocol by remember { mutableStateOf("1.0") }
-    var capabilities by remember { mutableStateOf("storage.namespace.read,storage.namespace.write") }
+    var capabilities by remember { mutableStateOf("storage.read_assigned_namespace,storage.write_assigned_namespace") }
     var role by remember { mutableStateOf("storage") }
     var proof by remember { mutableStateOf("") }
     var challenge by remember { mutableStateOf<DeviceTrustStore.EnrollmentChallenge?>(null) }
@@ -78,7 +78,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                     Text("Challenge ID: ${it.challengeId}", fontWeight = FontWeight.SemiBold)
                     Text("Nonce: ${it.nonce}")
                     Text("Owner: ${it.ownerDeviceId}")
-                    Text("Expires: ${it.expiresAt}")
+                    Text("Transport: ${it.transport} · single-use · expires: ${it.expiresAt}")
+                    Text("Owner signature: ${it.ownerSignature}")
                     OutlinedTextField(proof, { proof = it.trim() }, label = { Text("Agent proof signature · Base64 ECDSA") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                     Button(onClick = {
                         val requested = capabilities.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
