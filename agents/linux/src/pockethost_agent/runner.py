@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -23,6 +24,14 @@ def _valid_value(kind: str, value: Any) -> bool:
 def validate_job(envelope: dict[str, Any], grant: dict[str, Any]) -> None:
     if envelope.get("protocol") != "pockethost.device/1.0":
         raise ValueError("Unsupported job protocol.")
+    try:
+        uuid.UUID(envelope["job_id"])
+        uuid.UUID(envelope["correlation_id"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Job and correlation IDs must be UUIDs.") from error
+    idempotency_key = envelope.get("idempotency_key")
+    if not isinstance(idempotency_key, str) or not 16 <= len(idempotency_key) <= 128:
+        raise ValueError("Job idempotency key is invalid.")
     if envelope.get("target_device_id") != grant.get("device_id"):
         raise ValueError("Job targets another device.")
     if envelope.get("role_grant_id") != grant.get("grant_id") or envelope.get("owner_id") != grant.get("owner_id"):
