@@ -59,3 +59,8 @@ Device cards show identity, platform, software version, roles, trust state, conn
 ## 8. Acceptance
 
 UI acceptance is G8 for every release. Test both mobile modes, all v0.1.0 hosting flows, long text, font scaling, keyboard, scrolling, system appearance and permissions. Preserve the visual language while correcting implementation defects.
+
+
+## Source audit note — current login implementation
+
+The design contract retains the intended login/account experience and owner menu. In the audited Android source, however, MainActivity opens the app's main surface directly unless the optional biometric app-unlock gate is enabled; there is no conventional native username/password login screen yet. Owner/session/passkey login is implemented in the separate browser console. Keep this distinction explicit in UI status and release documentation; do not label the native login page complete until it exists and passes UI acceptance.
