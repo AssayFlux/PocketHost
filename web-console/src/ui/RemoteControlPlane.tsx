@@ -81,6 +81,7 @@ export function RemoteControlPlane() {
   const [newUserToken, setNewUserToken] = useState("");
   const [selected, setSelected] = useState("");
   const [issuedToken, setIssuedToken] = useState("");
+  const [issuedRelayToken, setIssuedRelayToken] = useState("");
   const [configText, setConfigText] = useState('{"pythonMaxWorkers":8,"nodeHeapMb":192,"tunnelEnabled":false}');
   const [configVersion, setConfigVersion] = useState<number | null>(null);
   const [commandKind, setCommandKind] = useState("site_action");
@@ -330,6 +331,24 @@ export function RemoteControlPlane() {
     } finally { setBusy(false); }
   }
 
+  async function rotateRelayToken(device: Device) {
+    if (sessionRole !== "owner") throw new Error("Only the owner can issue Relay host credentials.");
+    if (!window.confirm("Issue a dedicated website-ingress credential for " + device.name + "? Any previous Relay credential for this host will stop working immediately.")) return;
+    setBusy(true);
+    setIssuedRelayToken("");
+    try {
+      const result = await request<{ relay_token: string }>(
+        "/v1/admin/devices/" + encodeURIComponent(device.id) + "/relay-token",
+        { method: "POST" },
+      );
+      setIssuedRelayToken(result.relay_token);
+      setSelected(device.id);
+      setMessage("Dedicated Relay credential issued. Copy it into Pocket Host Settings > Network > AssayFlux Relay. It is separate from the fleet device token.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Relay credential issuance failed.");
+    } finally { setBusy(false); }
+  }
+
   async function loadRelaySites() {
     if (!selected) throw new Error("Select a device first.");
     const next = await request<RelaySite[]>(`/v1/admin/devices/${selected}/relay-sites`);
@@ -505,6 +524,17 @@ export function RemoteControlPlane() {
     {selected && <div className="lower-grid">
       <article className="panel">
         <div className="panel-heading"><h3>AssayFlux Relay hostnames</h3><span className="muted-tag">OUTBOUND DEVICE STREAM</span></div>
+        <p>Issue a dedicated visitor-ingress credential for this host. It is separate from the fleet-control device token and is shown only once.</p>
+        <button disabled={busy || !sessionToken || sessionRole !== "owner"} onClick={() => {
+          const device = devices.find(item => item.id === selected);
+          if (device) void rotateRelayToken(device);
+        }}>Issue / rotate Relay host credential</button>
+        {issuedRelayToken && <div className="notice">
+          <strong>One-time Relay host credential</strong>
+          <p>Paste this into Pocket Host Settings → Network → AssayFlux Relay. The endpoint is this Relay gateway's HTTPS URL.</p>
+          <code>{issuedRelayToken}</code>
+          <button onClick={() => void navigator.clipboard.writeText(issuedRelayToken)}>Copy Relay credential</button>
+        </div>}
         <p>Bind a verified hostname to this device and an existing Pocket Host site ID. The selected site ID must resolve to an enabled local site with at least one configured hostname. Visitor Private or Restricted access is enforced by the selected host's site policy.</p>
         <label>Hostname<input value={relayHostname} onChange={event => setRelayHostname(event.target.value)} placeholder="www.example.com" /></label>
         <label>Local site ID<input value={relaySiteId} onChange={event => setRelaySiteId(event.target.value)} placeholder="static-default" /></label>
