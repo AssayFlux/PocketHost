@@ -2,7 +2,7 @@
 
 ## 1. Product definition
 
-Pocket Host is a modular personal infrastructure platform whose first deliverable is Android static website hosting. It expands in three releases: v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.2.0 Connected Device Fabric.
+Pocket Host is a modular personal infrastructure platform whose first deliverable is Android static website hosting with optional public custom-domain access through Cloudflare Tunnel or the first-party AssayFlux Relay. It expands in three releases: v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.2.0 Connected Device Fabric.
 
 ## 2. Mobile operating modes
 
@@ -16,13 +16,13 @@ No standalone Command Center-only mode exists. Website serving remains on in bot
 ## 3. Release architecture
 
 ### v0.1.0 — First Hosting
-Android Compose UI → HostingService → Rust JNI/HTTP engine → active static website directory. SiteImporter validates into private staging before activation. SiteBackupManager protects the active static website. Local preview uses loopback; LAN is explicitly enabled. Remote control plane and optional runtimes are not required.
+Android Compose UI → HostingService → Rust JNI/HTTP engine → active static website directory. SiteImporter validates into private staging before activation. Local preview uses loopback; LAN is explicitly enabled. Optional public paths are independent: (1) Android cloudflared connector → Cloudflare edge/custom hostname → local Rust HTTP origin; (2) Android RelayAgent → outbound authenticated HTTPS/SSE session → owner-deployed AssayFlux Relay TLS visitor gateway → verified hostname/site route → local Rust HTTP origin. The Relay gateway uses a minimal host/site registration contract; full fleet command orchestration remains v0.2.0. Local/LAN serving never depends on either provider.
 
 ### v0.1.1 — Workbench & Runtime Development
 Workbench owns a per-site private draft workspace. Editor and build tools operate on drafts. Preview is isolated. A validated immutable artifact is staged and owner-approved before atomic activation. Python and Node remain separate companion runtimes and do not become dependencies of static serving.
 
 ### v0.2.0 — Connected Device Fabric
-Mobile command center ↔ authenticated control plane ↔ separately installed agents. Shared protocol defines identity, enrollment, role grants, typed jobs, leases and audit. Agents execute only approved bounded roles. Visitor ingress providers remain separate from management/control traffic.
+Mobile command center ↔ authenticated control plane ↔ separately installed agents. Shared protocol defines identity, enrollment, role grants, typed jobs, leases and audit. Agents execute only approved bounded roles. Later work scales Relay across multiple hosts/gateways and adds advanced health-based failover; the single-host public visitor paths ship in v0.1.0.
 
 ## 4. Main components
 
@@ -37,7 +37,9 @@ Mobile command center ↔ authenticated control plane ↔ separately installed a
 | Device trust and protocol | Identity, proof, grants and revocation | v0.2.0 |
 | Agents and workers | Bounded device roles | v0.2.0 |
 | Control plane | Optional fleet coordination | v0.2.0 |
-| Relay/Cloudflare | Independent public visitor ingress | v0.2.0 |
+| Cloudflare Tunnel | Android outbound tunnel adapter and custom-domain ingress | v0.1.0 |
+| AssayFlux Relay | Owner-deployed TLS visitor gateway and authenticated host stream | v0.1.0 |
+| Relay scaling | Multi-host scheduling, regional gateways and advanced failover | v0.2.0 |
 
 ## 5. Website serving and resource limits
 
@@ -55,7 +57,7 @@ Planned roles include storage, backup/recovery, traffic, build/publish preparati
 
 ## 8. Connectivity providers
 
-Local Network, AssayFlux Relay and Cloudflare Tunnel are independent visitor-ingress providers. Public visitor routing must terminate at website ingress only. Management API, runtime broker, device enrollment and MCU controls remain private. Public ingress is v0.2.0 acceptance.
+Local Network, AssayFlux Relay and Cloudflare Tunnel are independent visitor-ingress providers in v0.1.0. The owner chooses a provider per hostname; the same hostname cannot point at two independent providers simultaneously without a separate DNS/load-balancer failover layer. HTTPS is terminated at the public edge; HTTP redirects to HTTPS by default, with plain HTTP content serving requiring an explicit owner opt-in. Public visitor routing must terminate at website ingress only. Management API, runtime broker, device enrollment and MCU controls remain private. Multi-host routing/failover is v0.2.0.
 
 ## 9. Fault domains and autonomy
 
