@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 
-from .trust import load_or_create_identity, sign_challenge, verify_role_grant
+from .trust import load_or_create_identity, sign_challenge, verify_role_grant, verify_job_signature
 from .store import AgentStore
 from .runner import execute_job
 
@@ -40,7 +40,7 @@ def main() -> None:
             grant_data = json.loads(Path(args.grant_json).read_text())
             policy = json.loads((Path(__file__).resolve().parents[4] / "protocol" / "ROLE_CAPABILITY_POLICY.json").read_text())
             verify_role_grant(grant_data, args.owner_public_key, device_id, store.get_generation() + 1, policy)
-            store.save_grant(grant_data)
+            store.save_grant(grant_data, args.owner_public_key)
             print("Verified role grant installed.")
         elif args.command == "run-job":
             row = store.db.execute("SELECT value FROM agent_state WHERE key='grant'").fetchone()
@@ -48,6 +48,10 @@ def main() -> None:
                 raise SystemExit("No verified role grant is installed.")
             grant_data = json.loads(row[0])
             job_data = json.loads(Path(args.job_json).read_text())
+            owner_key = store.db.execute("SELECT value FROM agent_state WHERE key='owner_public_key'").fetchone()
+            if not owner_key:
+                raise SystemExit("No owner verification key is stored.")
+            verify_job_signature(job_data, owner_key[0])
             result = execute_job(job_data, grant_data)
             print(json.dumps({"result": result, "sha256": __import__("hashlib").sha256(
                 json.dumps(result, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}, indent=2))
