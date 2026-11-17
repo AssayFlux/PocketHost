@@ -13,7 +13,14 @@ def _roots():
     snapshot_root.mkdir(mode=0o700, parents=True, exist_ok=True)
     return namespace_root, snapshot_root
 
+def _require_assigned_namespace(namespace_id: str) -> None:
+    allowed = {item.strip() for item in os.environ.get("POCKETHOST_ALLOWED_NAMESPACES", "").split(",") if item.strip()}
+    if not allowed or namespace_id not in allowed:
+        raise PermissionError("Namespace is not assigned to this agent; default deny.")
+
+
 def create_snapshot(namespace_id: str, snapshot_id: str, maximum_bytes: int) -> dict:
+    _require_assigned_namespace(namespace_id)
     for value in (namespace_id, snapshot_id):
         if not value or not value.replace("-", "").replace("_", "").isalnum():
             raise ValueError("Namespace or snapshot identifier is invalid.")
@@ -23,7 +30,11 @@ def create_snapshot(namespace_id: str, snapshot_id: str, maximum_bytes: int) -> 
     source = (namespace_root / namespace_id).resolve()
     if source.parent != namespace_root or not source.is_dir() or source.is_symlink():
         raise ValueError("Assigned namespace does not exist or is not a safe directory.")
-    destination = snapshot_root / (snapshot_id + ".zip")
+    assigned_snapshots = snapshot_root / namespace_id
+    assigned_snapshots.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if assigned_snapshots.is_symlink() or assigned_snapshots.resolve().parent != snapshot_root:
+        raise ValueError("Snapshot namespace directory is not safe.")
+    destination = assigned_snapshots / (snapshot_id + ".zip")
     if destination.exists():
         raise FileExistsError("Snapshot IDs are immutable and cannot be overwritten.")
     entries, total = [], 0
@@ -57,11 +68,15 @@ def create_snapshot(namespace_id: str, snapshot_id: str, maximum_bytes: int) -> 
     return {"snapshot_id": snapshot_id, "sha256": digest, "file_count": len(entries),
             "source_bytes": total, "archive_bytes": destination.stat().st_size}
 
-def verify_snapshot(snapshot_id: str) -> dict:
+def verify_snapshot(namespace_id: str, snapshot_id: str) -> dict:
+    _require_assigned_namespace(namespace_id)
     if not snapshot_id or not snapshot_id.replace("-", "").replace("_", "").isalnum():
         raise ValueError("Snapshot identifier is invalid.")
     _, snapshot_root = _roots()
-    path = snapshot_root / (snapshot_id + ".zip")
+    namespace_snapshots = snapshot_root / namespace_id
+    if namespace_snapshots.is_symlink() or namespace_snapshots.resolve().parent != snapshot_root:
+        raise ValueError("Snapshot namespace directory is not safe.")
+    path = namespace_snapshots / (snapshot_id + ".zip")
     if path.is_symlink() or not path.is_file():
         raise FileNotFoundError("Snapshot does not exist.")
     with zipfile.ZipFile(path, "r") as archive:
@@ -71,5 +86,5 @@ def verify_snapshot(snapshot_id: str) -> dict:
         names = archive.namelist()
         if any(name.startswith("/") or ".." in Path(name).parts for name in names):
             raise ValueError("Snapshot contains an unsafe archive path.")
-    return {"snapshot_id": snapshot_id, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    return {"namespace_id": namespace_id, "snapshot_id": snapshot_id, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "file_count": len(names), "verified": True}
