@@ -1,6 +1,6 @@
 # Pocket Host 0.1.0 — Fleet Control Plane
 
-The control plane is an optional, separately deployed fleet coordination service. Android and iOS mobile applications are the primary owner command centers. Host agents connect to the control plane for enrollment, heartbeats, desired state, leased commands, artifact delivery, team roles and audit.
+The control plane is an optional, separately deployed fleet coordination service. The Android app is the current owner client foundation; an iOS app is planned and is not present in this repository. Host agents connect to the control plane for enrollment, heartbeats, desired state, leased commands, artifact delivery, team roles and audit.
 
 The control plane does **not** serve website traffic and is not required for local hosting or continued operation of already-authorized workloads. Every host persists local configuration and supervises its own services. A control-plane outage delays remote coordination; it must not stop active services.
 
@@ -30,7 +30,7 @@ Only the configured edge proxy publishes public ports. PostgreSQL and the API re
 
 ## Mobile and host enrollment
 
-The Android/iOS command center creates an owner-authorized enrollment flow. The host receives a device-bound credential that is shown only once and stored using the platform's secure credential store. The host agent—not the mobile app—maintains its own connection, heartbeat, command lease and workload lifecycle.
+The Android Command Center contains a local trust-authority foundation and preview control-plane client. The complete end-to-end owner enrollment flow remains in progress; no iOS client is present. The host receives a device-bound credential that is shown only once and stored using the platform's secure credential store. The host agent—not the mobile app—maintains its own connection, heartbeat, command lease and workload lifecycle.
 
 Host commands are typed, allow-listed, scoped, expiring and idempotent. Hosts validate owner policy and local capability before applying them. The host persists operation start/result before acknowledgement to prevent blind repetition after interruption.
 
