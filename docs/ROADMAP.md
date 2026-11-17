@@ -5,7 +5,7 @@
 
 ## Product constraints
 
-Native Kotlin/Jetpack Compose Android application; Android 8/API 26+; ARMv7/ARM64 target; no root or Termux. The phone is the website origin. Rust/Tokio/Hyper owns website ingress and routing. Static hosting works without Python, Node, Cloudflare, AssayFlux Relay or remote management. The owner's existing named Cloudflare Tunnel must be reused, not duplicated. The management API is never public. Python/Node remain trusted-code-only until per-project isolation passes.
+Native Kotlin/Jetpack Compose Android application; Android 8/API 26+; ARMv7/ARM64 target; no root or Termux. The phone is the website origin. Rust/Tokio/Hyper owns website ingress and routing. Static hosting works without Python, Node, either tunnel provider or remote management. Users can choose AssayFlux Relay, Cloudflare Tunnel, both simultaneously, or local-only access. Existing named Cloudflare tunnels must be reused when selected; never create duplicates or overwrite user configuration. The management API is never public. Python/Node remain trusted-code-only until per-project isolation passes.
 
 ## Gate 0 — Repository truth and architecture freeze (P0)
 
