@@ -13,7 +13,7 @@ This document is normative with `protocol/` schemas. A runtime implementation mu
 - Every device has a distinct cryptographic identity. Owner, mobile installation, device, role grant, job, runtime, artifact-signing and MCU identities are never reused.
 - Discovery is untrusted. Explicit owner approval is required for each exact role grant.
 - Default deny. Unknown protocol major, role, capability, job kind, transport or board operation is rejected.
-- Worker devices do not host customer-selected Python/Node language runtimes in 0.1.0. Those execute only on the mobile serving node.
+- Customer-selected server-side runtimes execute on the mobile serving node, not general worker devices. The current Python/Node implementations live in the separate Android runtime companion; see the implementation status documents. Static serving does not depend on them.
 - Control plane is optional for already-authorized local jobs. It is not the trust root for local serving availability.
 
 ## 2. Wire format and compatibility
