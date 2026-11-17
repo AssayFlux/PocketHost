@@ -14,7 +14,7 @@
 | Area | Existing foundation | 0.1.0 role |
 |---|---|---|
 | Android app | Kotlin, Jetpack Compose, AndroidX | Website server in both modes; fleet command center in combined mode |
-| Android runtime companion | Separate experimental Android package; Python/Node integration | Existing prototype foundation for future optional add-ons; not required by main app or Step 4 |
+| Android runtime companion | Separate Android APK; CPython 3.11 via Chaquopy and Node.js mobile 24.22.1 via JNI | Existing implementations in progress; Android device acceptance and independent per-language package distribution remain open; not required by main app or Step 4 |
 | Rust engine | Tokio/Hyper native library | Mobile website ingress and routing |
 | Remote management API | Android loopback API | Local mobile management |
 | Remote control agent | Android agent polling configured control plane | Host connection foundation |
@@ -34,7 +34,7 @@
 
 ## Current implementation boundaries
 
-The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated in the main Android app package/process; the Rust engine is a native library hosted by the app. The runtime companion is a separate experimental package for future optional add-ons. Python and Node projects share its application UID, so this package boundary alone is not per-project isolation. The control plane is separately deployable and the browser console is a separate client.
+The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated in the main Android app package/process; the Rust engine is a native library hosted by the app. The separate runtime companion APK already integrates CPython 3.11 and Node.js mobile 24.22.1. These integrations are in progress; both runtimes share the companion application UID, so the package boundary alone is not per-project isolation. They are not part of Step 4 or required for the main app's static web server. The control plane is separately deployable and the browser console is a separate client.
 
 The repository contains useful foundations, not yet the full device-fabric implementation. The following must not be inferred from the architecture documents:
 - end-to-end multi-device pairing and worker-consumed role grants are not complete; the Android implementation is a manual local trust-authority foundation and is not yet connected to the control plane or independent agents;
