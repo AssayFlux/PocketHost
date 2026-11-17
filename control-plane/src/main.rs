@@ -1446,6 +1446,57 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn command_history_requires_admin_session_and_returns_only_latest_fifty() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let device = Uuid::new_v4();
+        sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'CI command-history device',$2)")
+            .bind(device).bind(token_hash(&new_token())).execute(&db).await.unwrap();
+        let state = AppState {
+            db: db.clone(),
+            admin_token: format!("command-history-owner-{}", new_token()),
+            relay: relay::RelayHub::default(),
+        };
+        let credentials = HeaderMap::from_iter([(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap(),
+        )]);
+        let (_, Json(session)) = create_admin_session(
+            State(state.clone()), credentials, ConnectInfo("127.0.0.1:40123".parse().unwrap()),
+        ).await.unwrap();
+        let token = session["accessToken"].as_str().unwrap();
+        let headers = HeaderMap::from_iter([(
+            AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        )]);
+
+        for index in 0..55i64 {
+            let command = Uuid::new_v4();
+            let timestamp = Utc::now() + chrono::Duration::seconds(index);
+            sqlx::query(
+                "INSERT INTO device_commands(id,device_id,kind,payload,state,result,created_at,delivered_at,acknowledged_at,delivery_attempts) \
+                 VALUES($1,$2,'agent_job',$3,'succeeded',$4,$5,$5,$5,1)"
+            )
+            .bind(command).bind(device).bind(json!({"index":index}))
+            .bind(json!({"status":"healthy","index":index})).bind(timestamp)
+            .execute(&db).await.unwrap();
+        }
+
+        let (unauthorized, _) = list_device_commands(
+            State(state.clone()),
+            HeaderMap::new(),
+            Path(device),
+        ).await.unwrap_err();
+        assert_eq!(unauthorized, StatusCode::UNAUTHORIZED);
+
+        let Json(history) = list_device_commands(State(state), headers, Path(device)).await.unwrap();
+        assert_eq!(history.len(), 50, "command history must be bounded to 50 rows");
+        assert_eq!(history[0].result.as_ref().unwrap()["index"], 54);
+        assert_eq!(history[0].state, "succeeded");
+        assert_eq!(history[49].result.as_ref().unwrap()["index"], 5);
+    }
+
+    #[tokio::test]
     async fn relay_hostname_is_inactive_until_dns_verification_and_cascades_on_device_delete() {
         let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
         let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
