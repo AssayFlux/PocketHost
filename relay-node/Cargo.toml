@@ -1,0 +1,23 @@
+[package]
+name = "assayflux-relay-node"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "Apache-2.0"
+description = "Standalone owner-operated AssayFlux Relay visitor gateway"
+
+[dependencies]
+anyhow = "1"
+axum = { version = "0.7", features = ["json", "macros"] }
+base64 = "0.22"
+futures-util = "0.3"
+hex = "0.4"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+uuid = { version = "1", features = ["serde", "v4"] }
