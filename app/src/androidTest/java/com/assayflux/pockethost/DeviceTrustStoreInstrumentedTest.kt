@@ -79,6 +79,23 @@ class DeviceTrustStoreInstrumentedTest {
         assertTrue(DeviceTrustStore.isAuthorized(context, deviceId, "storage", grant.generation))
         assertFalse(DeviceTrustStore.verifyRoleGrant(grantDocument, owner.second, "f".repeat(64)))
 
+        val alteredGrant = org.json.JSONObject(grantDocument.toString())
+        alteredGrant.put("role", "edge_gateway")
+        assertFalse(DeviceTrustStore.verifyRoleGrant(alteredGrant, owner.second, deviceId))
+        assertFalse(DeviceTrustStore.verifyRoleGrant(grantDocument, owner.second, deviceId,
+            minimumGeneration = grant.generation + 1L))
+
+        // Approval consumes the challenge exactly once, even when the same proof is replayed.
+        val replayRejected = runCatching {
+            DeviceTrustStore.approveCandidate(
+                context, challenge.challengeId,
+                DeviceTrustStore.Candidate(deviceId, Base64.encodeToString(agentKeys.public.encoded, Base64.NO_WRAP),
+                    "Instrumented worker", "Pocket Host test agent", "Android", "arm64-v8a", "1.0", capabilities),
+                proof, "storage", capabilities
+            )
+        }.isFailure
+        assertTrue(replayRejected)
+
         assertTrue(DeviceTrustStore.revoke(context, deviceId))
         assertFalse(DeviceTrustStore.isAuthorized(context, deviceId, "storage", grant.generation))
     }
