@@ -118,10 +118,32 @@ def process_command(client: ControlPlaneClient, store: AgentStore, device_id: st
         uuid.UUID(command_id)
     except (TypeError, ValueError) as error:
         raise ValueError("Remote command ID is invalid.") from error
-    if command.get("kind") != "agent_job":
+    command_kind = command.get("kind")
+    envelope = command.get("payload")
+    if command_kind == "install_grant":
+        if not isinstance(envelope, dict):
+            client.acknowledge(command_id, False, {"error": "signed_role_grant_required"})
+            return
+        grant = envelope.get("grant")
+        owner_key = envelope.get("owner_public_key_spki")
+        if not isinstance(grant, dict) or not isinstance(owner_key, str):
+            client.acknowledge(command_id, False, {"error": "signed_role_grant_required"})
+            return
+        try:
+            policy_path = Path(__file__).resolve().parent / "ROLE_CAPABILITY_POLICY.json"
+            policy = json.loads(policy_path.read_text(encoding="utf-8"))
+            verify_role_grant(grant, owner_key, device_id, store.get_generation() + 1, policy)
+            store.save_grant(grant, owner_key)
+            client.acknowledge(command_id, True, {
+                "status": "grant_installed", "generation": grant["generation"],
+                "role": grant["role"],
+            })
+        except Exception as error:
+            client.acknowledge(command_id, False, {"error": str(error)[:256]})
+        return
+    if command_kind != "agent_job":
         client.acknowledge(command_id, False, {"error": "unsupported_agent_command"})
         return
-    envelope = command.get("payload")
     if not isinstance(envelope, dict):
         client.acknowledge(command_id, False, {"error": "signed_job_envelope_required"})
         return
