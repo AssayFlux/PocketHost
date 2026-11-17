@@ -223,11 +223,17 @@ object WorkbenchWorkspaceManager {
     private fun fileDigests(root: File): Map<String, String> {
         if (!root.isDirectory) return emptyMap()
         val result = linkedMapOf<String, String>()
-        root.walkTopDown().forEach { file ->
-            if (file == root || file.isDirectory) return@forEach
-            if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Symbolic links are not supported in Workbench.")
-            result[file.relativeTo(root).invariantSeparatorsPath] = sha256(file)
+        fun visit(directory: File) {
+            val children = directory.listFiles() ?: throw IOException("Could not inspect website files.")
+            children.forEach { file ->
+                if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Symbolic links are not supported in Workbench.")
+                if (isBlockedName(file.name.lowercase())) return@forEach
+                if (file.isDirectory) visit(file)
+                else if (file.isFile) result[file.relativeTo(root).invariantSeparatorsPath] = sha256(file)
+                else throw IOException("Unsupported entry in website tree.")
+            }
         }
+        visit(root)
         return result
     }
 
@@ -235,23 +241,24 @@ object WorkbenchWorkspaceManager {
         if (!destination.mkdirs()) throw IOException("Could not create Workbench snapshot.")
         var copiedBytes = 0L
         var copiedFiles = 0
-        source.walkTopDown().forEach { file ->
-            if (file == source) return@forEach
-            val relative = file.relativeTo(source)
-            val name = file.name.lowercase()
-            if (isBlockedName(name)) return@forEach
-            if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Symbolic links are not supported in Workbench.")
-            val target = File(destination, relative.path)
-            if (file.isDirectory) {
-                if (!target.mkdirs() && !target.isDirectory) throw IOException("Could not copy a Workbench folder.")
-            } else if (file.isFile) {
-                copiedFiles++
-                copiedBytes += file.length()
-                if (copiedFiles > MAX_FILES || copiedBytes > MAX_BYTES) throw IOException("Website exceeds Workbench file or size limits.")
-                target.parentFile?.let { if (!it.mkdirs() && !it.isDirectory) throw IOException("Could not create snapshot folder.") }
-                file.copyTo(target, overwrite = false)
-            } else throw IOException("Unsupported entry in website tree.")
+        fun copyDirectory(from: File, to: File) {
+            val children = from.listFiles() ?: throw IOException("Could not inspect website files.")
+            children.forEach { file ->
+                if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Symbolic links are not supported in Workbench.")
+                if (isBlockedName(file.name.lowercase())) return@forEach
+                val target = File(to, file.name)
+                if (file.isDirectory) {
+                    if (!target.mkdirs()) throw IOException("Could not copy a Workbench folder.")
+                    copyDirectory(file, target)
+                } else if (file.isFile) {
+                    copiedFiles++
+                    copiedBytes += file.length()
+                    if (copiedFiles > MAX_FILES || copiedBytes > MAX_BYTES) throw IOException("Website exceeds Workbench file or size limits.")
+                    file.copyTo(target, overwrite = false)
+                } else throw IOException("Unsupported entry in website tree.")
+            }
         }
+        copyDirectory(source, destination)
     }
 
     private fun atomicWrite(target: File, bytes: ByteArray, mustNotExist: Boolean = false) {
