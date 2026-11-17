@@ -1,8 +1,10 @@
-# Node.js Runtime Provider — Pocket Host 0.1.0
+# Node.js Runtime Add-on — Future Runtime Library
+
+**Status: optional future add-on.** Node.js is not part of the main Pocket Host app or Step 4 and is not required for HTML/CSS/JavaScript/TypeScript static websites. The current companion integration is an experimental foundation; this document is a future package specification, not a release claim.
 
 ## Placement
 
-Node.js is an optional customer-language runtime installed on the mobile website-serving node only in 0.1.0. It is not installed on storage, traffic, build or other worker nodes. Build workers may produce immutable artifacts; the mobile serving node verifies and activates them.
+When released, Node.js will be an optional user-downloaded runtime package for the mobile website-serving node. It will not be installed on storage, traffic, build or other worker nodes. Build workers may produce immutable artifacts; the mobile serving node verifies and activates them.
 
 ## Current Android provider
 
