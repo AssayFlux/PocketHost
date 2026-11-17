@@ -77,16 +77,17 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 - Ensure each role has separate scoped credentials, queue and data namespace.
 **Exit:** each supported role passes device-specific lifecycle, reboot, network-loss, resource-pressure and isolation tests; one worker cannot compromise sibling roles.
 
-### STEP 4 — Mobile website server, built-in web baseline and optional runtimes
-**Partial-close boundary:** the server app includes the basic web stack by default. HTML and CSS are handled by the bundled Rust static server; TypeScript is a built-in authoring/build capability that must compile to browser JavaScript before publication. A user should not have to install a separate language runtime to publish a basic HTML/CSS/TypeScript website. The current Rust engine already serves HTML/CSS; TypeScript compile integration and its app-bundling/acceptance evidence remain implementation work.
+### STEP 4 — Main Pocket Host mobile website server
+**Partial-close boundary:** Step 4 is the main Pocket Host mobile application and its built-in web-serving stack. HTML and CSS are handled by the bundled Rust static server. TypeScript is a built-in authoring/build capability that must compile to browser JavaScript before publication. A user does not install a companion runtime to publish a basic HTML/CSS/JavaScript/TypeScript website. The current Rust engine already serves HTML/CSS; TypeScript compiler integration and app-bundling/acceptance evidence remain implementation work.
 - Keep Server only and Command Center + Server as explicit modes; both continue serving websites.
-- Keep Rust ingress, static serving, site routing and safe asset delivery in the server app.
-- Add the TypeScript compiler/transpilation toolchain to the server app's built-in web baseline; emit JavaScript artifacts for browser execution. Do not mistake serving `.ts` source as executable JavaScript or describe TypeScript as a server-side runtime.
-- Keep additional server-side language runtimes as separately selectable, signed/versioned packs installed only on the mobile serving node. The owner will add languages separately; do not bundle every language into the base app.
-- Execute optional server-side components with separate OS-enforced identities and scoped storage/network.
-- Build workers produce immutable artifacts; serving node verifies, stages, health-checks and atomically activates them.
-- Add distributed storage and traffic workers without moving customer runtime execution off the mobile serving node.
-**Partial exit:** HTML/CSS static hosting is available from the bundled server app without installing an optional runtime. **Remaining exit:** TypeScript compilation is bundled and tested; optional runtime installation/removal, per-project isolation, runtime fault containment and approved artifact publishing pass acceptance.
+- Keep Rust ingress, static serving, site routing and safe asset delivery in the main app.
+- Bundle the TypeScript compiler/transpilation toolchain in the main app and emit JavaScript artifacts for browser execution. Raw `.ts` files are not browser-executable.
+- Build workers produce immutable artifacts; the main app verifies, stages, previews and atomically activates approved output.
+- Static website serving must work without any separately installed language runtime.
+**Partial exit:** HTML/CSS static hosting is available from the bundled main app. **Remaining Step 4 exit:** TypeScript compilation is bundled and tested; main-app site lifecycle, artifact verification, preview/atomic publishing and physical-device acceptance pass.
+
+### FUTURE PLAN — Optional Runtime Library (after the five-step baseline)
+Optional server-side language runtimes are separate downloadable add-ons, not part of Step 4 and not bundled into the main Pocket Host app. Each language has its own independently versioned, signed, installable package. Users download only the languages they need. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md) for the 20-package catalog, package contract and rollout sequence.
 
 ### STEP 5 — Fleet resilience, connectivity and release acceptance
 - Integrate Local Network, AssayFlux Relay and Cloudflare Tunnel as independent selectable providers.
@@ -95,6 +96,10 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 - Test phone loss, worker loss, storage loss, tunnel outage, network partitions, stale credentials, rogue devices, update rollback and MCU gateway failure.
 - Publish signed software for each supported platform and board, support matrix, SBOM, provenance and upgrade/recovery guides.
 **Exit:** end-to-end fleet scenario passes on named physical devices; security and recovery review complete; no unsupported platform or role is claimed.
+
+## Future expansion after the five-step baseline
+
+The optional 20-language Runtime Library is a separate post-baseline expansion. It must not block Step 4 or be bundled into the main Pocket Host application. Each runtime is a separate downloadable, signed package selected by the user. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md).
 
 ## Dependency order
 
