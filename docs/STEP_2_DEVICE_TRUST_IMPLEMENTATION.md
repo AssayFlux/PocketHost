@@ -44,11 +44,11 @@
 This commit is a real Android trust foundation, not a claim of complete fleet integration.
 
 1. Implement and test LAN discovery and authenticated TLS transport, then BLE and supported USB paths; the current enrollment UI is manual payload exchange and the challenge transport defaults to LAN.
-2. Finish connecting the mobile trust authority to the remote control plane and device-agent protocol. A preview Linux worker now polls the existing HTTPS device API for `agent_job` commands and verifies owner-signed job envelopes, but the mobile app still does not register that worker, distribute its role grant, create/queue signed jobs or present remote results through the Command Center. The existing loopback management API and phone remote-control client remain separate systems.
+2. The Android Command Center now has a preview Control Plane client: it exchanges an owner/bootstrap credential for a short-lived admin session, registers an approved worker, queues its owner-signed role grant as `install_grant`, and can queue a typed owner-signed native health-check job for a registered `native_job` worker. The worker receives a one-time device token for manual secure configuration and polls over HTTPS. This closes part of the integration gap, but native passkey session exchange, automatic token delivery, live worker status/acknowledgement UI, remote revocation propagation, transport mutual authentication and end-to-end physical acceptance remain open.
 3. Implement agent-side durable identity/key provisioning, challenge consumption, grant signature verification, generation persistence, renewal and revocation polling on each supported OS.
 4. Upgrade the current app-level biometric/device-credential confirmation to a Keystore key that requires per-use user authentication, and test lockout, cancellation, key invalidation and background transitions.
 5. Add device capability attestation, health/connection state, audit events, role changes and multi-role isolation.
-6. Implement durable typed job queues, leases, idempotency and cancellation against `JOB_KIND_POLICY.json`.
+6. Expand durable typed job queues, leases, idempotency and cancellation against `JOB_KIND_POLICY.json`; the initial mobile-signed health-check path is implemented for `native_job` workers.
 7. Add physical Android device tests and transport adversarial tests, including replay, MITM, stale generation, clock rollback, storage corruption, Keystore invalidation and reboot/network-loss recovery.
 8. Continue expanding parity checks to job-kind policy, schema versions and grant resource-budget constraints. The role capability allow-list itself is now mechanically checked against `protocol/ROLE_CAPABILITY_POLICY.json` in Android CI.
 
