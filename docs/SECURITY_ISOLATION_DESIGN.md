@@ -59,6 +59,10 @@ In 0.1.0, customer-selected Python/Node/other language runtimes execute only on 
 
 Rogue device, replayed code, device cloning, stolen credentials, role escalation, malicious worker, compromised storage, malicious artifact, archive traversal, runtime escape, cross-project access, proxy route abuse, secret exfiltration, denial of service, control-plane outage, phone loss and unsafe MCU command.
 
+## Protocol source of truth
+
+The machine-readable device hello, enrollment challenge, role grant and job envelope schemas plus default-deny role/job policies live in [`../protocol/`](../protocol/README.md). The normative ceremony, canonical signing rules, transport matrix and threat mitigations are in [`STEP_1_TRUST_AND_PROTOCOL.md`](STEP_1_TRUST_AND_PROTOCOL.md). Platform code must enforce the same role allow-list locally; UI visibility is not an authorization boundary.
+
 ## Acceptance
 
 Security claims require adversarial tests on named devices and OS versions. A successful pairing UI, signature check or process start alone is not proof of fleet isolation.
