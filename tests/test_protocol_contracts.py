@@ -143,7 +143,7 @@ class ProtocolSchemaTests(unittest.TestCase):
         self.assertFalse(set(sample["capabilities"]).intersection(denied))
         sample["capabilities"] = ["management.admin"]
         self.assertFalse(set(sample["capabilities"]).issubset(allowed))
-        self.assertTrue(set(sample["capabilities"]).isdisjoint(denied))
+        self.assertTrue(set(sample["capabilities"]).intersection(denied))
 
     def test_job_envelope_schema_rejects_untyped_shell_job(self):
         schema = self.schemas["job-envelope.schema.json"]
