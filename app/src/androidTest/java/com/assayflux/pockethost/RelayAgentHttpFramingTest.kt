@@ -10,6 +10,23 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class RelayAgentHttpFramingTest {
+
+    @Test
+    fun sseLineReaderBoundsAllocationAndAcceptsNormalLineEndings() {
+        val reader = java.io.StringReader("abc\\r\\nxy\\nlast")
+        assertEquals("abc", RelayAgent.readBoundedSseLine(reader, 3))
+        assertEquals("xy", RelayAgent.readBoundedSseLine(reader, 3))
+        assertEquals("last", RelayAgent.readBoundedSseLine(reader, 4))
+        assertEquals(null, RelayAgent.readBoundedSseLine(reader, 4))
+    }
+
+    @Test
+    fun sseLineReaderRejectsOversizedLineBeforeReturningIt() {
+        val reader = java.io.StringReader("abcd\\n")
+        assertTrue(runCatching { RelayAgent.readBoundedSseLine(reader, 3) }.isFailure)
+        assertTrue(runCatching { RelayAgent.readBoundedSseLine(java.io.StringReader("x"), 0) }.isFailure)
+    }
+
     @Test
     fun acceptsOnlyUnambiguousBoundedResponseFraming() {
         val chunked = RelayAgent.validateResponseFraming("chunked", null)
