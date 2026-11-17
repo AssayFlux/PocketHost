@@ -16,7 +16,7 @@ Implemented:
 - A hardened systemd unit and installer script using a dynamic service identity, filesystem protections, cgroup CPU/memory limits and a local-only inbox supervisor.
 - Idempotent job insertion by unique idempotency key.
 - Default-deny typed job execution. Implemented executors: `native.health_check`, confined `storage.snapshot`, `backup.create` and `backup.verify`. Unsupported job kinds and arbitrary shell/script payloads are rejected.
-- Storage snapshots are restricted to an assigned namespace root, reject symlink traversal and unsafe archive paths, enforce the granted byte budget, use immutable snapshot IDs and verify archive CRC plus SHA-256.
+- Storage snapshots are restricted to a root-configured per-agent namespace allow-list (default deny), reject symlink traversal and unsafe archive paths, enforce the granted byte budget, use immutable per-namespace snapshot IDs and verify archive CRC plus SHA-256.
 - CLI commands for identity, challenge proof, grant installation and a supported health-check job.
 - Python unit tests wired into the repository quality workflow.
 
@@ -32,7 +32,7 @@ sudo sh agents/linux/install-systemd.sh
 
 ## Important boundaries and remaining work
 
-The Linux package is a developer/preview component. It does not yet include authenticated LAN discovery/TLS pairing, a mobile-to-agent enrollment API, authenticated LAN discovery/TLS pairing, a mobile-to-agent enrollment API, network job transport, signed package repositories, automatic update/rollback, or complete build/publish/traffic adapters. Storage and backup currently provide local snapshot/verification only; restore, off-device replication and scheduling are not implemented. The included systemd unit is a local preview supervisor; it is not a connected remote worker. The local typed executor is intentionally allow-listed and incomplete.
+The Linux package is a developer/preview component. It does not yet include authenticated LAN discovery/TLS pairing, a mobile-to-agent enrollment API, authenticated LAN discovery/TLS pairing, a mobile-to-agent enrollment API, network job transport, signed package repositories, automatic update/rollback, or complete build/publish/traffic adapters. Storage and backup currently provide local snapshot/verification only; restore, off-device replication and scheduling are not implemented. The included systemd unit is a local preview supervisor; it is not a connected remote worker. The installer creates `/etc/pockethost-agent.env` with an empty `POCKETHOST_ALLOWED_NAMESPACES`; an administrator must explicitly populate the comma-separated namespace IDs before storage or backup jobs can access any data. The local typed executor is intentionally allow-listed and incomplete.
 
 The Android runtime companion remains a separate Android package/UID and is not the general-purpose Linux worker agent. Runtime packs remain on the mobile website-serving node.
 
