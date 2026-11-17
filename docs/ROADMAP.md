@@ -16,7 +16,7 @@ This roadmap follows the five-step master plan. The mobile command center is the
 - Owner approval, role selection, permission review and revocation.
 - Fleet dashboard, health, job status, audit and recovery.
 - Local LAN communication first; BLE and supported USB flows next.
-- Independent mobile Command Center and Server switches.
+- One mutually exclusive mobile operating-mode selector: **Server only** or **Command Center + Server**. Website serving remains enabled in both modes; only fleet administration is added or hidden.
 
 ## Step 3 — Device agents and workers
 - Separate Android, Linux, Windows, macOS and SBC packages.
