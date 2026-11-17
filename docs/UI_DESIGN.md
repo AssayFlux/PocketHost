@@ -90,7 +90,19 @@ Roles: Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery, Ed
 - Static content remains available if the companion is absent or a runtime fails.
 - Build worker artifacts are verified and staged before explicit activation on the mobile serving node.
 
-## 8. Storage, traffic and publishing
+## 8. Workbench
+
+Add **Workbench** as a first-class destination in the hamburger sidebar, adjacent to Websites & Files. It is available in both Server only and Command Center + Server modes. Keep Websites & Files for import/backup/site administration; Workbench is the development workspace.
+
+Workbench has a project selector and six clear destinations: **Explorer**, **Editor**, **Preview**, **Changes**, **Commits** and **Deployments**. Explorer uses a navigable nested tree, not a flat unbounded file dump. Editor supports tabs, dirty indicators, save state, syntax-aware colors and accessible controls. Changes shows per-file status and reviewable diffs. Commits and Deployments show durable history and clear active/failed/rollback states.
+
+On mobile, prioritize a single-pane editor with a collapsible file drawer and compact tab strip; on tablets use a resizable two-pane explorer/editor layout where supported. Respect system font scaling, IME/keyboard insets, landscape, large touch targets and long filenames. Avoid horizontal clipping and never hide editor actions behind fixed bottom bars when the keyboard is open.
+
+Visually distinguish **Workspace / Draft** from **Live / Production** at all times. Preview is marked as a development preview and uses an isolated origin. Deploy is a deliberate review-and-approve action with changed-file summary, validation results and rollback target. Never style Save, Commit and Deploy as interchangeable actions. Destructive file operations and production deployment require clear confirmation.
+
+See [Workbench specification](WORKBENCH.md) for behavior, security boundaries and acceptance.
+
+## 9. Storage, traffic and publishing
 
 - Storage nodes: namespace, quota, encryption, replication and backup health.
 - Traffic nodes: exact site routes, proxy/cache policy, upstream and provider health.
