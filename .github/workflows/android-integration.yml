@@ -15,6 +15,7 @@ on:
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - "scripts/build-cloudflared-android.sh"
+      - "docs/UI_DESIGN.md"
   workflow_dispatch:
     inputs:
       run_emulators:
