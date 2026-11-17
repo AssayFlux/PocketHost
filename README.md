@@ -5,33 +5,39 @@
 </p>
 
 <p align="center"><strong>Your devices. Your services. Your control.</strong></p>
-<p align="center">A mobile command center for a verified, role-assigned device fleet.</p>
+<p align="center">Build a personal infrastructure from the devices you own.</p>
 
 ## What is Pocket Host?
 
-Pocket Host lets an owner install separate software on different devices, verify each device from an Android or iPhone command center, and assign it a specific job: website serving, storage, traffic handling, builds and publishing, native backend jobs, backup or edge gateway.
+Pocket Host is a mobile-first personal infrastructure builder. It is designed to let an owner connect supported devices, verify each device, grant it specific roles and combine their capabilities into a coordinated service system.
 
 The mobile device has exactly two operating modes:
-- **Server only:** serves websites from this mobile device. Fleet command, device discovery approvals and role assignment are unavailable.
-- **Command Center + Server:** manages and verifies the fleet, assigns device jobs and serves websites from the same mobile device.
 
-Only Command Center + Server can approve new device integrations and grant fleet roles. Unknown devices cannot join the trusted fleet.
+- **Server only:** the mobile device serves websites. Fleet discovery, device approval and role assignment are unavailable.
+- **Command Center + Server:** the same mobile device serves websites and administers the verified device fleet.
+
+Website serving stays enabled in both modes. There is no standalone Command Center-only mode. Only Command Center + Server can approve external devices and grant or revoke fleet roles.
+
+Other devices use separate, platform-appropriate Pocket Host software. A device is not trusted or assigned work just because it appears on the network.
 
 ## Core architecture
 
-- **Mobile command center:** Android and iOS owner apps, device discovery, verification, approvals, role assignments, health and recovery.
-- **Separate node software:** Android, Linux, Windows, macOS and supported SBC agents; MCU firmware for supported boards.
-- **Role-based workers:** storage, traffic, build/publish, native backend/job, backup and edge gateway.
-- **Central runtime placement:** in 0.1.0, user-selected language runtime packs execute only on the mobile website-serving node. Worker nodes handle bounded infrastructure jobs and do not silently become arbitrary Python/Node hosting nodes.
-- **Device transports:** Wi-Fi/LAN for secure control and bulk transfer; Bluetooth for discovery/proximity/small control messages; USB only through supported OS APIs; authenticated remote links when needed.
-- **DemonCore:** MCU and edge-device integration through a board-aware gateway.
+- **Mobile serving node:** the website-serving role remains on the designated mobile device in both operating modes.
+- **Mobile fleet administration:** available only in Command Center + Server mode. Android is the current application foundation; native iOS is a planned deliverable, not present in this repository.
+- **Separate node software:** platform-specific Android, Linux, Windows, macOS and supported SBC agents are planned as separate installable products. Production desktop/SBC installers are not yet delivered.
+- **Verified device fabric:** explicit device identity, short-lived enrollment challenge, owner approval, scoped role grants, revocation and audit.
+- **Role-based workers:** target roles include storage, backup, traffic, build/publish, bounded native backend jobs and edge gateway. Each role is subject to exact platform and hardware acceptance.
+- **Central runtime placement:** in 0.1.0, customer-selected language runtime packs execute only on the mobile website-serving node. Worker devices do not silently become arbitrary Python/Node hosting nodes.
+- **Website delivery:** Rust ingress and static serving form the serving foundation; Python/Node runtime foundations and the publish pipeline still require hardening and acceptance.
+- **Device transports:** Wi-Fi/LAN is preferred for secure control and bulk transfer; Bluetooth supports discovery/proximity and small control messages; USB is platform/API-specific; remote links use authenticated sessions.
+- **Visitor ingress:** Local Network, AssayFlux Relay and Cloudflare Tunnel are independent connectivity options.
+- **DemonCore:** separate MCU firmware and edge-device integration through board-aware adapters.
 
 ## Device roles
 
 | Role | Example device |
 |---|---|
-| Server only / Command Center + Server | Android phone; iOS support subject to platform acceptance |
-| Mobile Website Server | Supported Android phone/tablet |
+| Mobile Server / Command Center + Server | Supported Android phone or tablet |
 | Storage / Backup | NAS, PC, server, Raspberry Pi |
 | Traffic | Linux server, SBC, eligible desktop |
 | Build / Publish | Desktop, laptop, server |
@@ -39,20 +45,21 @@ Only Command Center + Server can approve new device integrations and grant fleet
 | Edge Gateway | Raspberry Pi, embedded Linux |
 | MCU / Sensor / Actuator | DemonCore-supported boards, ESP32-class devices |
 
-Role assignment is capability-aware and explicitly approved. A device is not automatically trusted or eligible because it is visible on the network.
+The mobile device's two modes are operating modes, not separate external worker roles. iOS is planned as a mobile command client; always-on iOS website hosting is not promised. Role assignment is capability-aware and explicitly approved. A device is eligible only for roles supported by its measured OS, architecture, hardware, resources, transport and security capabilities.
 
 ## Repository components
 
-- `app/` — Android command center and optional mobile host.
-- `runtime-worker/` — Android language runtime companion.
-- `rust-engine/` — Rust website ingress and routing engine.
-- `control-plane/` — optional remote fleet identity, registry and command service.
-- `web-console/` — secondary browser operator console.
-- [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — MCU firmware and device-fleet project.
+- `app/` — Android application: website-serving foundation, local management API, remote-control integration and mobile UI. Two-mode enforcement and complete verified fleet workflows remain incomplete.
+- `runtime-worker/` — separate Android runtime companion for Python/Node integration. Package separation does not yet provide per-project OS-level isolation.
+- `rust-engine/` — Rust website ingress/routing engine hosted by the Android app.
+- `control-plane/` — Rust remote fleet-control service foundation, including API, database migrations and deployment assets; optional for local operation.
+- `web-console/` — React/TypeScript/Vite secondary operator client.
+- `tests/` and `scripts/` — repository test and engineering support assets.
+- [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — separate MCU firmware, board profiles and device-fleet project.
 
-The iOS command center and additional desktop/server/SBC node packages are product deliverables; their implementation is not claimed complete in this baseline.
+The repository currently contains foundations, specifications and partial implementations. It does not yet contain a native iOS app or production Linux, Windows, macOS and SBC node-agent installers.
 
-## Normative 0.1.0 documents
+## Normative and planning documents
 
 1. [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
 2. [Master Plan — five execution steps](docs/MASTER_PLAN.md)
@@ -63,7 +70,8 @@ The iOS command center and additional desktop/server/SBC node packages are produ
 7. [Mobile UI Design](docs/UI_DESIGN.md)
 8. [Security Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
 9. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
-10. [Documentation Index](docs/INDEX.md)
+10. [Competitive Landscape and Product Gap Analysis](docs/COMPETITIVE_LANDSCAPE.md)
+11. [Documentation Index](docs/INDEX.md)
 
 ## Five-step delivery plan and current position
 
@@ -71,45 +79,52 @@ Pocket Host is being delivered in five gated steps. The architecture and documen
 
 | Step | Scope | Current position |
 |---|---|---|
-| 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Specification baseline drafted.** Core contracts and two-mode decision are documented. Protocol simulations, threat-model review and contract conformance tests remain. |
-| 2. Mobile command center | Android/iOS modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **In progress / incomplete.** Android app foundation exists. End-to-end verified enrollment and fleet role workflows are not accepted; native iOS app is not present. |
-| 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Mostly planned.** Android foundations and separate runtime companion exist, but production role agents/installers for Linux, Windows, macOS and SBCs are not delivered. DemonCore integration still needs board-level acceptance. |
+| 1. Contracts and trust | Architecture, threat model, identity, enrollment, roles, jobs, transports and DemonCore boundaries | **Specification baseline drafted; gate not closed.** Core contracts and the two-mode decision are documented. Protocol simulations, threat-model review and contract conformance tests remain. |
+| 2. Mobile command center | Android modes, discovery, cryptographic verification, owner approval, role assignment and revocation | **In progress / incomplete.** Android application foundation exists. Two-mode enforcement and end-to-end verified enrollment/fleet role workflows are not accepted. Native iOS app is not present. |
+| 3. Device agents and workers | Separate platform agents and storage, traffic, build/publish, native-job, backup and edge roles | **Foundations / mostly planned.** Android foundations and a separate runtime companion exist. Production role agents/installers for Linux, Windows, macOS and SBCs are not delivered. DemonCore integration needs board-level acceptance. |
 | 4. Mobile website server and runtimes | Static serving, selected mobile runtime packs, isolation and verified publishing | **Partial implementation.** Android/Rust serving and Python/Node runtime foundations exist. Companion installation/recovery, per-project isolation, runtime fault containment and the complete artifact approval pipeline still need verification or work. |
-| 5. Resilience and release | Replication, recovery, connectivity, security, physical-device acceptance, signed releases and support evidence | **Not closed.** Some tunnel/control-plane foundations exist, but end-to-end resilience, physical-device matrix, security acceptance and release evidence remain. |
+| 5. Resilience and release | Replication, recovery, connectivity, security, physical-device acceptance, signed releases and support evidence | **Not closed.** Tunnel and control-plane foundations exist, but end-to-end resilience, physical-device matrix, security acceptance and release evidence remain. |
 
 ### What “complete” means
 
-- A document or interface is not proof that a capability is implemented.
-- A successful compile is not proof that a device role or transport is supported.
+- A document, design, interface or repository folder is not proof that a capability is implemented.
+- A successful compile is not proof that a device role, transport or platform is supported.
 - Each gate requires automated tests plus acceptance on its named OS, hardware and workload.
 - Unsupported platforms and roles remain labelled planned or conditional until evidence is recorded.
 - The mobile device has exactly two modes: **Server only** and **Command Center + Server**. Both serve websites; only the combined mode administers the fleet.
+- Accepted worker jobs must have defined local lifecycle and recovery behavior; the mobile app or optional remote control plane must not be treated as the only runtime authority for work already accepted by a worker.
 
-See [Master Plan](docs/MASTER_PLAN.md), [Project Baseline](docs/PROJECT_BASELINE.md) and [Roadmap](docs/ROADMAP.md) for the detailed scope and acceptance criteria.
+See [Master Plan](docs/MASTER_PLAN.md), [Project Baseline](docs/PROJECT_BASELINE.md), [Roadmap](docs/ROADMAP.md) and [Competitive Landscape](docs/COMPETITIVE_LANDSCAPE.md) for detailed scope, evidence requirements and product positioning.
 
 ## Build and verification
 
-Android:
+Run commands from the repository root.
+
+Android application and runtime companion:
+
 ```bash
 ./gradlew :app:assembleDebug :runtime-worker:assembleDebug
 ```
 
-Rust engine:
+Rust website engine:
+
 ```bash
 cargo test --manifest-path rust-engine/Cargo.toml --locked
 ```
 
-Control plane:
+Remote control plane:
+
 ```bash
 cargo test --manifest-path control-plane/Cargo.toml --locked
 ```
 
 Browser console:
+
 ```bash
 cd web-console && npm ci && npm run build
 ```
 
-A successful build does not prove a device role, transport or platform is supported. Use the named acceptance matrix in the documentation.
+These are build/test entry points, not a claim that every command has passed in the current checkout or that the product is release-ready. A successful build does not prove a device role, transport or platform is supported. Use the named acceptance matrix and record evidence for each target.
 
 ## License
 
