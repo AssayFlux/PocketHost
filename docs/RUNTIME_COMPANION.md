@@ -1,26 +1,27 @@
-# Android Runtime Provider — Pocket Host 0.1.0
+# Optional Runtime Provider — Future Runtime Library
 
-The companion is for optional server-side language runtimes. It is not required for the built-in HTML/CSS static website baseline. TypeScript is a built-in compile-to-JavaScript web toolchain requirement and must be bundled with the mobile server app, not presented as an optional companion runtime. That compiler integration remains pending until packaged and tested.
+**Product status: future add-on infrastructure, not part of Step 4 and not required by the main Pocket Host app.** The main app independently provides HTML/CSS static serving and is intended to bundle TypeScript compilation to browser JavaScript. This companion/provider boundary exists for separately downloaded server-side language runtimes only.
 
 ## Product role
 
-The Android runtime companion provides the language runtime execution provider for the mobile website-serving node. In 0.1.0, customer-selected Python, Node and future language runtime packs execute only on this designated mobile server. Other enrolled devices perform assigned infrastructure jobs; they do not become arbitrary customer-language runtime hosts.
+The future Runtime Library will let users download only the language runtimes they choose. Each language is an independent signed/versioned package with its own installation, health, update, rollback and removal lifecycle. The 20-package catalog is defined in [FUTURE_RUNTIME_LIBRARY.md](FUTURE_RUNTIME_LIBRARY.md). Current manifests are planning placeholders, not downloadable artifacts.
 
-## Current Android foundation
+## Existing Android foundation
 
 - Host application: `com.assayflux.pockethost`.
-- Runtime companion: `com.assayflux.pockethost.worker`.
-- The companion is a separate Android package and runtime provider boundary.
-- Python and Node currently share the companion package UID. This is not per-project OS isolation.
+- Runtime companion package: `com.assayflux.pockethost.worker`.
+- The companion is a separate Android package/provider boundary in the current repository.
+- Existing Python/Node foundation does not mean the future 20-package catalog is implemented or production-ready.
+- Python and Node currently share the companion package UID; this is not per-project OS isolation.
 
-## Runtime Manager requirements
+## Future Runtime Manager requirements
 
-- Each language is an independently selectable signed/versioned pack.
-- User explicitly chooses required languages and versions.
+- One independently selectable signed/versioned package per language.
+- User explicitly chooses required languages and versions; no all-in-one runtime bundle.
 - Verify digest, signature, ABI, license and compatibility before installation.
-- Install, update and remove one runtime without changing other packs.
+- Install, update and remove one runtime without changing the main app or other packs.
 - Runtime health, process lifecycle, logs, metrics and resource budgets are independent.
-- Static ingress works with no runtime installed.
+- Main-app static ingress works with zero runtime packages installed.
 - A runtime failure cannot stop static serving or unrelated runtime processes.
 
 ## Project isolation
@@ -33,4 +34,4 @@ Operations remain typed, bounded and versioned: provider discovery, project stag
 
 ## Acceptance
 
-Test independent pack installation/removal, wrong signature, ABI mismatch, process crash, Binder death, project cross-access, network escape, resource exhaustion, static hosting during runtime outage, upgrade and rollback. Android package installation success alone does not prove runtime health.
+Test independent package installation/removal, wrong signature, ABI mismatch, process crash, Binder death, project cross-access, network escape, resource exhaustion, static hosting during runtime outage, upgrade and rollback. Android package installation success alone does not prove runtime health.
