@@ -44,7 +44,7 @@ export function App() {
   const [capacityDirty, setCapacityDirty] = useState(false);
   const [benchmark, setBenchmark] = useState<CapacityBenchmark | null>(null);
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
-  const [message, setMessage] = useState("Connect to your PocketHost device on the same phone or local network.");
+  const [message, setMessage] = useState("Connect to an enrolled Pocket Host host through the local network or fleet control plane.");
   const [busy, setBusy] = useState(false);
 
   const request = useCallback(async <T extends Record<string, unknown>>(path: string, init: RequestInit = {}): Promise<T> => {
@@ -208,7 +208,7 @@ export function App() {
       localStorage.setItem("pockethost_api_base", apiBase);
       const result = await request<{ challengeId: string }>("/api/v1/pair/challenge", { method: "POST", body: "{}" });
       setChallengeId(result.challengeId);
-      setMessage("A six-digit approval code is now displayed in the PocketHost Android app. Approve this browser only if you initiated this request.");
+      setMessage("A six-digit approval code is displayed in the Pocket Host mobile command center. Approve this browser only if you initiated this request.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Pairing request failed.");
     } finally { setBusy(false); }
@@ -275,7 +275,7 @@ export function App() {
     try {
       const result = await request<CapacityBenchmark>("/api/v1/capacity/benchmark", { method: "POST", body: "{}" });
       setBenchmark(result);
-      setMessage("Capacity Lab started on the connected Android device. Results will appear as the bounded workload sweep completes.");
+      setMessage("Capacity Lab started on the connected host. Results will appear as the bounded workload sweep completes.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Capacity benchmark could not start."); }
     finally { setBusy(false); }
   }
@@ -323,7 +323,7 @@ export function App() {
       <div className="sidebar-bottom"><span className="connection-dot" /> {token ? "Paired device session" : "Device not paired"}<small>Loopback management API · v1</small></div>
     </aside>
     <section className="main-panel" id="overview">
-      <header className="topbar"><div><span className="eyebrow">ASSAYFLUX / CONTROL PLANE</span><h1>Device overview</h1><p>Live status from your PocketHost Android device.</p></div><span className="device-pill"><i /> {token ? "Session active" : "Not connected"}</span></header>
+      <header className="topbar"><div><span className="eyebrow">ASSAYFLUX / CONTROL PLANE</span><h1>Device overview</h1><p>Live status from the connected Pocket Host host.</p></div><span className="device-pill"><i /> {token ? "Session active" : "Not connected"}</span></header>
       <section className="notice"><div className="notice-icon">i</div><div><strong>Device connection</strong><p>{message}</p></div></section>
       {token && ownerReauthRequired && <section className="panel" aria-live="polite">
         <div className="panel-heading"><h3>Confirm Owner identity</h3><span className="muted-tag">FRESH AUTHORIZATION</span></div>
@@ -342,9 +342,9 @@ export function App() {
         </article>
         <article className="panel">
           <div className="panel-heading"><h3>First-time device pairing</h3><span className="muted-tag">ON-DEVICE APPROVAL</span></div>
-          <p>Pair only when you can approve the request on the Android phone. The first approved session creates the Owner account.</p>
+          <p>Pair only when you can approve the request in your mobile command center. The first approved session creates the Owner account.</p>
           <button disabled={busy} onClick={beginPairing}>Request pairing code</button>
-          {challengeId && <div className="pair-complete"><p>Enter the code shown in the Android app after approving this request.</p><input aria-label="Device approval code" value={approvalCode} onChange={e => setApprovalCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="6-digit code" /><button disabled={busy || approvalCode.length !== 6} onClick={completePairing}>Complete pairing</button></div>}
+          {challengeId && <div className="pair-complete"><p>Enter the code shown in the mobile command center after approving this request.</p><input aria-label="Device approval code" value={approvalCode} onChange={e => setApprovalCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="6-digit code" /><button disabled={busy || approvalCode.length !== 6} onClick={completePairing}>Complete pairing</button></div>}
         </article>
       </section>}
       {token && hostIdentity && <section className="panel">
@@ -359,7 +359,7 @@ export function App() {
         </div>
         {hostIdentity.deviceApprovedPairing && !needsOwnerSetup && <section className="panel">
           <div className="panel-heading"><h3>Owner account recovery</h3><span className="muted-tag">DEVICE APPROVAL</span></div>
-          <p>This browser session was approved directly on the Android phone. Set a new Owner password to recover access. All existing Owner and pairing sessions will be revoked.</p>
+          <p>This browser session was approved directly in the mobile command center. Set a new Owner password to recover access. All existing Owner and pairing sessions will be revoked.</p>
           <div className="resource-panel">
             <label>New Owner password<input type="password" autoComplete="new-password" value={recoveryPassword} onChange={event => setRecoveryPassword(event.target.value)} placeholder="At least 12 characters" /></label>
             <button disabled={busy || recoveryPassword.length < 12} onClick={() => void recoverOwnerPassword()}>Recover Owner account</button>
@@ -367,7 +367,7 @@ export function App() {
         </section>}
         {hostIdentity.role === "OWNER" && <>
           <div className="section-heading"><div><span className="eyebrow">TEAM ACCESS</span><h2>{needsOwnerSetup ? "Create the Owner account" : "Manage Operators"}</h2></div></div>
-          {needsOwnerSetup && <p>Set a unique Owner username and password of at least 12 characters. Credentials are stored encrypted on the phone.</p>}
+          {needsOwnerSetup && <p>Set a unique Owner username and password of at least 12 characters. Credentials are stored using the platform's secure credential storage.</p>}
           <div className="resource-panel">
             <label>Username<input autoComplete="username" value={accountUsername} onChange={e => setAccountUsername(e.target.value)} /></label>
             <label>Password<input type="password" autoComplete="new-password" value={accountPassword} onChange={e => setAccountPassword(e.target.value)} placeholder="At least 12 characters" /></label>
@@ -378,7 +378,7 @@ export function App() {
       </section>}
       <div className="section-heading"><div><span className="eyebrow">SITE REGISTRY</span><h2>Configured websites</h2></div><span className="muted-tag">{sites.length} REGISTERED</span></div>
       <section className="panel">
-        {sites.length === 0 ? <p>No registered websites yet. Import a project and assign its hostname in the Android app.</p> : sites.map(site => <div className="status-line" key={site.id}><span><strong>{site.name}</strong><small className="site-hosts">{site.hostnames.join(", ") || "No hostname assigned"}</small></span><span className="site-actions"><strong>{site.runtime} · {site.state}</strong><button disabled={busy} onClick={() => siteAction(site, "start")}>Start</button><button disabled={busy} onClick={() => siteAction(site, "stop")}>Stop</button></span></div>)}
+        {sites.length === 0 ? <p>No registered websites yet. Import a project and assign its hostname on an enrolled host.</p> : sites.map(site => <div className="status-line" key={site.id}><span><strong>{site.name}</strong><small className="site-hosts">{site.hostnames.join(", ") || "No hostname assigned"}</small></span><span className="site-actions"><strong>{site.runtime} · {site.state}</strong><button disabled={busy} onClick={() => siteAction(site, "start")}>Start</button><button disabled={busy} onClick={() => siteAction(site, "stop")}>Stop</button></span></div>)}
       </section>
       <section className="metric-grid" id="metrics">
         <article className="metric-card"><span>Rust static requests</span><strong>{metrics?.sources.find(x => x.source === "rust-static")?.requests?.toLocaleString() ?? "—"}</strong><small>Persisted device counter</small></article>
@@ -432,7 +432,7 @@ export function App() {
       </section>
       <div className="section-heading" id="runtimes"><div><span className="eyebrow">DEVICE RUNTIMES</span><h2>Runtime health</h2></div><span className="muted-tag">{status?.state ?? "NOT CONNECTED"}</span></div>
       <section className="lower-grid">
-        <article className="panel"><div className="panel-heading"><h3>Cloudflare Tunnel</h3><span className="muted-tag">{tunnel?.state ?? "UNKNOWN"}</span></div><p>{tunnel?.configured ? "Encrypted tunnel token is configured on the Android device." : "No tunnel token is configured."}</p><div className="site-actions"><button disabled={busy || !tunnel?.configured} onClick={() => tunnelAction("start")}>Start tunnel</button><button disabled={busy} onClick={() => tunnelAction("stop")}>Stop tunnel</button></div></article>
+        <article className="panel"><div className="panel-heading"><h3>Cloudflare Tunnel</h3><span className="muted-tag">{tunnel?.state ?? "UNKNOWN"}</span></div><p>{tunnel?.configured ? "Encrypted tunnel token is configured on the connected host." : "No tunnel token is configured."}</p><div className="site-actions"><button disabled={busy || !tunnel?.configured} onClick={() => tunnelAction("start")}>Start tunnel</button><button disabled={busy} onClick={() => tunnelAction("stop")}>Stop tunnel</button></div></article>
         <article className="panel"><div className="panel-heading"><h3>Recent operations</h3><span className="muted-tag">{logs.length} EVENTS</span></div>{logs.slice(0,8).map((entry,i)=><div className="log-line" key={entry.timestamp+i}><strong>{entry.level}</strong><span>{entry.event}</span><small>{entry.message}</small></div>)}</article>
       </section>
       <section className="lower-grid"><article className="panel"><div className="panel-heading"><h3>Runtime status</h3><span className="status-muted">{status ? "Live device data" : "Waiting for pairing"}</span></div>
