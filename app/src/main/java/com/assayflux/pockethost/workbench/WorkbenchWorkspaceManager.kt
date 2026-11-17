@@ -18,6 +18,8 @@ object WorkbenchWorkspaceManager {
     private const val MAX_BYTES = 50L * 1024L * 1024L
     private const val MAX_DEPTH = 32
     private const val MAX_TEXT_BYTES = 256L * 1024L
+    private const val MAX_COMMITS = 10
+    private const val MAX_COMMIT_STORAGE_BYTES = 200L * 1024L * 1024L
     private val textExtensions = setOf("html", "htm", "css", "js", "mjs", "json", "txt", "md", "xml", "svg", "yaml", "yml", "toml", "ts", "tsx", "jsx", "csv")
     private val blockedNames = setOf(".git", ".ssh", ".pockethost", "id_rsa", "id_ed25519", "authorized_keys", "known_hosts")
 
@@ -216,11 +218,54 @@ object WorkbenchWorkspaceManager {
         return root.listFiles()?.filter { it.isDirectory && it.name.startsWith("commit-") }?.mapNotNull { directory ->
             runCatching {
                 val json = JSONObject(File(directory, "commit.json").readText(Charsets.UTF_8))
-                Commit(json.getString("id"), json.getString("message"), json.getLong("created_at"),
-                    json.getInt("file_count"), json.getLong("total_bytes"))
+                val id = json.getString("id")
+                if (!isValidCommitId(id) || id != directory.name || json.getString("project_id") != projectId) {
+                    throw IOException("Commit metadata does not match its storage directory.")
+                }
+                val snapshot = File(directory, "snapshot")
+                val stats = validateTree(snapshot)
+                if (json.getInt("file_count") != stats.first || json.getLong("total_bytes") != stats.second) {
+                    throw IOException("Commit snapshot metadata is inconsistent.")
+                }
+                Commit(id, json.getString("message"), json.getLong("created_at"), stats.first, stats.second)
             }.getOrNull()
-        }?.sortedByDescending { it.createdAt } ?: emptyList()
+        }?.sortedWith(compareByDescending<Commit> { it.createdAt }.thenByDescending { it.id }) ?: emptyList()
     }
+
+    /** Retains a bounded recent history; the newest commit is never selected for deletion. */
+    private fun pruneCommitHistory(context: Context, projectId: String) {
+        val root = commitsRoot(context, projectId)
+        val history = commits(context, projectId)
+        var retainedBytes = history.sumOf { snapshotStorageBytes(File(root, it.id)) }
+        var retainedCount = history.size
+        history.sortedWith(compareBy<Commit> { it.createdAt }.thenBy { it.id }).forEach { commit ->
+            if (retainedCount <= MAX_COMMITS && retainedBytes <= MAX_COMMIT_STORAGE_BYTES) return
+            if (history.firstOrNull()?.id == commit.id) return@forEach
+            val directory = File(root, commit.id)
+            val size = snapshotStorageBytes(directory)
+            if (directory.deleteRecursively()) {
+                retainedCount--
+                retainedBytes = (retainedBytes - size).coerceAtLeast(0L)
+            }
+        }
+    }
+
+    private fun snapshotStorageBytes(directory: File): Long {
+        if (!directory.isDirectory || java.nio.file.Files.isSymbolicLink(directory.toPath())) return 0L
+        var total = 0L
+        directory.walkTopDown().forEach { file ->
+            if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Commit history contains a symbolic link.")
+            if (file.isFile) {
+                val length = file.length()
+                if (length > MAX_COMMIT_STORAGE_BYTES - total) return MAX_COMMIT_STORAGE_BYTES + 1L
+                total += length
+            }
+        }
+        return total
+    }
+
+    private fun isValidCommitId(id: String): Boolean =
+        id.matches(Regex("commit-[0-9]{10,}-[0-9a-fA-F]{8}"))
 
     private fun validateTree(root: File): Pair<Int, Long> {
         val canonicalRoot = root.canonicalFile
