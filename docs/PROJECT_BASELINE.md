@@ -270,3 +270,10 @@ Update this file with exact evidence whenever the baseline changes.
 ## Current main UI integration — 2026-11-17
 
 The owner home shell, hamburger drawer, account dropdown, service carousel and information centre are merged into main. Android UIAutomator source has been updated to traverse drawer destinations, test account menu routes and preserve visitor/publishing flows. A further small update applies Android system appearance by default and makes the biometric panel scroll on compact/large-font layouts. Current exact-SHA Android integration evidence is still required before visual acceptance.
+
+
+## Design Language V1 implementation/verification note (2026-11-17)
+
+The authoritative design is `docs/UI_DESIGN.md`. The V1 dashboard must have tall portrait-rectangular service cards, a horizontally scrolling carousel as its only scrollable dashboard component, and a fixed information centre with four or five compact, information-rich non-scrolling bars. The dashboard itself must not vertically scroll. The login/app-unlock screen, hamburger drawer and separate user/account dropdown are all explicit design deliverables, alongside monochrome icons, ten classic palettes and System/Light/Dark modes.
+
+Treat the UI source implementation as unaccepted until exact-SHA build/test evidence and screenshots/hierarchy are inspected. In particular, verify actual card aspect ratio, fixed dashboard layout, information density, menu design/route correctness, bundled calligraphy font, all theme combinations, font scaling, compact/landscape layouts and accessibility. This note does not claim those checks have passed.
