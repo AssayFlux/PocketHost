@@ -57,6 +57,23 @@ class PocketHostDashboardUiSmokeTest {
                 device.wait(Until.hasObject(By.text("Security settings")), 5_000))
             assertTrue("Account dropdown About route is missing",
                 device.wait(Until.hasObject(By.text("About Pocket Host")), 5_000))
+            device.findObject(By.text("App settings")).click()
+            assertTrue("Appearance settings did not open",
+                device.wait(Until.hasObject(By.text("Make Pocket Host feel like yours")), 10_000))
+            val darkMode = device.wait(Until.findObject(By.text("Dark")), 5_000)
+            assertTrue("Dark appearance option is missing", darkMode != null)
+            darkMode!!.click()
+            val forestTheme = device.wait(Until.findObject(By.text("Forest")), 5_000)
+            assertTrue("Forest classic palette option is missing", forestTheme != null)
+            forestTheme!!.click()
+            instrumentation.waitForIdleSync()
+            assertTrue("Dark appearance preference was not persisted",
+                context.getSharedPreferences("pockethost_state", 0).getString("appearance_mode", "") == "Dark")
+            assertTrue("Classic palette preference was not persisted",
+                context.getSharedPreferences("pockethost_state", 0).getString("appearance_theme", "") == "Forest")
+            device.findObject(By.text("System")).click()
+            device.findObject(By.text("Classic")).click()
+            instrumentation.waitForIdleSync()
             device.pressBack()
 
         }
