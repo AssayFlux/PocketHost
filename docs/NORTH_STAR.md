@@ -1,55 +1,58 @@
-# Pocket Host — Product North Star 0.1.0
+# Pocket Host 0.1.0 — Product North Star
 
-## Mission
+## Purpose
 
-Make personal and community-owned infrastructure approachable: users control a fleet of capable devices from the mobile phone they already carry, while each device independently runs the services assigned to it.
+Make personal and community-owned infrastructure approachable. A user controls a verified fleet of capable devices from an Android or iPhone command center, assigns each device a useful job and combines their capabilities without making the fleet fragile.
 
-## Product promise
+## Product promises
 
-- Android and iOS phones are the primary command centers.
-- Capable phones, tablets, computers, servers, VPSs, SBCs and embedded devices can contribute supported host capabilities.
-- Microcontrollers contribute bounded, board-verified edge capabilities.
-- Websites may contain multiple independently supervised components and runtimes.
-- Devices are interconnected through authenticated, scoped and versioned protocols.
-- A mobile app, Internet link, remote control plane, tunnel or single workload is never a required single point of failure for unrelated services.
+- Mobile is the primary command center.
+- Mobile can be Command Center, Server, or Command Center + Server.
+- Every external device is verified and explicitly approved before integration.
+- Every device runs platform-specific software/firmware for its supported role.
+- Users assign devices to storage, traffic, build/publish, native backend jobs, backup or edge gateway roles.
+- In 0.1.0, user-selected language runtimes execute only on the mobile website-serving node.
+- Static hosting does not depend on optional language runtimes.
+- Devices communicate through authenticated, encrypted, versioned and bounded contracts.
+- Wi-Fi/LAN is preferred for bulk communication; BLE supports discovery and small control messages; USB is platform/API-specific; remote links are authenticated.
+- A device or role failure does not stop unrelated services.
+- Local Network, AssayFlux Relay and Cloudflare Tunnel are independent visitor connectivity choices.
+- DemonCore provides MCU firmware and bounded edge-device capabilities through an authenticated adapter.
 
-## Five invariants
+## Mobile operating model
 
-1. **Phone commands; hosts operate.** The mobile app coordinates and authorizes. Each host locally supervises workloads and persists last-known-good state.
-2. **Independent by default.** Separate process, identity, storage, lifecycle, resource budget and recovery for each component where the platform supports it.
-3. **Connected by explicit permission.** No implicit trust from LAN, device discovery, same account, runtime package or shared Wi-Fi.
-4. **Graceful degradation.** A broken service is contained. Unrelated hosts, sites, runtimes, tunnels and edge devices continue.
-5. **Capability-based promises.** A service is offered only when the exact device profile passes compatibility and security verification.
+| Mode | Command role | Website server role |
+|---|---|---|
+| Command Center | On | Off |
+| Server | Off | On |
+| Command Center + Server | On | On |
 
-## Command center
+Command and server roles have separate lifecycle controls. The mobile app is not required for already-authorized jobs on other devices to continue. iOS is a first-class command client; always-on hosting is not promised where Apple's platform lifecycle does not support it.
 
-Android (Kotlin/Compose) and iOS (Swift/SwiftUI) are first-class mobile control clients using one versioned API and common product interaction model. The phone is the primary owner interface, not the authoritative sole storage of fleet state. An optional remote control plane enables off-LAN management; direct authenticated LAN control supports local operation. The browser console is secondary.
+## Device fabric
 
-iOS is a control client and must respect Apple's background execution rules. Do not promise an iPhone as an always-on arbitrary application server.
+The fleet may include Android devices, iPhones as command clients, Linux/Windows/macOS computers, servers, VPSs, Raspberry Pi and other SBCs, embedded Linux gateways, DemonCore boards, ESP32-class MCUs and constrained sensors.
 
-## Device ecosystem
+A device receives only roles supported by its measured OS, architecture, hardware, resource, transport and security capabilities. Discovery is not trust. The owner approves a cryptographic device identity, one-time challenge and exact role grant.
 
-- Full hosts: Android, Linux, Windows, macOS, capable servers/VPS and capable SBCs.
-- Compact hosts: embedded Linux and resource-limited SBCs with narrower workload profiles.
-- MCU edge nodes: ESP32 and other supported boards for telemetry, device APIs, bounded automation and protocol bridging.
-- Constrained nodes: sensors, actuators and event producers.
+## Runtime placement
 
-Raspberry Pi is an SBC. Microcontrollers are not assumed to execute general-purpose web runtimes.
+The 0.1.0 serving model centralizes customer-selected language runtimes on the mobile website-serving node. User installs only the languages required by the website. Worker nodes provide infrastructure jobs, storage, traffic proxy/cache, builds, publishing preparation, backups and fixed-purpose native services. They do not silently execute customer-selected language projects.
 
-## Interconnection model
+## Interconnection and resilience
 
-Control plane handles identity, enrollment, desired state, authorization, command queue and audit. Data plane handles website traffic, internal service calls, artifact transfer and device telemetry. Public visitor ingress is isolated from management and MCU administration. Local host agents continue their authorized work when remote services are unreachable.
+The control plane coordinates identity, enrollment, role grants, desired state, job leases and audit. The data plane carries website traffic, storage transfer, build artifacts, worker jobs and edge telemetry. Each device retains accepted local assignments. Control-plane, mobile, tunnel, storage, worker, runtime and MCU failures have bounded effects.
 
-AssayFlux Relay and Cloudflare Tunnel are independent optional visitor ingress providers and may run simultaneously. Local Network hosting is independent of both.
+## Security invariants
 
-## Service model
+- Device key, owner identity, mobile client, role grant, job, runtime and MCU identity are distinct.
+- One-time codes are short-lived proofs, never permanent credentials.
+- No arbitrary remote shell or unrestricted filesystem access.
+- Visitor ingress never reaches management, runtime broker or MCU controls.
+- Build workers cannot activate a live release directly.
+- Storage and traffic roles receive only named namespaces/routes.
+- MCU actions are board-verified, allow-listed and safety-bounded.
 
-A website is a service graph: static frontend, one or more runtime components, data services and optional edge capabilities. Components declare their runtime, architecture, resource needs, persistence, health checks and permissions. The scheduler places them only on eligible hosts. Runtime software may be shared; project execution identity and data are not.
+## Success definition
 
-## Failure model
-
-A failure in the mobile app, control plane, host, site, runtime, storage provider, tunnel, edge gateway or MCU must have a documented bounded impact. Each component has health reporting, resource ceilings, timeout/cancellation, restart policy, durable state and rollback. No global restart for a local component failure.
-
-## Release identity
-
-Pocket Host 0.1.0 is the baseline product architecture. See [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) and [MASTER_PLAN.md](MASTER_PLAN.md) for normative boundaries and delivery gates.
+A user installs the correct node software, verifies it from a phone, assigns it a job and sees it operate independently. The mobile device can serve a website, manage the fleet, or do both. A broken node, runtime, tunnel, job or edge device does not take down unrelated parts of the system.
