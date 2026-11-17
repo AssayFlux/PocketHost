@@ -10,7 +10,7 @@ Pocket Host is distributed as separate software for each device family. Every in
 |---|---|---|---|
 | Android phone/tablet | Pocket Host Android APK | Website server in both modes; fleet command center is an optional additional capability in the combined mode | Existing app foundation; two-mode selection/enforcement, role separation and full fleet flows require implementation |
 | iPhone/iPad | Pocket Host iOS app | Command center and owner approvals | Planned; native app not present in repository |
-| Linux x86_64/ARM64 | Pocket Host Node Agent package/service | Storage, traffic, build/publish, native jobs, backup, gateway where compatible | Planned |
+| Linux x86_64 (Python 3.11+) | Pocket Host Linux Node Agent package | Protocol identity, signed grant verification, durable assignment state, native health-check job | Preview foundation implemented; authenticated transport, service supervision, cgroups, role adapters and signed updates remain open |
 | Windows x64/ARM64 where supported | Pocket Host Node Agent installer/service | Storage, traffic, build/publish, native jobs, backup | Planned |
 | macOS Apple Silicon/Intel where supported | Pocket Host Node Agent package/service | Storage, traffic, build/publish, native jobs, backup | Planned |
 | Raspberry Pi / SBC | Board/OS/architecture-specific Pocket Host Node Agent image/package | Compact worker, storage, traffic, build, edge gateway | Planned; each board profile needs acceptance |
