@@ -26,10 +26,10 @@ Use a timeless, premium, classic visual language:
 - Success: `#34764A`; warning: `#9A7044`; error: `#B6423B`.
 - Subtle warm-grey borders: `#DEDAD1`.
 - Card radius 16–24dp, restrained elevation, 8dp spacing rhythm.
-- System sans-serif typography; monospace for hostnames, addresses, ports and logs.
+- Editorial typography hierarchy: a cursive display wordmark for Pocket Host branding; serif display styles for major section titles; clean sans-serif for controls, labels and body copy; monospace for hostnames, addresses, ports and logs. The current Compose implementation uses Android's generic cursive family as a fallback; a bundled, licensed calligraphy font should replace it before pixel-identical cross-device branding is claimed.
 - No neon, gradients, glassmorphism or decorative colour blocks.
 
-Dark mode is a coordinated charcoal/slate interpretation of the same system. Respect Android's system appearance unless the user explicitly chooses an in-app override.
+Dark mode is a coordinated, palette-aware interpretation of the same system. Settings offers System, Light and Dark display modes, plus ten coordinated classic palettes: Classic, Midnight, Forest, Burgundy, Ocean, Graphite, Sandstone, Lavender, Copper and Arctic. Persist both selections in app preferences. System mode follows Android's current setting; Light and Dark override it. Palette selection must recolour all Material surfaces, text, controls, outlines and semantic states together.
 
 ## 3. Authentication screen
 
@@ -137,8 +137,8 @@ The redesign is not complete until:
 ## 9. Current implementation and honest gaps
 
 **Source implementation merged into `main` (2026-11-17):**
-- The native entry/locked screen remains the existing optional biometric app lock, with a redesigned branded card and fingerprint action. The screen follows Android system appearance by default and scrolls on compact/large-font layouts; a saved in-app theme override is respected. There is no native username/password account-login API; management-console login is separate.
-- The new home shell is the initial authenticated destination. It has Pocket Host / AssayFlux branding, a hamburger control, an account/app dropdown, and no bottom navigation bar.
+- The native entry/locked screen remains the existing optional biometric app lock, with a branded card, cursive Pocket Host wordmark and fingerprint action. The app shell reads the saved appearance and palette preferences; System follows Android, while Light/Dark are explicit overrides. There is no native username/password account-login API; management-console login is separate.
+- The new home shell is the initial authenticated destination. It has Pocket Host / AssayFlux branding, a cursive display wordmark, a hamburger control, an account/app dropdown, and no bottom navigation bar. Major display/headline styles use serif typography; operational copy remains sans-serif.
 - The hamburger drawer exposes Home, Hosting, Websites & Files, Relay & Networking, Python & Node Runtimes, Security & Access, Capacity & Performance, Backups & Recovery, Activity & Logs, Learn, Settings and About. The drawer itself scrolls so every destination remains reachable on compact screens. Destinations are mapped to existing native Dashboard, Sites, Activity, Learn and Settings General/Network/Runtimes/About flows.
 - The home carousel presents Hosting, Websites, Relay & Tunnels, Runtimes, Security, Capacity and Backups as horizontally swipeable cards with adjacent-card previews and page indicators. Service status and metrics are bound to current app state; planned capabilities are not represented as verified.
 - The information centre reads current hosting status, connection count, DeviceTelemetry battery/memory/device/network fields and recent OperationalLog entries. Backup/runtime notes are labelled with their actual limitations.
@@ -146,6 +146,8 @@ The redesign is not complete until:
 - The account dropdown currently provides supported app settings, security settings and About routes; it does not invent a username, profile identity, cloud account, or sign-out capability.
 
 **Still required before UI acceptance:**
+- Validate the ten classic palettes in System/Light/Dark modes on real devices and emulator screenshots, including text contrast and status/navigation bar icon contrast.
+- Replace the generic Android cursive fallback with a bundled, licensed calligraphy font if the final brand needs identical letterforms across OEM devices.
 - Compile/package the Android host and run API 26/33/35 instrumentation on the exact branch SHA.
 - Review actual screenshots and accessibility hierarchy for login, home, drawer, account menu, all detail destinations and Settings subsections.
 - Verify carousel centering, swipe/page indicators, navigation/back behaviour, notification data freshness and empty/error/offline states.
