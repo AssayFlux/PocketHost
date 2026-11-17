@@ -1446,6 +1446,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn signed_agent_command_kinds_are_accepted_by_api_and_database() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        let device = Uuid::new_v4();
+        sqlx::query("INSERT INTO devices(id,name,token_hash) VALUES($1,'CI agent-command device',$2)")
+            .bind(device).bind(token_hash(&new_token())).execute(&db).await.unwrap();
+        let state = AppState {
+            db: db.clone(),
+            admin_token: format!("agent-command-owner-{}", new_token()),
+            relay: relay::RelayHub::default(),
+        };
+        let mut credentials = HeaderMap::from_iter([(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap(),
+        )]);
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            credentials.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
+        let (_, Json(session)) = create_admin_session(
+            State(state.clone()), credentials, ConnectInfo("127.0.0.1:40124".parse().unwrap()),
+        ).await.unwrap();
+        let token = session["accessToken"].as_str().unwrap();
+        let mut headers = HeaderMap::from_iter([(
+            AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        )]);
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
+
+        for kind in ["agent_job", "install_grant"] {
+            let (status, Json(response)) = queue_command(
+                State(state.clone()),
+                headers.clone(),
+                Path(device),
+                Json(QueueCommand { kind: kind.into(), payload: json!({"test":true}) }),
+            ).await.unwrap();
+            assert_eq!(status, StatusCode::ACCEPTED);
+            assert_eq!(response["state"], "queued");
+        }
+        let count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM device_commands WHERE device_id=$1 AND kind IN ('agent_job','install_grant')"
+        ).bind(device).fetch_one(&db).await.unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
     async fn command_history_requires_admin_session_and_returns_only_latest_fifty() {
         let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
         let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
