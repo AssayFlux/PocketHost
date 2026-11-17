@@ -3,7 +3,7 @@
   "package_id": "com.assayflux.pockethost.runtime.nodejs",
   "language": "Node.js",
   "distribution": "Node.js",
-  "version": "0.0.0-planned",
+  "version": "0.0.0-in-progress",
   "status": "in-progress",
   "description": "JavaScript server applications and APIs",
   "targets": [],
