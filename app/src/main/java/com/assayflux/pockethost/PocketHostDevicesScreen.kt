@@ -51,6 +51,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text("COMMAND CENTER IDENTITY", fontWeight = FontWeight.Bold, color = palette.onSurface)
                 Text("Owner fingerprint", color = palette.onSurfaceVariant)
                 Text(owner?.first ?: "Keystore identity unavailable", fontWeight = FontWeight.SemiBold)
+                Text("Owner public key · Base64 DER SPKI", color = palette.onSurfaceVariant)
+                Text(owner?.second ?: "Unavailable", color = palette.onSurfaceVariant)
                 Text("P-256 signing key · Android Keystore · encrypted local registry", color = palette.onSurfaceVariant)
             }
         }
