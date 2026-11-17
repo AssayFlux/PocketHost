@@ -1436,6 +1436,7 @@ mod tests {
         let actor = admin(&headers, &state).await.unwrap();
         assert_eq!(actor.role, "owner");
         assert!(actor.recovery_session);
+        assert_eq!(admin_write(&headers, &state).await.unwrap().session_id, actor.session_id);
 
         let replay = recover_owner_session(
             State(state), recovery_headers,
@@ -1447,6 +1448,37 @@ mod tests {
             .bind(actor.session_id).execute(&db).await.unwrap();
         sqlx::query("DELETE FROM owner_recovery_codes WHERE id=$1")
             .bind(recovery_id).execute(&db).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn passkey_required_policy_blocks_new_bootstrap_sessions() {
+        let url = std::env::var("DATABASE_URL").expect("CI DATABASE_URL is required");
+        let db = PgPoolOptions::new().max_connections(2).connect(&url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&db).await.unwrap();
+        sqlx::query("UPDATE owner_auth_policy SET passkey_required=TRUE WHERE id=1")
+            .execute(&db).await.unwrap();
+        let state = AppState {
+            db: db.clone(),
+            admin_token: "owner-test-token-0123456789abcdef".into(),
+            relay: relay::RelayHub::default(),
+        };
+        let mut headers = HeaderMap::from_iter([(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", state.admin_token)).unwrap(),
+        )]);
+        if let Ok(host) = std::env::var("POCKETHOST_CONTROL_API_HOST") {
+            headers.insert(axum::http::header::HOST, HeaderValue::from_str(&host).unwrap());
+        }
+        let result = create_admin_session(
+            State(state),
+            headers,
+            ConnectInfo("203.0.113.223:40000".parse().unwrap()),
+        ).await;
+        // Restore the shared CI fixture before asserting so a failed assertion cannot
+        // leave later integration tests with bootstrap authentication disabled.
+        sqlx::query("UPDATE owner_auth_policy SET passkey_required=FALSE WHERE id=1")
+            .execute(&db).await.unwrap();
+        assert_eq!(result.unwrap_err().0, StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
