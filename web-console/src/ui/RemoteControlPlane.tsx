@@ -206,9 +206,15 @@ export function RemoteControlPlane() {
     });
     let response = await send(bearerToken);
     if (response.status === 428 && sessionRole === "owner") {
-      // Passkey user verification is the Owner step-up. Do not fall back to a bootstrap
-      // credential after passkey enrollment has revoked that recovery path.
-      const refreshed = await authenticateOwnerPasskey();
+      // Prefer passkey verification. Before the first passkey is enrolled, a fresh
+      // bootstrap exchange remains the supported initial Owner recovery path.
+      let refreshed: string;
+      try {
+        refreshed = await authenticateOwnerPasskey();
+      } catch (passkeyError) {
+        if (!reauthCredential) throw passkeyError;
+        refreshed = await exchangeAdminSession(reauthCredential);
+      }
       response = await send(refreshed);
     } else if ((response.status === 428 || response.status === 401) && reauthCredential) {
       const refreshed = await exchangeAdminSession(reauthCredential);
