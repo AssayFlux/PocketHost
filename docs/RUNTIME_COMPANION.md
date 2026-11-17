@@ -1,42 +1,34 @@
 # Android Runtime Provider — Pocket Host 0.1.0
 
-## Responsibility
+## Product role
 
-The Android runtime companion packages Python and Node runtime integrations separately from the main Android host application. It is an Android-specific provider adapter. It does not define the cross-platform runtime contract for Linux, Windows or macOS.
+The Android runtime companion provides the language runtime execution provider for the mobile website-serving node. In 0.1.0, customer-selected Python, Node and future language runtime packs execute only on this designated mobile server. Other enrolled devices perform assigned infrastructure jobs; they do not become arbitrary customer-language runtime hosts.
 
-## Current package boundary
+## Current Android foundation
 
-- Host package: `com.assayflux.pockethost`.
+- Host application: `com.assayflux.pockethost`.
 - Runtime companion: `com.assayflux.pockethost.worker`.
-- Rust engine and local management API run in the host app.
-- Python and Node runtime services run in the companion package.
-- Host/companion communication uses signature-protected Binder IPC with caller and protocol checks.
+- The companion is a separate Android package and runtime provider boundary.
+- Python and Node currently share the companion package UID. This is not per-project OS isolation.
 
-The host and companion require a compatible signing identity for the protected IPC contract.
+## Runtime Manager requirements
 
-## Current execution and security boundary
+- Each language is an independently selectable signed/versioned pack.
+- User explicitly chooses required languages and versions.
+- Verify digest, signature, ABI, license and compatibility before installation.
+- Install, update and remove one runtime without changing other packs.
+- Runtime health, process lifecycle, logs, metrics and resource budgets are independent.
+- Static ingress works with no runtime installed.
+- A runtime failure cannot stop static serving or unrelated runtime processes.
 
-Python and Node projects execute under the companion application's UID. Multiple projects within that package are not isolated from each other by the package boundary. Python/Node language-level restrictions and listener binding are not OS-enforced network isolation.
+## Project isolation
 
-Therefore:
-- Execute only owner-controlled trusted code.
-- Do not run visitor-submitted or arbitrary third-party code.
-- Do not claim multi-tenant sandboxing or per-project egress denial.
-- Do not store credentials inside project roots.
-- Static website serving remains independent of runtime availability.
+Each website project/component requires a distinct OS-enforced execution identity where Android supports it, with scoped filesystem, secrets, network and resource capabilities. A package boundary or separate interpreter alone is not isolation. Until adversarial tests prove isolation and egress enforcement, untrusted customer code must not be treated as safely sandboxed.
 
-## Broker contract
+## IPC contract
 
-The companion is being treated as a trusted runtime provider/broker boundary. Its public operations must remain typed, bounded and versioned: provider discovery, project staging, start/stop, health, metrics and shutdown. Project data transfer uses bounded descriptors/files, path validation, staged extraction and atomic activation. The broker must not receive broad access to unrelated host secrets.
+Operations remain typed, bounded and versioned: provider discovery, project staging, start/stop, health, metrics and shutdown. Use bounded descriptors/files, path validation, staged extraction and atomic activation. Binder death, package missing, version mismatch, service-start denial and runtime crash are distinct error states.
 
-## Target execution-cell contract
+## Acceptance
 
-Each project/component requires a distinct OS-enforced execution identity where the host OS supports it. A cell receives only its own project data, explicit persistent volumes, scoped secrets and approved visitor listener/service capabilities. Network and filesystem restrictions must be enforced below the language runtime and verified against native code.
-
-## Failure behavior
-
-- Companion crash must not stop static ingress or unrelated hosts.
-- Runtime process crash must not stop sibling components.
-- Binder death must be reported distinctly from package missing, version mismatch, service start denial and runtime crash.
-- Restart uses bounded backoff and crash-loop detection.
-- Deployment activation is staged and rollback-capable.
+Test independent pack installation/removal, wrong signature, ABI mismatch, process crash, Binder death, project cross-access, network escape, resource exhaustion, static hosting during runtime outage, upgrade and rollback. Android package installation success alone does not prove runtime health.
