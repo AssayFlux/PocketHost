@@ -43,7 +43,7 @@ def main() -> None:
             print(json.dumps({"device_id": device_id, "proof_signature": sign_challenge(key, challenge_data)}, indent=2))
         elif args.command == "install-grant":
             grant_data = json.loads(Path(args.grant_json).read_text())
-            policy = json.loads((Path(__file__).resolve().parents[4] / "protocol" / "ROLE_CAPABILITY_POLICY.json").read_text())
+            policy = json.loads((Path(__file__).resolve().parent / "ROLE_CAPABILITY_POLICY.json").read_text())
             verify_role_grant(grant_data, args.owner_public_key, device_id, store.get_generation() + 1, policy)
             store.save_grant(grant_data, args.owner_public_key)
             print("Verified role grant installed.")
