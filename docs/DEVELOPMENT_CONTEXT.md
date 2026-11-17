@@ -115,3 +115,10 @@ Before each task: inspect current `main`, recent commits, relevant source, workf
 ## Owner-approved Android UI update — 2026-11-17
 
 The previous five-destination bottom-navigation UI contract is superseded by `docs/UI_DESIGN.md`. The hamburger drawer is the primary app navigation and maps every feature to the existing Dashboard, Sites, Activity, Learn and Settings implementations. Do not remove feature logic when replacing navigation. Native app unlock remains the existing optional biometric gate; no native username/password login is implemented. See current `docs/PROJECT_BASELINE.md` for source and acceptance status.
+
+
+## Pocket Host Design Language V1 — authoritative owner correction (2026-11-17)
+
+Use `docs/UI_DESIGN.md` as the single source of truth. Important dashboard rules: service cards are tall portrait rectangles (not square or landscape); only the service carousel scrolls horizontally; the dashboard never vertically scrolls; the information centre is fixed/non-scrolling and shows four or five compact information-rich bars at once. Do not implement a vertically scrolling notification feed. The bars should use monochrome icons, useful metrics, meaningful graphs/progress indicators and truthful state.
+
+V1 also specifies the branded local biometric app-unlock screen, calligraphic Pocket Host wordmark, elegant display/readable body typography, the complete hamburger drawer, a separate user/account dropdown, minimal monochrome icons, ten classic palettes and persisted System/Light/Dark modes. Design the drawer and user menu as first-class surfaces; do not invent profile/session actions. Feature pages inherit the design tokens but use their own task-appropriate layouts. All measurements and acceptance rules are in `docs/UI_DESIGN.md`.
