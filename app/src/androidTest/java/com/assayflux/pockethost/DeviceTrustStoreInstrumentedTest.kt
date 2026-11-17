@@ -63,7 +63,7 @@ class DeviceTrustStoreInstrumentedTest {
     }
 
     @Test
-    fun expiredChallengeAndCapabilityEscalationAreRejected() {
+    fun expiredChallengeAndWrongDeviceBindingAreRejected() {
         val owner = DeviceTrustStore.ownerIdentity()
         val candidateId = "a".repeat(64)
         val expired = DeviceTrustStore.createChallenge(candidateId, System.currentTimeMillis() / 1000L - 600L)
