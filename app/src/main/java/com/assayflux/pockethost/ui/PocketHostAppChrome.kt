@@ -14,7 +14,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -22,12 +21,9 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -106,19 +102,16 @@ internal fun PocketHostOwnerHeader(
 internal data class PocketHostNavItem(val title: String, val subtitle: String, val icon: ImageVector, val destination: String)
 
 private val pocketHostNavItems = listOf(
-    PocketHostNavItem("Home", "Service overview and device centre", Icons.Outlined.Dashboard, "Home"),
-    PocketHostNavItem("Devices", "Verified devices, roles and revocation", Icons.Outlined.Memory, "Devices"),
-    PocketHostNavItem("Hosting", "Server lifecycle, port and local access", Icons.Outlined.Language, "Dashboard"),
-    PocketHostNavItem("Websites & files", "Projects, import, publish and rollback", Icons.Outlined.FolderOpen, "Sites"),
-    PocketHostNavItem("Workbench", "Edit website code, review changes and commit drafts", Icons.Outlined.Code, "Workbench"),
-    PocketHostNavItem("Relay & networking", "Cloudflare tunnel and network settings", Icons.Outlined.NetworkCheck, "Settings:Network"),
-    PocketHostNavItem("Python & Node runtimes", "Runtime projects and trusted-code controls", Icons.Outlined.Code, "Settings:Runtimes"),
-    PocketHostNavItem("Security & access", "Biometric app lock and visitor access controls", Icons.Outlined.Security, "Settings:Network"),
-    PocketHostNavItem("Capacity & performance", "Live admission, capacity and device metrics", Icons.Outlined.Memory, "Dashboard"),
-    PocketHostNavItem("Backups & recovery", "Encrypted export and restore operations", Icons.Outlined.Backup, "Sites"),
-    PocketHostNavItem("Activity & logs", "Events, diagnostics and operational reports", Icons.Outlined.Timeline, "Activity"),
-    PocketHostNavItem("Learn", "Guides, workflows and limitations", Icons.Outlined.School, "Learn"),
-    PocketHostNavItem("Settings", "Device preferences and app configuration", Icons.Outlined.Settings, "Settings:General"),
+    PocketHostNavItem("Home", "Service overview and quick status", Icons.Outlined.Dashboard, "Home"),
+    PocketHostNavItem("Hosting", "Start, stop and monitor the web server", Icons.Outlined.Language, "Dashboard"),
+    PocketHostNavItem("Websites & files", "Import, edit, publish and recover sites", Icons.Outlined.FolderOpen, "Sites"),
+    PocketHostNavItem("Workbench", "Edit site files and preview changes", Icons.Outlined.Code, "Workbench"),
+    PocketHostNavItem("Devices", "Trusted devices and fleet administration", Icons.Outlined.Memory, "Devices"),
+    PocketHostNavItem("Network & tunnels", "LAN access, Relay and Cloudflare", Icons.Outlined.Security, "Settings:Network"),
+    PocketHostNavItem("Runtimes", "Optional Python and Node.js services", Icons.Outlined.Code, "Settings:Runtimes"),
+    PocketHostNavItem("Activity & logs", "Operational events and diagnostics", Icons.Outlined.Info, "Activity"),
+    PocketHostNavItem("Learn", "Guides and operating limits", Icons.Outlined.Info, "Learn"),
+    PocketHostNavItem("Settings", "Appearance and device preferences", Icons.Outlined.Settings, "Settings:General"),
     PocketHostNavItem("About", "Version and platform information", Icons.Outlined.Info, "Settings:About")
 )
 
