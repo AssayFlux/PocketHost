@@ -1,6 +1,7 @@
 package com.assayflux.pockethost.management
 
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
@@ -39,6 +40,18 @@ object FleetControlPlaneClient {
         } finally { runCatching { request(base, session, "/v1/admin/session", "DELETE", null) } }
     }
 
+    /** Reads the latest 50 command states and worker acknowledgements for one device. */
+    fun commandHistory(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String): JSONArray {
+        val base = validateEndpoint(endpoint)
+        require(controlPlaneDeviceId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid_control_plane_device_id" }
+        val session = exchangeSession(base, ownerCredential)
+        try {
+            return requestArray(base, session, "/v1/admin/devices/$controlPlaneDeviceId/commands")
+        } finally {
+            runCatching { request(base, session, "/v1/admin/session", "DELETE", null) }
+        }
+    }
+
     fun revokeWorker(endpoint: String, ownerCredential: String, controlPlaneDeviceId: String) {
         val base = validateEndpoint(endpoint)
         require(controlPlaneDeviceId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid_control_plane_device_id" }
@@ -71,6 +84,37 @@ object FleetControlPlaneClient {
 
     private fun queueCommand(base: String, session: String, deviceId: String, kind: String, payload: JSONObject) {
         request(base, session, "/v1/admin/devices/$deviceId/commands", "POST", JSONObject().put("kind", kind).put("payload", payload))
+    }
+
+    private fun requestArray(base: String, bearer: String, path: String): JSONArray {
+        require(path.startsWith("/v1/") && !path.startsWith("//")) { "invalid_control_plane_path" }
+        val connection = URL(base + path).openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 15_000
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Authorization", "Bearer $bearer")
+            connection.setRequestProperty("Accept", "application/json")
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val bytes = stream?.use { input -> ByteArrayOutputStream().use { output ->
+                val buffer = ByteArray(8192)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    require(total <= MAX_RESPONSE) { "control_plane_response_too_large" }
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            } } ?: ByteArray(0)
+            if (status !in 200..299) throw IllegalStateException("Control plane returned HTTP $status: ${String(bytes).take(200)}")
+            return JSONArray(String(bytes, Charsets.UTF_8))
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun request(base: String, bearer: String, path: String, method: String, body: JSONObject?): JSONObject {
