@@ -1,303 +1,51 @@
-# ASSAYFLUX POCKET HOST — CANONICAL PROJECT BASELINE
+# Pocket Host 0.1.0 — Baseline
 
-**Baseline review:** 2026-11-16  
-**Source reviewed:** `e9d7c9a95304ac16e55f988f509ef0f44383034a` (latest six-job quality run; subsequent commits update documentation only)  
-**Release:** 0.1.0 target · **Status:** pre-release · **Production approval:** no.
+## Product identity
 
-This is the current evidence baseline. Source implementation is unchanged since the wrapper/dependency freeze; this commit records the six-job exact-SHA quality result.
+- Product: AssayFlux Pocket Host
+- Version: 0.1.0
+- Canonical branch: main
+- Primary human interface: Android and iOS mobile command-center applications
+- System form: distributed self-hosting ecosystem
+- Core principle: independent components connected through authenticated contracts
 
-## Product contract
+## Repository implementation inventory
 
-Native Android phone-hosted website origin; API 26+; ARMv7/ARM64; no Termux/root; Rust/Tokio/Hyper request engine; static hosting independent of optional services; TypeScript/React console; existing Cloudflare Tunnel reused; AssayFlux Relay planned; management API never public; Python/Node trusted code only until per-project OS isolation is proven.
-
-## Current implementation truth
-
-| Subsystem | Source-level position | Verification / limitation |
+| Area | Current repository foundation | Product role |
 |---|---|---|
-| Android host | Kotlin/Compose app, owner-designed branded home shell with hamburger drawer and service carousel, foreground hosting service | Intermediate APK/ABI and API 26/33/35 emulator validation authorized during Gates 2–4; final physical-device/release acceptance remains Gate 8 |
-| Rust engine | Tokio/Hyper, static files, hostname routing, reverse proxy, bounded admission | Non-Android Rust tests pass; fairness and sustained-load evidence remain |
-| Python | CPython 3.11/Chaquopy moved into companion package | Python-through-Rust instrumentation test is written; not run yet |
-| Node | Node mobile 24.22.1 native runtime in companion, dedicated process | Node-through-Rust and static-origin continuity tests are written; not run yet |
-| Companion | Separate package/UID, signature Binder, caller checks, protocol negotiation, Binder death handling, rebind and orderly shutdown | Instrumentation source exists; API 26/33/35 execution is now part of Gates 2–4 and remains unverified |
-| Project transfer | Bounded archive, staged extraction and recoverable previous-project rename | At the original snapshot, Android transfer/rollback tests awaited Gate 8; owner-approved intermediate API validation was subsequently moved into Gates 2–4 |
-| Isolation | Isolated-service, Unix-domain and native seccomp proof source exists | Not a production per-project sandbox; Python/Node remain trusted-only |
-| Management | Authenticated loopback API and TypeScript/React console | External deployment and full security acceptance remain |
-| Cloudflare | Android cloudflared build integration; existing named tunnel is reused | External hostname/TLS verification remains |
-| AssayFlux Relay | Bounded HTTP gateway, Android outbound SSE agent, verified hostname/device/site routing and request/response forwarding in source | Public TLS/DNS deployment, certificate lifecycle, streaming/WebSocket, load/soak and external visitor acceptance remain open |
-| Capacity | Device telemetry, first Capacity Lab and admission derating | Fair governor, workload coverage and safe-envelope evidence remain |
-| Backup | Encrypted .afbackup and staged restore foundations | Full fault matrix remains |
-| Control plane | Axum/PostgreSQL source, device/user token rotation, 12-hour revocable admin sessions and audit | Deployment and device E2E not proven |
-| Release | Manual signed-release workflow source | No verified signed production APK pair |
-
-## Reproducible build inputs
-
-- Rust toolchain/MSRV: 1.88.0; `.cargo/config.toml` selects Rust-version-compatible dependency resolution.
-- Cargo locks: `rust-engine/Cargo.lock`, `control-plane/Cargo.lock`.
-- Gradle: wrapper 8.9, distribution SHA-256 pinned in `gradle/wrapper/gradle-wrapper.properties`; app and companion Gradle dependency lockfiles committed.
-- Android: SDK platform 35, Build Tools 35.0.0, NDK 27.2.12479018, CMake 3.22.1.
-- Native Rust Android tool: cargo-ndk 4.1.2 installed with `--locked`.
-- Console: exact direct package versions and `web-console/package-lock.json`; CI uses `npm ci`.
-- Python: 3.11; Node console CI: 22; Node runtime smoke CI: 24; cloudflared build Go toolchain: 1.27.4.
-- Dependency lock workflow resolves graphs and commits lockfiles; it does not build APKs.
-
-## CI and Android build policy
-
-- Quality workflow: Rust, control plane/database migrations, Python, Node, console and Gradle wrapper validation. It does not compile Android or package APKs.
-- Android integration now runs on relevant `main` pushes and can be manually dispatched; signed-release remains a separate release workflow.
-- Revised Owner instruction (2026-11-16): run intermediate Android APK/ABI builds and API 26/33/35 emulator instrumentation during Gates 2–4 so security changes are validated as implemented. Gate 8 retains final release packaging, physical-device acceptance and independent review.
-- A legacy Android integration run `43824043298` on SHA `12eaf3ba700b6e0c37ecc14f72e633c5800fd431` started before the manual-only change and is now cancelled. Its cloudflared job succeeded, APK job failed, API 26/33 emulator jobs failed, and API 35 was cancelled. It produced no accepted APK or API-matrix result. The replacement push-triggered run `43828040040` skipped all Android jobs.
-
-## Verification evidence
-
-- Quality run `43827669251`: all six jobs passed on `9f249f0faf3f103bcee9aaa763adf3c275211951` (Rust 1.88 locked tests, control-plane migrations and Compose profiles, Python, Node, `npm ci`, Gradle wrapper validation).
-- Dependency-lock workflow `43826809601`: completed successfully; generated Cargo/npm/Gradle locks and the checksum-verified Gradle wrapper.
-- No successful Android APK artifact, accepted API matrix or physical-device result is claimed on this baseline.
-
-## Gate status
-
-| Gate | Status |
-|---|---|
-| 0 — Repository truth and architecture freeze | Complete |
-| 1 — Runtime migration | Source implementation complete; intermediate Android validation pulled into Gates 2–4; final release acceptance remains Gate 8 |
-| 2 — Per-project isolation and adversarial security | Open; shared companion UID is not a sandbox |
-| 3 — AssayFlux Relay | Partial source implementation; external deployment and end-to-end validation open |
-| 4 — Owner/visitor authentication | Open |
-| 5 — Rust governor and Capacity Lab | Open |
-| 6 — Backup, operations and lifecycle | Open |
-| 7 — Product UX and onboarding | Open |
-| 8 — Final release, physical-device acceptance and independent review | Deferred until Gates 2–7 implementation and intermediate API-matrix validation are complete |
-
-No current percentage is published. Source presence, compilation, automated testing, emulator verification, physical-device verification and production approval are separate states.
-
-## Non-negotiable security limitations
-
-- Companion UID separation is host-vs-companion only; it is not per-project isolation.
-- Python/Node share companion UID and storage.
-- Outbound egress is not OS-enforced per project.
-- Seccomp/isolated UID/Unix-domain probes are not production runtime confinement.
-- Keep runtimes limited to owner-controlled trusted code.
-- Relay must not expose management API and must disclose that gateway-terminated TLS allows relay inspection.
-- A relay hides the phone's IP from ordinary visitors, not from relay infrastructure or carrier.
-
-Update this file with exact evidence whenever the baseline changes.
-
-## 2026-11-16 incremental source and CI evidence
-
-- Latest previously completed quality run: `43836090906` on `5de2ff28b880119de379a52885b17abecec23e06`; all six jobs completed successfully (Rust, control-plane, Python, Node, console and Gradle wrapper).
-- Subsequent control-plane source increment: `dc18daa9855debdeb8fe7b5ed291b9ee8365bdcb` adds exclusive create-new deployment artifact writes, file and parent-directory fsync, and cleanup of partial files or database-transaction failures, plus a regression test for cleanup, committed-file retention and overwrite rejection. The control-plane README documents the transactional audit and artifact lifecycle.
-- CI for that source increment was queued at review time; do not treat the earlier successful run as verification of the new code.
-- Gate 2 remains open: no production per-project isolated runtime migration or accepted Android API matrix.
-- Gate 4 remains open: remote control-plane device and team-user token rotation, role checks and atomic audit writes are implemented; passkeys and site-scoped visitor authorization are not complete.
-- Latest incremental commits add an Owner-only team-user token rotation endpoint, PostgreSQL-backed revocation/audit regression test, OpenAPI contract and console action. Source: `11b30b3`, `0aa1f1f`, `59bf1e7`, `7ea7c22`, `c4fcb48`. CI for these changes is pending.
-
-
-## 2026-11-16 Stage 2 incremental source work
-
-- Native feasibility probe now enumerates `/proc/self/fd` and closes inherited socket descriptors except the broker-created Unix visitor listener before seccomp installation. Descriptor cleanup fails closed; the probe detaches ownership of the deliberately supplied descriptor before native closure to avoid closing a subsequently reused FD.
-- Instrumentation source now supplies a connected loopback TCP socket and checks that the isolated service closes it, denies new socket creation, and still accepts the brokered Unix visitor stream with the expected peer UID.
-- Source commits: `e1a1e1d`, `8d9b87a`, `be0b1fb`, `1b2e7b0`, `bd6af74`, `e8b4616`, `3986990`; documentation commits `7815887`, `fd0eef3`.
-- This is feasibility-probe hardening only. It does not migrate Python/Node into isolated services, provide project directory capabilities, establish a strict syscall allowlist, or pass the API 26/33/35 adversarial matrix. Gate 2 remained open at that historical snapshot. No Android build or instrumentation execution had yet been performed; the owner later revised the sequencing and pulled intermediate Android validation into Gates 2–4.
-- The latest six-job quality workflow before these changes passed on `1497f8b` (run `43837524062`). The native Android C++ and instrumentation changes have not been compiled or executed by that workflow; a new workflow run must be checked for the non-Android jobs only.
-
-
-## 2026-11-16 Gate 2–4 implementation evidence
-
-- Latest six-job quality run: `43841652274`, completed success on `e9d7c9a95304ac16e55f988f509ef0f44383034a` (Rust, control-plane/PostgreSQL migrations, Python, Node, console and Gradle wrapper).
-- Gate 2 source: inherited socket descriptors are closed before seccomp installation in the isolated-UID probe; instrumentation source checks an inherited connected TCP socket is closed and `socket`, `connect`, `bind` are denied while the brokered Unix listener remains usable. A host-side Binder adapter obtains `Binder.getCallingUid()` at transaction receipt and mediates read-only PFD opens and bounded writes; the isolated probe calls it, and instrumentation source checks host-UID spoof rejection and project-file read/write. This is not production Python/Node confinement. Android C++/Kotlin instrumentation was not compiled or run; no API 26/33/35 evidence is claimed.
-- Gate 2 architecture research: `android:isolatedProcess` services have no permissions; `bindIsolatedService` multi-instance binding begins at API 29, requiring fixed service slots on API 26–28. Chaquopy and the current Node worker use app-private runtime/project/cache paths; they need descriptor-rooted storage and runtime-specific bootstrap adaptation before isolated execution can be enabled.
-- Gate 3 now has a bounded HTTP Relay implementation in source: Owner DNS TXT hostname proof, verified host-to-device/site routing, authenticated outbound Android SSE stream, request/response forwarding, local site-ID validation and immediate device-session revocation. Limits: 8 MiB request/response bodies, 45-second deadline, four concurrent local requests per device; no WebSocket upgrades or streaming response bodies. The phone resolves the site ID to an enabled local hostname, preserves the public host for runtime proxying, and forwards multiple Set-Cookie and WWW-Authenticate headers. Visitor auth is throttled per site/client IP. No WebSocket/streaming response support, DNSSEC, TLS/certificate lifecycle, external deployment or load/soak evidence is claimed.
-- Gate 4 source: 12-hour hashed and revocable remote admin sessions, role enforcement, token rotation and transactional audit are covered by PostgreSQL CI. Local site-scoped Public/Private/Restricted access, one-time 256-bit visitor credentials stored as SHA-256 hashes, Owner invite/revoke APIs, and browser Basic-auth enforcement in Rust are implemented in source. Protected sites require HTTPS at the trusted loopback proxy; visitor Authorization is stripped before proxying to customer runtimes. Five-minute fresh credential checks for remote writes and sensitive local Owner mutations are implemented, with console reauthentication and session replacement. Passkey-first identity, biometric-bound step-up, complete route-by-route tests and executed Android integration tests remain open.
-- The new Android Binder/seccomp instrumentation source had not been compiled or executed at that historical snapshot; the six-job quality workflow does not build the Android app/native worker. The owner later moved intermediate Android build/device validation into Gates 2–4; external Relay deployment remains unverified. No production-ready claim is made.
-
-
-## 2026-11-16 latest Gate 2–4 source changes
-
-- Gate 2 remains open. The Binder capability adapter and isolated probe remain feasibility work; the production Python/Node runtime still shares the companion UID and app-private project/runtime storage. No production cell supervisor, runtime migration or Android API 26/33/35 test result is claimed.
-- Gate 3 source now routes an authenticated visitor request to the selected enabled local site ID, uses its configured local hostname for Rust routing, and preserves the verified public hostname for runtime X-Forwarded-Host. The Android agent uses bounded raw loopback HTTP to preserve Host; response cookies and browser Basic-auth challenges are retained. DNS TXT parsing checks response source, transaction ID, question and answer owner. DNSSEC is not validated. Streaming/WebSocket, TLS/certificate lifecycle, deployment, external visitor tests and soak evidence remain open.
-- Gate 4 now has per-site/effective-client-IP visitor-authentication throttling in Rust (8 failed attempts per 60-second window, then a 60-second cooldown, with a bounded bucket map). Remote 12-hour sessions, role enforcement, user/device token rotation, audit and site-scoped visitor credential revocation remain implemented in source. Five-minute credential reauthentication is implemented in source; passkey-first identity and biometric-bound step-up remain open.
-- Latest six-job quality workflow `43853226788` completed success on exact SHA `5a2eb78c624e122dbf38a91fcf49b1750c8599b1`: Rust, control-plane/PostgreSQL migrations and Compose profiles, Python runtime, Node runtime, console and Gradle wrapper all passed. This workflow does not compile Android Kotlin/C++ or execute Android instrumentation. No Android build/device test had been run at that historical snapshot under the then-current Gate 8 sequencing; the owner subsequently revised the sequence.
-
-
-## Latest verified quality evidence — 2026-11-16
-
-- Repository HEAD at verification: 5a2eb78c624e122dbf38a91fcf49b1750c8599b1.
-- Workflow: https://github.com/AssayFlux/PocketHost/actions/runs/43853226788 — completed success, all six jobs successful.
-- Control-plane tests ran against PostgreSQL 16, including migrations, remote session expiry/revocation, team-user token rotation, device token rotation, Relay hostname state, bounded pending-request quotas, DNS TXT parser validation, dedicated control-host matching and artifact transaction tests. Caddy strict SNI validation and both Compose ingress profiles passed.
-- Rust engine tests passed, including per-site/client visitor-auth throttling tests. Python, Node, TypeScript console and Gradle-wrapper jobs passed.
-- The six-job quality workflow does not compile Android app Kotlin, companion Kotlin, C++/JNI, nor execute Android instrumentation. A separate push-triggered Android integration workflow is configured for relevant `main` changes, but no successful run/result is verified in this baseline.
-
-
-## Relay ingress separation — 2026-11-16
-
-- The Axum control plane now binds two listeners in one process with shared state: the dedicated control/device API listener (POCKETHOST_CONTROL_BIND, port 8080) and the visitor-only Relay gateway listener (POCKETHOST_RELAY_BIND, port 8081).
-- The visitor listener has only the verified-host fallback; it does not register /v1/admin, /v1/device, health or management routes. The control listener carries admin/device routes and is guarded by POCKETHOST_CONTROL_API_HOST.
-- Caddy routes the dedicated control hostname to 8080 and other verified Relay visitor hostnames to 8081. strict_sni_host on is enabled to reject SNI/Host domain-fronting mismatches. The Cloudflare Tunnel profile must route the management hostname to 8080 and visitor hostnames to 8081.
-- This is source and CI-validated ingress separation; no live Caddy/Cloudflare deployment or external visitor acceptance is claimed.
-
-
-## Owner-approved intermediate Android validation — 2026-11-16
-
-- The Owner explicitly changed the sequencing: Android APK/ABI builds and API 26/33/35 emulator instrumentation are required during Gates 2–4, not deferred wholesale to Gate 8.
-- `.github/workflows/android-integration.yml` now runs on relevant pushes to `main`; it builds cloudflared Android ABIs, the host and companion debug APKs, and runs the API 26/33/35 emulator instrumentation matrix. The workflow definition is source evidence only; a successful run and its artifacts have not yet been verified here.
-- Gate 2 source hardening after the earlier snapshot: root and intermediate directory opens now use `O_NONBLOCK`; Android instrumentation source rejects FIFO roots, FIFO path components, symlinked files and symlinked directories. The duplicate `O_NONBLOCK` flag in root identity capture was removed. The production Python/Node launcher still does not use per-project isolated UIDs or the Binder capability broker, so Gate 2 remains open.
-- Gate 4 instrumentation source now qualifies the Owner step-up policy helper through `ManagementApiServer`, fixing unresolved test references found during review. This is a source correction, not a test result.
-- Source changes are on `main` through `2357ed5301617ae0b63b35915779d4f4b44b44ad`. No Android compile, emulator result, external Relay deployment, physical-device test or independent security review is claimed. Gates 2, 3 and 4 remain open.
-
-## 2026-11-16 Gate 5–7 source increments
-
-- Gate 5 Rust change: 8fc83afdb30a6a6b59ccc972e1c924873fc3aaac adds a bounded FIFO per-site response-permit wait and a timeout/recovery test. This is not weighted cross-site scheduling or workload capacity proof.
-- Gate 6 source: ec933ba91d4718c91b0265189a83d2bffb87742b adds Android instrumentation for wrong passphrases and modified AES-GCM ciphertext failing before active-site mutation. 1817a33957804d18d797dbe5b90a28939ed07150 and 478bf1bc26e797ffceaabd138b0cd67d44510352 prevent operational logs and telemetry from growing without bound when rotation fails. 1b964419e9419c7ae113170d8472dfac175671d8 adds instrumentation coverage for log redaction and normal bounded rotation.
-- Gate 7 source: 714fede2e30862455cc6c8c945b98a42102d8747 aligns Learn onboarding labels with the actual Sites navigation destination. Dedicated Dashboard, Sites, Activity and Learn Compose files already exist; Settings is still embedded in the main activity.
-- Documentation updates: 1a7f13e6e964311e92bfe22634f8c07623e386ad, 13829144d6681afe1e82089e1ef82bcd2e5fc7e5, 389adde1713d52aee545bbd5e38ba8a3816a0710.
-- These commits add source and test definitions, not executed acceptance evidence. The Rust quality workflow and Android API 26/33/35 workflow must be checked on the resulting exact HEAD before any verification claim. Gates 5, 6 and 7 remain open.
-
-## 2026-11-16 interrupted deployment recovery source
-
-- 7bc5556d2bb5026244777419b27d57c7817347ec adds SiteImporter recovery of the newest retained valid release when the active site is missing or invalid.
-- 0a2909910f4c5a4d68f194337ccc5c40e075d2ad invokes that recovery before MainActivity renders and records a redacted operational event.
-- 4fc9582ebc78cf4d9860e76b3455a554b713b539 adds Android instrumentation source for recovery from a missing active site.
-- This covers interrupted static deployment activation only. Full application backup restore journaling, process-death recovery across all restore phases and Android lifecycle/device acceptance remain open.
-
-## 2026-11-16 UI navigation instrumentation source
-
-- 7c55388f54313ae81cf3b5d644bf21f102615745 adds a UIAutomator instrumentation test for all five destinations and verifies destination-specific content.
-- b36858a4581a69eebf428b4ec6d86d2c74f722d2 retains per-destination screenshots and accessibility hierarchy XML; 77f3cb655365cd29c01a88e5f664ce40bfd12b34 updates Android CI to collect them.
-- These artifacts have not yet been produced/inspected by a successful API 26/33/35 workflow. Human accessibility and responsive visual acceptance remain open.
-
-## 2026-11-16 latest Gate 5–7 source follow-up
-
-- Rust governor: 62c15054cf28474250bbc64110a0748df7146d24 clarifies the distinction between the bounded socket queue and protocol-bounded HTTP/2 request concurrency. FIFO per-site permit waiting remains bounded by 200 ms.
-- Gate 7: a27556e822f044fc9bcaaa046d721c19393d0865 and 2bc01c398741b9ccf9109f44b02195e85111fd8d align the Learn screen callback name with the actual Sites destination.
-- UI instrumentation and artifact collection remain in source at 7c55388f54313ae81cf3b5d644bf21f102615745, b36858a4581a69eebf428b4ec6d86d2c74f722d2 and 77f3cb655365cd29c01a88e5f664ce40bfd12b34.
-- GitHub combined commit-status lookup returned no status entries for the latest source commit at review time. This is not evidence of workflow success or failure; inspect Actions runs/artifacts before claiming Android or Rust verification.
-- Gates 5, 6 and 7 remain open pending weighted/global fairness and representative capacity evidence, full backup/lifecycle fault acceptance, and executed UI/accessibility/onboarding review.
-
-## 2026-11-16 Capacity Lab tail-latency increment
-
-- f9fd4f4f6773e1fc79f693e65b9e07abb8a60467 adds p99 latency to each Capacity Lab concurrency result.
-- 19b963158b68ea685339b2050195a985220354e5 and c788553eed7307874c7ca0e6ae2f6d21c88192e9 display p95/p99 in the dashboard and identify legacy benchmark records without p99 as unavailable.
-- No benchmark or Android build execution is claimed; representative workload profiles and target-device measurements remain open.
-
-## 2026-11-16 Gate 5–7 correctness and UI follow-up
-
-- 6415357e0d00fe874cd8b41d1f3bc811c4a8d488 switches Capacity Lab latency percentiles to nearest-rank selection; e500ab818adb14c9b460837b23d252ecbd5f74b8 adds small-sample regression coverage.
-- 048ceb4ebcc9f8e08ccded5f2f403f4d5f28ec7f tests quarantine of invalid active static deployment; c64ee93dbac89a62516111638261709a1192e759 hardens recovery against symlinked active and release trees.
-- 9d47c946aca35b2d99981f690218a639f37b640e and 4c4296c45b37f8a0a8329c7dd6a4d822dae970f8 extract device preferences into a dedicated Settings composable; 71cfca3dc985cb614794b0ad7881e1deb0e55f83 and 1dc94fb2a1376a4c991d2b88d55ddfcf6972536b extract section navigation. 33ff08559f02be36b7bdf16c9c99326736df082d and da578b4e914576a3418c0addeb1f4843e45285f5 extend Settings subsection UI instrumentation and visual artifacts.
-- Source tests include terminal-free archive activation while Rust static hosting remains online, backup authentication/tamper failure, operational storage bounds, and settings navigation. They remain unexecuted until successful Android workflow evidence is reviewed.
-- Gates 5–7 remain open pending actual CI/device evidence, additional capacity workload profiles and lifecycle fault injection.
-
-- adb58da6fbdbc5b1bbb19f04ed5b6820879cada1 adds a Rust regression test for independent per-target response permits under saturation. The Rust test suite has not yet been run in the current environment.
-
-- 2601e4448a1d535af730a41c4ea36f090e1324b0 makes an invalid active website with no safe fallback an explicit startup recovery error; 0472357a848d57a4daf35a7eb1a1e0af826602f7 adds instrumentation coverage for symlinked active-root quarantine without following the target.
-
-## 2026-11-16 full backup restore journal source
-
-- 16b4951bb6bfeab4f18cdf6e091dbcfa0cfa8aa0 adds startup recovery for interrupted full backup restores.
-- 5d13466caf545e97f602ede4e1bfc70c913f89b0 journals the old runtime/site/settings/registry state before destructive restore changes; 3987096b48782d946153322940f34d8a68044ea9 removes obsolete in-memory rollback tracking.
-- 621905689f4e196c0eae04e03f062dd6359360aa invokes backup transaction recovery before ordinary site activation recovery. 623505cd3bb7169a753928bcae5dd7cbf80211e makes journal persistence atomic; ce3da1a886a2c180379ac970e989e3fbddbcc284 restricts release listing/rollback to safe non-symlink deployments; 462f99450cd3240771306557d33bbfd630bf05cc adds the required operational logging import.
-- 41105536c41fc5502381b6ed98731eedc2c0e759 and 57ad1eaf9ab58ce0595108def1fbfc90ec879ecc add instrumentation source for restoring previous Python, static, custom-root, registry and settings state after simulated process interruption. a087882170f5b1ae10ce3fcb8af58a5c80d90dcc serializes backup export/restore operations.
-- The tests have not been executed. API 26/33/35, low-storage, forced process death and physical-device acceptance remain open.
-
-- 64607e8a3d159e1d0ff5b23db1f97a8fa5b2bf1b adds instrumentation coverage that a committed full restore is cleaned without rolling back the newly deployed site. This and the simulated interrupted-restore test remain unexecuted.
-
-- 91007e7d1c1266cba5a9653fd3a6bcb421dc8fe0, 25b5e0f5db84917b22712de9783f0fdcfc821c1f, 503153f63a1c5589dc50d1a57f4c63352418ded8 and 86212c0b2b21996551d057b1b982d5e74476b209 harden restore recovery against symlinked journal/commit metadata, unsafe rollback roots, and runtime activity during recovery.
-- 64607e8a3d159e1d0ff5b23db1f97a8fa5b2bf1b verifies committed transaction cleanup without reverting the new site. All these instrumentation cases still require execution.
-
-- 8c2a1a82a670ff307850ce4ac42b2e7e71438545 caps HTTP/2 concurrent streams at eight per TCP socket and bounds reset streams/header-list sizes; 407ec6e2c48aaac7ae27fffd03007b4378030751 clarifies the admission contract. This prevents the prior Hyper default of 200 multiplexed streams/socket from bypassing the mobile connection/task budget. Rust execution remains unverified.
-
-- d3e398965d1dbb1f0adbd9efe303a7fbea104a54 configures a 10-second HTTP/1 header read timeout, 64-header cap and 16 KiB buffer using TokioTimer. This source setting has not yet been exercised by a slowloris test or device load run.
-
-- c820d05809b0c79ead9d12171a97c54e2c326197 adds the same recovery guard to HostingService before Management API or Rust ingress startup, preventing boot/sticky service paths from bypassing interrupted restore recovery.
-
-- f528bdd9e1b6c40e6dc3e8038a70219ea289372b serializes startup site recovery, release rollback and interrupted full-restore release rollback to avoid Activity/foreground-service startup races.
-
-- 0ef2a01392d5f1c7f20b8cef7b7800db97f52409 caps the fsynced recovery journal at 1 MB, prior route-registry snapshot at 256 KB and custom-root records at 100.
-
-- 83bbe93a6a24ccd1958fee9c7dd5ed2ab0c5cf70 makes manual rollback handle a missing active site and quarantine invalid/symlinked active trees; pruning only removes verified safe releases.
-
-- 25f243f9e742b91c3958a8be58e7c87aea8da9a4 enforces importer file/entry/size/depth and blocked-name limits during startup recovery; deb77ae6526aaf97c9caee07b9e64338a9fbf2bc and c50a0e2690d84f95240d1f30db1cf65c36c39952 share that validator with custom-root restore rollback.
-
-- 86cec992dea727034118152f9e8aff67ad82fc47 prevents overflow in the safe-release byte-budget calculation.
-
-- 8252db29d97a3fae149f4364e78367a1252796bf adds an instrumentation test that keeps the Rust static server running while a committed restore's rollback directory is cleaned, proving cleanup does not unnecessarily stop live hosting. The test is source-only until Android CI executes.
-
-## Latest source snapshot — 2026-11-16
-
-- Main HEAD at this audit: f5df10576750c9a024dd6504582b230044ef9a0b.
-- Combined commit-status lookup returned no status entries, and the available commit-workflow lookup returned no PR-triggered runs for this main commit. This is not evidence of a pass or a failure. Android API 26/33/35 build/instrumentation artifacts and Rust quality logs still need to be obtained and reviewed.
-- Gate 5 source now includes nearest-rank p50/p95/p99, at least 20 benchmark observations per concurrency level, FIFO per-target permits, cross-target permit isolation tests, HTTP/2 eight-stream limits, and HTTP/1 10-second header deadlines with bounded headers/buffers. Live mixed-protocol load and sustained target-device capacity/thermal measurements remain open.
-- Gate 6 source now includes startup recovery for interrupted static activation and full encrypted backup restore, durable pre-mutation journaling, committed-transaction cleanup, no-follow metadata validation, and recovery guards before Activity and foreground-service ingress startup. Fault-injection source exists; executed API-matrix, low-storage, forced process-death and physical-device evidence remain open.
-- Gate 7 source includes dedicated Dashboard/Sites/Activity/Learn screens, extracted device-preference and settings-section Compose components, and UIAutomator screenshot/hierarchy capture for all five destinations and four Settings sections. Human TalkBack, font scaling, contrast, compact/landscape and complete first-run UI publishing acceptance remain open.
-- Gates 5, 6 and 7 are therefore still open. Do not mark them complete until the recorded source tests execute successfully and the remaining device/production acceptance criteria are met.
-
-- a3cb89ce6cc42ee738360d1e0217a05424077e64 extends the API-matrix UI test to seed a temporary hostname route, exercise Private visitor credential issuance and revocation against SiteRegistry, and verify terminal-free folder/ZIP import and backup actions. It remains unexecuted.
-
-## Gate 5–7 follow-up audit — 2026-11-16
-
-- Main HEAD at this follow-up audit: 06c7c29b82994f67828e9e2a1c5b406377573945.
-- The latest UI test source seeds a unique registered site and exercises the private visitor credential create/revoke flow as well as terminal-free publishing entry points. It captures screenshots and accessibility hierarchy XML for the main destinations and Settings subsections.
-- The combined commit-status lookup returned no status entries and the available commit-workflow lookup returned no PR-triggered runs for this direct-main commit. This does not prove success or failure. The Android integration workflow and Rust quality workflow must be checked in GitHub Actions for exact-SHA logs and artifacts.
-- Gate 5 still needs executed slow-header/multiplexed-load, representative workload and target-phone thermal/battery evidence. Gate 6 still needs executed API-matrix, low-storage, forced process-death, reboot/Doze/network/service-death evidence. Gate 7 still needs executed UI artifacts and human TalkBack, font-scale, contrast and compact/landscape review.
-- Do not close Gates 5, 6 or 7 on source presence alone.
-
-
-
-## Exact-SHA verification update — 2026-11-16
-
-- Implementation SHA `574b9ef3aa8ad226a0886cf4af87ee0dd6c3bdf0` on `main` passed quality workflow [43900937687](https://github.com/AssayFlux/PocketHost/actions/runs/43900937687): all six jobs (Rust, control-plane/PostgreSQL, Python, Node, console and Gradle wrapper) completed successfully.
-- Android integration workflow [43900937744](https://github.com/AssayFlux/PocketHost/actions/runs/43900937744) on the same SHA: cloudflared Android build/ABI verification passed; separate ABI debug APK builds and APK-content verification passed; signature-matched runtime companion build passed. API 26 emulator instrumentation was still in progress at 16:12 UTC; API 33 and API 35 emulator jobs were queued. The workflow is not yet an accepted API-matrix result.
-- This is the first successful Android APK/ABI build evidence recorded for this current source line. It does not yet prove the isolated runtime probe, Python/Node startup, full visitor path, backup recovery, UI instrumentation or accessibility because the emulator matrix has not completed and its reports/artifacts have not been inspected.
-- Gates 2–7 remain open. Specifically, per-project UID/storage/egress confinement is not in production; Relay is not deployed and lacks streaming/WebSocket/TLS lifecycle and soak acceptance; passkey-first Owner identity is absent; target-device capacity and lifecycle fault evidence is incomplete; and human accessibility/onboarding acceptance remains outstanding.
-- Sequencing correction: intermediate APK/ABI builds and API 26/33/35 instrumentation are being run during Gates 2–4. Gate 8 still owns final signed release artifacts, physical ARMv7/ARM64 acceptance, external connectivity and independent review.
-
-
-## Owner-approved native UI redesign — 2026-11-17
-
-- The current authoritative layout is defined by `docs/UI_DESIGN.md` and supersedes the historical five-bottom-destination description above.
-- Native app entry retains the optional local biometric app lock; the native application does not currently implement username/password account sign-in. Management-console authentication is separate.
-- Home shell source introduces the brand/header card, hamburger drawer, account dropdown, swipeable service cards and device/notification information cards. Drawer routes map to existing Dashboard, Sites, Activity, Learn and Settings sections rather than claiming separate backend modules exist.
-- Existing business logic remains in the root Compose activity and dedicated Dashboard/Sites/Activity/Learn/Settings composables. The new home cards read existing service state, operational events and DeviceTelemetry JSON. Runtime isolation remains unproven and Python/Node remain trusted-code-only.
-- UI source implementation is not UI acceptance. The new Android shell still requires Android compilation, API 26/33/35 emulator runs, screenshot/hierarchy inspection, accessibility and responsive review.
-
-
-## UI instrumentation alignment — 2026-11-17
-
-- `PocketHostNavigationAccessibilityTest` now traverses the hamburger drawer destinations (Home, Hosting, Websites & Files, Activity & Logs, Learn, Settings), preserves Settings subsection and visitor-credential checks, and captures the new screen hierarchy/screenshots.
-- `PocketHostDashboardUiSmokeTest` now asserts the owner home carousel, hamburger control and account dropdown routes.
-- Android integration artifact collection now retrieves `home.png` alongside the navigation screenshots and hierarchy. Source-level test updates are not passing evidence until API 26/33/35 runs complete and artifacts are inspected.
-
-
-## Current main UI integration — 2026-11-17
-
-The owner home shell, hamburger drawer, account dropdown, service carousel and information centre are merged into main. Android UIAutomator source has been updated to traverse drawer destinations, test account menu routes and preserve visitor/publishing flows. A further small update applies Android system appearance by default and makes the biometric panel scroll on compact/large-font layouts. Current exact-SHA Android integration evidence is still required before visual acceptance.
-
-
-## Design Language V1 implementation/verification note (2026-11-17)
-
-The authoritative design is `docs/UI_DESIGN.md`. The V1 dashboard must have tall portrait-rectangular service cards, a horizontally scrolling carousel as its only scrollable dashboard component, and a fixed information centre with four or five compact, information-rich non-scrolling bars. The dashboard itself must not vertically scroll. The login/app-unlock screen, hamburger drawer and separate user/account dropdown are all explicit design deliverables, alongside monochrome icons, ten classic palettes and System/Light/Dark modes.
-
-Treat the UI source implementation as unaccepted until exact-SHA build/test evidence and screenshots/hierarchy are inspected. In particular, verify actual card aspect ratio, fixed dashboard layout, information density, menu design/route correctness, bundled calligraphy font, all theme combinations, font scaling, compact/landscape layouts and accessibility. This note does not claim those checks have passed.
-
-
-## Universal device expansion baseline — 2026-11-17
-
-**Architecture status:** approved direction and documentation plan; no cross-platform host implementation or DemonCore integration is claimed by this update.
-
-Pocket Host is expanding from Android-first hosting toward a distributed cross-platform ecosystem. The target device classes are Android phones/tablets, Linux/Windows/macOS computers, VPS/dedicated servers, Raspberry Pi-class SBCs, embedded Linux and microcontroller/edge devices. Device tiers and service compatibility are specified in `docs/UNIVERSAL_DEVICE_FABRIC.md`.
-
-### Repository audit: AssayFlux/DemonCore
-
-Reviewed the public `main` branch documentation on 2026-11-17:
-- ESP-WROOM-32 38-pin, 4 MiB flash, no PSRAM; pinned MicroPython ESP32_GENERIC firmware target.
-- DCP v1.0 is a bounded UTF-8 JSON device protocol (4,096-byte message/reassembly limit) with initial system/GPIO operations. Its normative document explicitly states that the envelope does not authenticate traffic.
-- DemonCore README records Phase 1 as not hardware-accepted. Physical boot, memory/GC/filesystem measurements, board pinout confirmation and live transport remain outstanding.
-- DemonCore backlog records board verification blocked, claim/provisioning work incomplete, Flutter app workspace documentation-only and hub not implemented.
-- MQTT, ESP-NOW mesh, jobs, OTA and fleet scheduling are planned backlog, not accepted production capability.
-
-### Integration decision
-
-Keep Pocket Host and DemonCore as independent repositories and products. Pocket Host owns general-purpose website/service hosting and host-node management. DemonCore owns MCU firmware, board safety, DCP and constrained edge/fleet operations. Integrate only through a reviewed, versioned, authenticated and allow-listed adapter after DemonCore hardware/security acceptance. No MCU is assumed to execute the full Rust host, Python or Node.
-
-### Evidence status
-
-No Linux, Windows, macOS, Raspberry Pi, MCU interoperability or multi-host deployment tests were run by this documentation change. No firmware, application, hub or runtime code was changed. All expansion targets remain **planned** until their named device profiles pass the verification ladder.
+| Android app | Kotlin, Jetpack Compose, AndroidX | Mobile command center and Android host client |
+| Android runtime companion | Separate Android package; Python/Node runtime integration | Runtime provider boundary |
+| Rust engine | Tokio/Hyper native library | Android website ingress and routing |
+| Remote management API | Android loopback API | Local owner management |
+| Remote control agent | Android agent polling configured control plane | Remote host connection |
+| Control plane | Rust/Axum, PostgreSQL, migrations, device commands, audit | Optional remote fleet coordination |
+| Browser console | React/TypeScript/Vite | Secondary operator client |
+| Cloudflare connector | cloudflared Android integration | Optional visitor ingress |
+| AssayFlux Relay | Rust visitor gateway and Android agent source | First-party bounded HTTP visitor ingress |
+| Tests/CI | Android instrumentation, Rust tests, Python/Node tests, console build, workflow validation | Engineering verification |
+| DemonCore | ESP32 MicroPython firmware, DCP, board profile and simulator | Separate MCU/edge-device project |
+
+## Version baseline
+
+The Android app, runtime companion, Rust website engine, control plane and browser console declare 0.1.0 in their current build metadata. The product release identity is 0.1.0. A common release manifest and cross-component compatibility matrix are required before a coordinated multi-platform distribution.
+
+## Platform coverage
+
+- Android: application and host implementation present.
+- iOS: no native application workspace in this repository; must be implemented as a first-class mobile control client.
+- Linux/Windows/macOS: no host agent implementation is claimed by this baseline.
+- Raspberry Pi/SBC: no named board profile is accepted by this baseline.
+- MCU: DemonCore firmware/protocol foundation exists; each board and secure fleet capability requires physical acceptance.
+
+## Architectural acceptance status
+
+This document inventories repository foundations, not production certification. Platform, runtime, security, tunnel, fleet and device support must be claimed only against named target tests and release evidence.
+
+## Normative specifications
+
+- [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)
+- [MASTER_PLAN.md](MASTER_PLAN.md)
+- [ROADMAP.md](ROADMAP.md)
+- [UI_DESIGN.md](UI_DESIGN.md)
+- [SECURITY_ISOLATION_DESIGN.md](SECURITY_ISOLATION_DESIGN.md)
+- [REMOTE_CONTROL_ACCEPTANCE.md](REMOTE_CONTROL_ACCEPTANCE.md)
