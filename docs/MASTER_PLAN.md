@@ -66,6 +66,9 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 **Exit:** unknown devices cannot join; replay/expired codes fail; role changes and revocation work; mobile app outage does not stop accepted jobs.
 
 ### STEP 3 — Autonomous device software and role workers
+
+**Linux agent preview foundation committed; Step 3 gate open.** A separately installable Python package at `agents/linux` now creates a P-256 device identity, signs enrollment challenge proofs, verifies owner-signed role grants and policy bounds, persists generation/job idempotency in SQLite, and runs only an allow-listed native health-check job. CI runs its unit tests. It is not yet a network-connected daemon or a production-supported worker: authenticated transport, service supervision, cgroups, role adapters, signed updates and Windows/macOS/SBC packages remain open. See [Step 3 implementation record](STEP_3_DEVICE_AGENTS.md).
+
 - Build separate signed installers/agents for Android, Linux, Windows and macOS.
 - Build Raspberry Pi/SBC packages and gateway images.
 - Implement durable local assignment state, supervisor, resource budgets, health, updates and rollback.
