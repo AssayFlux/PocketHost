@@ -31,6 +31,8 @@ The current Compose deployment uses Linux, Docker Engine and Docker Compose v2 w
 
 Discovery is not trust. The control plane does not accept a code alone as proof of device identity. Revocation invalidates sessions and outstanding unstarted jobs.
 
+**Current integration status:** Android contains a preview client that can bootstrap/register a worker and queue an owner-signed grant plus typed health-check command. The complete owner enrollment workflow is not closed: token delivery is manual, transport mutual authentication, automatic grant/revocation propagation and live acknowledgement/status UX remain open. The Linux agent HTTPS bearer-token poller is a preview and does not provide mTLS. The iOS client is planned, not present.
+
 ## Jobs and desired state
 
 - Commands are typed, allow-listed, scoped, expiring and idempotent.
