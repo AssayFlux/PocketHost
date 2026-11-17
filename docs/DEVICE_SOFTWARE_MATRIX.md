@@ -2,49 +2,75 @@
 
 ## Purpose
 
-Pocket Host is distributed as separate software for each device family. Every installer/firmware package declares its OS, architecture, supported roles, permissions, transports, protocol compatibility and update path. A generic package is never assumed to work on every device.
+Pocket Host is a family of interoperable but separately installable products. Every product declares its OS, architecture, supported roles, permissions, protocol range and update path. Installing an agent never enrolls a device or grants a role.
 
 ## 1. Installable software products
 
-| Device family | Installable product | Primary purpose | 0.1.0 status |
+| Device family | Product | Source-backed position | Remaining acceptance |
 |---|---|---|---|
-| Android phone/tablet | Pocket Host Android APK | Website server in both modes; fleet command center is an optional additional capability in the combined mode | Existing app foundation; two-mode selection/enforcement, role separation and full fleet flows require implementation |
-| iPhone/iPad | Pocket Host iOS app | Command center and owner approvals | Planned; native app not present in repository |
-| Linux x86_64 (Python 3.11+) | Pocket Host Linux Node Agent package | Protocol identity, signed grant verification, durable assignment state, native health-check job | Preview foundation implemented; authenticated transport, service supervision, cgroups, role adapters and signed updates remain open |
-| Windows x64/ARM64 where supported | Pocket Host Node Agent installer/service | Storage, traffic, build/publish, native jobs, backup | Planned |
-| macOS Apple Silicon/Intel where supported | Pocket Host Node Agent package/service | Storage, traffic, build/publish, native jobs, backup | Planned |
-| Raspberry Pi / SBC | Board/OS/architecture-specific Pocket Host Node Agent image/package | Compact worker, storage, traffic, build, edge gateway | Planned; each board profile needs acceptance |
-| Embedded Linux gateway | Pocket Host Edge Agent package | Protocol bridge, bounded edge gateway, selected storage/traffic roles | Planned |
-| DemonCore-supported MCU | Board-specific firmware and DCP adapter | Telemetry, sensors, actuators and bounded edge operations | DemonCore foundation exists; integration and board acceptance required |
+| Android phone/tablet | Pocket Host main APK | Kotlin/Compose app; website-serving foundation; persisted Server only / Command Center + Server modes; local trust workspace and control-plane client foundation | Hosting lifecycle on physical devices; full authenticated fleet integration; transport and recovery matrix |
+| Android runtime provider | Separate runtime companion APK | Existing CPython 3.11 and Node.js mobile 24.22.1 integrations; both currently ship together | Android API/ABI acceptance, crash/restart, isolation/egress hardening and independent package split |
+| Linux x86_64 | Pocket Host Linux Node Agent package | Preview package with P-256 identity, signed grants/jobs, durable SQLite queue, HTTPS poll/ack and allow-listed health/storage snapshot/backup executors | mTLS or stronger device transport, grant renewal/revocation, service resource isolation, signed updates, full mobile provisioning and physical acceptance |
+| iPhone/iPad | Pocket Host iOS app | No iOS project or native source in this repository | Entire product implementation; preserve two-mode contract and only advertise server mode if platform lifecycle supports it |
+| Windows x64/ARM64 | Pocket Host Node Agent installer/service | Not implemented in this repository | Native service, identity, role adapters, isolation, update/rollback and hardware acceptance |
+| macOS Apple Silicon/Intel | Pocket Host Node Agent package/service | Not implemented in this repository | Native service, identity, sandbox controls, update/rollback and hardware acceptance |
+| Raspberry Pi / SBC | Board/OS/architecture-specific agent or gateway | No certified board profile in this repository | Per-board package/image, resource and transport tests, edge integration |
+| Embedded Linux gateway | Pocket Host Edge Agent | Planned | Protocol bridge, scoped device access, lifecycle and board acceptance |
+| DemonCore-supported MCU | Separate DemonCore firmware and DCP adapter | DemonCore is an external AssayFlux project; Pocket Host does not vendor its firmware | Adapter implementation, board identity, secure provisioning and physical safety acceptance |
 
-## 2. Role compatibility matrix
+## 2. Mobile operating modes
 
-Legend: **Target** means a planned role subject to hardware/OS acceptance; **Conditional** means only where the exact platform supports the role; **No** means the role is not part of this product baseline.
+| Mode | Website serving | Fleet command and approval |
+|---|---|---|
+| Server only | Enabled | Disabled |
+| Command Center + Server | Enabled | Enabled |
 
-| Role | Android | iOS | Linux/server | Windows | macOS | SBC | MCU |
-|---|---|---|---|---|---|---|---|
-| Command Center (inside combined mode) | Target | Target | No | No | No | No | No |
-| Mobile Website Server | Conditional | No promise | No in 0.1.0 | No in 0.1.0 | No in 0.1.0 | No in 0.1.0 | No |
-| Storage | Conditional | No | Target | Target | Target | Target | No |
-| Traffic | Conditional | No | Target | Conditional | Conditional | Conditional | No |
-| Build/Publish | Conditional | No | Target | Target | Target | Conditional | No |
-| Native Backend/Jobs | Conditional | No | Target | Target | Target | Conditional | Bounded firmware tasks only |
-| Backup/Recovery | Conditional | No | Target | Target | Target | Target | No |
-| Edge Gateway | No/limited | No | Target | Conditional | Conditional | Target | MCU endpoint only |
+There is no Command Center-only mode. The Android app currently contains the mode selector and a local device-trust foundation. Full fleet operation is not yet complete. iOS is planned, not implemented.
 
-Role support is not granted by installation alone. A signed capability profile and physical/OS acceptance are required.
+## 3. Role compatibility and current implementation
 
-## 3. Main-app web baseline and future runtime add-ons
+**Target** means an intended future role subject to platform acceptance. **Preview** means a limited implementation exists but is not production-supported. **Foundation** means source/UI exists but end-to-end acceptance remains. **No** means not part of the target role.
 
-The main app includes HTML/CSS/JavaScript static hosting. TypeScript-to-browser-JavaScript compilation is a required built-in feature but the compiler is not yet bundled or verified. Basic static websites require no runtime companion.
+| Role | Android mobile app | Linux agent | Windows | macOS | SBC | MCU |
+|---|---|---|---|---|---|---|
+| Website Server | Foundation | No in 0.1.0 | No in 0.1.0 | No in 0.1.0 | No in 0.1.0 | No |
+| Command Center (combined mode) | Foundation | No | No | No | No | No |
+| Storage | Target | Preview: scoped local snapshot executor | Target | Target | Target | No |
+| Traffic | Target | Not implemented | Target | Conditional | Conditional | No |
+| Build/Publish | Target | Not implemented | Target | Target | Conditional | No |
+| Native Backend/Jobs | Target | Preview: health-check job | Target | Target | Conditional | Bounded firmware tasks only |
+| Backup/Recovery | Foundation: Android site/app backup | Preview: create/verify local snapshot | Target | Target | Target | No |
+| Edge Gateway | Not implemented | Not implemented | Conditional | Conditional | Target | MCU endpoint only |
 
-The separate `runtime-worker` Android companion APK already integrates CPython 3.11 and Node.js mobile 24.22.1; both are **in progress**, shipped together in one companion APK, and are not required for static websites or Step 4. Independent per-language packages, Android device acceptance and security hardening remain open. The future Runtime Library is planned to split Python and Node into independent packages and add 18 more optional languages, each as its own package. The current catalog consists of manifests only, not downloadable runtime binaries. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md).
+The Linux preview's storage/backup operations are local snapshot and verification primitives, not a complete distributed storage, restore or replication service. A role is not production-supported because its name appears in a protocol policy or UI.
 
-Worker devices execute Pocket Host's signed native node agent and narrowly defined job adapters. They may build source into immutable artifacts, store data, proxy approved traffic or run bounded infrastructure tasks. They do not become arbitrary customer-language runtime hosts by default.
+## 4. Main-app web baseline and runtime add-ons
 
-## 4. Package requirements
+The main app includes HTML/CSS/JavaScript static hosting through the bundled Rust engine. TypeScript-to-browser-JavaScript compilation is a required built-in feature but the compiler is not yet bundled or verified. Basic static websites require no runtime companion.
 
-Every package/firmware release includes:
+The separate `runtime-worker` Android companion APK already integrates CPython 3.11 and Node.js mobile 24.22.1; both are **in progress**, shipped together in one companion APK, and are not required for static websites or Step 4. Independent per-language packages, Android device acceptance and security hardening remain open. The future Runtime Library is planned to split Python and Node into independent packages and add 18 more optional languages. The current catalog consists of manifests only, not downloadable runtime binaries. See [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md).
+
+Python and Node currently share the companion application UID. The package boundary is not per-project OS isolation. Only trusted owner-controlled projects should execute until adversarial filesystem and egress tests pass.
+
+React + TypeScript + Vite belong to the separate `web-console/` browser operator client. They are not dependencies of the main Android app. The main-app TypeScript compiler is a distinct website-authoring feature, not a server-side runtime.
+
+Worker devices execute narrowly scoped native jobs and infrastructure adapters. They do not become arbitrary customer-language runtime hosts by default.
+
+## 5. Transport status
+
+| Transport | Intended use | Current repository position |
+|---|---|---|
+| Wi-Fi/LAN | Discovery, control, bulk transfer | Manual challenge/proof exchange exists; authenticated LAN discovery and mutual device transport remain open |
+| Bluetooth LE | Proximity, pairing, small control messages | Planned; not an accepted end-to-end transport |
+| Bluetooth Classic | Optional supported profiles | Planned/conditional; no acceptance evidence |
+| USB cable | Provisioning, diagnostics, bulk transfer | Platform-specific future work; no generic iOS USB assumption |
+| Remote network | Fleet commands and artifact exchange | Linux agent HTTPS bearer-token polling preview; this is not mutual TLS or full fleet acceptance |
+
+Transport availability is distinct from authorization. Every transport must preserve the same device identity, signed role grant and revocation semantics.
+
+## 6. Package and installer contract
+
+Every production package/firmware release must include:
 - Product/component version and source commit SHA.
 - Target OS, version range, architecture and ABI/board.
 - Supported role IDs and explicit permission inventory.
@@ -54,25 +80,8 @@ Every package/firmware release includes:
 - Resource profile and known lifecycle limitations.
 - Security contact and vulnerability reporting path.
 
-## 5. Installer behavior
-
-- Installer does not silently enroll a device or assign a role.
-- First launch generates/loads device identity and shows a one-time pairing challenge.
-- Mobile owner approves the device and exact role grant.
-- Uninstall/reinstall does not silently inherit trust; re-enrollment is required unless a secure migration flow explicitly transfers identity.
-- Updates are signed, staged and rollback-capable.
-- MCU firmware verifies board identity and signature before activation.
-
-## 6. Transport support
-
-| Transport | Intended use | Restrictions |
-|---|---|---|
-| Wi-Fi/LAN | Discovery, control, bulk transfer | Authenticated encrypted channel; discovery is untrusted |
-| Bluetooth LE | Proximity, pairing, small control messages | Not a bulk transfer path or trust proof |
-| Bluetooth Classic | Optional supported profiles | Exact OS/hardware/API validation |
-| USB cable | Provisioning, diagnostics, bulk transfer | Only documented APIs and explicit permission; no generic iOS USB assumption |
-| Remote network | Fleet commands and artifact exchange | Authenticated outbound connections, short-lived credentials and bounded queues |
+Target installer behavior: first launch provisions a device identity; owner explicitly approves the device and exact role; uninstall/reinstall does not silently inherit trust; updates are signed, staged and rollback-capable. These are release requirements, not a claim that all current packages implement them.
 
 ## 7. Release acceptance
 
-A product is releasable only after install/upgrade/revoke/uninstall and reboot tests on named target hardware, role-permission tests, network loss, resource pressure, signature verification and rollback. Planned rows remain unsupported until evidence is published.
+A product is releasable only after install/upgrade/revoke/uninstall and reboot tests on named target hardware, role-permission tests, network loss, resource pressure, signature verification and rollback. Planned and preview rows remain unsupported until evidence is published.
