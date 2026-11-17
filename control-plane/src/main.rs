@@ -412,6 +412,13 @@ async fn create_admin_session(
         return Err((StatusCode::TOO_MANY_REQUESTS, "admin_session_rate_limited".into()));
     }
     let credential = admin_credential(&headers, &s).await?;
+    if credential.bootstrap_hash.is_some() {
+        let passkey_required: bool = sqlx::query_scalar("SELECT passkey_required FROM owner_auth_policy WHERE id=1")
+            .fetch_one(&s.db).await.map_err(internal)?;
+        if passkey_required {
+            return Err((StatusCode::UNAUTHORIZED, "owner_passkey_required".into()));
+        }
+    }
     let id = Uuid::new_v4();
     let token = new_token();
     let expires_at = Utc::now() + chrono::Duration::hours(ADMIN_SESSION_TTL_HOURS);
@@ -441,9 +448,11 @@ async fn admin(headers: &HeaderMap, state: &AppState) -> Result<AdminActor, (Sta
     let row = sqlx::query(
         "SELECT s.id,s.name,s.role,s.created_at FROM control_sessions s \
          LEFT JOIN control_users u ON u.id=s.user_id \
+         LEFT JOIN owner_passkeys p ON p.credential_id=s.owner_passkey_id \
          WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() \
-         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL) OR \
-              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role AND u.token_hash=s.user_token_hash AND s.bootstrap_token_hash IS NULL))"
+         AND ((s.user_id IS NULL AND s.bootstrap_token_hash=$2 AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NULL) OR \
+              (s.user_id IS NOT NULL AND u.active=TRUE AND u.role=s.role AND u.token_hash=s.user_token_hash AND s.bootstrap_token_hash IS NULL AND s.owner_passkey_id IS NULL) OR \
+              (s.user_id IS NULL AND s.role='owner' AND s.bootstrap_token_hash IS NULL AND s.user_token_hash IS NULL AND s.owner_passkey_id IS NOT NULL AND p.revoked_at IS NULL))"
     )
         .bind(token_hash(supplied)).bind(token_hash(&state.admin_token))
         .fetch_optional(&state.db).await.map_err(internal)?;
