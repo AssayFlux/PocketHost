@@ -2,11 +2,11 @@
 
 **Release assignment:** v0.1.0 — First Hosting  
 **Scope:** main Android Pocket Host app and bundled Rust static website engine.  
-**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers or public ingress.
+**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and single-host AssayFlux Relay are mandatory v0.1.0 public-ingress scope.
 
 ## 1. Release promise
 
-A user can import a static website into the Android app, start hosting, open it locally and allow a second device on the same trusted Wi-Fi network to access it.
+A user can import a static website into the Android app, start hosting, open it locally, allow a second device on the same trusted Wi-Fi network to access it, and publish it through a custom domain using Cloudflare Tunnel or AssayFlux Relay over HTTP/HTTPS.
 
 ## 2. Required capabilities
 
@@ -21,6 +21,9 @@ A user can import a static website into the Android app, start hosting, open it 
 - Loopback default and explicit opt-in LAN binding.
 - Foreground hosting service, notification, start/stop/restart and recovery.
 - Basic encrypted website backup/restore.
+- Cloudflare Tunnel with encrypted token storage and external custom-domain HTTP/HTTPS verification.
+- Owner-deployed AssayFlux Relay gateway with DNS TXT hostname proof, authenticated outbound host session and visitor-only route.
+- Minimal owner-facing Relay hostname setup/verification surface.
 - Clear error, diagnostics and Android permission/lifecycle behavior.
 
 ## 3. Static response safety
@@ -49,8 +52,8 @@ This is a source inventory, not proof that the first release passes on a physica
 
 ## 6. v0.1.0 exit
 
-All ten G0–G9 gates must pass. The critical acceptance journey is folder/ZIP import, 500 MB boundary checks, local page load, second-device LAN load, assets/navigation, stop/restart, Android lifecycle, backup/restore and artifact installation on a named physical phone.
+All ten G0–G9 gates must pass. The critical acceptance journey is folder/ZIP import, 500 MB boundary checks, local page load, second-device LAN load, Cloudflare and Relay public-domain HTTP/HTTPS from an independent network, assets/navigation, visitor/admin route isolation, stop/restart, Android lifecycle, backup/restore and artifact installation on a named physical phone.
 
 ## 7. Deferred work
 
-Workbench preview, diff, TypeScript compilation, commits/deployment history, owner-approved publishing and rollback are v0.1.1. Python/Node acceptance is v0.1.1. Device trust, agents, control plane and public ingress are v0.2.0.
+Workbench preview, diff, TypeScript compilation, commits/deployment history, owner-approved publishing and rollback are v0.1.1. Python/Node acceptance is v0.1.1. Device trust, agents, full fleet control-plane acceptance and multi-host Relay scaling are v0.2.0.
