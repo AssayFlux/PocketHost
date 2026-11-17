@@ -83,18 +83,31 @@ internal fun PocketHostDevicesScreen(context: Context) {
                     Text(DeviceTrustStore.enrollmentChallengeDocument(it).toString(), color = palette.onSurfaceVariant)
                     OutlinedTextField(proof, { proof = it.trim() }, label = { Text("Agent proof signature · Base64 ECDSA") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                     Button(onClick = {
-                        val requested = capabilities.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-                        val candidate = DeviceTrustStore.Candidate(fingerprint.lowercase(), publicKey, displayName.trim(),
-                            product.trim(), os.trim(), architecture.trim(), protocol.trim(), requested)
-                        runCatching {
-                            DeviceTrustStore.approveCandidate(context, it.challengeId, candidate, proof, role.trim(), requested)
-                        }.onSuccess { grant ->
-                            challenge = null
-                            proof = ""
-                            refresh++
-                            message = "Device approved. Signed role grant generation ${grant.generation} issued."
-                        }.onFailure { message = it.message ?: "Device approval failed." }
-                    }, modifier = Modifier.fillMaxWidth()) { Text("Approve device and issue role grant") }
+                        val activity = context as? MainActivity
+                        if (activity == null) {
+                            message = "Owner authentication is unavailable; device approval was blocked."
+                        } else {
+                            message = "Confirm owner identity to approve this device."
+                            activity.confirmBiometricUnlock { confirmed ->
+                                if (confirmed) {
+                                    val requested = capabilities.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+                                    val candidate = DeviceTrustStore.Candidate(fingerprint.lowercase(), publicKey, displayName.trim(),
+                                        product.trim(), os.trim(), architecture.trim(), protocol.trim(), requested)
+                                    runCatching {
+                                        DeviceTrustStore.approveCandidate(context, challenge?.challengeId ?: error("challenge_missing"),
+                                            candidate, proof, role.trim(), requested)
+                                    }.onSuccess { grant ->
+                                        challenge = null
+                                        proof = ""
+                                        refresh++
+                                        message = "Device approved. Signed role grant generation ${grant.generation} issued."
+                                    }.onFailure { message = it.message ?: "Device approval failed." }
+                                } else {
+                                    message = "Owner authentication failed or was cancelled; device was not approved."
+                                }
+                            }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("Verify owner and approve device") }
                 }
                 Text(message, color = palette.onSurfaceVariant)
             }
@@ -113,10 +126,22 @@ internal fun PocketHostDevicesScreen(context: Context) {
                         Text(device.deviceId, color = palette.onSurfaceVariant)
                         Text(if (device.revokedAt == 0L) "Approved" else "Revoked", color = if (device.revokedAt == 0L) palette.primary else palette.error)
                         if (device.revokedAt == 0L) OutlinedButton(onClick = {
-                            runCatching { DeviceTrustStore.revoke(context, device.deviceId) }
-                                .onSuccess { refresh++; message = "Device revoked; prior grant generation is no longer accepted." }
-                                .onFailure { message = it.message ?: "Could not revoke device." }
-                        }) { Text("Revoke access") }
+                            val activity = context as? MainActivity
+                            if (activity == null) {
+                                message = "Owner authentication is unavailable; revocation was blocked."
+                            } else {
+                                message = "Confirm owner identity to revoke this device."
+                                activity.confirmBiometricUnlock { confirmed ->
+                                    if (confirmed) {
+                                        runCatching { DeviceTrustStore.revoke(context, device.deviceId) }
+                                            .onSuccess { refresh++; message = "Device revoked; prior grant generation is no longer accepted." }
+                                            .onFailure { message = it.message ?: "Could not revoke device." }
+                                    } else {
+                                        message = "Owner authentication failed or was cancelled; device access remains unchanged."
+                                    }
+                                }
+                            }
+                        }) { Text("Verify owner and revoke access") }
                     }
                 }
             }
