@@ -8,7 +8,7 @@
 
 ## 1. Product objective
 
-Pocket Host is a modular personal infrastructure platform. The first deliverable is a reliable Android website host: import a static website, start the host on the phone, open it locally and allow a second device on the same Wi-Fi to visit it. Later releases add safe in-app development and a connected device fabric.
+Pocket Host is a modular personal infrastructure platform. The first deliverable is a reliable Android website host: import a static website, serve it locally and over LAN, and make it reachable worldwide through either Cloudflare Tunnel or the first-party AssayFlux Relay using the owner's domain over HTTP/HTTPS. Later releases add safe in-app development and a connected device fabric.
 
 The old five-step delivery sequence is retired. The new three-version pathway is the only active release roadmap until the owner approves an expansion.
 
@@ -26,16 +26,17 @@ The old five-step delivery sequence is retired. The new three-version pathway is
 10. Workbench edits a private workspace, never the active production site. Preview, validated publishing, owner approval and rollback are v0.1.1.
 11. External devices use separate software for their OS/architecture. Discovery is not trust. Integration requires identity proof and explicit owner approval.
 12. Worker roles are bounded, separately authorized and revocable. No arbitrary shell or unrestricted filesystem permission is implied.
-13. Local website hosting does not depend on public ingress, the remote control plane or another device.
+13. Local website hosting never depends on public ingress, the remote control plane or another device. Public ingress is optional and must fail independently without stopping local/LAN hosting.
 14. Source presence, UI presence, compilation and simulation are not product acceptance. Support claims require named target hardware/OS tests.
 15. Every release must define and pass G0, G1, G2, G3, G4, G5, G6, G7, G8 and G9. This rule is permanent.
 16. The current full-app backup implementation has a 50 MiB static-site root cap, 200 MiB total uncompressed cap and 220 MiB encrypted archive cap. It does not back up every site allowed by the new 500 MB importer. v0.1.0 must either safely align backup capacity or explicitly approve and expose the lower backup ceiling before release.
+17. Public visitor ingress must terminate at the selected website only. Management API, owner sessions, device enrollment, runtime brokers, Workbench drafts and MCU controls must never be reachable through visitor hostnames.
 
 ## 3. Release pathway
 
 ### v0.1.0 — First Hosting
 
-**Promise:** an owner can install Pocket Host on a supported Android phone, import a real static website and serve it locally and over the same Wi-Fi network.
+**Promise:** an owner can install Pocket Host on a supported Android phone, import a real static website and serve it locally, over the same Wi-Fi network and publicly through a custom domain using Cloudflare Tunnel or AssayFlux Relay.
 
 In scope:
 - Main Android APK and bundled Rust static website engine.
@@ -44,6 +45,11 @@ In scope:
 - HTML, CSS, browser JavaScript, common static assets and correct MIME types.
 - Local preview, configurable HTTP port and opt-in LAN binding.
 - Access from another device on the same Wi-Fi.
+- Public custom-domain hosting through Cloudflare Tunnel, using an owner-created named tunnel and encrypted Android token storage.
+- First-party AssayFlux Relay gateway deployment, DNS TXT hostname ownership proof, authenticated outbound host session and visitor-only routing to the selected static website.
+- Public HTTP and HTTPS entry points for verified custom hostnames; HTTPS certificates are validated at the public edge, and HTTP redirects to HTTPS by default with an explicit owner opt-in for unencrypted HTTP serving.
+- Independent provider status, start/stop, reconnect, diagnostics and manual failover between Cloudflare Tunnel and AssayFlux Relay.
+- External verification from mobile data or an unrelated network, including DNS, TLS, expected site content and management-route isolation.
 - Foreground hosting service, visible notification, start/stop/restart and Android lifecycle behavior.
 - Permission, network, battery and thermal-state feedback.
 - Existing encrypted full-app backup/restore and interrupted activation recovery, with the backup/import capacity mismatch explicitly resolved before release.
@@ -55,7 +61,6 @@ Explicitly out of scope:
 - On-device TypeScript compilation or React/Vite build.
 - Python/Node execution as a requirement for static websites.
 - Worker enrollment, distributed jobs, production control plane or multi-device roles.
-- Public Relay or Cloudflare public-ingress acceptance.
 - iOS, Windows, macOS, SBC or MCU certification.
 
 A v0.1.0 website can be built elsewhere and imported as static files. For Vite projects, import the contents of the production dist directory. The website root must contain index.html (the ZIP importer also accepts one top-level directory containing index.html).
@@ -79,7 +84,7 @@ The existing companion currently contains both runtime implementations in one AP
 
 ### v0.2.0 — Connected Device Fabric
 
-**Promise:** the owner can safely connect separately installed devices and delegate explicit infrastructure roles.
+**Promise:** the owner can safely connect separately installed devices and delegate explicit infrastructure roles, then scale and coordinate infrastructure beyond the first phone host.
 
 In scope:
 - Device identity, enrollment ceremony, owner approval, signed role grants, renewal and revocation.
@@ -88,7 +93,7 @@ In scope:
 - Bounded storage/backup, traffic, build/publish preparation and native-job roles.
 - Durable job contracts, audit, resource budgets, health, signed updates and rollback.
 - Optional Rust control plane and browser operator console.
-- Independent visitor ingress: Local Network, AssayFlux Relay and Cloudflare Tunnel.
+- Multi-host Relay scheduling, regional gateway scaling and advanced health-based failover beyond the single-host public-ingress baseline delivered in v0.1.0.
 - Strict separation of public visitor routes from management, runtime broker and MCU controls.
 - Cross-device recovery, fault isolation and operational security acceptance.
 
