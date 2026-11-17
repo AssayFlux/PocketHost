@@ -87,3 +87,10 @@ The historical validation deferral text above is superseded. The Owner explicitl
 ## UI architecture supersession note — 2026-11-17
 
 This document is a historical Stage 0 snapshot. Its mention of five Android destinations and earlier Gate 8-only Android validation language is not the current UI design authority. The owner-approved native UI layout and implementation status are maintained in `docs/UI_DESIGN.md` and the current `docs/PROJECT_BASELINE.md`. The new home shell uses a hamburger drawer and service carousel; existing feature logic is retained. Android build and API 26/33/35 validation status must be taken from current exact-SHA workflow evidence, not this historical snapshot.
+
+
+## Design Language V1 clarification — 2026-11-17
+
+The authoritative native UI specification is now **Pocket Host Design Language V1** in `docs/UI_DESIGN.md`. This supersedes the earlier generic wording above about vertically stacked/scrollable information cards. V1 requires tall portrait-rectangular service cards, a horizontal-only service carousel, and a fixed information centre containing four or five compact information bars visible together. The dashboard does not vertically scroll; the information centre does not scroll in either direction. Only the service carousel scrolls horizontally.
+
+V1 also explicitly specifies the hamburger drawer, separate user/account dropdown, branded biometric app-unlock screen, calligraphic wordmark, monochrome icon system, ten classic palettes, and System/Light/Dark appearance. The README and MASTER_PLAN UI contract now point to V1. This documentation update does not claim that the source UI or Android acceptance tests already satisfy every V1 requirement; exact-SHA build, screenshot, layout, accessibility and interaction verification remain outstanding where not evidenced.
