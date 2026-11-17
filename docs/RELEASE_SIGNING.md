@@ -1,37 +1,48 @@
-# Production Release Signing
+# Pocket Host 0.1.0 — Release Signing and Provenance
 
-**Baseline:** 2026-11-16  
-**Current status:** debug APK packaging only; no verified signed production release.
+## Release identity
 
-## Security rules
+Every distributed artifact declares:
+- Product/component name and version.
+- Source commit SHA and build workflow/run.
+- Target OS, architecture, ABI and minimum platform version.
+- API/protocol compatibility.
+- Artifact SHA-256 and signature identity.
+- SBOM and license inventory.
+- Installation, upgrade and rollback instructions.
 
-- Never commit keystores, passwords, private keys or Cloudflare tokens.
-- Never paste signing secrets into chat, issues or logs.
-- Use a dedicated release keystore backed up securely by the owner.
-- Restrict GitHub Actions environment access and require approval where available.
-- Do not reuse debug signing credentials for production.
+## Android packages
 
-## Required GitHub Actions secrets
+The Android host and runtime companion must be signed with the same protected release certificate because the host/companion IPC contract uses a signature-level permission. Debug signing is not a release identity.
 
-| SECRET | PURPOSE |
-|---|---|
-| `POCKETHOST_KEYSTORE_BASE64` | Base64-encoded release keystore |
-| `POCKETHOST_KEYSTORE_PASSWORD` | Keystore password |
-| `POCKETHOST_KEY_ALIAS` | Signing key alias |
-| `POCKETHOST_KEY_PASSWORD` | Key password |
+Release workflow inputs:
+- `POCKETHOST_KEYSTORE_BASE64`
+- `POCKETHOST_KEYSTORE_PASSWORD`
+- `POCKETHOST_KEY_ALIAS`
+- `POCKETHOST_KEY_PASSWORD`
 
-The release workflow must decode the keystore to a temporary runner path, use it for host and companion release APKs, and remove it even on failure. Host and companion must use the same signing certificate because the companion Binder service uses a signature-level permission.
+Store these only in protected GitHub Actions secrets and a protected release environment. Never commit a keystore, signing password or private key.
 
-## Acceptance
+## Cross-platform signing
 
-1. Build host and companion release variants in a protected workflow.
-2. Verify both with `apksigner verify --verbose --print-certs`.
-3. Confirm the expected matching signer certificate.
-4. Inspect package IDs, version, minSdk and ABI contents.
-5. Generate SHA-256 checksums and attach them to release.
-6. Verify install/upgrade on supported API levels.
-7. Download and validate the actual artifacts.
+- iOS: Apple signing identity, provisioning and notarization/distribution requirements for the chosen channel.
+- Linux: signed package/repository metadata and verified host-agent artifacts.
+- Windows: signed installer and service binaries.
+- macOS: Developer ID signing and notarization where distributed outside the App Store.
+- MCU: signed firmware and OTA metadata with device-side verification and rollback policy.
 
-## Current boundary
+Each platform uses its own trust store and signing identity. Do not reuse Android APK signing keys as fleet device identity keys or firmware signing keys.
 
-Debug APK packaging passed, but a previous artifact retrieval returned a truncated ZIP. It is not distributable. Production signing remains blocked until owner-controlled secrets are configured and release workflow passes. Debug signing is not production signing.
+## Build requirements
+
+- Reproducible dependency lockfiles and pinned toolchains.
+- Verify downloaded upstream runtime archives against pinned digests.
+- Build only from a reviewed commit.
+- Generate SBOM and license inventory.
+- Sign artifacts after build and verify signatures before publication.
+- Publish checksums and provenance alongside artifacts.
+- Never include owner secrets, device keys or runtime credentials in artifacts.
+
+## Release gate
+
+A successful build is not a signed release. A signed artifact is not platform acceptance. A release requires signature verification, exact target-device tests, upgrade/rollback, recovery, security review and a support matrix.
