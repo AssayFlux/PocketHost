@@ -127,7 +127,7 @@ def sign_challenge(
                          canonical_json(unsigned_challenge), ec.ECDSA(hashes.SHA256()))
     except (InvalidSignature, KeyError, ValueError) as error:
         raise ValueError("Enrollment challenge owner signature is invalid.") from error
-    signed_payload = canonical_json(unsigned_challenge) + b"\n + canonical_json(candidate)
+    signed_payload = canonical_json(unsigned_challenge) + bytes([10]) + canonical_json(candidate)
     return base64.b64encode(private_key.sign(signed_payload, ec.ECDSA(hashes.SHA256()))).decode("ascii")
 
 
