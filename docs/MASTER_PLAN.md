@@ -133,7 +133,7 @@ Encrypted `.afbackup` includes supported site/runtime source, route mapping and 
 
 ## 10. UI contract
 
-Five destinations: Dashboard, Sites, Activity, Learn, Settings. Classic clean navy visual identity, monochrome icons, card-based hierarchy, light default and optional dark. No gradients/neon/glass. Every state is backend-derived. Simple Mode prioritizes first static publish; Advanced exposes runtime/network/capacity controls with clear trust and resource warnings.
+The owner-approved Android layout is authoritative in `docs/UI_DESIGN.md`: biometric app-unlock screen, then a branded home with hamburger drawer, account dropdown, swipeable enlarged-centre service carousel and stacked live information cards. The drawer is the primary global navigation and routes into all existing product feature implementations. The previous five-destination bottom-navigation shell is retired. Use classic warm-neutral cards, navy identity, monochrome icons, light default and coordinated dark mode. No gradients/neon/glass. Every operational state is backend/device-derived. Simple Mode prioritizes first static publish; Advanced exposes runtime/network/capacity controls with clear trust and resource warnings. Preserve all feature state/actions while reorganizing the UI.
 
 ## 11. Implementation sequence
 
@@ -154,3 +154,8 @@ Detailed exit criteria live in `docs/NORTH_STAR.md` and `docs/ROADMAP.md`.
 Use repository-pinned Gradle, SDK, NDK, Rust and native dependencies. CI results must identify exact SHA, workflow, API level, test counts, failures and skips. A compile pass is not runtime proof; emulator is not physical device; source presence is not a shipped feature. Host and companion release APKs share a signer. Validate package IDs, ABIs, signatures, checksums and upgrades. Never commit secrets.
 
 **Release definition:** all gates accepted on one release candidate, physical ARM device evidence, external HTTPS tests, independent security review and explicit owner approval.
+
+
+## Owner UI architecture update — 2026-11-17
+
+The login and home-screen sketches supplied by the owner supersede the older bottom-navigation visual contract. The authoritative layout, route mapping, truthful state rules and acceptance criteria are in `docs/UI_DESIGN.md`. The source shell is implemented on main; API 26/33/35 Android compilation/instrumentation and screenshot/accessibility acceptance remain open until exact-SHA evidence is inspected.
