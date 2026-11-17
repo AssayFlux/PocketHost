@@ -96,6 +96,14 @@ object DeviceTrustStore {
         return fingerprint(pair.public.encoded) to Base64.encodeToString(pair.public.encoded, Base64.NO_WRAP)
     }
 
+    fun deviceFingerprint(publicKeySpki: ByteArray): String = fingerprint(publicKeySpki)
+
+    /** Exact unsigned canonical bytes that an enrolling agent signs for proof of possession. */
+    fun enrollmentProofPayload(challenge: EnrollmentChallenge): ByteArray = challengeBytes(challenge)
+
+    /** Wire document for the shared signed role-grant schema. */
+    fun roleGrantDocument(grant: SignedRoleGrant): JSONObject = grantJson(grant)
+
     /** Wire document for the shared enrollment-challenge schema. */
     fun enrollmentChallengeDocument(value: EnrollmentChallenge): JSONObject = JSONObject()
         .put("protocol", "pockethost.device/1.0")
