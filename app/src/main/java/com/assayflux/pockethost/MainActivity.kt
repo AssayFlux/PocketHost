@@ -61,6 +61,8 @@ import com.assayflux.pockethost.runtime.NodeHostRuntime
 import com.assayflux.pockethost.sites.SiteRegistry
 import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.management.RemoteControlAgent
+import com.assayflux.pockethost.management.RelayAgent
+import com.assayflux.pockethost.management.RelayCredentialStore
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -235,6 +237,10 @@ private fun PocketHostDashboard() {
     var visitorUsername by remember { mutableStateOf("") }
     var issuedVisitorCredential by remember { mutableStateOf<Pair<String, String>?>(null) }
     var cloudflareTokenText by remember { mutableStateOf("") }
+    var relayEndpointText by remember { mutableStateOf(RelayCredentialStore.endpoint(context)) }
+    var relayTokenText by remember { mutableStateOf("") }
+    var relayConfigured by remember { mutableStateOf(RelayCredentialStore.isConfigured(context)) }
+    var relayStatus by remember { mutableStateOf(RelayAgent.status()) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
@@ -309,6 +315,7 @@ private fun PocketHostDashboard() {
             pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             nodeHosting = runCatching { NodeHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
+            relayStatus = RelayAgent.status()
             pendingPairingCode = ManagementApiServer.pendingApprovalCode()
             preferences.getString("service_status", null)?.let { status = it }
             recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
@@ -877,6 +884,100 @@ private fun PocketHostDashboard() {
                 }
                 if (selectedTab == "Settings") {
                 if (settingsSection == "Network") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("ASSAYFLUX RELAY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            when (relayStatus) {
+                                "CONNECTED" -> "Independent Relay connection is active."
+                                "CONNECTING" -> "Connecting to your owner-operated Relay Node…"
+                                "RETRYING" -> "Relay connection lost. Reconnecting with backoff."
+                                "ERROR" -> "Relay credentials could not be read. Re-save the connection."
+                                else -> if (relayConfigured) "Relay credentials are encrypted on this device." else "No independent Relay connection configured."
+                            },
+                            color = palette.onSurfaceVariant, fontSize = 14.sp
+                        )
+                        OutlinedTextField(
+                            value = relayEndpointText,
+                            onValueChange = { relayEndpointText = it },
+                            label = { Text("Your Relay HTTPS endpoint") },
+                            placeholder = { Text("https://relay.example.com") },
+                            singleLine = true,
+                            enabled = relayStatus !in setOf("CONNECTED", "CONNECTING"),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = relayTokenText,
+                            onValueChange = { relayTokenText = it },
+                            label = { Text("Dedicated Relay host credential") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            enabled = relayStatus !in setOf("CONNECTED", "CONNECTING"),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    runCatching {
+                                        RelayCredentialStore.configure(context, relayEndpointText, relayTokenText)
+                                        relayTokenText = ""
+                                        relayConfigured = true
+                                        if (hosting) RelayAgent.start(context)
+                                        status = if (hosting) "Dedicated Relay credentials saved. Connecting to your Relay Node." else "Dedicated Relay credentials saved securely. Start hosting to connect."
+                                    }.onFailure { status = it.message ?: "Could not save Relay credentials." }
+                                },
+                                enabled = relayEndpointText.isNotBlank() && relayTokenText.length >= 32 &&
+                                    relayStatus !in setOf("CONNECTED", "CONNECTING")
+                            ) { Text("Save Relay connection") }
+                            OutlinedButton(
+                                onClick = {
+                                    if (hosting) {
+                                        RelayAgent.start(context)
+                                        relayStatus = RelayAgent.status()
+                                        status = "Relay connection requested."
+                                    } else {
+                                        status = "Start website hosting before connecting the Relay."
+                                    }
+                                },
+                                enabled = relayConfigured && hosting && relayStatus !in setOf("CONNECTED", "CONNECTING")
+                            ) { Text("Connect") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    RelayAgent.stop()
+                                    relayStatus = RelayAgent.status()
+                                    status = "AssayFlux Relay disconnected. Local and Cloudflare hosting remain available."
+                                },
+                                enabled = relayStatus in setOf("CONNECTED", "CONNECTING", "RETRYING", "ERROR")
+                            ) { Text("Stop Relay") }
+                            OutlinedButton(
+                                onClick = {
+                                    RelayAgent.stop()
+                                    runCatching { RelayCredentialStore.clear(context) }
+                                        .onSuccess {
+                                            relayConfigured = false
+                                            relayTokenText = ""
+                                            relayEndpointText = ""
+                                            relayStatus = "STOPPED"
+                                            status = "Dedicated Relay credentials removed from this device."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not remove Relay credentials." }
+                                },
+                                enabled = relayConfigured
+                            ) { Text("Disconnect") }
+                        }
+                        Text(
+                            "This is independent of the fleet Remote Control Plane and Cloudflare. The Relay Node must be reachable from the public Internet; this phone connects outbound and never opens an Internet-facing Relay port.",
+                            color = palette.onSurfaceVariant, fontSize = 13.sp
+                        )
+                    }
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
