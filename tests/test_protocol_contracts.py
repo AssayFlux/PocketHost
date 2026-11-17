@@ -117,6 +117,47 @@ class ProtocolSchemaTests(unittest.TestCase):
         }
         self.assertFalse(Draft202012Validator(schema).is_valid(sample))
 
+    def test_role_grant_schema_and_capability_policy(self):
+        schema = self.schemas["role-grant.schema.json"]
+        sample = {
+            "protocol": "pockethost.device/1.0",
+            "grant_id": "11111111-1111-4111-8111-111111111111",
+            "owner_id": "owner-1", "device_id": "a" * 64, "role": "storage",
+            "generation": 1, "capabilities": ["storage.read_assigned_namespace"],
+            "denied_capabilities": ["process.exec"],
+            "resource_budget": {"cpu_millis": 100, "memory_bytes": 1048576,
+                                "storage_bytes": 0, "network_bytes_per_day": 0},
+            "issued_at": "2026-01-01T00:00:00Z", "expires_at": "2026-01-01T01:00:00Z",
+            "policy_version": "1", "signature": {
+                "algorithm": "ed25519", "key_id": "owner-key-1", "value": "S" * 64
+            }
+        }
+        Draft202012Validator(schema, format_checker=FormatChecker()).validate(sample)
+        allowed = set(self.policy["roles"]["storage"]["allow"])
+        denied = set(self.policy["roles"]["storage"]["deny"])
+        self.assertTrue(set(sample["capabilities"]).issubset(allowed))
+        sample["capabilities"] = ["management.admin"]
+        self.assertFalse(set(sample["capabilities"]).issubset(allowed))
+        self.assertTrue(set(sample["capabilities"]).intersection(denied) == set())
+
+    def test_job_envelope_schema_rejects_untyped_shell_job(self):
+        schema = self.schemas["job-envelope.schema.json"]
+        sample = {
+            "protocol": "pockethost.device/1.0",
+            "job_id": "11111111-1111-4111-8111-111111111111",
+            "idempotency_key": "idempotency-key-0001",
+            "correlation_id": "22222222-2222-4222-8222-222222222222",
+            "owner_id": "owner-1", "target_device_id": "a" * 64,
+            "role_grant_id": "33333333-3333-4333-8333-333333333333",
+            "kind": "storage.snapshot", "payload": {"namespace": "backup-1"},
+            "issued_at": "2026-01-01T00:00:00Z", "expires_at": "2026-01-01T00:05:00Z",
+            "resource_budget": {"timeout_seconds": 60, "memory_bytes": 1048576},
+            "signature": {"algorithm": "ed25519", "key_id": "owner-key-1", "value": "S" * 64}
+        }
+        Draft202012Validator(schema, format_checker=FormatChecker()).validate(sample)
+        sample["kind"] = "shell.exec"
+        self.assertFalse(Draft202012Validator(schema).is_valid(sample))
+
     def test_enrollment_challenge_requires_single_use_and_known_transport(self):
         schema = self.schemas["enrollment-challenge.schema.json"]
         sample = {
