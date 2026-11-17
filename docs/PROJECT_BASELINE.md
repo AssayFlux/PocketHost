@@ -258,3 +258,10 @@ Update this file with exact evidence whenever the baseline changes.
 - Home shell source introduces the brand/header card, hamburger drawer, account dropdown, swipeable service cards and device/notification information cards. Drawer routes map to existing Dashboard, Sites, Activity, Learn and Settings sections rather than claiming separate backend modules exist.
 - Existing business logic remains in the root Compose activity and dedicated Dashboard/Sites/Activity/Learn/Settings composables. The new home cards read existing service state, operational events and DeviceTelemetry JSON. Runtime isolation remains unproven and Python/Node remain trusted-code-only.
 - UI source implementation is not UI acceptance. The new Android shell still requires Android compilation, API 26/33/35 emulator runs, screenshot/hierarchy inspection, accessibility and responsive review.
+
+
+## UI instrumentation alignment — 2026-11-17
+
+- `PocketHostNavigationAccessibilityTest` now traverses the hamburger drawer destinations (Home, Hosting, Websites & Files, Activity & Logs, Learn, Settings), preserves Settings subsection and visitor-credential checks, and captures the new screen hierarchy/screenshots.
+- `PocketHostDashboardUiSmokeTest` now asserts the owner home carousel, hamburger control and account dropdown routes.
+- Android integration artifact collection now retrieves `home.png` alongside the navigation screenshots and hierarchy. Source-level test updates are not passing evidence until API 26/33/35 runs complete and artifacts are inspected.
