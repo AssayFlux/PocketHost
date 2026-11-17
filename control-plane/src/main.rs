@@ -1481,7 +1481,7 @@ mod tests {
             let timestamp = Utc::now() + chrono::Duration::seconds(index);
             sqlx::query(
                 "INSERT INTO device_commands(id,device_id,kind,payload,state,result,created_at,delivered_at,acknowledged_at,delivery_attempts) \
-                 VALUES($1,$2,'agent_job',$3,'succeeded',$4,$5,$5,$5,1)"
+                 VALUES($1,$2,'site_action',$3,'succeeded',$4,$5,$5,$5,1)"
             )
             .bind(command).bind(device).bind(json!({"index":index}))
             .bind(json!({"status":"healthy","index":index})).bind(timestamp)
