@@ -185,12 +185,13 @@ object WorkbenchWorkspaceManager {
         val stats = validateTree(workspace)
         val parent = commitsRoot(context, projectId)
         if (!parent.exists() && !parent.mkdirs()) throw IOException("Could not create commit history.")
-        val id = "commit-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}"
+        val previousCommits = commits(context, projectId)
+        val createdAt = maxOf(System.currentTimeMillis(), (previousCommits.maxOfOrNull { it.createdAt } ?: 0L) + 1L)
+        val id = "commit-$createdAt-${UUID.randomUUID().toString().take(8)}"
         val staging = File(parent, ".$id.tmp")
         val destination = File(parent, id)
         try {
             copyTree(workspace, File(staging, "snapshot"))
-            val createdAt = System.currentTimeMillis()
             val manifest = JSONObject()
                 .put("id", id)
                 .put("project_id", projectId)
@@ -233,14 +234,14 @@ object WorkbenchWorkspaceManager {
     }
 
     /** Retains a bounded recent history; the newest commit is never selected for deletion. */
-    private fun pruneCommitHistory(context: Context, projectId: String) {
+    private fun pruneCommitHistory(context: Context, projectId: String, newestCommitId: String) {
         val root = commitsRoot(context, projectId)
         val history = commits(context, projectId)
         var retainedBytes = history.sumOf { snapshotStorageBytes(File(root, it.id)) }
         var retainedCount = history.size
         history.sortedWith(compareBy<Commit> { it.createdAt }.thenBy { it.id }).forEach { commit ->
             if (retainedCount <= MAX_COMMITS && retainedBytes <= MAX_COMMIT_STORAGE_BYTES) return
-            if (history.firstOrNull()?.id == commit.id) return@forEach
+            if (newestCommitId == commit.id) return@forEach
             val directory = File(root, commit.id)
             val size = snapshotStorageBytes(directory)
             if (directory.deleteRecursively()) {
