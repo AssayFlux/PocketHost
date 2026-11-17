@@ -1,6 +1,6 @@
 # Pocket Host Mobile Design System 0.1.0
 
-**Platforms:** Android and iOS command-center applications  
+**Current platform:** Android application. iOS is a future target; no iOS source project exists in this repository.  
 **Design language:** Pocket Host Design Language V1  
 **Purpose:** serve websites from the mobile device in both operating modes, with fleet administration available only in the combined mode.
 
@@ -111,7 +111,7 @@ Show the smallest failing component and what remains healthy. Display offline st
 ## 11. Accessibility and platform behavior
 
 - Android: respect system font scale, display size, insets, keyboard, foreground-service requirements, Doze and battery policies.
-- iOS: native navigation, safe areas, Dynamic Type, VoiceOver, Keychain/Secure Enclave and background restrictions.
+- Future iOS implementation: native navigation, safe areas, Dynamic Type, VoiceOver, Keychain/Secure Enclave and background restrictions; not implemented in this repository.
 - Touch targets at least 48dp / 44pt as appropriate.
 - Screen-reader labels, logical focus, contrast, reduced motion, portrait/landscape and tablet layouts.
 - No clipped controls at large text sizes.
