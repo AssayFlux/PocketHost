@@ -1829,6 +1829,7 @@ mod tests {
     fn command_allowlist_excludes_arbitrary_shell_execution() {
         let allowed = ["deploy_site", "site_action", "tunnel_action", "restart_runtime", "agent_job"];
         assert!(allowed.contains(&"site_action"));
+        assert!(allowed.contains(&"agent_job"));
         assert!(!allowed.contains(&"shell"));
     }
 }
