@@ -1,6 +1,6 @@
 <!-- POCKETHOST · ASSAYFLUX -->
 <p align="center">
-  <img src="Assets/Pocket Host Logo.png" alt="AssayFlux Pocket Host" width="100%">
+  <img src="Assets/Pocket Host 2.svg" alt="AssayFlux Pocket Host" width="100%">
 </p>
 <p align="center"><strong>YOUR DEVICES. YOUR SERVICES. YOUR CONTROL.</strong></p>
 <p align="center">Build personal infrastructure from the devices you own.</p>
