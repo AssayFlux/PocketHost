@@ -1,75 +1,67 @@
-# Pocket Host 0.1.0 — Optional Fleet Control Plane
+# Pocket Host 0.1.0 — Fleet Control Plane Deployment
 
-## Responsibility boundary
+## Role
 
-The control plane is an **optional fleet coordination service** for identity, device enrollment, heartbeat, desired state, queued commands, team roles and audit history. It does not serve website traffic and does not supervise host workloads. Android and iOS are the primary command-center clients. Host agents persist their own state and continue the last authorized configuration when this service is unavailable.
+The optional control plane coordinates owner identity, host enrollment, desired state, leased commands, artifact delivery, team roles and audit. It is not a website origin, runtime supervisor or required dependency for local hosting.
 
-The current deployment workflow uses a Linux host with Docker Compose. This is an additional infrastructure requirement only if the owner chooses to deploy the optional remote-management feature. Do not treat a VPS as a prerequisite for the core PocketHost phone-hosting product.
+Android and iOS mobile applications are the primary command-center clients. Each host independently stores authorized configuration and supervises its workloads.
 
-The owner has confirmed that their website domain and Cloudflare Tunnel are already connected. PR #58 adds an explicit Cloudflare Tunnel ingress profile for the control plane. It can use a connector token for the same named tunnel, but it requires a **separate public hostname** and a Cloudflare Tunnel Public Hostname route targeting `http://control-plane:8080` on the Compose network. This is separate from the phone's website origin. When the optional tunnel secret is absent, the deployment workflow uses the existing Caddy public-TLS profile instead.
+## Deployment topology
 
-## Host requirements for the current Compose deployment
+- Rust/Axum API and PostgreSQL run on a dedicated management network.
+- Caddy or Cloudflare Tunnel provides access to the management hostname.
+- AssayFlux Relay visitor gateway uses a separate visitor hostname/listener.
+- Host agents initiate outbound authenticated connections.
+- Website visitors reach host website ingress through Local Network, AssayFlux Relay or Cloudflare Tunnel; they never reach management endpoints.
 
-- Linux host with Docker Engine and Docker Compose v2.
-- Non-root deployment account allowed to run Docker Compose.
-- Persistent Docker volumes for PostgreSQL and uploaded deployment artifacts.
-- Outbound access to GitHub and container registries.
-- If using the included Caddy public-TLS topology: inbound TCP 80/443 and public DNS for the control-plane hostname.
+## Host requirements
 
-## GitHub Actions variables
+The current Compose deployment uses a Linux server with Docker Engine and Docker Compose v2, persistent PostgreSQL/artifact volumes and outbound access to required registries. This is an optional infrastructure requirement for remote fleet coordination only.
 
-| Variable | Meaning |
-|---|---|
-| `POCKETHOST_CONTROL_HOST` | SSH hostname or IP |
-| `POCKETHOST_CONTROL_USER` | Non-root deployment user |
-| `POCKETHOST_CONTROL_PATH` | Absolute checkout path |
-| `POCKETHOST_CONTROL_DOMAIN` | Public API hostname |
-| `POCKETHOST_CONTROL_ORIGIN` | Exact HTTPS origin of the TypeScript console |
+## Configuration
 
-## GitHub Actions secrets
-
-| Secret | Meaning |
-|---|---|
-| `POCKETHOST_CONTROL_SSH_KEY` | Private SSH deployment key |
-| `POCKETHOST_CONTROL_KNOWN_HOSTS` | Pre-verified SSH host-key line(s) |
-| `POCKETHOST_CONTROL_ADMIN_TOKEN` | Unique high-entropy Owner token |
-| `POCKETHOST_POSTGRES_PASSWORD` | Independent strong PostgreSQL password |
-| `POCKETHOST_CONTROL_TUNNEL_TOKEN` | Optional named Cloudflare Tunnel connector token. When set, deployment uses the Cloudflare Tunnel profile and does not publish inbound host ports. |
-
-Put these only in GitHub Actions secrets/variables. Never paste private keys, tokens or passwords into chat, issues or repository files. Use a protected `production` environment and require approval.
+1. Review `control-plane/compose.yaml`, `Caddyfile` and `.env.example`.
+2. Configure a dedicated management hostname and exact allowed client origins.
+3. Generate independent high-entropy Owner and database credentials.
+4. Configure exact trusted proxy peer IPs; do not trust an entire private subnet.
+5. Choose the Caddy public-TLS or Cloudflare Tunnel profile.
+6. Keep PostgreSQL and the application listener private behind the edge proxy.
+7. Store all credentials in protected deployment secrets, never in source control.
 
 ## Deployment
 
-1. Review `control-plane/compose.yaml` and `.github/workflows/deploy-control-plane.yml`.
-2. Populate the required host, SSH, database and Owner-token variables/secrets.
-3. Configure the exact allowed console origin. The deployment workflow writes POCKETHOST_CONTROL_API_HOST from POCKETHOST_CONTROL_DOMAIN; this is the dedicated API hostname and is distinct from POCKETHOST_CONTROL_HOST, which is the SSH host/IP.
-4. For Cloudflare mode, route the dedicated management hostname to `http://control-plane:8080`. For each verified Relay visitor hostname, route it to `http://control-plane:8081`; the visitor listener contains no admin or device-management routes. Each host's outbound management/Relay agent connects to the dedicated hostname on port 8080. Add POCKETHOST_CONTROL_TUNNEL_TOKEN as a GitHub Actions secret. The phone's independent Cloudflare website hostname must continue to target the phone's Rust listener, not this service.
-5. If the optional tunnel secret is absent, the workflow uses the Caddy public-TLS profile and requires inbound TCP 80/443.
-6. Run **Actions → Deploy PocketHost Control Plane → Run workflow**.
-7. Confirm `https://<control-plane-domain>/health` returns HTTP 200, admin/device API calls work only on the dedicated management hostname, a Relay visitor hostname cannot access `/v1/admin` or `/v1/device` endpoints, CORS preflight succeeds for the console origin and no unintended ports are reachable.
-8. Register a device and pair it in PocketHost → Advanced → Remote Control Plane.
-9. Verify heartbeat, live configuration, command queue/acknowledgement, device revocation and audit events.
+```sh
+docker compose --env-file .env -f compose.yaml up -d --build
+```
 
-The workflow does not create DNS records, configure Cloudflare Access, deploy the frontend, register the phone or perform physical-device testing.
+The deployment workflow does not create DNS records, register hosts, configure mobile clients or perform external acceptance.
 
-## Data and recovery
+## Enrollment and operations
 
-- Keep PostgreSQL data and the artifact volume in coordinated backups.
-- Protect the `.env` file and restrict access to the Docker host.
-- Rotate the Owner token through the deployment secret and restart/redeploy.
-- Restore the database and artifact volume from the same backup point.
-- Do not publish database port 5432 or the raw application port 8080 to the internet.
+- Owner authenticates in the mobile command center.
+- The command center requests a short-lived enrollment challenge.
+- The target host proves possession of its device-bound key and displays its identity/capabilities for owner approval.
+- The control plane issues a scoped, revocable host credential.
+- Host agents maintain their own heartbeat and command lease.
+- Commands are typed, allow-listed, scoped, expiring and idempotent.
+- Hosts persist the result before acknowledgement.
+- Revocation closes sessions and invalidates credentials.
 
-## Production limitation
+## Availability contract
 
-The existence of this workflow and backend source does not mean the control plane is deployed. The Cloudflare Tunnel profile removes the inbound-port requirement but still needs a configured hostname route, a Linux Docker host, owner-controlled secrets and end-to-end pairing/command-recovery acceptance. Compose reserves `172.31.240.10` for Caddy and `172.31.240.11` for cloudflared as exact trusted proxy peers. Check `POCKETHOST_DOCKER_SUBNET` for overlap with the host LAN/VPN; if changed, update `POCKETHOST_TRUSTED_PROXY_IPS` to the corresponding static proxy addresses. Never trust the whole Docker/private subnet. Neither ingress mode is production-approved until the live service and phone agent are tested together.
+A control-plane/database outage may block new enrollment and remote changes. It must not stop running workloads, local host supervision or local management. Hosts retain last-authorized desired state and reconcile when connectivity returns.
 
+## Security checks
 
-## Fleet availability contract
+- Management hostname is distinct from all visitor hostnames.
+- Visitor listener has no administrative or device-management routes.
+- No public database or raw application port.
+- Exact trusted proxy peers only.
+- Short-lived sessions, role checks, token rotation and audit.
+- No shell, arbitrary SQL or unrestricted filesystem API.
+- Device and owner credentials are separate.
+- Verify revocation and command expiry from an independent client.
 
-- Control-plane outage blocks new remote enrollment and may delay remote commands; it must not stop active workloads or erase local host state.
-- Each host validates command scope, expiry, idempotency and owner authorization before applying changes.
-- Commands are durably acknowledged only after the target host records the result.
-- Device revocation invalidates the device's remote credentials and sessions; local recovery requires explicit owner re-enrollment.
-- Android and iOS clients are replaceable control clients. No mobile installation is the sole holder of fleet identity or desired state.
-- Public website visitor listeners remain separate from the management hostname and API.
+## Recovery
+
+Back up PostgreSQL and artifact volumes consistently. Protect the Owner recovery material and signing keys separately. Restore the database and artifacts from the same backup point, verify host enrollment state and rotate credentials if compromise is suspected.
