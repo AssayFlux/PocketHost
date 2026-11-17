@@ -61,7 +61,17 @@ Still required before the main-app baseline can be called verified:
 - Verify a fresh main-app installation serves HTML/CSS/JS without installing the runtime companion or any optional runtime.
 - Verify on supported Android ABIs and physical devices.
 
-## 6. Step 4 partial-close definition
+## 6. Workbench — required Step 4 workstream
+
+Workbench is a first-class in-app website development workspace, available in both operating modes. It is GitHub-inspired but does not require a GitHub account. It extends the existing website registry and file-management foundations rather than introducing a second site system.
+
+Required areas: multi-site Explorer, Editor with unsaved changes, isolated Preview, Changes/diffs, durable local Commits, Deployments, release history and rollback. Its editable workspace must be separate from the immutable production release. Editing, saving, previewing and committing cannot alter the version currently served to visitors.
+
+Publishing validates paths and content, performs bounded build steps, creates an immutable staged release and digest, previews/health-checks it, presents a diff, requires owner approval, atomically activates it and preserves a last-known-good release. Failure or process death must not leave a partially deployed site. TypeScript is supported only after the main-app compiler is bundled and verified. See [Workbench specification](WORKBENCH.md) for the full contract and acceptance checklist.
+
+Current SiteFileManager provides bounded file listing/edit/create/upload/rename/delete primitives but currently targets the deployed site tree; the Websites & Files screen disables many operations while hosting. This is not yet a production-safe isolated Workbench and must not be described as completed.
+
+## 7. Step 4 partial-close definition
 
 **Partially closed:** the architecture and existing implementation establish the always-included HTML/CSS static-serving baseline. TypeScript is frozen as a built-in main-app toolchain capability, not an optional language runtime.
 
