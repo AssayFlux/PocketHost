@@ -16,7 +16,7 @@ The old five-step delivery sequence is retired. The new three-version pathway is
 
 1. The Android phone is the first supported website-serving device and the owner-facing mobile interface.
 2. Exactly two mobile modes exist: **Server only** and **Command Center + Server**. Both serve websites. There is no Command Center-only mode.
-3. The existing Pocket Host Design Language V1 is preserved. No redesign is authorized by this roadmap. Keep the established minimal monochrome visual language, calligraphic brand treatment, readable typography, classic themes, light/dark/system appearance, login, owner menu and hamburger navigation. Fix implementation defects without changing the design identity.
+3. The existing Pocket Host Design Language V1 is preserved. No redesign is authorized by this roadmap. Keep the established minimal monochrome visual language, calligraphic brand treatment, readable typography, classic themes, light/dark/system appearance, intended login/account experience, owner menu and hamburger navigation. Source baseline note: the current native app has optional biometric unlock but no conventional login page yet; browser-console owner/passkey login is separate. Fix implementation defects without changing the design identity.
 4. v0.1.0 static hosting works without Python, Node.js or any companion APK.
 5. Website folder/ZIP import limit is 500,000,000 bytes for the ZIP archive and independently 500,000,000 bytes for extracted website contents. File count, entry count, depth, path and sensitive-file limits remain enforced.
 6. The Rust engine's 50 MiB per-file response cap is separate from the 500 MB website import limit.
@@ -127,4 +127,4 @@ The normative gate definitions and per-version matrix are in [RELEASE_GATES.md](
 
 ## 6. Active work order
 
-The current target is v0.1.0. Complete the import-and-host path first: verify the 500 MB limits, test folder and ZIP imports, run the Rust static engine, validate localhost and LAN access, exercise foreground service/recovery/backup, build APKs and test on a named physical Android device. Workbench completion, runtime acceptance and device-fabric integration remain in later releases.
+The current target is v0.1.0. Complete the import-and-host path, Cloudflare integration and the standalone owner-operated Termux/Linux Relay Node. First verify the 500 MB limits and backup mismatch, test folder/ZIP imports, run the Rust static engine, validate localhost/LAN, decouple RelayAgent from RemoteControlAgent credentials, implement the standalone public gateway, test DNS/TLS/HTTP/HTTPS from an independent network, exercise foreground/gateway lifecycle and recovery, build the APK and Relay Node artifacts, and test on named physical devices. Workbench completion, runtime acceptance and full device-fabric integration remain in later releases.
