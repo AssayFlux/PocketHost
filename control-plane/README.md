@@ -1,8 +1,8 @@
-# Pocket Host 0.1.0 — Fleet Control Plane
+# Pocket Host — Relay Gateway & Fleet Control Plane
 
-The control plane is an optional, separately deployed fleet coordination service. The Android app is the current owner client foundation; an iOS app is planned and is not present in this repository. Host agents connect to the control plane for enrollment, heartbeats, desired state, leased commands, artifact delivery, team roles and audit.
+The Rust service has separate management and visitor-ingress listeners. The minimal AssayFlux Relay gateway is a v0.1.0 dependency for owners who choose first-party public hosting; it can be deployed on an owner-controlled public VPS/server. Full fleet coordination (owner sessions, device enrollment, role grants, desired state, leased jobs and worker orchestration) remains v0.2.0. The Android app is the current owner client foundation; an iOS app is planned and is not present in this repository.
 
-The control plane does **not** serve website traffic and is not required for local hosting or continued operation of already-authorized workloads. Every host persists local configuration and supervises its own services. A control-plane outage delays remote coordination; it must not stop active services.
+The management API does **not** serve website traffic. The separate Relay visitor listener does serve bounded website requests. Neither service is required for local hosting or continued operation of the local website server. Every host persists local configuration and supervises its own services. A control-plane outage delays remote coordination; it must not stop active services.
 
 ## Components
 
@@ -43,11 +43,11 @@ Host commands are typed, allow-listed, scoped, expiring and idempotent. Hosts va
 - Host agent failure is local to that host; unrelated hosts continue.
 - Website visitor ingress and management endpoints use separate listeners/hostnames.
 
-## AssayFlux Relay
+## AssayFlux Relay — v0.1.0
 
-The Relay visitor listener accepts only verified hostnames and forwards bounded visitor requests to an enrolled host agent. It is separate from the management API. The current transport is bounded HTTP request/response, not a general-purpose TCP/WebSocket tunnel. Verify deployment, DNS/TLS, external reachability, reconnect, limits and security before advertising public availability.
+The Relay visitor listener accepts only DNS-verified hostnames and forwards bounded visitor requests to the authenticated host agent. It is separate from the management API and uses its own public TLS edge. The current transport is bounded HTTP request/response, not a general-purpose TCP/WebSocket tunnel. The owner must deploy the gateway on a public VPS/server, configure DNS and valid TLS, then verify external reachability, reconnect, limits and security before advertising public availability.
 
-Cloudflare Tunnel is an independent provider and may be used concurrently. Both providers target website ingress only.
+Cloudflare Tunnel is an independent v0.1.0 provider and may be used at the same time on a different hostname. Both providers target website ingress only. Full fleet management remains v0.2.0.
 
 ## Security
 
