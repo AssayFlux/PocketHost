@@ -19,6 +19,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import com.assayflux.pockethost.management.FleetControlPlaneClient
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,6 +45,13 @@ internal fun PocketHostDevicesScreen(context: Context) {
     var challenge by remember { mutableStateOf<DeviceTrustStore.EnrollmentChallenge?>(null) }
     var message by remember { mutableStateOf("Discovery never grants access. Verify the fingerprint, then approve the exact role and capabilities.") }
     var refresh by remember { mutableIntStateOf(0) }
+    var controlPlaneEndpoint by remember { mutableStateOf("") }
+    var ownerCredential by remember { mutableStateOf("") }
+    var fleetMapText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getString("fleet_device_map", "{}") ?: "{}") }
+    var fleetMessage by remember { mutableStateOf("Register an approved agent with the remote control plane to issue its separate device token and deliver the signed role grant.") }
+    var oneTimeToken by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    val fleetMap = remember(fleetMapText) { runCatching { JSONObject(fleetMapText) }.getOrDefault(JSONObject()) }
     val palette = MaterialTheme.colorScheme
     val devices = remember(refresh) { runCatching { DeviceTrustStore.list(context, includeRevoked = true) }.getOrDefault(emptyList()) }
     val owner = remember { runCatching { DeviceTrustStore.ownerIdentity() }.getOrNull() }
@@ -118,6 +131,19 @@ internal fun PocketHostDevicesScreen(context: Context) {
             }
         }
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("REMOTE FLEET CONNECTION", fontWeight = FontWeight.Bold)
+                Text("Use the Control Plane owner/bootstrap credential. It is exchanged for a short-lived session and is not saved by this screen.", color = palette.onSurfaceVariant)
+                OutlinedTextField(controlPlaneEndpoint, { controlPlaneEndpoint = it.trim() }, label = { Text("Control Plane HTTPS URL") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(ownerCredential, { ownerCredential = it.trim() }, label = { Text("Owner / bootstrap credential") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Text(fleetMessage, color = palette.onSurfaceVariant)
+                if (oneTimeToken.isNotBlank()) {
+                    Text("ONE-TIME WORKER TOKEN · copy this to the worker's POCKETHOST_CONTROL_TOKEN configuration:", fontWeight = FontWeight.SemiBold)
+                    Text(oneTimeToken, color = palette.primary)
+                }
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("TRUSTED DEVICES", fontWeight = FontWeight.Bold)
@@ -130,7 +156,62 @@ internal fun PocketHostDevicesScreen(context: Context) {
                         Text("${device.os} · ${device.architecture} · ${device.role} · generation ${device.generation}", color = palette.onSurfaceVariant)
                         Text(device.deviceId, color = palette.onSurfaceVariant)
                         Text(if (device.revokedAt == 0L) "Approved" else "Revoked", color = if (device.revokedAt == 0L) palette.primary else palette.error)
-                        if (device.revokedAt == 0L) OutlinedButton(onClick = {
+                        if (device.revokedAt == 0L) {
+                            val controlPlaneId = fleetMap.optString(device.deviceId)
+                            if (controlPlaneId.isBlank()) {
+                                OutlinedButton(
+                                    enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
+                                    onClick = {
+                                        scope.launch {
+                                            fleetMessage = "Registering worker and queuing its owner-signed role grant…"
+                                            oneTimeToken = ""
+                                            val result = runCatching {
+                                                withContext(Dispatchers.IO) {
+                                                    FleetControlPlaneClient.registerWorker(
+                                                        controlPlaneEndpoint, ownerCredential, device.displayName,
+                                                        DeviceTrustStore.signedGrantDocument(context, device.deviceId),
+                                                        DeviceTrustStore.ownerIdentity().second
+                                                    )
+                                                }
+                                            }
+                                            result.onSuccess { registered ->
+                                                fleetMap.put(device.deviceId, registered.controlPlaneId)
+                                                fleetMapText = fleetMap.toString()
+                                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                                    .edit().putString("fleet_device_map", fleetMapText).apply()
+                                                oneTimeToken = registered.oneTimeDeviceToken
+                                                fleetMessage = "Worker registered. The signed grant is queued; configure its one-time token and HTTPS endpoint on the worker, then wait for it to poll."
+                                            }.onFailure { fleetMessage = it.message ?: "Worker registration failed." }
+                                        }
+                                    }, modifier = Modifier.fillMaxWidth()
+                                ) { Text("Register worker & send signed grant") }
+                            } else {
+                                Text("Control Plane device: $controlPlaneId", color = palette.onSurfaceVariant)
+                                if (device.role == "native_job") OutlinedButton(
+                                    enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
+                                    onClick = {
+                                        scope.launch {
+                                            fleetMessage = "Signing and queueing a health-check job…"
+                                            val result = runCatching {
+                                                val envelope = DeviceTrustStore.createSignedJobEnvelope(
+                                                    context, device.deviceId, "native.health_check",
+                                                    JSONObject().put("check_id", "mobile-command-center-health-check")
+                                                )
+                                                withContext(Dispatchers.IO) {
+                                                    FleetControlPlaneClient.queueSignedJob(
+                                                        controlPlaneEndpoint, ownerCredential, controlPlaneId, envelope
+                                                    )
+                                                }
+                                            }
+                                            fleetMessage = result.fold(
+                                                { "Signed health-check job queued. Worker acknowledgement is visible in the Control Plane device command history." },
+                                                { it.message ?: "Could not queue signed job." }
+                                            )
+                                        }
+                                    }, modifier = Modifier.fillMaxWidth()
+                                ) { Text("Queue signed health check") }
+                            }
+                            OutlinedButton(onClick = {
                             val activity = context as? MainActivity
                             if (activity == null) {
                                 message = "Owner authentication is unavailable; revocation was blocked."
@@ -147,6 +228,7 @@ internal fun PocketHostDevicesScreen(context: Context) {
                                 }
                             }
                         }) { Text("Verify owner and revoke access") }
+                        }
                     }
                 }
             }
