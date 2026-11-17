@@ -54,7 +54,7 @@ Never share tunnel tokens in chat, source, screenshots or logs.
 - Rotate exposed credentials.
 - Never log token or put it in process arguments.
 - Keystore protects stored credentials but not a rooted device or process memory.
-- Public website traffic terminates at Rust; management API remains private.
+- Cloudflare terminates visitor TLS at the edge and forwards website requests to the Rust HTTP origin; the management API remains private.
 - Use Cloudflare Access for private sites where appropriate.
 - Test reconnect, Wi-Fi/mobile transition, screen-off, battery saver, process restart and Android lifecycle.
 - Do not promise 24/7 uptime.
