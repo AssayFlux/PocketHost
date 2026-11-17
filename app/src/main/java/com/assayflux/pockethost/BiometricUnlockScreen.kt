@@ -69,18 +69,19 @@ internal fun BiometricUnlockScreen(onRetry: () -> Unit) {
                         )
                     }
                     Text(
-                        text = "POCKET HOST",
+                        text = "Pocket Host",
                         color = palette.primary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                        fontSize = 25.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Welcome back",
                         color = palette.onSurface,
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.headlineMedium
                     )
                     Text(
                         text = "Unlock your hosting control centre with your device authentication.",
