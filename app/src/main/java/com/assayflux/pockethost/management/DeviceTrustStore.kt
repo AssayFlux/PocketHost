@@ -7,6 +7,9 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.AtomicMoveNotSupportedException
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -216,8 +219,8 @@ object DeviceTrustStore {
         if (record.optLong("revokedAt", 0L) != 0L || record.optString("role") != role ||
             record.optLong("generation", -1L) != generation) return false
         val grant = record.optJSONObject("grant") ?: return false
-        return grant.optLong("expiresAt", 0L) > nowSeconds &&
-            grant.optLong("generation", -1L) == generation
+        val expiry = runCatching { Instant.parse(grant.optString("expires_at")).epochSecond }.getOrDefault(0L)
+        return expiry > nowSeconds && grant.optLong("generation", -1L) == generation
     }
 
     // RFC 8785 canonical JSON for the fixed protocol objects; signature is excluded.
@@ -338,9 +341,10 @@ object DeviceTrustStore {
         val target = File(context.noBackupFilesDir, REGISTRY_FILE)
         val temporary = File(context.noBackupFilesDir, "$REGISTRY_FILE.tmp")
         temporary.outputStream().use { stream -> stream.write(iv); stream.write(encrypted); stream.fd.sync() }
-        if (!temporary.renameTo(target)) {
-            temporary.copyTo(target, overwrite = true)
-            temporary.delete()
+        try {
+            Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
 
