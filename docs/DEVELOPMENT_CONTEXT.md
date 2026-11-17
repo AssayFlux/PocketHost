@@ -5,7 +5,7 @@ Read [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md), [MASTER_PLAN.md](MASTER_P
 ## Non-negotiable product model
 
 - Mobile command center is the primary owner interface.
-- Mobile has exactly two modes: Server only and Command Center + Server.
+- Mobile has exactly two mutually exclusive modes: Server only and Command Center + Server. Both serve the website; only the combined mode administers the fleet.
 - Every external device must be cryptographically verified and explicitly approved by the mobile command center.
 - Separate software/firmware is built for each supported OS, architecture and board.
 - Device roles are assigned explicitly: Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery and Edge Gateway.
