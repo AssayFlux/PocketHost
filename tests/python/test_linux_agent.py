@@ -12,7 +12,7 @@ from pockethost_agent.store import AgentStore
 from pockethost_agent.runner import execute_job, validate_job
 
 POLICY = json.loads((Path(__file__).resolve().parents[2] / "protocol" / "ROLE_CAPABILITY_POLICY.json").read_text())
-PACKAGED_POLICY = json.loads((Path(__file__).resolve().parents[1] / "agents" / "linux" / "src" / "pockethost_agent" / "ROLE_CAPABILITY_POLICY.json").read_text())
+PACKAGED_POLICY = json.loads((Path(__file__).resolve().parents[2] / "agents" / "linux" / "src" / "pockethost_agent" / "ROLE_CAPABILITY_POLICY.json").read_text())
 
 
 class LinuxAgentTests(unittest.TestCase):
@@ -67,8 +67,8 @@ class LinuxAgentTests(unittest.TestCase):
                 verify_role_grant(grant, owner_key, device_id, 2, POLICY)
 
     def test_typed_job_default_deny(self):
-        grant = {"grant_id": "g", "owner_id": "o", "device_id": "d", "role": "native_job", "capabilities": ["native_job.report_health"], "resource_budget": {"cpu_millis": 100, "memory_bytes": 4096, "storage_bytes": 0, "network_bytes_per_day": 0}}
-        job = {"protocol": "pockethost.device/1.0", "target_device_id": "d", "role_grant_id": "g",
+        grant = {"grant_id": "00000000-0000-4000-8000-000000000001", "owner_id": "o", "device_id": "d" * 64, "role": "native_job", "capabilities": ["native_job.report_health"], "resource_budget": {"cpu_millis": 100, "memory_bytes": 4096, "storage_bytes": 0, "network_bytes_per_day": 0}}
+        job = {"protocol": "pockethost.device/1.0", "target_device_id": "d" * 64, "role_grant_id": "00000000-0000-4000-8000-000000000001", "job_id": "00000000-0000-4000-8000-000000000002", "correlation_id": "00000000-0000-4000-8000-000000000003", "idempotency_key": "idempotency-key-0001",
                "owner_id": "o", "kind": "native.health_check", "issued_at": "2026-11-17T00:00:00Z",
                "expires_at": "2027-11-17T00:05:00Z", "resource_budget": {"timeout_seconds": 30, "memory_bytes": 1024}, "payload": {"check_id": "node-1"}}
         self.assertEqual("healthy", execute_job(job, grant)["status"])
