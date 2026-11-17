@@ -149,12 +149,22 @@ class RuntimeIsolationProbeTest {
             visitorOne.connect(address)
             visitorTwo.connect(address)
             try {
-                visitorOne.getOutputStream().write("request-one\n".toByteArray(Charsets.UTF_8))
-                visitorOne.getOutputStream().flush()
                 visitorOne.soTimeout = 3_000
                 visitorTwo.soTimeout = 3_000
-                visitorTwo.getOutputStream().write("request-two\n".toByteArray(Charsets.UTF_8))
-                visitorTwo.getOutputStream().flush()
+                // API 26 may block a small Unix-socket write until the peer accepts.
+                // Drive both writes concurrently with the Binder accept operation.
+                val writeFailure = AtomicReference<Throwable?>()
+                val writers = listOf(
+                    visitorOne to "request-one\n",
+                    visitorTwo to "request-two\n"
+                ).mapIndexed { index, (socket, payload) ->
+                    Thread({
+                        runCatching {
+                            socket.getOutputStream().write(payload.toByteArray(Charsets.UTF_8))
+                            socket.getOutputStream().flush()
+                        }.onFailure(writeFailure::set)
+                    }, "PocketHost-Isolation-Writer-$index").apply { start() }
+                }
                 val data = Parcel.obtain()
                 val reply = Parcel.obtain()
                 val acceptedCount = try {
@@ -170,6 +180,9 @@ class RuntimeIsolationProbeTest {
                     listenerPfd.close()
                     data.recycle()
                     reply.recycle()
+                    writers.forEach { it.join(5_000) }
+                    check(writers.none { it.isAlive }) { "Unix-socket request writer did not complete." }
+                    writeFailure.get()?.let { throw it }
                 }
                 assertTrue("Isolated process did not accept both host-listener connections", acceptedCount == 2)
                 val responses = listOf(
