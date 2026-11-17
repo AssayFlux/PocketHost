@@ -2,7 +2,7 @@
 
 ## Serving model
 
-The mobile website-serving node is the final website origin in the 0.1.0 product baseline. The mobile owner selects Command Center, Server or Command Center + Server mode. Customer-selected language runtimes are installed on this mobile serving node only.
+The mobile website-serving node is the final website origin in the 0.1.0 product baseline. The mobile owner selects exactly one of two modes: Server only or Command Center + Server. Server only is a serving-only mode and cannot enroll or assign worker devices. Customer-selected language runtimes are installed on this mobile serving node only.
 
 Worker devices support the serving node through assigned infrastructure jobs: storage, traffic proxy/cache, build and publish preparation, backups and approved native backend/job adapters. They do not silently host customer-selected Python/Node/PHP runtime components in this baseline.
 
