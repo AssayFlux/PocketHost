@@ -29,6 +29,10 @@ A website root contains <code>index.html</code>. ZIP import accepts the file at 
 
 The Rust engine's 50 MiB per-file response limit is separate. A site may contain many files whose combined size is up to the import cap, but an individual asset above the server response cap will not be served until that engine limit is changed and separately accepted. The current full-app backup has a 50 MiB static-site cap and 200 MiB total uncompressed cap, so it does not back up the full 500 MB import allowance. This must be resolved or explicitly approved before v0.1.0 release.
 
+## Separate website source repository
+
+The owner also maintains the private repository [AssayFlux/AssayFlux.org](https://github.com/AssayFlux/AssayFlux.org). It is a separate website source repository, not part of Pocket Host. The v0.1.0 hosting flow does not automatically clone private GitHub repositories: build the site in its own workflow/desktop environment and import the resulting static output. The repository was inspected on 2026-11-17 and currently contains only `.gitignore`, `LICENSE` and a short `README.md`; no deployable website source or build output is present yet. Once the source is added, build its production output and import that folder (for Vite, `dist/`).
+
 ## Static build handling
 
 v0.1.0 hosts already-built static output. For a Vite/React project, run the build on a desktop/CI environment and import the contents of the production dist directory. Raw TypeScript and JSX are not directly browser-executable. The main-app TypeScript compiler and Workbench build integration are v0.1.1.
