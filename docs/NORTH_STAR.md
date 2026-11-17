@@ -7,7 +7,7 @@ Make personal and community-owned infrastructure approachable. A user controls a
 ## Product promises
 
 - Mobile is the primary command center.
-- Mobile can be Command Center, Server, or Command Center + Server.
+- Mobile has exactly two operating modes: Server only, or Command Center + Server.
 - Every external device is verified and explicitly approved before integration.
 - Every device runs platform-specific software/firmware for its supported role.
 - Users assign devices to storage, traffic, build/publish, native backend jobs, backup or edge gateway roles.
@@ -23,11 +23,10 @@ Make personal and community-owned infrastructure approachable. A user controls a
 
 | Mode | Command role | Website server role |
 |---|---|---|
-| Command Center | On | Off |
-| Server | Off | On |
+| Server only | Off | On |
 | Command Center + Server | On | On |
 
-Command and server roles have separate lifecycle controls. The mobile app is not required for already-authorized jobs on other devices to continue. iOS is a first-class command client; always-on hosting is not promised where Apple's platform lifecycle does not support it.
+Server only exposes website-serving controls and does not enroll devices or assign fleet roles. Command Center + Server exposes both fleet administration and website-serving controls. The mobile app is not required for already-authorized jobs on other devices to continue. iOS is a first-class command client; always-on hosting is not promised where Apple's platform lifecycle does not support it.
 
 ## Device fabric
 
