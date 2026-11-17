@@ -231,7 +231,7 @@ internal fun PocketHostDevicesScreen(context: Context) {
                                                 }
                                             }
                                             fleetMessage = result.fold(
-                                                { "Signed health-check job queued. Worker acknowledgement is visible in the Control Plane device command history." },
+                                                { "Signed health-check job queued. The Control Plane records the worker acknowledgement; live result display is not implemented in this screen yet." },
                                                 { it.message ?: "Could not queue signed job." }
                                             )
                                         }
