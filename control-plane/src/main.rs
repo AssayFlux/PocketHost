@@ -17,6 +17,7 @@ use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use subtle::ConstantTimeEq;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
+use webauthn_rs::prelude::*;
 
 mod relay;
 
@@ -241,6 +242,166 @@ async fn admin_credential(headers: &HeaderMap, state: &AppState) -> Result<Admin
         bootstrap_hash: None,
         user_token_hash: Some(token_hash(supplied)),
     }).ok_or((StatusCode::UNAUTHORIZED, "invalid_admin_credential".into()))
+}
+
+
+fn owner_webauthn() -> Result<Webauthn, (StatusCode, String)> {
+    let rp_id = std::env::var("POCKETHOST_WEBAUTHN_RP_ID")
+        .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "webauthn_rp_id_not_configured".into()))?;
+    let origin = std::env::var("POCKETHOST_CONTROL_ORIGIN")
+        .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "webauthn_origin_not_configured".into()))?;
+    let origin = Url::parse(&origin).map_err(internal)?;
+    if origin.scheme() != "https" || origin.host_str().is_none() {
+        return Err((StatusCode::SERVICE_UNAVAILABLE, "webauthn_requires_https_origin".into()));
+    }
+    WebauthnBuilder::new(&rp_id, &origin)
+        .map_err(internal)?
+        .rp_name("PocketHost Owner")
+        .build()
+        .map_err(internal)
+}
+
+#[derive(Deserialize)]
+struct PasskeyRegistrationStart { display_name: String }
+
+#[derive(Deserialize)]
+struct PasskeyRegistrationFinish {
+    challenge_id: Uuid,
+    credential: Value,
+    display_name: String,
+}
+
+#[derive(Deserialize)]
+struct PasskeyAuthenticationFinish {
+    challenge_id: Uuid,
+    credential: Value,
+}
+
+async fn start_owner_passkey_registration(
+    State(s): State<AppState>, headers: HeaderMap, Json(input): Json<PasskeyRegistrationStart>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    if actor.role != "owner" {
+        return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
+    }
+    let display_name = input.display_name.trim();
+    if display_name.is_empty() || display_name.len() > 80 {
+        return Err((StatusCode::BAD_REQUEST, "invalid_passkey_display_name".into()));
+    }
+    let webauthn = owner_webauthn()?;
+    let (public_key, registration) = webauthn.start_passkey_registration(
+        Uuid::nil(), "owner", display_name, None,
+    ).map_err(internal)?;
+    let state = serde_json::to_value(registration).map_err(internal)?;
+    let challenge_id = Uuid::new_v4();
+    sqlx::query("DELETE FROM owner_passkey_challenges WHERE expires_at <= now()")
+        .execute(&s.db).await.map_err(internal)?;
+    sqlx::query("INSERT INTO owner_passkey_challenges(id,ceremony,session_id,state,expires_at) VALUES($1,'registration',$2,$3,now()+interval '5 minutes')")
+        .bind(challenge_id).bind(actor.session_id).bind(state)
+        .execute(&s.db).await.map_err(internal)?;
+    Ok(Json(json!({"challengeId":challenge_id,"publicKey":public_key})))
+}
+
+async fn finish_owner_passkey_registration(
+    State(s): State<AppState>, headers: HeaderMap, Json(input): Json<PasskeyRegistrationFinish>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    let actor = admin_write(&headers, &s).await?;
+    if actor.role != "owner" {
+        return Err((StatusCode::FORBIDDEN, "owner_role_required".into()));
+    }
+    let display_name = input.display_name.trim();
+    if display_name.is_empty() || display_name.len() > 80 {
+        return Err((StatusCode::BAD_REQUEST, "invalid_passkey_display_name".into()));
+    }
+    let row = sqlx::query("DELETE FROM owner_passkey_challenges WHERE id=$1 AND ceremony='registration' AND session_id=$2 AND expires_at>now() RETURNING state")
+        .bind(input.challenge_id).bind(actor.session_id)
+        .fetch_optional(&s.db).await.map_err(internal)?
+        .ok_or((StatusCode::UNAUTHORIZED, "passkey_registration_challenge_expired_or_invalid".into()))?;
+    let state: PasskeyRegistration = serde_json::from_value(row.get("state")).map_err(internal)?;
+    let credential: RegisterPublicKeyCredential = serde_json::from_value(input.credential).map_err(internal)?;
+    let passkey = owner_webauthn()?.finish_passkey_registration(&credential, &state).map_err(internal)?;
+    let credential_id = hex::encode(passkey.cred_id().as_ref());
+    let credential_json = serde_json::to_value(&passkey).map_err(internal)?;
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    let inserted = sqlx::query("INSERT INTO owner_passkeys(credential_id,credential,display_name) VALUES($1,$2,$3) ON CONFLICT(credential_id) DO NOTHING")
+        .bind(&credential_id).bind(credential_json).bind(display_name)
+        .execute(&mut *tx).await.map_err(internal)?;
+    if inserted.rows_affected() != 1 {
+        return Err((StatusCode::CONFLICT, "passkey_already_registered".into()));
+    }
+    sqlx::query("UPDATE owner_auth_policy SET passkey_required=TRUE,updated_at=now() WHERE id=1")
+        .execute(&mut *tx).await.map_err(internal)?;
+    // The bootstrap credential is a recovery/bootstrap path only. Once the first passkey
+    // is enrolled, revoke every bootstrap-derived session so it cannot bypass passkey auth.
+    sqlx::query("UPDATE control_sessions SET revoked_at=now() WHERE bootstrap_token_hash IS NOT NULL AND revoked_at IS NULL")
+        .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES($1,'owner.passkey.register',$2,$3)")
+        .bind(&actor.name).bind(&credential_id).bind(json!({"displayName":display_name}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::CREATED, Json(json!({"credentialId":credential_id,"displayName":display_name,"passkeyRequired":true}))))
+}
+
+async fn start_owner_passkey_authentication(
+    State(s): State<AppState>, headers: HeaderMap, ConnectInfo(peer): ConnectInfo<SocketAddr>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    ensure_control_plane_host(&headers)?;
+    let client_ip = relay_client_ip(peer.ip(), headers.get("cf-connecting-ip").and_then(|value| value.to_str().ok()));
+    if !allow_admin_session_attempt(client_ip) {
+        return Err((StatusCode::TOO_MANY_REQUESTS, "passkey_auth_rate_limited".into()));
+    }
+    let rows = sqlx::query("SELECT credential FROM owner_passkeys WHERE revoked_at IS NULL ORDER BY created_at")
+        .fetch_all(&s.db).await.map_err(internal)?;
+    let passkeys: Vec<Passkey> = rows.into_iter()
+        .map(|row| serde_json::from_value(row.get("credential")).map_err(internal))
+        .collect::<Result<_, _>>()?;
+    if passkeys.is_empty() {
+        return Err((StatusCode::CONFLICT, "owner_passkey_not_enrolled".into()));
+    }
+    let (public_key, authentication) = owner_webauthn()?.start_passkey_authentication(&passkeys).map_err(internal)?;
+    let state = serde_json::to_value(authentication).map_err(internal)?;
+    let challenge_id = Uuid::new_v4();
+    sqlx::query("DELETE FROM owner_passkey_challenges WHERE expires_at <= now()")
+        .execute(&s.db).await.map_err(internal)?;
+    sqlx::query("INSERT INTO owner_passkey_challenges(id,ceremony,session_id,state,expires_at) VALUES($1,'authentication',NULL,$2,now()+interval '5 minutes')")
+        .bind(challenge_id).bind(state).execute(&s.db).await.map_err(internal)?;
+    Ok(Json(json!({"challengeId":challenge_id,"publicKey":public_key})))
+}
+
+async fn finish_owner_passkey_authentication(
+    State(s): State<AppState>, headers: HeaderMap, Json(input): Json<PasskeyAuthenticationFinish>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
+    ensure_control_plane_host(&headers)?;
+    let row = sqlx::query("DELETE FROM owner_passkey_challenges WHERE id=$1 AND ceremony='authentication' AND session_id IS NULL AND expires_at>now() RETURNING state")
+        .bind(input.challenge_id).fetch_optional(&s.db).await.map_err(internal)?
+        .ok_or((StatusCode::UNAUTHORIZED, "passkey_authentication_challenge_expired_or_invalid".into()))?;
+    let state: PasskeyAuthentication = serde_json::from_value(row.get("state")).map_err(internal)?;
+    let credential: PublicKeyCredential = serde_json::from_value(input.credential).map_err(internal)?;
+    let credential_id = hex::encode(credential.get_credential_id());
+    let row = sqlx::query("SELECT credential FROM owner_passkeys WHERE credential_id=$1 AND revoked_at IS NULL")
+        .bind(&credential_id).fetch_optional(&s.db).await.map_err(internal)?
+        .ok_or((StatusCode::UNAUTHORIZED, "unknown_or_revoked_owner_passkey".into()))?;
+    let mut passkey: Passkey = serde_json::from_value(row.get("credential")).map_err(internal)?;
+    let result = owner_webauthn()?.finish_passkey_authentication(&credential, &state).map_err(internal)?;
+    let _ = passkey.update_credential(&result);
+    let updated_credential = serde_json::to_value(&passkey).map_err(internal)?;
+    let session_id = Uuid::new_v4();
+    let token = new_token();
+    let expires_at = Utc::now() + chrono::Duration::hours(ADMIN_SESSION_TTL_HOURS);
+    let mut tx = s.db.begin().await.map_err(internal)?;
+    sqlx::query("UPDATE owner_passkeys SET credential=$2,last_used_at=now() WHERE credential_id=$1 AND revoked_at IS NULL")
+        .bind(&credential_id).bind(updated_credential).execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO control_sessions(id,user_id,name,role,token_hash,bootstrap_token_hash,user_token_hash,expires_at,owner_passkey_id) VALUES($1,NULL,'PocketHost Owner','owner',$2,NULL,NULL,$3,$4)")
+        .bind(session_id).bind(token_hash(&token)).bind(expires_at).bind(&credential_id)
+        .execute(&mut *tx).await.map_err(internal)?;
+    sqlx::query("INSERT INTO audit_events(actor,action,target,details) VALUES('PocketHost Owner','session.passkey',$1,$2)")
+        .bind(session_id.to_string()).bind(json!({"credentialId":credential_id,"expiresAt":expires_at}))
+        .execute(&mut *tx).await.map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    Ok((StatusCode::CREATED, Json(json!({
+        "accessToken":token,"expiresAt":expires_at,"role":"owner",
+        "authenticatedWith":"passkey","warning":"This session expires after 12 hours; sensitive writes require a passkey authentication within the previous five minutes."
+    }))))
 }
 
 async fn create_admin_session(
@@ -1073,6 +1234,10 @@ async fn main() -> anyhow::Result<()> {
     let control_app = Router::new()
         .route("/health", get(health))
         .route("/v1/admin/session", post(create_admin_session).delete(revoke_admin_session))
+        .route("/v1/admin/passkeys/registration/start", post(start_owner_passkey_registration))
+        .route("/v1/admin/passkeys/registration/finish", post(finish_owner_passkey_registration))
+        .route("/v1/admin/passkeys/authentication/start", post(start_owner_passkey_authentication))
+        .route("/v1/admin/passkeys/authentication/finish", post(finish_owner_passkey_authentication))
         .route("/v1/admin/audit", get(list_audit))
         .route("/v1/admin/users", get(list_users).post(create_user))
         .route("/v1/admin/users/:id", axum::routing::delete(revoke_user))
