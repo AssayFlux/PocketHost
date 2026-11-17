@@ -21,6 +21,11 @@ class PocketHostDashboardUiSmokeTest {
             .putBoolean("biometric_unlock_enabled", false)
             .commit()
 
+        val owner = com.assayflux.pockethost.management.HostAccountStore.list(context).firstOrNull { it.role == "OWNER" }
+            ?: com.assayflux.pockethost.management.HostAccountStore.create(
+                context, "uiowner", "PocketHost-UI-Owner-Password-42".toCharArray(), "OWNER"
+            )
+        PocketHostOwnerSession.username = owner.username
         val device = UiDevice.getInstance(instrumentation)
         val externalFiles = checkNotNull(context.getExternalFilesDir(null)) { "App external files directory is unavailable" }
         val screenshotDir = File(externalFiles, "screenshots")
