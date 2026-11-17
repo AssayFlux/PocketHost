@@ -36,7 +36,7 @@ There is no Command Center-only mode. External devices use separate platform-spe
 | Remote control plane | `control-plane/` | Rust/Axum API, PostgreSQL migrations, sessions/passkeys foundation, device commands, audit, artifact metadata and Compose/Caddy deployment | Backend foundation; production deployment and end-to-end acceptance open |
 | Browser operator console | `web-console/` | React 18, TypeScript 5.7, Vite 6, separate browser UI | Builds independently in CI; not bundled in Android app |
 | Linux Node Agent | `agents/linux/` | Python package, P-256 identity, owner challenge/grant/job verification, SQLite durable jobs, HTTPS polling preview and allow-listed health/storage/backup snapshot executors | Preview foundation; production/physical acceptance open |
-| Protocol contracts | `protocol/` | Versioned JSON Schemas, default-deny role/job policies and validator/tests | Contract implementation present; gate evidence tracked separately |
+| Protocol contracts | `protocol/` | Versioned JSON Schemas, default-deny role/job policies and validator/tests | Step 1 contract gate passed on Alpha CI; production crypto remains Step 2+ |
 | Future Runtime Library | `runtime-library/catalog/` | 20 JSON manifests; Python and Node marked in progress, 18 others planned | Catalog metadata only; no independent runtime package artifacts or Runtime Manager |
 | DemonCore | External project | Link to separate AssayFlux/DemonCore firmware and board profiles | External dependency; Pocket Host integration/board acceptance open |
 
