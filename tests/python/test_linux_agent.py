@@ -3,13 +3,15 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.exceptions import InvalidSignature
 
-from pockethost_agent.trust import canonical_json, load_or_create_identity, public_key_id, verify_role_grant, verify_job_signature
+from pockethost_agent.trust import canonical_json, load_or_create_identity, public_key_id, verify_role_grant, verify_job_signature, sign_challenge
 from pockethost_agent.store import AgentStore
 from pockethost_agent.runner import execute_job, validate_job
 
@@ -43,6 +45,53 @@ class LinuxAgentTests(unittest.TestCase):
         signature = owner.sign(canonical_json(grant), ec.ECDSA(hashes.SHA256()))
         grant["signature"] = {"algorithm": "ecdsa-p256-sha256", "key_id": grant["owner_id"], "value": base64.b64encode(signature).decode()}
         return grant, base64.b64encode(owner_der).decode(), owner
+
+    def test_enrollment_proof_binds_owner_challenge_and_candidate_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            device_key, device_id, device_public = load_or_create_identity(Path(directory))
+            owner = ec.generate_private_key(ec.SECP256R1())
+            owner_der = owner.public_key().public_bytes(
+                serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+            owner_id = public_key_id(owner_der)
+            now = datetime.now(timezone.utc)
+            challenge = {
+                "protocol": "pockethost.device/1.0",
+                "challenge_id": "00000000-0000-4000-8000-000000000001",
+                "owner_id": owner_id,
+                "device_id": device_id,
+                "challenge_nonce": "A" * 43,
+                "issued_at": now.isoformat().replace("+00:00", "Z"),
+                "expires_at": (now + timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
+                "single_use": True,
+                "transport": "lan",
+            }
+            owner_signature = owner.sign(canonical_json(challenge), ec.ECDSA(hashes.SHA256()))
+            challenge["signature"] = {
+                "algorithm": "ecdsa-p256-sha256", "key_id": owner_id,
+                "value": base64.b64encode(owner_signature).decode(),
+            }
+            candidate = {
+                "architecture": "x86_64", "device_id": device_id,
+                "display_name": "Linux worker", "os": "linux",
+                "product": "pockethost-node-agent", "protocol_version": "1.0",
+                "public_key_spki": device_public,
+                "requested_capabilities": ["native_job.report_health"],
+            }
+            request = {"challenge": challenge, "candidate": candidate}
+            proof = base64.b64decode(sign_challenge(
+                device_key, request, base64.b64encode(owner_der).decode()
+            ))
+            unsigned = {key: value for key, value in challenge.items() if key != "signature"}
+            payload = canonical_json(unsigned) + b"\\n" + canonical_json(candidate)
+            device_key.public_key().verify(proof, payload, ec.ECDSA(hashes.SHA256()))
+            altered = dict(candidate)
+            altered["display_name"] = "Different device name"
+            with self.assertRaises(InvalidSignature):
+                device_key.public_key().verify(
+                    proof, canonical_json(unsigned) + b"\\n" + canonical_json(altered),
+                    ec.ECDSA(hashes.SHA256())
+                )
 
     def test_grant_signature_and_policy(self):
         with tempfile.TemporaryDirectory() as directory:
