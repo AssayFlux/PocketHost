@@ -131,9 +131,19 @@ Capacity Lab expands from initial static GET sweeps to cached/uncached content, 
 
 Encrypted `.afbackup` includes supported site/runtime source, route mapping and allowlisted non-secret settings. Exclude tokens, sessions, Keystore keys, signing material and device-bound credentials. Test corruption, wrong passphrase, interruption, low storage, failed activation and rollback. Logs are bounded, rotated and redacted. Restore must preserve last known-good site.
 
-## 10. UI contract
+## 10. UI contract — Pocket Host Design Language V1
 
-The owner-approved Android layout is authoritative in `docs/UI_DESIGN.md`: biometric app-unlock screen, then a branded home with hamburger drawer, account dropdown, swipeable enlarged-centre service carousel and stacked live information cards. The drawer is the primary global navigation and routes into all existing product feature implementations. The previous five-destination bottom-navigation shell is retired. Use classic warm-neutral cards, navy identity, monochrome icons, light default and coordinated dark mode. No gradients/neon/glass. Every operational state is backend/device-derived. Simple Mode prioritizes first static publish; Advanced exposes runtime/network/capacity controls with clear trust and resource warnings. Preserve all feature state/actions while reorganizing the UI.
+The owner-approved visual and interaction contract is maintained in `docs/UI_DESIGN.md`. V1 is classic, elegant and restrained: calligraphic Pocket Host wordmark, serif display headings, readable sans-serif operational text, minimal monochrome icons, coordinated classic palettes, and System/Light/Dark appearance.
+
+The native launch experience is a branded local biometric app-unlock screen (not a claimed username/password account login). The dashboard has a compact brand region, a top control bar with hamburger on the left and a separate user/account menu on the right, **tall portrait-rectangular service cards** with a horizontally swipeable carousel, and a fixed information centre with four or five compact, information-rich bars using icons, metrics and meaningful graphs.
+
+**Dashboard scrolling contract:** the dashboard itself does not vertically scroll. Only the service carousel scrolls horizontally. The information centre is fixed and does not scroll vertically or horizontally. It shows four or five useful bars simultaneously; adapt their layout and density for available screen space without clipping or making dashboard scrolling the fallback.
+
+The hamburger drawer is the primary global navigation. The user/account dropdown is visually distinct and must expose only real identity/session actions. Both menus require clear hierarchy, monochrome icons, selected/focus states, accessible touch targets and correct dismissal/back behaviour. Feature detail screens inherit V1 tokens but use task-appropriate layouts and may vertically scroll when their content requires it.
+
+V1 includes ten classic palettes (Classic Ivory, Midnight, Forest, Burgundy, Ocean, Graphite, Sandstone, Lavender, Copper and Arctic), plus System/Light/Dark appearance selection with persisted preferences. Theme tokens apply to login, dashboard, drawer, user menu, feature screens, settings, dialogs, charts and system bars. Full dimensions, typography, card proportions, responsive rules and acceptance checks are specified in `docs/UI_DESIGN.md`.
+
+Do not restore the retired bottom-navigation shell, square service tiles, landscape service cards, a vertically scrolling dashboard, or a scrolling notification/information feed. Preserve feature state/actions and truthful operational status. Source implementation is not proof of Android build, accessibility or device acceptance; those remain exact-SHA verification gates.
 
 ## 11. Implementation sequence
 
