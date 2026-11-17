@@ -204,6 +204,17 @@ object RelayAgent {
             line.append(next.toChar())
         }
     }
+    internal fun addResponseFramingHeader(headers: MutableMap<String, String>, name: String, value: String) {
+        val normalized = name.lowercase()
+        require(normalized == "transfer-encoding" || normalized == "content-length") {
+            "Unsupported local HTTP framing header."
+        }
+        require(!headers.containsKey(normalized)) {
+            "Duplicate local HTTP $normalized header."
+        }
+        headers[normalized] = value
+    }
+
     internal data class ResponseFraming(val chunked: Boolean, val contentLength: Long?)
 
     internal fun validateResponseFraming(transferEncodingInput: String?, contentLengthInput: String?): ResponseFraming {
@@ -308,7 +319,9 @@ object RelayAgent {
                     headers[name] = if (headers.containsKey(name)) "${headers[name]}, $value" else value
                 }
                 if (name == "set-cookie" && value.length <= 8_192) setCookies.add(value)
-                if (name == "transfer-encoding" || name == "content-length") headers[name] = value
+                if (name == "transfer-encoding" || name == "content-length") {
+                    addResponseFramingHeader(headers, name, value)
+                }
             }
             val framing = validateResponseFraming(headers["transfer-encoding"], headers["content-length"])
             val response = ByteArrayOutputStream()
