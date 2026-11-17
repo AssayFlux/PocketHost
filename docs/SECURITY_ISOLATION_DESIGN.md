@@ -1,49 +1,110 @@
-# SECURITY ISOLATION DESIGN — POCKET HOST
+# Pocket Host 0.1.0 — Security and Isolation Architecture
 
-**Status:** design and proof work only; production sandbox not accepted.  
-**Normative implementation plan:** `docs/SECURITY_GATE_2_EXECUTION_PLAN.md`.
+## 1. Protected assets
 
-## 1. Threat model
+- Owner/team identity, sessions, recovery credentials and device keys.
+- Website source, deployment artifacts, persistent data and backups.
+- Runtime secrets, database credentials and internal service tokens.
+- Host operating-system data and management interfaces.
+- Tunnel credentials, hostname ownership proofs and certificates.
+- Device identity, MCU provisioning keys and OTA signing authority.
+- Logs, audit records and private visitor information.
 
-Treat Python/Node application code as potentially compromised. It must not read sibling projects, host-private files, management sessions, tunnel credentials, backup keys or device-bound secrets. It must not create arbitrary outbound network connections, reach loopback/private/link-local/metadata endpoints, persist across deletion, or exhaust the phone without bounded controls.
+## 2. Threat actors and assumptions
 
-Rust static hosting must remain available when a runtime cell crashes or is stopped.
+Treat uploaded application code, dependencies, archives, network peers, LAN discovery, public visitors, compromised service cells and compromised edge nodes as untrusted. A device being on the same Wi-Fi, enrolled in the fleet or owned by the same account does not automatically grant access to other devices or projects.
 
-## 2. Current verified boundary
+## 3. Identity hierarchy
 
-| Area | Current source behavior | Conclusion |
-|---|---|---|
-| Host/companion | Different Android package UIDs | Host-private file separation improved |
-| Project identity | Shared companion UID | No per-project isolation |
-| Python | Multiple site roots may share WSGI process | Cross-project state/file access risk |
-| Node | Separate process but same companion UID | Not a distinct security identity |
-| Python listener | Pinned loopback | Listener exposure control only |
-| Node preload | Restricts ordinary TCP listen calls | Not native or outbound network control |
-| Egress | Companion INTERNET permission | No OS-enforced per-project denial |
-| Archive checks | Bounds and path/credential filters | Import hardening, not sandboxing |
+Keep distinct cryptographic identities for:
+- Human owner and team member.
+- Mobile command-center installation.
+- Host device and host agent.
+- Website/service component.
+- Visitor/client.
+- MCU/edge node.
+- Runtime package publisher and deployment signer.
 
-## 3. Required architecture
+Use device-bound keys where supported, short-lived scoped credentials, explicit owner approvals, rotation, revocation and recovery. Never embed fleet-wide secrets in runtime packages, firmware images or source repositories.
 
-One Android isolated service process/UID per executable project. Trusted broker handles allocation, archive staging, lifecycle and capability transfer but never executes customer code. A cell receives only its own project/scratch data capability and a host-created visitor listener capability. Rust remains the only public ingress.
+## 4. Plane separation
 
-A native fail-closed kernel policy must be installed before Python/Node initialization. Deny socket creation and outbound network paths; permit only the explicitly brokered visitor transport. Filesystem and network controls must be enforced by OS/kernel mechanisms, not language-level monkey patches.
+**Control plane:** identity, enrollment, desired state, commands, policy and audit.
 
-## 4. Feasibility risks
+**Service data plane:** website traffic, internal service calls, artifacts and storage.
 
-Android 8/API 26 SELinux and isolated-process behavior may reject directory-FD or socket-FD access. The previous Binder-passed TCP socket probe failed under SELinux. The newer abstract Unix-domain listener and seccomp probe is still a proof spike. Do not assume it passes because it compiles. If descriptors are blocked, test a brokered descriptor-backed storage/stream design; never weaken SELinux, expose parent directories or grant INTERNET to the project cell to make a demo work.
+**Device/edge plane:** MCU telemetry and allow-listed hardware operations.
 
-## 5. Adversarial acceptance
+Public visitor ingress may reach only the website ingress and explicitly published service routes. It must never reach management APIs, runtime brokers, debug endpoints, artifact administration or MCU control.
 
-- Distinct UIDs for two concurrent projects.
-- Own project read/write succeeds; sibling, parent and host paths fail.
-- Credentials, account/session state and tunnel tokens inaccessible.
-- socket/socketpair/connect/bind, DNS, TCP, UDP, raw, IPv4/IPv6 and native bypasses fail.
-- Loopback management, private, link-local and metadata targets unreachable.
-- Child/native code cannot escape the same restrictions.
-- Revoked/stale FDs and cross-project stream injection fail.
-- Cell crash, OOM, timeout and restart do not affect static hosting.
-- API 26, 33 and 35 pass on one exact SHA; independent review accepts findings.
+## 5. Workload isolation
 
-## 6. Operational policy
+Each project/component receives:
+- Distinct OS-enforced execution identity where supported.
+- Dedicated project data roots and explicitly mounted persistent volumes.
+- Scoped secrets delivered only at runtime.
+- Deny-by-default filesystem and network access.
+- Resource ceilings, timeouts, process limits and bounded queues.
+- Explicit service-to-service capabilities and authenticated routes.
 
-Until acceptance, Python/Node are owner-trusted-code-only. Never expose marketplace or visitor-submitted execution. Do not claim multi-tenant sandboxing, egress enforcement, hard CPU quotas or production security. See North Star Gate 2 for release dependency and exit criteria.
+Runtime packs may be shared as immutable software. Runtime processes, data, credentials and permissions are not shared by default.
+
+Platform enforcement must be proven separately:
+- Android: isolated processes/services, Binder capability brokerage, SELinux and platform-specific filesystem/network constraints.
+- Linux: namespaces, cgroups, seccomp, capabilities, mount isolation and an unprivileged service identity.
+- Windows: service identities, ACLs, restricted tokens/AppContainer where appropriate, firewall and job-object limits.
+- macOS: launchd identities, sandbox/entitlements and platform-supported filesystem/network controls.
+- Embedded Linux: exact kernel, init, filesystem and hardware security profile.
+- MCU: board-specific firmware privilege model, safe GPIO profile, bounded parser, watchdog and authenticated device protocol.
+
+A process boundary, package boundary, language-level sandbox or container label alone is not proof of isolation.
+
+## 6. Device-to-device trust
+
+- Discovery is unauthenticated hinting only.
+- Pairing uses short-lived one-time challenges and owner approval of the exact key/fingerprint and requested role.
+- Connections use standard authenticated encryption such as reviewed TLS configurations.
+- Commands are typed, versioned, bounded, expiring, scoped and auditable.
+- Replay protection, idempotency and durable acknowledgement are mandatory.
+- Revocation closes sessions and invalidates credentials within a bounded interval.
+- Devices never receive the owner's master credential or unrelated device secrets.
+
+## 7. Fault containment as security
+
+A compromised or exhausted component must not:
+- Read sibling project files or host-private state.
+- Access another component's secrets.
+- Bind arbitrary public listeners or create unapproved egress.
+- Reach loopback management, cloud metadata, private networks or other devices without an explicit capability.
+- Modify host supervisor, deployment trust roots or update policy.
+- Exhaust unrelated components through unbounded CPU, memory, disk, file descriptors, queues or connections.
+
+The host supervisor, website ingress, runtime broker and identity store must be separate trust boundaries. A failure in telemetry, a tunnel or the mobile client must not disable local hosting.
+
+## 8. Supply chain and updates
+
+- Sign host agents, runtime packs, deployment manifests, firmware and update metadata.
+- Verify artifact digest, signature, publisher, compatibility and rollback policy before activation.
+- Stage updates, run health checks and atomically activate.
+- Preserve last-known-good artifacts and recover from power loss, disk full and network interruption.
+- Prevent downgrade to revoked or vulnerable versions according to explicit policy.
+- Generate SBOM and license inventory for distributed artifacts.
+
+## 9. DemonCore/MCU boundary
+
+DCP payload parsing is not authentication. MCU commands require a claimed device identity, authenticated transport, replay protection, owner authorization, per-board allow-list and audit. Never bridge public website requests directly to GPIO. A compromised MCU must not gain host-agent privileges or other device keys.
+
+## 10. Required adversarial tests
+
+- Cross-project file, secret and process isolation.
+- Native/runtime escape and alternate network-stack attempts.
+- Loopback, private, link-local and metadata endpoint denial.
+- Forged, replayed, expired and revoked device commands.
+- Pairing brute force and identity substitution.
+- Oversized/malformed protocol and archive inputs.
+- Resource exhaustion and crash-loop containment.
+- Host, runtime, storage, tunnel and control-plane independent failure.
+- Update tampering, rollback and interrupted activation.
+- MCU unauthorized pin, replay and compromised-node containment.
+
+Security support is declared only for exact tested OS/device/runtime profiles and reviewed threat models.
