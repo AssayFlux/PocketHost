@@ -12,7 +12,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 ## Non-negotiable decisions
 
 1. The mobile application is the primary owner command center.
-2. Mobile has exactly two modes: Server only and Command Center + Server.
+2. Mobile has exactly two modes: Server only and Command Center + Server. Both serve websites; only the combined mode can enroll, verify, approve and assign fleet devices. There is no standalone Command Center-only mode.
 3. A device must be explicitly verified and approved by the command center before integration.
 4. Every device has a stable cryptographic identity, short-lived enrollment challenge and revocable role grants.
 5. Different device classes receive separate installable software/firmware built for their OS, architecture and hardware.
