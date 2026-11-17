@@ -13,7 +13,7 @@ sudo sh agents/linux/install-systemd.sh
 ```
 
 The agent stores its P-256 private identity key with mode 0600 and state under
-`~/.local/state/pockethost-agent` (override with `POCKETHOST_AGENT_HOME`).
+`~/.local/state/pockethost-agent` (override with `POCKETHOST_AGENT_HOME`). The systemd installer creates `/etc/pockethost-agent.env`; set `POCKETHOST_ALLOWED_NAMESPACES` to the comma-separated namespace IDs assigned to this agent. It is empty by default, so storage and backup access are denied until an administrator configures the allow-list.
 
 ## Initial pairing flow
 
