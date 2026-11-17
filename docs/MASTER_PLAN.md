@@ -17,7 +17,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 4. Every device has a stable cryptographic identity, short-lived enrollment challenge and revocable role grants.
 5. Different device classes receive separate installable software/firmware built for their OS, architecture and hardware.
 6. Users assign jobs such as storage, traffic, build/publish, native backend jobs, backup and edge gateway.
-7. Runtime placement is centralized: customer-selected language runtime packs execute only on the mobile website-serving node in 0.1.0. Worker devices do not silently become general-purpose language runtime hosts.
+7. Future optional language runtime add-ons, when introduced, execute on the designated mobile website-serving node; they are not bundled into the main app or required for its built-in web server. Worker devices do not silently become general-purpose language runtime hosts.
 8. Static serving is independent of optional language runtimes.
 9. Wi-Fi/LAN is the preferred high-bandwidth transport; Bluetooth is for discovery/proximity/small control; USB is used only where the OS and hardware expose supported APIs; remote links use authenticated encrypted sessions.
 10. Discovery is never authorization. Verification code, device identity, role grant and credential binding are all required.
@@ -31,14 +31,15 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 
 - Android mobile application with the website-server role always enabled and a selectable fleet-administration layer: Server only or Command Center + Server.
 - iOS mobile application follows the same two-mode product contract only where website serving passes platform lifecycle acceptance; otherwise do not advertise an unsupported server mode or silently introduce a Command Center-only product.
-- Android worker/host agent and optional server runtime pack manager.
+- Android worker/host agent.
+- Future optional server runtime pack manager, delivered after the five-step baseline.
 - Linux host/worker agent packages.
 - Windows host/worker agent installer and service.
 - macOS host/worker agent installer and service.
 - Raspberry Pi and other SBC packages/images, architecture and board-specific.
 - DemonCore/MCU firmware and edge adapters.
 - Optional remote fleet control plane and secondary browser console.
-- Separately installable language runtime packs for the mobile serving node.
+- Future expansion: separately installable language runtime packs for the mobile serving node (outside the five-step baseline).
 
 ## Five-step execution plan
 
@@ -49,7 +50,7 @@ Let a user install the appropriate Pocket Host software on different devices, ve
 - Freeze device identity, enrollment, verification code, role grant, host-agent and job schemas.
 - Define mobile operating modes and role/permission matrix.
 - Define transports and platform limitations: Wi-Fi, BLE, USB and remote.
-- Define runtime centralization, artifact handoff, storage and traffic contracts.
+- Define built-in web serving, artifact handoff, storage and traffic contracts; keep future optional runtime add-ons separately versioned.
 - Threat model replay, rogue devices, stolen phones, malicious workers, compromised storage, supply chain and MCU safety.
 - Align DemonCore interop and version compatibility.
 **Exit:** schemas reviewed; threat model and trust ceremony tested with protocol simulations; no implementation begins against ambiguous contracts.
@@ -103,7 +104,7 @@ The optional 20-language Runtime Library is a separate post-baseline expansion. 
 
 ## Dependency order
 
-Step 1 is the contract gate. Step 2 establishes the trusted control path. Step 3 creates useful autonomous workers. Step 4 centralizes website runtime execution and publishing. Step 5 hardens the distributed system and releases it.
+Step 1 is the contract gate. Step 2 establishes the trusted control path. Step 3 creates useful autonomous workers. Step 4 delivers the main app's built-in web server and publishing; optional language runtime add-ons are a later expansion. Step 5 hardens the distributed system and releases it.
 
 Parallel work is permitted only after the relevant contract and compatibility tests are frozen. A successful compile, simulated device or documentation update alone never closes a step.
 
