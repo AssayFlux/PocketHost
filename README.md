@@ -103,9 +103,9 @@ Pocket Host is a pre-release engineering project. The repository contains substa
 
 ## WEBSITE WORKBENCH
 
-Workbench is a planned first-class feature inside the mobile app, available in both operating modes. It gives each website a GitHub-inspired project workspace: full directory explorer, code editor, isolated preview, change diffs, local commits, deployment history and rollback. It does not require a GitHub account.
+Workbench is now an initial first-class destination in the mobile app, available in both operating modes. The first implementation includes a per-site private draft workspace, nested directory explorer, basic text editor, draft saving, file/folder creation, file rename/delete, change detection and local commit snapshots. It does not require a GitHub account.
 
-**Production safety is fundamental:** Workbench edits a separate workspace while visitors continue receiving the current live release. Save and Commit do not overwrite production. Deploy validates and stages an immutable release, shows the changes, requires owner approval, switches atomically and retains a last-known-good version for rollback. The current Websites & Files editor is a foundation only; this full isolated workflow is not yet implemented. See [Workbench specification](docs/WORKBENCH.md).
+**Production safety is fundamental:** the current Workbench writes only to its private workspace; commits are local snapshots and do not overwrite production. Isolated preview, TypeScript build, diff viewer, deployment history, owner-approved atomic publishing and rollback are still under implementation. See [Workbench specification](docs/WORKBENCH.md).
 
 ## TECHNOLOGY BOUNDARIES
 
