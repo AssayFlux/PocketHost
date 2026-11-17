@@ -1,17 +1,18 @@
-# Optional Runtime Provider — Future Runtime Library
+# Runtime Companion — Existing Python and Node.js Provider
 
-**Product status: future add-on infrastructure, not part of Step 4 and not required by the main Pocket Host app.** The main app independently provides HTML/CSS static serving and is intended to bundle TypeScript compilation to browser JavaScript. This companion/provider boundary exists for separately downloaded server-side language runtimes only.
+<badge>IN PROGRESS</badge> The runtime companion is an existing, separately installable Android APK in the repository. It currently integrates CPython 3.11 and Node.js mobile 24.22.1. It is not part of the main Pocket Host app or Step 4, and it is not required for static HTML/CSS/JavaScript/TypeScript websites. The future goal is to split the two existing runtimes into independently downloadable packages and add further languages.
 
 ## Product role
 
-The future Runtime Library will let users download only the language runtimes they choose. Each language is an independent signed/versioned package with its own installation, health, update, rollback and removal lifecycle. The 20-package catalog is defined in [FUTURE_RUNTIME_LIBRARY.md](FUTURE_RUNTIME_LIBRARY.md). Current manifests are planning placeholders, not downloadable artifacts.
+The current companion APK contains both Python and Node.js integrations. They are implemented foundations, but they are not yet independently downloadable packages. The future Runtime Library will split them into separate signed/versioned artifacts and add 18 further language packages. The 20-language catalog and exact status split are defined in [FUTURE_RUNTIME_LIBRARY.md](FUTURE_RUNTIME_LIBRARY.md).
 
 ## Existing Android foundation
 
 - Host application: `com.assayflux.pockethost`.
 - Runtime companion package: `com.assayflux.pockethost.worker`.
 - The companion is a separate Android package/provider boundary in the current repository.
-- Existing Python/Node foundation does not mean the future 20-package catalog is implemented or production-ready.
+- Python CPython 3.11 and Node.js mobile 24.22.1 integrations already exist in this companion.
+- The current companion APK packages both runtimes together; independent Python and Node package artifacts are not yet delivered.
 - Python and Node currently share the companion package UID; this is not per-project OS isolation.
 
 ## Future Runtime Manager requirements
