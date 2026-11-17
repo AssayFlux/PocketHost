@@ -1,6 +1,6 @@
 # Pocket Host Workbench — Product and Engineering Specification
 
-**Status:** Accepted product requirement; implementation not yet complete  
+**Status:** Initial Android workspace/editor foundation implemented; Workbench acceptance gate remains open  
 **Owner surface:** Android Pocket Host app, available in both operating modes  
 **Delivery step:** Step 4 — Main Pocket Host mobile website server  
 **Relationship:** Extends Websites & Files; does not create a second site store or server
@@ -69,26 +69,26 @@ Preview must serve the workspace on a separate loopback-only endpoint or isolate
 
 ## 7. Relationship to current repository implementation
 
-The repository already contains SiteFileManager with bounded text-file editing, listing, upload, create, rename, delete and index selection. A first isolated WorkbenchWorkspaceManager foundation has now been added for per-project workspace initialization, bounded text edits, change digests and immutable local commit snapshots; it is not yet connected to the app UI or a deployment pipeline. The existing Websites & Files screen currently edits the deployed filesDir/site tree and disables many edits while hosting. The new workspace manager is a separate storage foundation; UI integration, release activation, isolated preview and complete acceptance remain open. This is a useful foundation, **not** the Workbench product described here: it does not yet provide an isolated workspace, full tree navigation/editor experience, change tracking, commit history, separate preview or immutable atomic release deployment.
+The repository already contains SiteFileManager for the existing Websites & Files workflow. The new `WorkbenchWorkspaceManager` now creates a per-site private draft workspace and a separate initial baseline, preserves workspace edits across reopen, supports bounded nested listing, text read/write/create, folder creation, file rename/delete, SHA-256 change detection and immutable local commit snapshots. A Compose Workbench screen is connected to the app navigation in both operating modes; it provides website selection, folder navigation, a basic text editor, create/rename/delete file actions, change status and local commit history. The live website root is not written by these operations. This is an initial implementation foundation, **not** a completed Workbench: syntax-aware editor features, unsaved-edit protection, complete directory operations, per-file diff, isolated preview, TypeScript build, release/deployment history, owner-approved atomic publishing, rollback and physical-device acceptance remain open.
 
 The existing SiteImporter release/activation and recovery mechanisms should be audited and extended for Workbench rather than bypassed. Verify actual semantics before relying on them for production activation.
 
 ## 8. Delivery sequence inside Step 4
 
-1. **Workbench foundation:** site/project selector, complete tree navigation, robust file operations, editor tabs, dirty state, diff and path/security tests.
-2. **Workspace isolation:** separate editable workspace from active release; safe copy-on-write/snapshot model; preserve production while editing.
-3. **Preview/build:** isolated preview server; HTML/CSS/JS validation; TypeScript compiler integration once bundled; bounded diagnostics.
-4. **Commit/release:** durable local commits, immutable staged artifacts, digest manifest, compare/history and storage retention.
-5. **Publish/rollback:** owner-approved atomic activation, health check, crash recovery, rollback and audit events.
-6. **Acceptance:** Android lifecycle, large projects, low storage, process death, interrupted publish, malformed archives, path attacks, symlink attacks, multi-site isolation, live visitor continuity and physical-device tests.
+1. **Foundation (partially implemented):** site selector, nested explorer, basic text editor, draft save, create/rename/delete files, create folders, change detection and local commit snapshots. Remaining: upload/move, editor tabs, unsaved-edit protection, diff viewer and broader tests.
+2. **Workspace isolation (foundation implemented):** separate per-site private workspace and baseline; saves and commits do not mutate the live website. Remaining: reconcile live-release changes, crash-safe workspace migration and multi-site physical acceptance.
+3. **Preview/build (not implemented):** isolated preview server; HTML/CSS/JS validation; bundled TypeScript compiler integration; bounded diagnostics.
+4. **Commit/release (partially implemented):** durable local snapshot and manifest. Remaining: signed/integrity-verified history, storage retention, compare/history UI and immutable staged release artifacts.
+5. **Publish/rollback (not implemented):** owner-approved atomic activation, health check, crash recovery, rollback and audit events.
+6. **Acceptance (open):** Android lifecycle, large projects, low storage, process death, interrupted publish, malformed archives, path attacks, symlink attacks, multi-site isolation, live visitor continuity and physical-device tests.
 
 Workbench does not add a sixth top-level step. It is a required Step 4 workstream and must pass its own acceptance criteria before Step 4 closes.
 
 ## 9. Acceptance checklist
 
-- [ ] Multiple websites can be selected and remain isolated.
-- [ ] Full nested directory tree is navigable and all supported file operations are safe.
-- [ ] Editing and saving never modifies the active production release.
+- [x] Multiple registered websites can be selected; workspace storage is keyed by validated project ID (multi-site physical acceptance remains open).
+- [x] Nested directory listing/navigation and bounded supported text/file operations are implemented; upload/move and recursive folder operations remain open.
+- [x] Editing and saving operate on a private workspace and do not modify the active production release.
 - [ ] Live visitors continue receiving the previous release during editing/build/preview.
 - [ ] Workspace preview is isolated and cannot mutate production.
 - [ ] Changes and diffs are accurate after app restart.
