@@ -49,6 +49,7 @@ The repository contains useful foundations, not yet the full device-fabric imple
 - [System Architecture](SYSTEM_ARCHITECTURE.md)
 - [Master Plan](MASTER_PLAN.md)
 - [Host Agent and Role Contract](HOST_AGENT_CONTRACT.md)
+- [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md)
 - [Roadmap](ROADMAP.md)
 - [UI Design](UI_DESIGN.md)
 - [Security Isolation](SECURITY_ISOLATION_DESIGN.md)
