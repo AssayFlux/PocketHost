@@ -26,7 +26,7 @@
 
 ## Platform and role coverage
 
-- Android: website-serving foundation present; selectable Server only / Command Center + Server mode enforcement, verified enrollment ceremony and fleet worker roles require implementation/acceptance.
+- Android: website-serving foundation and persisted Server only / Command Center + Server selector are present. Combined mode exposes a local device-trust workspace with Android Keystore P-256 identity, signed five-minute challenge, proof-of-possession, role-allow-list-checked grant, encrypted registry and revocation. Authenticated transports, remote control-plane integration and independently installed agent acceptance remain open.
 - iOS: no native application workspace in this repository; command-center app is a planned deliverable.
 - Linux/Windows/macOS: no production host-agent installer is claimed.
 - Raspberry Pi/SBC: no named production board/OS profile is accepted.
@@ -37,7 +37,7 @@
 The Android UI, local management API, remote-control agent and tunnel lifecycle are coordinated in the Android app package/process; the Rust engine is a native library hosted by the app. The runtime companion is a separate package. Python and Node projects share its application UID, so this package boundary alone is not per-project isolation. The control plane is separately deployable and the browser console is a separate client.
 
 The repository contains useful foundations, not yet the full device-fabric implementation. The following must not be inferred from the architecture documents:
-- verified multi-device pairing and role grants are not complete merely because device IDs or QR flows exist;
+- end-to-end multi-device pairing and worker-consumed role grants are not complete; the Android implementation is a manual local trust-authority foundation and is not yet connected to the control plane or independent agents;
 - Bluetooth and USB transports are not supported until their platform-specific implementations and tests exist;
 - Linux, Windows, macOS and SBC installers are not complete;
 - the iOS app is not present;
@@ -54,3 +54,4 @@ The repository contains useful foundations, not yet the full device-fabric imple
 - [UI Design](UI_DESIGN.md)
 - [Security Isolation](SECURITY_ISOLATION_DESIGN.md)
 - [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
+- [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
