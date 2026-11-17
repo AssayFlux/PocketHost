@@ -54,6 +54,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
     var oneTimeToken by remember { mutableStateOf("") }
     var remoteHistoryText by remember { mutableStateOf("{}") }
     val remoteHistory = remember(remoteHistoryText) { runCatching { JSONObject(remoteHistoryText) }.getOrDefault(JSONObject()) }
+    var remoteInventoryText by remember { mutableStateOf("[]") }
+    val remoteInventory = remember(remoteInventoryText) { runCatching { org.json.JSONArray(remoteInventoryText) }.getOrDefault(org.json.JSONArray()) }
     val scope = rememberCoroutineScope()
     val fleetMap = remember(fleetMapText) { runCatching { JSONObject(fleetMapText) }.getOrDefault(JSONObject()) }
     val palette = MaterialTheme.colorScheme
@@ -140,6 +142,23 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text("Use the Control Plane owner/bootstrap credential. It is exchanged for a short-lived session and is not saved by this screen.", color = palette.onSurfaceVariant)
                 OutlinedTextField(controlPlaneEndpoint, { controlPlaneEndpoint = it.trim() }, label = { Text("Control Plane HTTPS URL") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(ownerCredential, { ownerCredential = it.trim() }, label = { Text("Owner / bootstrap credential") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+                OutlinedButton(
+                    enabled = ownerCredential.length >= 32 && controlPlaneEndpoint.startsWith("https://"),
+                    onClick = {
+                        scope.launch {
+                            fleetMessage = "Refreshing remote worker heartbeat inventory…"
+                            val result = runCatching {
+                                withContext(Dispatchers.IO) {
+                                    FleetControlPlaneClient.deviceInventory(controlPlaneEndpoint, ownerCredential)
+                                }
+                            }
+                            result.onSuccess {
+                                remoteInventoryText = it.toString()
+                                fleetMessage = "Remote worker heartbeat inventory refreshed."
+                            }.onFailure { fleetMessage = it.message ?: "Could not refresh worker inventory." }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()
+                ) { Text("Refresh worker heartbeat status") }
                 Text(fleetMessage, color = palette.onSurfaceVariant)
                 if (oneTimeToken.isNotBlank()) {
                     Text("ONE-TIME WORKER TOKEN · copy this to the worker's POCKETHOST_CONTROL_TOKEN configuration:", fontWeight = FontWeight.SemiBold)
@@ -160,6 +179,17 @@ internal fun PocketHostDevicesScreen(context: Context) {
                         Text("${device.os} · ${device.architecture} · ${device.role} · generation ${device.generation}", color = palette.onSurfaceVariant)
                         Text(device.deviceId, color = palette.onSurfaceVariant)
                         Text(if (device.revokedAt == 0L) "Approved" else "Revoked", color = if (device.revokedAt == 0L) palette.primary else palette.error)
+                        val mappedRemoteId = fleetMap.optString(device.deviceId)
+                        val remoteDevice = (0 until remoteInventory.length()).mapNotNull { remoteInventory.optJSONObject(it) }
+                            .firstOrNull { it.optString("id") == mappedRemoteId }
+                        if (remoteDevice != null) {
+                            val heartbeat = remoteDevice.optJSONObject("state")?.optJSONObject("agent")
+                            Text(
+                                "Remote worker: ${heartbeat?.optString("status", "UNKNOWN") ?: "NO HEARTBEAT"} · grant ${heartbeat?.optString("grant_state", "UNKNOWN") ?: "UNKNOWN"}",
+                                color = palette.onSurfaceVariant
+                            )
+                            Text("Last seen: ${remoteDevice.optString("last_seen", "never")}", color = palette.onSurfaceVariant)
+                        }
                         val remoteCommands = remoteHistory.optJSONArray(device.deviceId)
                         if (fleetMap.optString(device.deviceId).isNotBlank()) {
                             OutlinedButton(
@@ -180,7 +210,7 @@ internal fun PocketHostDevicesScreen(context: Context) {
                                         }.onFailure { fleetMessage = it.message ?: "Could not refresh remote command history." }
                                     }
                                 }, modifier = Modifier.fillMaxWidth()
-                            ) { Text("Refresh remote status & job results") }
+                            ) { Text("Refresh command history & job results") }
                             if (remoteCommands != null) {
                                 Text("LATEST REMOTE COMMANDS", fontWeight = FontWeight.SemiBold)
                                 if (remoteCommands.length() == 0) Text("No remote commands recorded yet.", color = palette.onSurfaceVariant)
