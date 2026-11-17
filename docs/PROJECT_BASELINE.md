@@ -1,6 +1,6 @@
 # Pocket Host — Project Baseline
 
-**Baseline snapshot:** branch `Alpha`, source commit `4185ea0f5e258c0d4c024f79de0a59f4757af9af`, audited 2026-11-17.  
+**Current source snapshot:** branch `Alpha`, commit `0784b3294f2de9f435479c7a290f336e85b78df0`, checked 2026-11-17. Current recursive Git tree: 257 tracked files across 72 directories. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
 **Complete file-level record:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md). That document lists every tracked file and directory, module boundaries, source status, exact limits and verification evidence.
 
 ## Product invariants
@@ -25,7 +25,7 @@
 | Cloudflare Tunnel | Android token store, cloudflared process, readiness probe, reconnect supervisor, Settings controls, build script | Connector source/build present; public hostname/DNS/TLS acceptance open |
 | AssayFlux Relay client | Android outbound SSE request/response agent | Coupled to RemoteControlAgent endpoint/device token; no independent Relay settings/credentials |
 | AssayFlux Relay gateway | Rust visitor handler, DNS TXT proof, hostname routes, separate visitor listener, Caddy TLS | Exists inside full control-plane process; PostgreSQL and fleet credentials required; not standalone |
-| Relay Node for Termux/Linux | No package, installer or standalone service in snapshot | Not implemented; mandatory v0.1.0 target |
+| Relay Node for Termux/Linux | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host-agent protocol, installer, service unit or Termux lifecycle; not runnable and not release-ready |
 | Runtime companion | Separate APK with CPython 3.11/Chaquopy and Node.js mobile 24.22.1/JNI | Both in same companion APK, in progress; not hardened sandbox |
 | Runtime Library | 20 catalog JSON manifests | Python/Node in progress; remaining 18 planned metadata only |
 | Browser console | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; remote control and Relay hostname panel | Separate browser app; build passes; not an Android runtime |
@@ -43,7 +43,7 @@
 - Current Relay HTTP listener redirects port 80 to HTTPS; there is no configurable plain-HTTP content mode.
 - Main Android Network UI says “No built-in visitor password yet,” but the Rust engine already implements private/restricted Basic visitor authentication. The UI copy is stale.
 - Main app has optional biometric app unlock and local pairing/approval; it does not currently have a conventional username/password mobile login page. Owner/passkey login is in the browser console.
-- No standalone Termux Relay Node, no production deployment, no signed release, no APK artifact and no physical-device/public-domain acceptance are evidenced at this baseline.
+- The current tree has a Relay Node Cargo manifest scaffold only; no runnable standalone node or installer is present. No production deployment, signed release, APK artifact or physical-device/public-domain acceptance is evidenced.
 
 ## Public hosting direction without a VPS
 
@@ -53,9 +53,9 @@ Cloudflare Tunnel remains an optional fallback, not a dependency of the first-pa
 
 ## Build and verification evidence
 
-- [Quality workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44082938152) on baseline source commit: Rust tests, PostgreSQL/control-plane tests and migrations, Caddy/Compose validation, Python/Linux agent tests, Node metrics smoke test, web-console TypeScript/Vite build and Gradle wrapper validation passed.
-- [Protocol contract workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44082937765) on baseline source commit.
+- [Quality workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819401) on current source commit `0784b3294f2de9f435479c7a290f336e85b78df0`: Rust tests, PostgreSQL/control-plane tests and migrations, Caddy/Compose validation, Python/Linux agent tests, Node metrics smoke test, web-console TypeScript/Vite build and Gradle wrapper validation passed.
+- [Protocol contract workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294) on current source commit `0784b3294f2de9f435479c7a290f336e85b78df0`.
 - [Android integration workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44079487947) on code commit `5d90c1d`: cloudflared Android builds/ELF checks and Kotlin/instrumentation-source compilation passed. APK packaging and emulator jobs were skipped.
 - No main APK build, signed release, physical-device test, live Cloudflare hostname test, standalone Relay Node deployment or external public-domain acceptance is recorded.
 
-See [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md) for the complete 252-file/71-directory inventory and detailed evidence.
+See [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md) for the historical file-level inventory and current-tree delta.
