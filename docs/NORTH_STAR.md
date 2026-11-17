@@ -12,9 +12,9 @@
 
 ## 1. THE NORTH STAR
 
-**Make secure, understandable and affordable self-hosting possible on an Android phone — without root, Termux or a mandatory cloud server.**
+**Make secure, understandable and affordable self-hosting possible on the devices people already own — from Android phones and PCs to servers, Raspberry Pi-class boards and constrained edge devices — without forcing a mandatory cloud server.**
 
-Pocket Host turns a phone the owner already has into the actual origin for static websites and modest web applications. The product should make publishing straightforward for beginners while giving advanced operators meaningful controls for capacity, security, networking, recovery and diagnostics.
+Pocket Host begins with Android as its first host and expands into a cross-platform ecosystem where capable phones, tablets, PCs, servers and SBCs can run websites and services, while microcontrollers contribute bounded edge/device capabilities. The product should make publishing straightforward for beginners while giving advanced operators meaningful controls for capacity, security, networking, recovery and diagnostics.
 
 **Brand promise:** Your website. Your device. Your control.
 
@@ -305,3 +305,20 @@ The authoritative implementation and acceptance sequence is now `docs/MASTER_PLA
 A separate package/UID per language provides modular delivery and a host/provider boundary; it does **not** isolate projects sharing that language. The security target remains one OS-enforced execution identity per project, with brokered filesystem/network capabilities and a host-side supervisor. The host and broker must not execute project code. Static hosting remains fully usable without any runtime pack. Android package installation must use supported user-confirmed flows; do not claim silent installation or treat Play dynamic features as a per-project security boundary.
 
 The master plan now separates product/Android reliability from secure modular execution, defines runtime-pack contracts, reorders gates to establish production isolation before converting Python/Node to optional packs, and adds explicit reliability/release acceptance evidence. Older gate numbering and historical status addenda below are historical snapshots; use the V2 master plan for current sequencing and acceptance.
+
+
+## 6. UNIVERSAL DEVICE HOSTING NORTH STAR
+
+Pocket Host is a distributed self-hosting ecosystem, not an Android-only app. The product supports Android phones/tablets, Linux, Windows, macOS, VPS/dedicated servers, Raspberry Pi-class SBCs and compatible microcontroller/edge devices through measured capability profiles.
+
+A device is offered only workloads it can safely run. Full hosts run static and supported multi-runtime applications; compact edge hosts run resource-profiled services; MCUs provide bounded telemetry, device APIs, MQTT/DCP, local control and protocol bridges. A tiny MCU is not promised arbitrary Node/Python execution or general-purpose website hosting.
+
+The portable architecture, device tiers, service catalog, host-agent contracts, workload placement, security boundaries and expansion gates are authoritative in `docs/UNIVERSAL_DEVICE_FABRIC.md`.
+
+### DemonCore integration
+
+AssayFlux/DemonCore remains a separate specialised microcontroller/fleet project. Pocket Host will integrate with it through a versioned, authenticated, allow-listed edge adapter after DemonCore's own physical hardware, identity, claim, transport and OTA acceptance. DCP v1's message envelope is not authentication. Never expose MCU control or GPIO operations through public website ingress. Current DemonCore documentation reports Phase 1 as not hardware-accepted, with app and hub implementation still incomplete.
+
+### Cross-platform sequencing
+
+Android reliability and per-project runtime isolation remain the first production gates. Freeze portable contracts, then build Linux host support and Raspberry Pi profiles, followed by Windows/macOS, MCU interoperability and multi-host placement. No rewrite, repository merge or cloud-only dependency is authorised by this expansion.
