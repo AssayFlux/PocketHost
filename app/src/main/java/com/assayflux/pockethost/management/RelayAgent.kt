@@ -105,9 +105,10 @@ object RelayAgent {
                 "Relay endpoint did not return an event stream."
             }
             BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8), 16 * 1024).use { reader ->
+                val sseReader = java.io.PushbackReader(reader, 1)
                 var data = StringBuilder()
                 while (running) {
-                    val line = readBoundedSseLine(reader, MAX_SSE_LINE_CHARS)
+                    val line = readBoundedSseLine(sseReader, MAX_SSE_LINE_CHARS)
                         ?: throw IllegalStateException("Relay event stream ended.")
                     if (line.isEmpty()) {
                         if (data.isNotEmpty()) {
@@ -185,15 +186,18 @@ object RelayAgent {
 
 
     /** Reads one SSE line without allowing BufferedReader.readLine() to allocate an unbounded string. */
-    internal fun readBoundedSseLine(reader: java.io.Reader, maxChars: Int): String? {
+    internal fun readBoundedSseLine(reader: java.io.PushbackReader, maxChars: Int): String? {
         require(maxChars > 0) { "SSE line limit must be positive." }
         val line = StringBuilder(minOf(maxChars, 256))
         while (true) {
             val next = reader.read()
             if (next < 0) return if (line.isEmpty()) null else line.toString()
             if (next == '\n'.code) return line.toString()
-            // CRLF and LF are accepted. Ignoring CR prevents CR bytes from bypassing the bound.
-            if (next == '\r'.code) continue
+            if (next == '\r'.code) {
+                val following = reader.read()
+                if (following >= 0 && following != '\n'.code) reader.unread(following)
+                return line.toString()
+            }
             if (line.length >= maxChars) {
                 throw IllegalStateException("Relay SSE line exceeds its ${maxChars}-character limit.")
             }
