@@ -114,7 +114,7 @@ internal fun PocketHostHomeScreen(
                         }
                     }
                 }
-                Spacer(Modifier.width((maxWidth - cardWidth - 12.dp) / 2))
+                Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
             }
             Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 services.indices.forEach { index ->
