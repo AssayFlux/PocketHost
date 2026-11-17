@@ -38,7 +38,7 @@ Acceptance still needs a physical device: notification permission, foreground-se
 
 SiteImporter stages folder/ZIP contents, checks file and entry counts, nesting, path traversal, sensitive filenames, index.html and activation/recovery. It currently has a 5,000-file cap, 10,000-entry cap and 32-level depth cap.
 
-The former source had a 50 MB ZIP input and 50 MB expanded-site limit. The new v0.1.0 importer requirement is 500,000,000 bytes for each independent limit. UI, ZIP input cap, expanded byte counter, folder copy, prepared-directory validation and importer tests must use the same value. The current ApplicationBackupManager is separate: static site root 50 MiB, Python 50 MiB, Node 100 MiB, total uncompressed 200 MiB and encrypted archive 220 MiB. It cannot currently back up a site near the new 500 MB import cap. This is a distinct v0.1.0 gap; do not claim import and backup limits are aligned.
+The former source had a 50 MB ZIP input and 50 MB expanded-site limit. The new v0.1.0 importer requirement is 500,000,000 bytes for each independent limit. Source and UI are now aligned to 500,000,000 bytes for ZIP input and expanded content. The current instrumentation test asserts the configured constant and the ZIP happy path; it does not exercise the actual 500 MB boundary. Below/at/above-boundary, low-storage, memory and physical-device tests remain open. The current ApplicationBackupManager is separate: static site root 50 MiB, Python 50 MiB, Node 100 MiB, total uncompressed 200 MiB and encrypted archive 220 MiB. It cannot currently back up a site near the new 500 MB import cap. This is a distinct v0.1.0 gap; do not claim import and backup limits are aligned.
 
 ### Static engine
 
