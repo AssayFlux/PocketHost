@@ -1,66 +1,63 @@
-# Step 4 — Built-in Web Baseline and Optional Runtime Packs
+# Step 4 — Pocket Host Built-in Web Server Baseline
 
-**Status: partial close only.** The mobile server app already bundles the Rust static website engine and serves HTML/CSS assets. This document freezes the requested baseline product boundary. TypeScript compiler integration, optional runtime lifecycle/isolation and publishing acceptance are not claimed complete.
+**Scope: the main Pocket Host mobile application only.** Step 4 covers the built-in website-serving experience. Optional language runtime add-ons are explicitly outside Step 4 and are tracked in the future Runtime Library plan (`FUTURE_RUNTIME_LIBRARY.md`).
 
-## 1. Default server-app baseline
+## 1. Main-app capabilities
 
-Every Pocket Host mobile server installation must provide these capabilities without a separate runtime download:
+Every Pocket Host mobile server installation must provide these capabilities without a companion APK, runtime download or add-on installation:
 
-| Technology | Default behavior | Execution model |
+| Technology | Main-app behavior | Execution model |
 |---|---|---|
-| HTML | Serve pages, entry documents and fragments | Rust static server |
-| CSS | Serve stylesheets, fonts and related assets | Rust static server |
-| TypeScript | Accept TypeScript source in the built-in website build workflow and compile/transpile it to JavaScript before publish | Bundled TypeScript build toolchain; browser executes emitted JavaScript |
+| HTML | Serve pages, entry documents and fragments | Bundled Rust static server |
+| CSS | Serve stylesheets, fonts and related assets | Bundled Rust static server |
+| TypeScript | Built-in authoring/build workflow compiles TypeScript to JavaScript before publish | Compiler/transpiler bundled with the main app; browser executes emitted JavaScript |
+| JavaScript | Serve generated and authored browser-side JavaScript | Static asset delivery |
 
-The built-in web baseline is present in both mobile modes: **Server only** and **Command Center + Server**. Website hosting never becomes optional when the user changes fleet-administration mode.
+The built-in baseline is present in both mobile modes: **Server only** and **Command Center + Server**. Website serving remains enabled in both modes.
 
-## 2. TypeScript boundary
+## 2. TypeScript behavior
 
-TypeScript is not a browser-native language and must not be served as if a browser could execute raw TypeScript source. The app must bundle the TypeScript compiler/transpiler and perform a bounded build step before activation:
+TypeScript is not browser-native and must not be served as if a browser could execute raw TypeScript. The main app must bundle the compiler/transpiler and perform a bounded build step before activation:
 
-1. Import the site source into a staging area.
+1. Import site source into a staging area.
 2. Identify TypeScript entry points and project configuration.
 3. Compile TypeScript to JavaScript and emit diagnostics.
-4. Reject failed builds; do not replace the active site.
-5. Validate generated paths and file sizes, then stage the immutable output.
+4. Reject failed builds without replacing the active site.
+5. Validate generated paths and file sizes, then stage immutable output.
 6. Let the owner preview/approve the artifact and atomically activate it.
-7. Serve the generated JavaScript as a normal static asset.
+7. Serve generated JavaScript as a normal static asset.
 
-The first baseline should support a simple TypeScript-to-JavaScript workflow without silently promising full npm package installation, arbitrary native addons, server-side Node execution or a general-purpose build farm. Dependency installation and advanced bundling need their own explicit compatibility and security policy.
+The initial built-in workflow must not silently promise full npm package installation, arbitrary native addons, server-side Node execution or a general-purpose build farm. Those are separate product decisions.
 
-## 3. Additional language runtimes stay separate
+## 3. Main-app boundaries
 
-Python, Node/server-side JavaScript and future language runtimes remain separately selectable, signed, versioned and installable packs. They are installed only on the mobile website-serving node in this product baseline. Installing or removing one pack must not alter the built-in HTML/CSS/TypeScript capability or sibling packs.
-
-The base app must not bundle every future language runtime. Users choose which additional languages they need and install them independently.
-
-## 4. Isolation and failure boundaries
-
-- Static HTML/CSS/JS serving must work when no optional language runtime is installed.
-- A failed TypeScript build must leave the previous active website unchanged.
-- A runtime crash must not stop static ingress or unrelated runtimes.
-- Optional runtime execution must use project-scoped filesystem access, network policy, secrets, quotas and process supervision.
-- Until adversarial tests prove the controls, do not advertise optional runtime execution as a hostile-code sandbox.
+- Basic HTML/CSS/JavaScript static hosting works without installing any extra runtime.
+- A failed TypeScript build leaves the previous active website unchanged.
+- Static serving remains independent of future optional language runtime packages.
 - Worker devices may build immutable artifacts, but cannot publish directly to the live site or bypass owner approval.
+- The main app does not bundle every server-side language runtime.
+- Optional runtime package management is a future, separately scoped Runtime Library feature, not a Step 4 exit requirement.
 
-## 5. Current implementation evidence
+## 4. Current implementation evidence
 
 Already present in the repository:
 - Android server app packages the Rust website engine through its native build.
 - Rust engine serves HTML and CSS and includes static routing, path validation, bounded connections and common asset MIME handling.
 - Site import and static hosting flows exist in the Android application.
 
-Still required before the baseline can be called verified:
-- Bundle the TypeScript compiler/transpiler into the server app.
+Still required before the main-app baseline can be called verified:
+- Bundle the TypeScript compiler/transpiler into the main Pocket Host app.
 - Add deterministic tests for TypeScript success, diagnostics/failure, path traversal, output bounds and atomic publish behavior.
 - Verify generated JavaScript assets are served with the JavaScript MIME type.
-- Verify the server app installs and uses this baseline without installing the separate Python/Node runtime companion.
+- Verify a fresh main-app installation serves HTML/CSS/JS without installing the runtime companion or any optional runtime.
 - Verify on supported Android ABIs and physical devices.
 
-## 6. Step 4 partial-close definition
+## 5. Step 4 partial-close definition
 
-**Partially closed:** the architecture and existing implementation establish the always-included HTML/CSS static-serving baseline, and this document fixes TypeScript as part of the built-in app toolchain rather than an optional language pack.
+**Partially closed:** the architecture and existing implementation establish the always-included HTML/CSS static-serving baseline. TypeScript is frozen as a built-in main-app toolchain capability, not an optional language runtime.
 
-**Still open:** implementation and verification of the bundled TypeScript compiler; separately installable additional language runtimes; per-project OS isolation; runtime lifecycle/fault containment; signed artifact verification, preview and atomic publishing; storage/traffic integration and physical-device acceptance.
+**Still open within Step 4:** TypeScript compiler bundling and tests; main-app website lifecycle; secure staging, preview and atomic publishing; and required physical-device acceptance.
 
-Do not mark all of Step 4 complete until the remaining exit criteria in the Master Plan pass. Do not claim TypeScript support is implemented until the compiler is actually bundled and tested.
+**Not part of Step 4:** Python, Node.js, PHP or any other separately downloadable server-side language runtime. Those are future optional add-ons described in `FUTURE_RUNTIME_LIBRARY.md`.
+
+Do not claim TypeScript support is implemented until the compiler is actually bundled and tested. Do not hold Step 4 open for the future language add-on catalog.
