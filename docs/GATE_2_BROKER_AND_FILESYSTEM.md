@@ -36,6 +36,7 @@ A passed file descriptor remains usable until the receiver closes it or its proc
 
 ## Verification status
 
-- Source-level broker primitives added.
-- Android API 26/33/35 service binding, UID uniqueness, FD transfer, runtime filesystem compatibility and adversarial tests: **deferred to Gate 8** by owner instruction.
-- Python/Node are still owner-trusted-code-only. This increment does not pass Gate 2 or authorize untrusted/third-party project execution.
+- Source-level broker primitives, Binder caller-UID checks, isolated-UID probe services, seccomp/network-policy probe and project-root capability tests are present.
+- Production per-project launcher integration is not present: the Python/Node launchers still transfer project archives to the shared companion UID and do not bind each project to a distinct isolated service.
+- Android API 26/33/35 service binding, unique UID per real project, descriptor transfer under SELinux, runtime filesystem compatibility, hostile two-project concurrency and adversarial tests are active Gate 2–4 requirements. Gate 8 adds physical ARMv7/ARM64 device and independent review evidence; it does not defer the core Gate 2 implementation.
+- Python/Node remain owner-trusted-code-only. This increment does not pass Gate 2 or authorize untrusted/third-party project execution.
