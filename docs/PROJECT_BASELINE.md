@@ -31,7 +31,7 @@ There is no Command Center-only mode. The phone is the serving node in both mode
 | Python | runtime-worker/src/main/python/ | WSGI adapter, loopback serving, host routing, bounded workers/body/timeouts and metrics | Existing integration; Android acceptance and isolation open |
 | Node.js | runtime-worker/src/main/cpp and src/main/java | JNI/libnode integration, pinned mobile SDK and native ABI support | Existing integration; Android acceptance and isolation open |
 | TypeScript authoring | Main app | No verified bundled compiler in current Android dependency graph | v0.1.1 requirement, not v0.1.0 |
-| Browser operator console | web-console/ | React, TypeScript and Vite browser application | Separate console; not an Android runtime |
+| Browser operator console | web-console/ | React, TypeScript and Vite browser application; existing Relay hostname registration panel | Minimal Relay setup surface must be accepted in v0.1.0; full operator console remains v0.2.0 |
 | Android device trust | DeviceTrustStore.kt and Devices UI | P-256 owner key, short-lived challenge, proof checks, role grants, encrypted local registry and generation revocation | Foundation; v0.2.0 acceptance |
 | Linux agent | agents/linux/ | Python package, P-256 identity, grant/job checks, SQLite durable jobs, HTTPS polling preview and allow-listed health/storage/backup snapshot tasks | Preview; v0.2.0 acceptance |
 | Control plane | control-plane/ | Rust/Axum API, PostgreSQL migrations, session/passkey foundations, device commands, audit and deployment configuration | Foundation; v0.2.0 acceptance |
