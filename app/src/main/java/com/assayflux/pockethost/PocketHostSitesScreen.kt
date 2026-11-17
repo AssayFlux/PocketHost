@@ -152,7 +152,7 @@ internal fun PocketHostSitesScreen(
                             enabled = !state.hosting && !state.importing,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Import website ZIP") }
-                        Text("Imports are staged and validated before replacing the current website. Maximum import: 50 MB, 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Imports are staged and validated before replacing the current website. Maximum import: 500 MB for the ZIP archive and 500 MB for extracted website contents; 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         OutlinedTextField(
                             value = state.backupPassphrase,
                             onValueChange = { if (it.length <= 128) actions.onBackupPassphraseChange(it) },

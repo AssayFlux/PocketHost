@@ -1,56 +1,56 @@
-# Pocket Host 0.1.0 — Documentation Index
+# Pocket Host — Documentation Index
+
+This documentation set follows the new three-version pathway. The former five-step roadmap is retired. G0–G9 is mandatory for every release.
 
 ## Start here
+1. [README](../README.md) — product summary, release pathway and build entry points.
+2. [Master Plan](MASTER_PLAN.md) — product rules and version boundaries.
+3. [Three-Version Roadmap](ROADMAP.md) — v0.1.0, v0.1.1 and v0.2.0.
+4. [Mandatory Release Gates G0–G9](RELEASE_GATES.md) — common gate definitions and version acceptance matrix.
+5. [Repository Baseline](PROJECT_BASELINE.md) — source-audited inventory.
+6. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
+7. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
+8. [Architecture Decisions](DECISIONS.md) — durable product decisions.
+9. [Product North Star](NORTH_STAR.md) — long-term direction.
 
-0. [Competitive Landscape and Product Gap Analysis](COMPETITIVE_LANDSCAPE.md) — competitor lessons, Pocket Host differentiation and implementation priorities.
-1. [System Architecture](SYSTEM_ARCHITECTURE.md) — normative component model, mobile command center, device fabric and fault containment.
-2. [Master Plan](MASTER_PLAN.md) — five-step implementation plan and release acceptance.
-3. [Host Agent and Role Contract](HOST_AGENT_CONTRACT.md) — verified enrollment, role grants, job lifecycle and transports.
-4. [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md) — installable products, supported roles and transports per device family.
-5. [Roadmap](ROADMAP.md) — sequenced milestones.
-6. [Project Baseline](PROJECT_BASELINE.md) — repository implementation inventory and version identity.
-7. [Development Context](DEVELOPMENT_CONTEXT.md) — rules for contributors and coding agents.
-8. [Architecture Decisions](DECISIONS.md) — accepted product and engineering decisions.
-
-## Product and mobile UX
-
-- [Mobile Design System](UI_DESIGN.md) — Android/iOS command center, branding, themes, navigation and accessibility.
-- [Learn Guide](LEARN_GUIDE.md) — user-facing operating guidance.
-- [Workbench](WORKBENCH.md) — GitHub-inspired website workspace, safe editing, preview, local commits, atomic publishing and rollback contract.
-
-## Engineering and security
-
-- [Security Isolation Design](SECURITY_ISOLATION_DESIGN.md)
-- [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
-- [Step 2 Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
-- [Step 3 Device Agents](STEP_3_DEVICE_AGENTS.md)
-- [Step 4 Main-App Web Baseline](STEP_4_WEB_BASELINE.md)
-- [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md)
-- [Future Runtime Library — 20 Optional Packages](FUTURE_RUNTIME_LIBRARY.md)
-- [Runtime Companion](RUNTIME_COMPANION.md)
-- [Runtime Project Storage](RUNTIME_PROJECT_STORAGE.md)
-- [Python Runtime](PYTHON_RUNTIME.md)
-- [Node Runtime](NODE_RUNTIME.md)
+## v0.1.0 — First Hosting
+- [Static Hosting Baseline](STEP_4_WEB_BASELINE.md)
 - [Website Deployment](WEBSITE_DEPLOYMENT.md)
-- [Site Backup](SITE_BACKUP.md)
-- [Adaptive Capacity and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
+- [Website Backup and Restore](SITE_BACKUP.md)
+- [Capacity and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
+- [User Guide](LEARN_GUIDE.md)
+- [Security and Isolation](SECURITY_ISOLATION_DESIGN.md)
+- [Pocket Host Design Language V1](UI_DESIGN.md)
+
+## v0.1.1 — Workbench & Runtime Development
+- [Workbench Specification](WORKBENCH.md)
+- [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md)
+- [Runtime Companion](RUNTIME_COMPANION.md)
+- [Python Runtime](PYTHON_RUNTIME.md)
+- [Node.js Runtime](NODE_RUNTIME.md)
+- [Runtime Project Storage](RUNTIME_PROJECT_STORAGE.md)
+- [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md)
+
+## v0.2.0 — Connected Device Fabric
+- [System Architecture](SYSTEM_ARCHITECTURE.md)
+- [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md)
+- [Host Agent Contract](HOST_AGENT_CONTRACT.md)
+- [Device Trust and Protocol](STEP_1_TRUST_AND_PROTOCOL.md)
+- [Android Device Trust Implementation](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
+- [Device Agents and Workers](STEP_3_DEVICE_AGENTS.md)
+- [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
 - [Control Plane Deployment](CONTROL_PLANE_DEPLOYMENT.md)
-- [Release Signing and Provenance](RELEASE_SIGNING.md)
 - [AssayFlux Relay](ASSAYFLUX_RELAY.md)
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
-- [Management API schema](management-api-v1.yaml)
+- [Release Signing and Provenance](RELEASE_SIGNING.md)
 
-## Shared machine-readable contracts
+## Product, security and competitive references
+- [Security and Isolation](SECURITY_ISOLATION_DESIGN.md)
+- [Competitive Landscape](COMPETITIVE_LANDSCAPE.md)
+- [Architecture Decisions](DECISIONS.md)
 
-- [Interoperability Protocol](../protocol/README.md) — versioned device hello, one-time enrollment challenge, signed role grants, typed jobs and compatibility rules.
-- [Step 1 Trust and Protocol](STEP_1_TRUST_AND_PROTOCOL.md) — normative trust ceremony, threat model, transport matrix, runtime/artifact boundaries and DemonCore contract.
+## Machine-readable contracts
+- [Device protocol](../protocol/README.md)
+- [Management API OpenAPI](management-api-v1.yaml)
 
-## Repository boundaries
-
-- Android app: `app/`
-- Android runtime companion: `runtime-worker/`
-- Rust website engine: `rust-engine/`
-- Remote control plane: `control-plane/`
-- Browser operator console: `web-console/`
-- Linux node agent preview: `agents/linux/`
-- MCU and edge fleet: [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore)
+Technical specifications may describe later capabilities. They do not change version scope or prove acceptance. Use ROADMAP.md and RELEASE_GATES.md as the delivery source of truth.

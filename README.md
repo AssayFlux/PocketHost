@@ -39,18 +39,18 @@
 
 ## ABOUT POCKET HOST
 
-**AssayFlux Pocket Host** is a mobile-first personal infrastructure project. It is designed to let an owner use a phone as a website server and, when desired, as the command center for a verified network of other devices.
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release makes an Android phone a practical static website host. Later releases add an in-app development workbench, optional server runtimes, public visitor ingress and a verified device fabric.
 
-A desktop, laptop, server, NAS or supported single-board computer can eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Devices are separate products for their respective platforms and connect through shared versioned contracts. A device is never trusted merely because it appears on the network.
+A desktop, laptop, server, NAS or supported single-board computer may eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Device products remain separate for their platforms and interoperate through shared contracts. Network discovery never establishes trust.
 
-Pocket Host is a pre-release engineering project. The repository contains substantial working foundations, but the complete device fabric, platform matrix and release acceptance are not finished.
+Pocket Host is in pre-release engineering. Existing source foundations are not the same as release acceptance. The official delivery path is the three-version roadmap below.
 
 <table>
   <tr>
     <td align="center" width="50%">
       <img src="https://api.iconify.design/lucide/server.svg?color=%23800020" width="30" height="30" alt="Server">
       <br><strong>SERVER ONLY</strong><br>
-      Serve websites from the mobile device. Fleet discovery, approval and role administration stay unavailable.
+      Serve websites from this mobile device. Fleet discovery, approval and role administration stay unavailable.
     </td>
     <td align="center" width="50%">
       <img src="https://api.iconify.design/lucide/network.svg?color=%23800020" width="30" height="30" alt="Command center">
@@ -62,72 +62,75 @@ Pocket Host is a pre-release engineering project. The repository contains substa
 
 **The two-mode rule is fundamental:** website serving remains enabled in both modes. There is no standalone Command Center-only mode.
 
-## PRODUCT CAPABILITIES
+## THE NEW THREE-VERSION PATHWAY
 
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <img src="https://api.iconify.design/lucide/globe.svg?color=%23800020" width="28" height="28" alt=""><br>
-      <strong>WEBSITE HOSTING</strong><br>
-      HTML, CSS and browser JavaScript static serving through the Rust engine. Built-in TypeScript compilation is a Step 4 requirement and is not yet bundled/verified.
-    </td>
-    <td align="center" width="33%">
-      <img src="https://api.iconify.design/lucide/fingerprint.svg?color=%23800020" width="28" height="28" alt=""><br>
-      <strong>DEVICE TRUST</strong><br>
-      P-256 identity, signed short-lived enrollment challenges, metadata-bound proof, role grants and revocation foundation.
-    </td>
-    <td align="center" width="33%">
-      <img src="https://api.iconify.design/lucide/workflow.svg?color=%23800020" width="28" height="28" alt=""><br>
-      <strong>DEVICE WORKERS</strong><br>
-      Linux preview agent with durable jobs, HTTPS polling and default-deny health/storage/backup snapshot operations.
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="https://api.iconify.design/lucide/blocks.svg?color=%23800020" width="28" height="28" alt=""><br>
-      <strong>OPTIONAL RUNTIMES</strong><br>
-      Python 3.11 and Node.js 24.22.1 already exist in a separate Android companion APK; both are in progress.
-    </td>
-    <td align="center">
-      <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
-      <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, AssayFlux Relay and Cloudflare Tunnel are independent ingress options.
-    </td>
-    <td align="center">
-      <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
-      <strong>CONTROL &amp; EVIDENCE</strong><br>
-      Versioned contracts, least-privilege policies, audit foundations, bounded operations and CI validation.
-    </td>
-  </tr>
-</table>
+| Version | Milestone | Release outcome |
+|---|---|---|
+| **v0.1.0** | First Hosting | Import and host a real static website from Android, locally and over the same Wi-Fi network |
+| **v0.1.1** | Workbench & Runtime Development | Edit, preview, version and safely publish websites; complete optional Python/Node runtime integration |
+| **v0.2.0** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and harden public ingress |
 
-## WEBSITE WORKBENCH
+This is the initial roadmap, not the final product boundary. It will be expanded after these three milestones. The old five-step delivery sequence is retired as the release roadmap.
 
-Workbench is now an initial first-class destination in the mobile app, available in both operating modes. The first implementation includes a per-site private draft workspace, nested directory explorer, basic text editor, draft saving, file/folder creation, file rename/delete, change detection and local commit snapshots. It does not require a GitHub account.
+## v0.1.0 — FIRST HOSTING
 
-**Production safety is fundamental:** the current Workbench writes only to its private workspace; commits are local snapshots and do not overwrite production. Isolated preview, TypeScript build, diff viewer, deployment history, owner-approved atomic publishing and rollback are still under implementation. See [Workbench specification](docs/WORKBENCH.md).
+The first release has one primary promise: **a website imported into Pocket Host can be served correctly by the Android phone.**
+
+- Main Android application with the bundled Rust static website engine.
+- Website import from a folder or ZIP.
+- **500 MB maximum ZIP archive and 500 MB maximum extracted website contents** (500,000,000 bytes for each limit).
+- Up to 5,000 files, 10,000 total entries and 32 directory levels.
+- HTML, CSS, browser JavaScript and static assets.
+- Local phone preview, configurable HTTP port and optional LAN binding.
+- A second device on the same Wi-Fi can open the website.
+- Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
+- Website backup/restore and useful hosting diagnostics.
+- APK build, installation and physical Android acceptance.
+
+The static website path does not require Python, Node.js or a companion runtime. A React/Vite website can be hosted from its already-built static output (normally the contents of <code>dist/</code>); the phone does not compile a raw React/TypeScript project in v0.1.0.
+
+The Rust engine currently has a separate **50 MiB per-file response safety cap**. That is not the overall import limit and must remain visible in the technical documentation.
+
+## v0.1.1 — WORKBENCH & RUNTIME DEVELOPMENT
+
+- Complete the GitHub-inspired Workbench: project explorer, editor, tabs, file operations, changes/diffs, commits and deployment history.
+- Keep private drafts separate from the live website.
+- Add isolated preview and a bounded built-in TypeScript-to-JavaScript compiler.
+- Stage immutable website releases, require explicit owner approval, activate atomically and support rollback.
+- Complete and verify the existing Python 3.11 and Node.js 24.22.1 integrations in the separate runtime companion.
+- Keep optional runtimes separate from the main app; static hosting must work without them.
+- Add larger-project, quota, crash-recovery and cross-site isolation tests.
+
+## v0.2.0 — CONNECTED DEVICE FABRIC
+
+- Complete owner-approved device identity, enrollment, role grants and revocation.
+- Connect the mobile command center to separate platform-specific worker software.
+- Deliver bounded storage/backup, traffic, build/publish preparation and native-job roles.
+- Harden authenticated transport, job lifecycle, audit, control plane and agent recovery.
+- Deliver independently operated Local Network, AssayFlux Relay and Cloudflare Tunnel ingress paths.
+- Prove isolation between visitor traffic, device administration, runtimes and edge controls.
+
+## MANDATORY RELEASE RULE: G0–G9
+
+**Every version must document and pass all ten release gates, G0 through G9.** This rule applies to v0.1.0, v0.1.1, v0.2.0 and every later version. A gate is PASS only with implementation and recorded verification evidence. A document, source file, successful compile or simulator-only run is not sufficient. No release may ship with any gate open.
+
+See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, per-version acceptance matrix and required evidence ledger.
 
 ## TECHNOLOGY BOUNDARIES
 
-The tools have separate responsibilities. They are not one giant Android bundle.
-
-| Technology | Lives in | Responsibility | Status |
+| Technology | Repository location | Responsibility | Release placement |
 |---|---|---|---|
-| HTML / CSS / browser JavaScript | Main Android app + Rust engine | Default static website hosting | Foundation implemented |
-| TypeScript compiler | Main Android app | Compile user website TypeScript into browser JavaScript | Required by Step 4; not yet implemented/verified |
-| React + TypeScript + Vite | <code>web-console/</code> | Separate browser operator console | Present; builds in CI |
-| Python 3.11 | <code>runtime-worker/</code> companion APK | Optional server-side WSGI runtime | Existing integration; in progress |
-| Node.js mobile 24.22.1 | <code>runtime-worker/</code> companion APK | Optional server-side JavaScript runtime | Existing integration; in progress |
-| Future 20-language Runtime Library | <code>runtime-library/catalog/</code> | Independently downloadable server-side runtime packs | Catalog manifests only; future work |
+| Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
+| Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
+| HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
+| Workbench | Android app | Website development workflow | v0.1.1 |
+| TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
+| React + TypeScript + Vite | <code>web-console/</code> | Separate browser operator console | v0.2.0 scope |
+| Python 3.11 | <code>runtime-worker/</code> companion APK | Optional WSGI server runtime | v0.1.1 |
+| Node.js 24.22.1 | <code>runtime-worker/</code> companion APK | Optional server-side JavaScript runtime | v0.1.1 |
+| Device agents and control plane | <code>agents/</code>, <code>control-plane/</code>, <code>protocol/</code> | Connected device fabric | v0.2.0 |
 
-**Important distinctions**
-- The main app must serve static websites without the runtime companion.
-- Python and Node.js are already in the repository. They currently ship together in the separate companion APK and share its application UID. This is not a per-project hostile-code sandbox; use trusted owner-controlled code only until isolation tests pass.
-- The future Runtime Library will split Python and Node into independent signed packages and add 18 planned languages. The JSON manifests are not downloadable runtime binaries.
-- React, TypeScript and Vite dependencies for the operator console are not bundled into the Android app.
-- The main app's built-in TypeScript compiler is a separate website-authoring feature, not Node.js and not a server-side runtime.
-
-See [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md), [Step 4 Web Baseline](docs/STEP_4_WEB_BASELINE.md) and [Future Runtime Library](docs/FUTURE_RUNTIME_LIBRARY.md).
+Python and Node.js already have repository implementations in a separate companion APK. They are in progress, currently delivered together and not production-isolated. The future 20-language Runtime Library is a later expansion; catalog manifests are not downloadable runtime binaries.
 
 ## SYSTEM ARCHITECTURE
 
@@ -139,71 +142,56 @@ flowchart TB
     MODE -->|"Command Center + Server"| COMMAND["FLEET COMMAND CENTER"]
     COMMAND --> TRUST["DEVICE IDENTITY · OWNER APPROVAL · ROLE GRANTS"]
     TRUST --> AGENTS["SEPARATE DEVICE AGENTS"]
-    AGENTS --> STORAGE["STORAGE / BACKUP"]
-    AGENTS --> TRAFFIC["TRAFFIC / GATEWAY"]
-    AGENTS --> BUILD["BUILD / PUBLISH"]
-    AGENTS --> JOBS["BOUNDED NATIVE JOBS"]
+    AGENTS --> ROLES["BOUNDED STORAGE · TRAFFIC · BUILD · NATIVE JOBS"]
     SERVER --> RUST["RUST HTTP INGRESS"]
     RUST --> STATIC["HTML · CSS · JAVASCRIPT"]
-    MOBILE --> WB["WORKBENCH · EXPLORER / EDITOR / DIFFS"]
-    WB --> WS["ISOLATED WORKSPACE + PREVIEW"]
-    WS --> RELEASE["COMMIT · VALIDATE · APPROVE · ATOMIC RELEASE"]
-    RELEASE --> STATIC
-    RUST --> COMPANION["OPTIONAL RUNTIME COMPANION"]
+    MOBILE --> WB["WORKBENCH · v0.1.1"]
+    WB --> RELEASE["PREVIEW · VALIDATE · APPROVE · PUBLISH"]
+    RUST --> COMPANION["OPTIONAL RUNTIME COMPANION · v0.1.1"]
     COMPANION --> PY["PYTHON 3.11"]
     COMPANION --> NODE["NODE.JS 24.22.1"]
-    SERVER --> INGRESS["LOCAL NETWORK / ASSAYFLUX RELAY / CLOUDFLARE"]
-    COMMAND --> CONTROL["OPTIONAL RUST CONTROL PLANE"]
-    CONSOLE["REACT · TYPESCRIPT · VITE CONSOLE"] --> CONTROL
-    EDGE["DEMONCORE · MCU"] --> AGENTS
+    SERVER --> INGRESS["LOCAL NETWORK / RELAY / CLOUDFLARE"]
+    COMMAND --> CONTROL["OPTIONAL CONTROL PLANE · v0.2.0"]
+    CONSOLE["BROWSER OPERATOR CONSOLE"] --> CONTROL
 ~~~
 
-The diagram shows target integration boundaries, not a claim that every connection or role is production-ready. Current implementation and acceptance status are listed below.
+The diagram includes future integration boundaries. It is not a claim that every connection, runtime or device role is already production-ready.
 
 ## REPOSITORY STATUS
 
-| TRACK | CURRENT POSITION | OPEN WORK |
-|---|---|---|
-| **STEP 1 · CONTRACTS** | Protocol 1.0 schemas, role/job policies, validator and trust simulations committed | Confirm Alpha CI evidence and complete review |
-| **STEP 2 · MOBILE TRUST** | Android two-mode UI, P-256 owner identity, signed challenge/proof, role grant, encrypted registry and revocation foundation | Authenticated transports, per-use key auth, full control-plane provisioning, revocation propagation, agent lifecycle and physical-device acceptance |
-| **STEP 3 · DEVICE AGENTS** | Linux preview package, durable SQLite jobs, HTTPS polling, signed grants/jobs, health and local storage/backup snapshot executors | Full mobile provisioning, grant renewal/revocation, stronger isolation, other OS packages, missing worker roles and hardware acceptance |
-| **STEP 4 · WEB SERVER + WORKBENCH** | Rust static-serving foundation, site import/registry/backup and Android hosting lifecycle | Main-app TypeScript compiler, isolated Workbench/editor/preview/commits, immutable releases, atomic deploy/rollback and physical-device acceptance |
-| **STEP 5 · RESILIENCE** | Control-plane, Relay, Cloudflare, backup and diagnostics foundations exist | External ingress acceptance, restore drills, security review, fault/soak testing and signed release acceptance |
-| **FUTURE RUNTIME LIBRARY** | Python and Node.js runtime foundations; 20 catalog manifests | Independent package artifacts, Runtime Manager, security/lifecycle acceptance and 18 additional runtimes |
+The source tree contains Android hosting, a Rust static engine, website import/registry/backup foundations, a first Workbench workspace, Python and Node companion implementations, Android device-trust foundations, a Linux agent preview, a Rust control plane and visitor-ingress integrations.
 
-No step is considered complete solely because documentation, source code or a successful compile exists. See [Master Plan](docs/MASTER_PLAN.md) and [Repository Baseline](docs/PROJECT_BASELINE.md).
+The current source baseline and remaining gaps are recorded in [Repository Baseline](docs/PROJECT_BASELINE.md) and [Repository Deep Audit](docs/REPOSITORY_AUDIT.md). These documents distinguish implemented foundations from accepted product behavior.
 
 ## ANDROID APPLICATION
 
-The current Android app is a Kotlin/Jetpack Compose application with a native Rust website engine. Its repository includes:
-- Website hosting foreground service and boot/recovery hooks.
-- Site import from folder, ZIP and individual files; site registry and preview flow.
-- Site/application backup and interrupted-operation recovery foundations.
-- Local management API and remote control agent.
+The Android app is Kotlin/Jetpack Compose with a native Rust website engine. Repository components include:
+- Website hosting foreground service and recovery hooks.
+- Folder/ZIP website import, site registry and preview flow.
+- Website backup and interrupted-operation recovery foundations.
+- Local management API, diagnostics, metrics and operational logs.
 - Owner/account and biometric confirmation foundations.
-- Device trust store and Command Center device screen.
-- Capacity, telemetry, metrics and operational logs.
+- Device trust store and command-center screen foundation.
 - Cloudflare Tunnel integration and AssayFlux Relay client foundation.
-- Runtime companion client, trust acknowledgement and project transfer.
+- Optional runtime companion client and project-transfer foundation.
 
-The Android module declares min SDK 26, target SDK 35 and native ABI targets arm64-v8a, armeabi-v7a and x86_64. Declared build targets are not a substitute for device acceptance.
+The Android module declares min SDK 26, target SDK 35 and native ABI targets arm64-v8a, armeabi-v7a and x86_64. Declared targets are not a substitute for device acceptance.
 
 ## DEVICE SOFTWARE
 
-| Device | Software | Repository status |
+| Device | Software | Honest status |
 |---|---|---|
-| Android phone/tablet | Pocket Host main app | Implemented foundation; device acceptance open |
-| Android runtime provider | Separate runtime companion APK | Python + Node integrations in progress |
+| Android phone/tablet | Pocket Host main app | Hosting foundation present; physical acceptance open |
+| Android runtime provider | Separate companion APK | Python + Node integrations in progress |
 | Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
-| Windows | Native worker agent | Planned |
-| macOS | Native worker agent | Planned |
-| Raspberry Pi / SBC | Board/OS-specific agent or gateway | Planned; no board certified |
+| Windows / macOS | Native worker agent | Planned |
+| Raspberry Pi / SBC | Board/OS-specific agent | Planned; no board certified |
 | iOS | Mobile client | Planned; no iOS source project here |
-| DemonCore / MCU | Separate firmware and board profiles | External project; Pocket Host adapter acceptance open |
+| DemonCore / MCU | Separate firmware and board profiles | External project; adapter acceptance open |
 
 ## DEVELOPMENT AND VERIFICATION
 
-Run commands from the repository root. The Android build requires JDK 17, Android SDK/NDK (NDK 27.2.12479018 in CI), Go 1.27.4 for the cloudflared helper, Rust 1.88 and <code>cargo-ndk</code>. Install the Android Rust targets before compiling. The cloudflared Android native dependency is prepared by the repository build helper.
+Run commands from the repository root.
 
 ### Android main app
 
@@ -214,13 +202,13 @@ bash scripts/build-cloudflared-android.sh
 ./gradlew :app:assembleDebug
 ~~~
 
-### Optional Python/Node runtime companion
+### Optional runtime companion (v0.1.1 scope)
 
 ~~~bash
 ./gradlew :runtime-worker:assembleDebug
 ~~~
 
-This builds a separate companion APK. It is not required for static website hosting.
+This creates a separate companion APK and is not required for v0.1.0 static hosting.
 
 ### Rust website engine
 
@@ -228,7 +216,7 @@ This builds a separate companion APK. It is not required for static website host
 cargo test --manifest-path rust-engine/Cargo.toml --locked
 ~~~
 
-### Python runtime and Linux agent tests
+### Python runtime and Linux agent
 
 ~~~bash
 python -m pip install -e agents/linux
@@ -257,35 +245,32 @@ python scripts/validate-protocol.py
 python -m unittest discover -s tests -p 'test_protocol_contracts.py' -v
 ~~~
 
-### CI evidence
+### CI and APK evidence
 
-The [Pocket Host quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs on pushes and pull requests targeting the default branch, Alpha. It checks Rust, Python/Linux agent, browser console, Node metrics, Gradle wrapper and control-plane configuration/tests. Use the live badge above and [workflow history](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) for the latest result. CI does not by itself prove Android runtime execution, physical-device behavior, external public reachability or production security.
-
-The Android integration workflow has compile-only and manual APK/emulator paths. APK packaging and emulator tests are not automatic on every push. No production APK, signed release or device certification is claimed by this README.
+The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs automated repository checks. The Android integration workflow has a compile-only path and a manually dispatched APK/emulator path. A compile-only job is not an APK build or device acceptance. Release claims require the exact workflow run, artifact digest and device test evidence.
 
 ## DOCUMENTATION
 
-| Document | Purpose |
-|---|---|
-| [System Architecture](docs/SYSTEM_ARCHITECTURE.md) | Normative system boundaries, topology and trust |
-| [Master Plan](docs/MASTER_PLAN.md) | Five-step implementation plan |
-| [Roadmap](docs/ROADMAP.md) | Milestones and gate definitions |
-| [Repository Baseline](docs/PROJECT_BASELINE.md) | Source-audited implementation inventory |
-| [Repository Deep Audit](docs/REPOSITORY_AUDIT.md) | Component-level source findings, workflow wiring and open engineering risks |
-| [Device Software Matrix](docs/DEVICE_SOFTWARE_MATRIX.md) | Platform/role support boundaries |
-| [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md) | React/Vite, TypeScript compiler and runtime separation |
-| [Step 1 — Protocol](docs/STEP_1_TRUST_AND_PROTOCOL.md) | Schemas, signing and threat model |
-| [Step 2 — Mobile Trust](docs/STEP_2_DEVICE_TRUST_IMPLEMENTATION.md) | Android enrollment and owner trust foundation |
-| [Step 3 — Device Agents](docs/STEP_3_DEVICE_AGENTS.md) | Linux agent and remaining platform work |
-| [Step 4 — Web Baseline](docs/STEP_4_WEB_BASELINE.md) | Main-app static hosting and TypeScript compiler requirements |
-| [Future Runtime Library](docs/FUTURE_RUNTIME_LIBRARY.md) | Twenty optional server-side runtime catalog |
-| [Security and Isolation](docs/SECURITY_ISOLATION_DESIGN.md) | Threats, privilege boundaries and acceptance |
-| [Website Deployment](docs/WEBSITE_DEPLOYMENT.md) | Site lifecycle, runtime placement and publishing |
-| [Control Plane](docs/CONTROL_PLANE_DEPLOYMENT.md) | Optional remote fleet coordination |
-| [AssayFlux Relay](docs/ASSAYFLUX_RELAY.md) | First-party visitor ingress provider |
-| [Cloudflare Tunnel](docs/CLOUDFLARE_TUNNEL.md) | Independent public ingress provider |
-| [Release Signing](docs/RELEASE_SIGNING.md) | Signing, SBOM and release provenance |
-| [Documentation Index](docs/INDEX.md) | Full document catalogue |
+- [New Master Plan](docs/MASTER_PLAN.md)
+- [Three-Version Roadmap](docs/ROADMAP.md)
+- [Mandatory G0–G9 Release Gates](docs/RELEASE_GATES.md)
+- [Repository Baseline](docs/PROJECT_BASELINE.md)
+- [Repository Deep Audit](docs/REPOSITORY_AUDIT.md)
+- [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
+- [v0.1.0 Static Hosting Baseline](docs/STEP_4_WEB_BASELINE.md)
+- [Website Deployment](docs/WEBSITE_DEPLOYMENT.md)
+- [Website Backup and Restore](docs/SITE_BACKUP.md)
+- [Workbench Specification](docs/WORKBENCH.md)
+- [Web Toolchain Boundaries](docs/WEB_TOOLCHAIN_BOUNDARIES.md)
+- [Device Software Matrix](docs/DEVICE_SOFTWARE_MATRIX.md)
+- [Security and Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
+- [Python Runtime](docs/PYTHON_RUNTIME.md)
+- [Node.js Runtime](docs/NODE_RUNTIME.md)
+- [Future Runtime Library](docs/FUTURE_RUNTIME_LIBRARY.md)
+- [Device Trust and Protocol](docs/STEP_1_TRUST_AND_PROTOCOL.md)
+- [Device Trust Implementation](docs/STEP_2_DEVICE_TRUST_IMPLEMENTATION.md)
+- [Device Agents](docs/STEP_3_DEVICE_AGENTS.md)
+- [Documentation Index](docs/INDEX.md)
 
 ## PROJECT IDENTITY
 

@@ -1,4 +1,4 @@
-# Pocket Host 0.1.0 — Release Signing and Provenance
+# Pocket Host — Release Signing and Provenance
 
 ## Release identity
 
@@ -13,36 +13,30 @@ Every distributed artifact declares:
 
 ## Android packages
 
-The Android host and runtime companion must be signed with the same protected release certificate because the host/companion IPC contract uses a signature-level permission. Debug signing is not a release identity.
+The Android host and runtime companion currently use signature-level IPC permission boundaries; where that contract is retained, their release packages must be signed with the same protected release certificate. Debug signing is not a release identity.
 
-Release workflow inputs:
-- `POCKETHOST_KEYSTORE_BASE64`
-- `POCKETHOST_KEYSTORE_PASSWORD`
-- `POCKETHOST_KEY_ALIAS`
-- `POCKETHOST_KEY_PASSWORD`
+Protected workflow inputs currently include:
+- POCKETHOST_KEYSTORE_BASE64
+- POCKETHOST_KEYSTORE_PASSWORD
+- POCKETHOST_KEY_ALIAS
+- POCKETHOST_KEY_PASSWORD
 
-Store these only in protected GitHub Actions secrets and a protected release environment. Never commit a keystore, signing password or private key.
+Store these only in protected GitHub Actions secrets and release environments. Never commit keystores or private keys.
 
 ## Cross-platform signing
 
-- iOS: Apple signing identity, provisioning and notarization/distribution requirements for the chosen channel.
-- Linux: signed package/repository metadata and verified host-agent artifacts.
+- iOS: Apple signing/provisioning for the selected distribution channel.
+- Linux: signed package/repository metadata and verified agent artifacts.
 - Windows: signed installer and service binaries.
-- macOS: Developer ID signing and notarization where distributed outside the App Store.
-- MCU: signed firmware and OTA metadata with device-side verification and rollback policy.
+- macOS: Developer ID signing/notarization where applicable.
+- MCU: signed firmware and OTA metadata with device-side verification/rollback.
 
-Each platform uses its own trust store and signing identity. Do not reuse Android APK signing keys as fleet device identity keys or firmware signing keys.
+Do not reuse Android APK signing keys as device identity or firmware signing keys.
 
-## Build requirements
+## Build and provenance
 
-- Reproducible dependency lockfiles and pinned toolchains.
-- Verify downloaded upstream runtime archives against pinned digests.
-- Build only from a reviewed commit.
-- Generate SBOM and license inventory.
-- Sign artifacts after build and verify signatures before publication.
-- Publish checksums and provenance alongside artifacts.
-- Never include owner secrets, device keys or runtime credentials in artifacts.
+Use pinned toolchains and lockfiles. Verify upstream archives against pinned digests. Build only from reviewed commits. Generate SBOM/license inventory, sign after build, verify signatures, publish checksums and provenance. Never include owner secrets, device keys or runtime credentials.
 
 ## Release gate
 
-A successful build is not a signed release. A signed artifact is not platform acceptance. A release requires signature verification, exact target-device tests, upgrade/rollback, recovery, security review and a support matrix.
+Signing is G4; release provenance and owner approval are G9. A successful build is not a signed release. A signed artifact is not physical-device acceptance. All G0–G9 gates apply.

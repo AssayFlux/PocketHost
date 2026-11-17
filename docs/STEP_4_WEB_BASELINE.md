@@ -1,82 +1,56 @@
-# Step 4 — Pocket Host Built-in Web Server Baseline
+# Pocket Host v0.1.0 — Static Hosting Baseline
 
-**Scope: the main Pocket Host mobile application only.** Step 4 covers the built-in website-serving experience. Optional language runtime add-ons are explicitly outside Step 4 and are tracked in the future Runtime Library plan (`FUTURE_RUNTIME_LIBRARY.md`).
+**Release assignment:** v0.1.0 — First Hosting  
+**Scope:** main Android Pocket Host app and bundled Rust static website engine.  
+**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers or public ingress.
 
-## 1. Main-app capabilities
+## 1. Release promise
 
-Every Pocket Host mobile server installation must provide these capabilities without a companion APK, runtime download or add-on installation:
+A user can import a static website into the Android app, start hosting, open it locally and allow a second device on the same trusted Wi-Fi network to access it.
 
-| Technology | Main-app behavior | Execution model |
-|---|---|---|
-| HTML | Serve pages, entry documents and fragments | Bundled Rust static server |
-| CSS | Serve stylesheets, fonts and related assets | Bundled Rust static server |
-| TypeScript | Built-in authoring/build workflow compiles TypeScript to JavaScript before publish | Compiler/transpiler bundled with the main app; browser executes emitted JavaScript |
-| JavaScript | Serve generated and authored browser-side JavaScript | Static asset delivery |
+## 2. Required capabilities
 
-The built-in baseline is present in both mobile modes: **Server only** and **Command Center + Server**. Website serving remains enabled in both modes.
+- Main Android application and bundled Rust HTTP engine.
+- HTML, CSS, browser JavaScript and static assets.
+- Folder and ZIP import with staging and validation.
+- ZIP archive maximum 500,000,000 bytes.
+- Expanded website maximum 500,000,000 bytes.
+- 5,000 files, 10,000 entries and 32 directory levels.
+- <code>index.html</code> required at website root; ZIP may have one top-level containing folder.
+- Local preview and configurable port.
+- Loopback default and explicit opt-in LAN binding.
+- Foreground hosting service, notification, start/stop/restart and recovery.
+- Basic encrypted website backup/restore.
+- Clear error, diagnostics and Android permission/lifecycle behavior.
 
-## 2. TypeScript behavior
+## 3. Static response safety
 
-TypeScript is not browser-native and must not be served as if a browser could execute raw TypeScript. The main app must bundle the compiler/transpiler and perform a bounded build step before activation:
+The current Rust engine defines a 50 MiB per-file response cap. This is separate from the total website import quota. Do not infer that a single file up to 500 MB is serveable. If this cap changes, update Rust tests, resource budgets, security review, documentation and G0/G1/G3/G7/G8 evidence.
 
-1. Import site source into a staging area.
-2. Identify TypeScript entry points and project configuration.
-3. Compile TypeScript to JavaScript and emit diagnostics.
-4. Reject failed builds without replacing the active site.
-5. Validate generated paths and file sizes, then stage immutable output.
-6. Let the owner preview/approve the artifact and atomically activate it.
-7. Serve generated JavaScript as a normal static asset.
+## 4. Technology boundaries
 
-The initial built-in workflow must not silently promise full npm package installation, arbitrary native addons, server-side Node execution or a general-purpose build farm. Those are separate product decisions.
-
-## 3. Technology separation
-
-The accepted technology ownership and dependency boundaries are normative in [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md):
-
-- React, React DOM, TypeScript and Vite dependencies used by the browser operator console stay inside `web-console/`; none are bundled into the Android app.
-- The main app receives its own bundled TypeScript compiler/transpiler for website authoring. This is a compiler tool, not Node.js or a server-side runtime.
-- The main app's TypeScript workflow must work without npm, React, Vite, Node.js or the runtime companion. Full npm package resolution and arbitrary package scripts are explicitly out of scope for the initial baseline.
-- Python and Node.js remain separate optional server-side runtimes in `runtime-worker/`.
-
-## 4. Main-app boundaries
-
-- Basic HTML/CSS/JavaScript static hosting works without installing any extra runtime.
-- A failed TypeScript build leaves the previous active website unchanged.
-- Static serving remains independent of future optional language runtime packages.
-- Worker devices may build immutable artifacts, but cannot publish directly to the live site or bypass owner approval.
-- The main app does not bundle every server-side language runtime.
-- Optional runtime package management is a future, separately scoped Runtime Library feature, not a Step 4 exit requirement.
+- React + TypeScript + Vite are the separate web-console operator client.
+- React/Vite websites are supported in v0.1.0 as prebuilt static output, not as source builds on the phone.
+- Main-app TypeScript compiler and Workbench build flow are v0.1.1.
+- Python 3.11 and Node.js 24.22.1 are existing optional integrations in the separate runtime-worker APK; their acceptance is v0.1.1.
+- Static hosting must continue when the runtime companion is absent or fails.
 
 ## 5. Current implementation evidence
 
-Already present in the repository:
-- Android server app packages the Rust website engine through its native build.
-- Rust engine serves HTML and CSS and includes static routing, path validation, bounded connections and common asset MIME handling.
-- Site import and static hosting flows exist in the Android application.
+The audited source includes:
+- HostingService foreground service and recovery before starting the native engine.
+- NativeEngine Rust HTTP listener with loopback default and LAN opt-in.
+- SiteImporter folder/ZIP staging, path/name validation, quotas, index validation, activation and recovery.
+- SiteBackupManager encrypted website archive/restore foundation.
+- Websites & Files UI and site registry.
+- Android integration workflow with compile-only and manually dispatched APK/emulator paths.
 
-Still required before the main-app baseline can be called verified:
-- Bundle the TypeScript compiler/transpiler into the main Pocket Host app.
-- Add deterministic tests for TypeScript success, diagnostics/failure, path traversal, output bounds and atomic publish behavior.
-- Verify generated JavaScript assets are served with the JavaScript MIME type.
-- Verify a fresh main-app installation serves HTML/CSS/JS without installing the runtime companion or any optional runtime.
-- Verify on supported Android ABIs and physical devices.
+This is a source inventory, not proof that the first release passes on a physical device.
 
-## 6. Workbench — required Step 4 workstream
+## 6. v0.1.0 exit
 
-Workbench is a first-class in-app website development workspace, available in both operating modes. It is GitHub-inspired but does not require a GitHub account. It extends the existing website registry and file-management foundations rather than introducing a second site system.
+All ten G0–G9 gates must pass. The critical acceptance journey is folder/ZIP import, 500 MB boundary checks, local page load, second-device LAN load, assets/navigation, stop/restart, Android lifecycle, backup/restore and artifact installation on a named physical phone.
 
-Required areas: multi-site Explorer, Editor with unsaved changes, isolated Preview, Changes/diffs, durable local Commits, Deployments, release history and rollback. Its editable workspace must be separate from the immutable production release. Editing, saving, previewing and committing cannot alter the version currently served to visitors.
+## 7. Deferred work
 
-Publishing validates paths and content, performs bounded build steps, creates an immutable staged release and digest, previews/health-checks it, presents a diff, requires owner approval, atomically activates it and preserves a last-known-good release. Failure or process death must not leave a partially deployed site. TypeScript is supported only after the main-app compiler is bundled and verified. See [Workbench specification](WORKBENCH.md) for the full contract and acceptance checklist.
-
-Current `WorkbenchWorkspaceManager` provides a separate per-site private draft workspace and baseline, bounded nested file listing, text read/write/create, folder creation, file rename/delete, SHA-256 change detection and immutable local commit snapshots. `PocketHostWorkbenchScreen` is connected to the hamburger navigation in both operating modes and provides site selection, nested folder navigation, a basic text editor, save-draft, create/rename/delete file actions, change summary and commit history. Unsaved editor text is protected from accidental navigation/discard. Android integration run [44050320129](https://github.com/AssayFlux/PocketHost/actions/runs/44050320129) successfully compiled app and instrumentation sources; emulator tests and APK packaging were skipped. This is an initial foundation, not a production-ready Workbench: preview, per-file diffs, TypeScript build, deployment UI, owner-approved atomic release activation, rollback, complete acceptance and physical-device testing remain open.
-
-## 7. Step 4 partial-close definition
-
-**Partially closed:** the architecture and existing implementation establish the always-included HTML/CSS static-serving baseline. TypeScript is frozen as a built-in main-app toolchain capability, not an optional language runtime.
-
-**Still open within Step 4:** TypeScript compiler bundling and tests; main-app website lifecycle; secure staging, preview and atomic publishing; and required physical-device acceptance.
-
-**Not part of Step 4:** Python, Node.js, PHP or any other separately downloadable server-side language runtime. Those are future optional add-ons described in `FUTURE_RUNTIME_LIBRARY.md`.
-
-Do not claim TypeScript support is implemented until the compiler is actually bundled and tested. Do not hold Step 4 open for the future language add-on catalog.
+Workbench preview, diff, TypeScript compilation, commits/deployment history, owner-approved publishing and rollback are v0.1.1. Python/Node acceptance is v0.1.1. Device trust, agents, control plane and public ingress are v0.2.0.

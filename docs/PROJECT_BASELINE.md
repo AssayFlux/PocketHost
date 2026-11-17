@@ -1,87 +1,81 @@
-# Pocket Host 0.1.0 — Repository Baseline
+# Pocket Host — Repository Baseline
 
-**Repository:** [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)  
-**Default branch:** `Alpha`  
-**Product baseline:** `0.1.0`  
-**Audit scope:** source tree at the Alpha branch, 236 tracked files at the audit snapshot.  
-**Release state:** pre-release engineering baseline; not production certified.
+**Repository:** AssayFlux/PocketHost  
+**Branch audited:** Alpha  
+**Audit baseline commit:** afb0cceadfabca840590eb42eb4b5f3aaf9eac3e  
+**Release target:** v0.1.0 — First Hosting  
+**Certification state:** pre-release; physical Android acceptance not yet established by this audit
 
-## Product identity and invariants
+This file records source presence and known workflow evidence. It is not a claim that all listed features are complete or production-ready.
 
-Pocket Host is a mobile-first personal infrastructure system. The mobile device is always the website-serving node. It has exactly two mutually exclusive operating modes:
+## Product invariants
 
-| Mode | Website server | Fleet administration |
+| Mode | Website serving | Fleet administration |
 |---|---|---|
 | Server only | Enabled | Disabled |
-| Command Center + Server | Enabled | Enabled |
+| Command Center + Server | Enabled | Enabled when fleet implementation is accepted |
 
-There is no Command Center-only mode. External devices use separate platform-specific software and are integrated only after cryptographic verification and owner approval. A device receives narrowly scoped, revocable roles rather than unrestricted remote access.
+There is no Command Center-only mode. The phone is the serving node in both modes. Device enrollment and fleet administration are later-release functionality.
 
-## Repository implementation inventory
+## Implementation inventory
 
-| Component | Source location | What is actually present | Current status |
+| Component | Source location | Source-audited implementation | Honest status / release |
 |---|---|---|---|
-| Android Pocket Host app | `app/` | Kotlin, Jetpack Compose, hosting foreground service, Rust JNI engine integration, site import/registry/backup, local management API, account/biometric flows, diagnostics, tunnel controls, runtime companion clients and device-trust UI | Implemented foundation; product acceptance open |
-| Rust website engine | `rust-engine/` | Tokio/Hyper HTTP server, static site delivery, host routing and native Android library | Source and host tests present; Android device acceptance open |
-| Runtime companion | `runtime-worker/` | Separate APK/package and UID; CPython 3.11 via Chaquopy; Node.js mobile 24.22.1 via JNI/libnode; Binder services, project transfer, process lifecycle and network/runtime probes | Both integrations in progress; not production sandboxed |
-| Python runtime | `runtime-worker/src/main/python/` | WSGI adapter, loopback serving, multi-host routing, bounded workers/body/timeouts and metrics | Existing implementation; Android acceptance and independent package split open |
-| Node.js runtime | `runtime-worker/src/main/cpp/`, `src/main/java/` | JNI/libnode bridge, pinned native SDK for arm64-v8a/armeabi-v7a/x86_64, foreground service, bounded heap and metrics | Existing implementation; Android acceptance and independent package split open |
-| Website file foundation | app/.../storage/SiteFileManager.kt, PocketHostSitesScreen.kt | Bounded list/read/write/create/upload/rename/delete/index operations and a Websites & Files screen; current editing targets the deployed site tree | Foundation only; current screen still edits live files |
-| Workbench | `WorkbenchWorkspaceManager.kt`, `PocketHostWorkbenchScreen.kt`, `WorkbenchWorkspaceManagerTest.kt`, app navigation | Per-site private workspace/baseline; nested explorer; basic text editor; draft save; create folder/file, rename/delete file; change digest; immutable local commit snapshots and history UI | Initial UI + storage foundation; preview, diffs, TypeScript build, release activation/rollback and emulator/physical acceptance remain open |
-| Android trust | `app/.../management/DeviceTrustStore.kt`, Devices UI | Keystore P-256 owner identity, signed short-lived challenges, metadata-bound candidate proof, role grants, encrypted local registry and generation revocation | Foundation implemented; transport and end-to-end acceptance open |
-| Local management API | `ManagementApiServer.kt` | Loopback management API with security/instrumentation tests | Implemented foundation; full product/API acceptance open |
-| Remote control agent | `RemoteControlAgent.kt`, `FleetControlPlaneClient.kt` | Android control-plane client/agent foundation | Partial integration; end-to-end fleet workflows open |
-| AssayFlux Relay | `RelayAgent.kt`, `control-plane/src/relay.rs` | Bounded HTTP request/response visitor relay path | Source implementation; public deployment and external acceptance not proven |
-| Cloudflare Tunnel | `tunnel/`, Android JNI assets/build script | Android cloudflared connector, encrypted token storage, lifecycle integration; Android ABI build helper | Integration present; external/physical acceptance open |
-| Remote control plane | `control-plane/` | Rust/Axum API, PostgreSQL migrations, sessions/passkeys foundation, device commands, audit, artifact metadata and Compose/Caddy deployment | Backend foundation; production deployment and end-to-end acceptance open |
-| Browser operator console | `web-console/` | React 18, TypeScript 5.7, Vite 6, separate browser UI | Builds independently in CI; not bundled in Android app |
-| Linux Node Agent | `agents/linux/` | Python package, P-256 identity, owner challenge/grant/job verification, SQLite durable jobs, HTTPS polling preview and allow-listed health/storage/backup snapshot executors | Preview foundation; production/physical acceptance open |
-| Protocol contracts | `protocol/` | Versioned JSON Schemas, default-deny role/job policies and validator/tests | Step 1 contract gate passed on Alpha CI; production crypto remains Step 2+ |
-| Future Runtime Library | `runtime-library/catalog/` | 20 JSON manifests; Python and Node marked in progress, 18 others planned | Catalog metadata only; no independent runtime package artifacts or Runtime Manager |
-| DemonCore | External project | Link to separate AssayFlux/DemonCore firmware and board profiles | External dependency; Pocket Host integration/board acceptance open |
+| Android main app | app/ | Kotlin/Compose UI, hosting foreground service, Rust JNI engine, site import/registry/backup, local API, account/biometric flows, diagnostics, tunnel and runtime client integration, device-trust UI | Foundation; v0.1.0 hosting acceptance open |
+| Rust website engine | rust-engine/ | Tokio/Hyper static HTTP serving, host routing, bounded connections and native Android library | Source/tests present; v0.1.0 device acceptance open |
+| Website importer | app/.../storage/SiteImporter.kt | Folder and ZIP import, staging, path/name checks, index validation, activation/recovery | v0.1.0; 500 MB limits being aligned with code/UI/tests |
+| Website backup | app/.../storage/SiteBackupManager.kt | Passphrase-encrypted active static website backup/restore | Foundation; align and verify 500 MB safety limits in v0.1.0 |
+| Website file UI | PocketHostSitesScreen.kt and SiteFileManager.kt | Bounded list/read/write/create/upload/rename/delete/index operations | Existing site-file foundation; not a complete Workbench |
+| Workbench | WorkbenchWorkspaceManager.kt, PocketHostWorkbenchScreen.kt | Per-site private draft workspace, nested explorer, basic text editor, draft save, file/folder operations, change digest and immutable local commit snapshots | Initial foundation; v0.1.1 completion |
+| Runtime companion | runtime-worker/ | Separate APK/UID; CPython 3.11 via Chaquopy; Node.js mobile 24.22.1 via JNI/libnode; Binder IPC, project transfer and lifecycle controls | In progress; v0.1.1 acceptance |
+| Python | runtime-worker/src/main/python/ | WSGI adapter, loopback serving, host routing, bounded workers/body/timeouts and metrics | Existing integration; Android acceptance and isolation open |
+| Node.js | runtime-worker/src/main/cpp and src/main/java | JNI/libnode integration, pinned mobile SDK and native ABI support | Existing integration; Android acceptance and isolation open |
+| TypeScript authoring | Main app | No verified bundled compiler in current Android dependency graph | v0.1.1 requirement, not v0.1.0 |
+| Browser operator console | web-console/ | React, TypeScript and Vite browser application | Separate console; not an Android runtime |
+| Android device trust | DeviceTrustStore.kt and Devices UI | P-256 owner key, short-lived challenge, proof checks, role grants, encrypted local registry and generation revocation | Foundation; v0.2.0 acceptance |
+| Linux agent | agents/linux/ | Python package, P-256 identity, grant/job checks, SQLite durable jobs, HTTPS polling preview and allow-listed health/storage/backup snapshot tasks | Preview; v0.2.0 acceptance |
+| Control plane | control-plane/ | Rust/Axum API, PostgreSQL migrations, session/passkey foundations, device commands, audit and deployment configuration | Foundation; v0.2.0 acceptance |
+| AssayFlux Relay | RelayAgent.kt and control-plane/src/relay.rs | Bounded HTTP request/response visitor path | Source foundation; public deployment/acceptance v0.2.0 |
+| Cloudflare Tunnel | tunnel/ and Android native assets | Android cloudflared connector build/lifecycle and encrypted token store | Integration source present; external acceptance v0.2.0 |
+| Protocol | protocol/ | Versioned JSON Schemas, role/job policy and validator/tests | Contract foundation; production device integration v0.2.0 |
+| Runtime Library | runtime-library/catalog/ | 20 JSON catalog manifests; Python/Node in progress, remaining 18 planned | Metadata only; no independent package artifacts |
+| DemonCore | External project | Separate firmware and board profiles | External dependency; adapter acceptance later |
 
 ## Technology boundaries
 
-- Main app default web capability: HTML, CSS and browser JavaScript static serving through the bundled Rust engine.
-- Main app TypeScript authoring: a bundled TypeScript-to-JavaScript compiler is a required Step 4 feature, **not present/verified in the current Android dependency graph**.
-- React + TypeScript + Vite belong only to the separate `web-console/` operator client.
-- Python and Node.js are already implemented in the separate `runtime-worker/` companion APK, currently shipped together. They are optional server-side runtimes and are not required for static sites.
-- The 20-language Runtime Library is future work after the five-step baseline. Its manifests are not runtime binaries or downloadable packages.
+- v0.1.0 default: HTML, CSS and browser JavaScript through the Rust static server.
+- The current Rust engine has a 50 MiB per-file response cap. It is distinct from website import limits.
+- v0.1.0 import contract: 500,000,000 bytes maximum for the ZIP input and independently 500,000,000 bytes maximum for expanded site contents; 5,000 files, 10,000 entries and 32 directory levels.
+- React + TypeScript + Vite belong to web-console/, not the main Android application.
+- Built-in TypeScript-to-JavaScript compilation is assigned to v0.1.1 and is not verified in the current app dependency graph.
+- Python and Node.js are in the separate runtime-worker companion APK, currently shipped together and not independently packaged.
+- Python and Node share the companion app UID. This is not an OS-enforced per-project sandbox.
+- Static website hosting must work when the runtime companion is absent or stopped.
 
-## Platform and role coverage
+## Platform matrix
 
-| Target | Evidence in this repository | Honest support status |
+| Target | Repository evidence | Support status |
 |---|---|---|
-| Android phone/tablet | Main app and runtime companion Gradle modules; app compile/instrumentation sources; ABI-targeted native build | Android foundation only; physical-device acceptance still required |
-| iOS | No iOS source project or native application in this repository | Planned, not implemented |
-| Linux | Independently installable Python Node Agent preview package and tests | Preview only; not production-certified |
-| Windows/macOS | No platform agent installers/services in this repository | Planned |
-| Raspberry Pi/SBC | Linux agent may be a starting point, but no named board acceptance profile | Planned/conditional |
-| MCU | DemonCore is a separate repository/project | External integration foundation; per-board acceptance open |
+| Android | Main app, companion module, Rust JNI build | Foundation; named physical-device acceptance open |
+| Linux x86_64 | Preview agent package and tests | Preview only |
+| Windows/macOS | No production agent package found in audited tree | Planned |
+| Raspberry Pi/SBC | No named board acceptance profile | Planned |
+| iOS | No iOS source project | Planned |
+| MCU | Separate DemonCore project | External integration; board acceptance open |
 
-## Verification evidence and limitations
+## Build and CI interpretation
 
-The quality workflow includes:
-- Rust engine tests.
-- Python runtime and Linux agent unit tests.
-- React/TypeScript/Vite console build.
-- Node runtime metrics smoke test.
-- Gradle wrapper validation.
-- Control-plane tests, database migrations and deployment configuration checks.
+The quality workflow contains Rust, control-plane, Python/Linux agent, console, Node smoke and Gradle wrapper checks. Earlier CI runs are historical evidence, not proof of the current commit's Android runtime behavior.
 
-Historical CI evidence: quality run [44046355538](https://github.com/AssayFlux/PocketHost/actions/runs/44046355538) completed successfully across six jobs at the earlier main-branch snapshot. Alpha branch workflows have since been reconfigured; consult the live Alpha workflow history for current evidence. CI is not proof of Android runtime behavior or physical-device acceptance.
+The Android integration workflow has a compile-only path. Its manual APK job builds the main APK and companion APKs and can run emulator instrumentation when explicitly dispatched. Compile-only success is not an APK artifact. APK packaging is not physical-device acceptance.
 
-The Android integration workflow has compiled app and instrumentation sources in earlier runs. Emulator and APK packaging jobs were skipped in the compile-only run. The release workflow is manual and has not established a signed production release in this audit. No APK is claimed as built or physically tested here.
+## Known open items for the new roadmap
 
-## Known open engineering gates
+1. v0.1.0: prove 500 MB ZIP and expanded import boundaries, folder import, archive/path safety, correct static serving, local preview and same-Wi-Fi LAN access.
+2. v0.1.0: verify foreground service, notification, stop/restart, network changes, process death, backup/restore and Android permission/power behavior.
+3. v0.1.0: build, install and test APK on named physical hardware; attach artifact hash and G0–G9 evidence.
+4. v0.1.1: finish Workbench preview, diff, compiler, release staging, owner-approved activation and rollback.
+5. v0.1.1: finish Python/Node Android acceptance, optional installation lifecycle and isolation hardening.
+6. v0.2.0: finish device enrollment, authenticated transport, worker agents, control-plane integration, public ingress and cross-device recovery.
 
-1. Step 1: preserve schema/policy parity and confirm protocol CI evidence on Alpha.
-2. Step 2: complete owner step-up key authentication, authenticated transport, remote control-plane integration, agent provisioning/revocation and physical Android tests.
-3. Step 3: close Linux agent security/lifecycle gaps and implement other platform packages and missing role adapters.
-4. Step 4: bundle and test TypeScript compiler; implement Workbench workspace isolation, full project editor, diffs/commits, isolated preview, immutable staged releases, owner-approved atomic deploy/rollback and Android acceptance.
-5. Step 5: public ingress/relay operations, backup/restore rehearsals, resilience, security review, platform matrix and signed release evidence.
-6. Post-baseline Runtime Library: split Python and Node into independently signed packages; then implement and distribute further language packs.
-
-## Normative documents
-
-Start with [System Architecture](SYSTEM_ARCHITECTURE.md), [Master Plan](MASTER_PLAN.md), [Development Context](DEVELOPMENT_CONTEXT.md), [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md), [Step 1](STEP_1_TRUST_AND_PROTOCOL.md), [Step 2](STEP_2_DEVICE_TRUST_IMPLEMENTATION.md), [Step 3](STEP_3_DEVICE_AGENTS.md), [Step 4](STEP_4_WEB_BASELINE.md) and [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md). This baseline inventory describes source presence; the acceptance documents determine whether a capability is supported.
+See [Repository Deep Audit](REPOSITORY_AUDIT.md), [Roadmap](ROADMAP.md) and [Release Gates](RELEASE_GATES.md).

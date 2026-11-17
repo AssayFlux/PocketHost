@@ -1,57 +1,49 @@
-# Pocket Host 0.1.0 — Product North Star
+# Pocket Host — Product North Star
 
 ## Purpose
 
-Make personal and community-owned infrastructure approachable. A user controls a verified fleet of capable devices from an Android command center (iOS is a future target, not yet in this repository), assigns each device a useful job and combines their capabilities without making the fleet fragile.
+Make personal infrastructure approachable and owner-controlled. A user starts by serving a real website from an Android phone, then gains a safe in-app development workflow and eventually a trusted network of separately installed devices.
 
 ## Product promises
 
-- Mobile is the primary command center.
-- Mobile has exactly two operating modes: Server only, or Command Center + Server.
-- Every external device is verified and explicitly approved before integration.
-- Every device runs platform-specific software/firmware for its supported role.
-- Users assign devices to storage, traffic, build/publish, native backend jobs, backup or edge gateway roles.
-- In 0.1.0, user-selected language runtimes execute only on the mobile website-serving node.
-- Static hosting does not depend on optional language runtimes.
-- Devices communicate through authenticated, encrypted, versioned and bounded contracts.
-- Wi-Fi/LAN is preferred for bulk communication; BLE supports discovery and small control messages; USB is platform/API-specific; remote links are authenticated.
-- A device or role failure does not stop unrelated services.
-- Local Network, AssayFlux Relay and Cloudflare Tunnel are independent visitor connectivity choices.
-- DemonCore provides MCU firmware and bounded edge-device capabilities through an authenticated adapter.
+1. The owner controls the phone's website-serving service.
+2. Website serving works in both mobile modes.
+3. Static websites do not require optional runtimes.
+4. Local hosting remains useful without public ingress or the remote control plane.
+5. Every external device is explicitly verified and granted only bounded roles.
+6. Draft development never silently changes the live website.
+7. Optional runtimes remain modular and independently managed.
+8. Product claims are supported by G0–G9 evidence, not source presence.
+
+## Three-release journey
+
+- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, manage the foreground service and recover safely.
+- **v0.1.1 — Workbench & Runtime Development:** edit, preview, diff, commit and publish safely; complete optional Python/Node integrations.
+- **v0.2.0 — Connected Device Fabric:** enroll other devices, assign roles, coordinate work and provide verified public ingress.
+
+The roadmap can expand after these first three versions.
 
 ## Mobile operating model
 
-| Mode | Command role | Website server role |
+| Mode | Website server | Fleet administration |
 |---|---|---|
-| Server only | Off | On |
+| Server only | On | Off |
 | Command Center + Server | On | On |
 
-Server only exposes website-serving controls and does not enroll devices or assign fleet roles. Command Center + Server exposes both fleet administration and website-serving controls. The mobile app is not required for already-authorized jobs on other devices to continue. iOS is a first-class command client; always-on hosting is not promised where Apple's platform lifecycle does not support it.
+No standalone Command Center-only mode exists. Switching modes must not silently cancel already accepted autonomous work. v0.1.0 release acceptance focuses on serving behavior; full fleet operation is v0.2.0.
 
 ## Device fabric
 
-The fleet may include Android devices, iPhones as command clients, Linux/Windows/macOS computers, servers, VPSs, Raspberry Pi and other SBCs, embedded Linux gateways, DemonCore boards, ESP32-class MCUs and constrained sensors.
-
-A device receives only roles supported by its measured OS, architecture, hardware, resource, transport and security capabilities. Discovery is not trust. The owner approves a cryptographic device identity, one-time challenge and exact role grant.
+A device may contribute storage, backup, traffic, build/publish preparation, native jobs or an edge-gateway role only after explicit owner approval. Each role has its own credentials, namespace, limits, health and revocation behavior. Unknown capabilities are treated as unsupported.
 
 ## Runtime placement
 
-The 0.1.0 serving model centralizes customer-selected language runtimes on the mobile website-serving node. User installs only the languages required by the website. Worker nodes provide infrastructure jobs, storage, traffic proxy/cache, builds, publishing preparation, backups and fixed-purpose native services. They do not silently execute customer-selected language projects.
+Static content is the first default. Python 3.11 and Node.js 24.22.1 already have implementations in the separate Android runtime-worker companion APK; they are in progress and assigned to v0.1.1 acceptance. They share the companion UID and are not yet a hardened hostile-code sandbox. The future 20-language Runtime Library is later expansion.
 
-## Interconnection and resilience
+## Design promise
 
-The control plane coordinates identity, enrollment, role grants, desired state, job leases and audit. The data plane carries website traffic, storage transfer, build artifacts, worker jobs and edge telemetry. Each device retains accepted local assignments. Control-plane, mobile, tunnel, storage, worker, runtime and MCU failures have bounded effects.
-
-## Security invariants
-
-- Device key, owner identity, mobile client, role grant, job, runtime and MCU identity are distinct.
-- One-time codes are short-lived proofs, never permanent credentials.
-- No arbitrary remote shell or unrestricted filesystem access.
-- Visitor ingress never reaches management, runtime broker or MCU controls.
-- Build workers cannot activate a live release directly.
-- Storage and traffic roles receive only named namespaces/routes.
-- MCU actions are board-verified, allow-listed and safety-bounded.
+Pocket Host Design Language V1 remains the visual identity: elegant calligraphic brand moments, refined readable typography, minimal monochrome icons, semantic state colors, classic palettes and System/Light/Dark appearance. The roadmap is not a redesign.
 
 ## Success definition
 
-A user installs the correct node software, verifies it from a phone, assigns it a job and sees it operate independently. The mobile device can serve a website, manage the fleet, or do both. A broken node, runtime, tunnel, job or edge device does not take down unrelated parts of the system.
+A user imports a site and opens it from another device on the same Wi-Fi. The app clearly shows host state and respects Android permissions and lifecycle constraints. The team can reproduce the result from a named APK artifact and device test record. All G0–G9 gates pass before the version is released.

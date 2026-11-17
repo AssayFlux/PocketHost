@@ -1,55 +1,48 @@
-# Pocket Host 0.1.0 — Backup and Restore Contract
+# Pocket Host — Website Backup and Restore Contract
 
-## Goals
+## Purpose
 
-Backups protect service configuration and user-owned data across host failure, device replacement and deployment mistakes. Backup and restore are host-local capabilities coordinated by the mobile command center; the phone does not need to remain online during a host's backup or restore operation.
+Protect the active static website from accidental replacement, import failure and device migration. Backup/restore is part of the v0.1.0 hosting milestone; distributed multi-device backup is later.
 
-## Backup scope
+## Current Android implementation
 
-A backup manifest identifies:
-- Product and component versions.
-- Host-independent service definitions and schema versions.
-- Site/component source and immutable deployment releases.
-- Persistent volumes and supported database snapshots.
-- Hostname/site routing metadata.
-- Non-secret operational settings.
-- Artifact digests, file counts, sizes and timestamps.
+The repository contains SiteBackupManager, a portable passphrase-encrypted backup implementation for the active static website. It uses AES-GCM authenticated encryption and a passphrase-derived key. Export currently requires the native website server to be stopped. The backup is a website archive, not a full phone image.
 
-Device-bound identity keys, private keys, active sessions, tunnel tokens and platform keystore material are excluded. A restored host must enroll as a new device and receive fresh credentials.
+## v0.1.0 limits
 
-## Encryption and integrity
+- Website source content: up to 500,000,000 bytes.
+- Backup archive output: capped at 500,000,000 bytes by the current safety limit.
+- Maximum 5,000 files and 32 directory levels.
+- A compressed backup may be smaller than the source, but encrypted ZIP overhead can cause an archive near the source limit to exceed the backup cap. A clear error must be shown; never truncate silently.
+- Import/restore validates the staged directory, paths, names, file count, total entries, depth and total bytes before activation.
 
-- Use authenticated encryption with a modern, reviewed construction.
-- Derive passphrase keys using a memory-hard KDF where supported and version its parameters.
-- Use unique random salt and nonce per backup.
-- Authenticate the manifest and all payloads before activation.
-- Sign backup metadata where account/device signing infrastructure supports it.
-- Never store the passphrase or plaintext secrets in the backup.
-- Verify artifact hashes, sizes, file counts and schema compatibility before extraction.
+## Included and excluded data
+
+The current portable website backup covers the active static website. Cloudflare tokens, owner/device private keys, runtime credentials, runtime project state, control-plane sessions and unrelated Android settings are intentionally excluded. Do not claim full application backup.
+
+## Passphrase handling
+
+- Require at least 12 characters.
+- Never log or transmit the passphrase.
+- Do not store the passphrase in plaintext.
+- The user must retain the passphrase; recovery is not possible if it is lost.
+- Authenticate the backup before activation; corrupted or wrong-passphrase data must not replace the active site.
 
 ## Restore lifecycle
 
-1. Verify format, signature, encryption and compatibility.
-2. Decrypt to a restricted staging area.
-3. Validate all paths, file types, quotas and schemas.
-4. Restore data into a new staged component/volume.
-5. Run component-specific validation and health checks.
-6. Atomically activate the restored deployment.
-7. Preserve last-known-good data until the operation is confirmed.
-8. Record an audit event and allow rollback.
+1. Stop hosting where required by the current implementation.
+2. Select backup and enter passphrase.
+3. Decrypt into an app-private staging location.
+4. Validate archive paths, entries, file count, expanded bytes and index.html.
+5. Preserve the active site and record a recovery snapshot.
+6. Activate the restored site atomically.
+7. Recover last-known-good if the process stops during activation.
+8. Restart hosting and verify the restored website.
 
-## Fault isolation
+## v0.2.0 expansion
 
-- A failed site restore does not overwrite unrelated sites.
-- A corrupt component archive does not invalidate other backups.
-- Storage exhaustion preserves the active release and recovery material.
-- Interrupted restore resumes or rolls back deterministically.
-- Restore of one host does not clone its device identity or secrets.
-
-## Android provider
-
-The Android application currently has an encrypted application backup implementation for supported website/runtime data and selected settings. It is an Android-specific provider, not yet a universal multi-host backup service. Its exact supported contents and limits must be read from the implementation and verified against the build under test.
+Remote encrypted namespaces, worker-assisted backup, off-device replication, device replacement and restore orchestration are later features and require their own role/security acceptance.
 
 ## Acceptance
 
-Test wrong passphrase, tampering, truncated archive, path traversal, symlink, duplicate entry, archive bomb, low disk, process kill, power loss, partial volume restore, schema incompatibility, key rotation and full host replacement. Perform real restore rehearsals, not export-only tests.
+Test wrong passphrase, tampering, truncated archive, oversized archive, path traversal, duplicate/unsafe entries, low storage, process death during restore, restart recovery, active-site preservation and a successful website smoke test. See G0–G9.

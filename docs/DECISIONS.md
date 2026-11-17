@@ -1,49 +1,63 @@
-# Pocket Host 0.1.0 — Architecture Decisions
+# Pocket Host — Architecture and Product Decisions
+
+This document records decisions that remain binding unless a later ADR explicitly supersedes them.
 
 ## ADR-001 — Exactly two mobile operating modes
 
-**Decision:** the mobile device always has the website-serving role enabled. The user chooses exactly one of two modes: **Server only** or **Command Center + Server**. Server only exposes website-serving controls and cannot enroll, approve, assign or revoke fleet devices. Command Center + Server adds the complete fleet command center. There is no standalone Command Center-only mode.
+**Decision:** the phone always retains the website-serving role. The owner chooses Server only or Command Center + Server. Server only hides/disables fleet administration. Combined mode adds fleet management. No standalone Command Center-only mode exists.
 
-**Reason:** the user wants the phone to remain the website-serving node, with fleet management as an optional additional capability. The two modes must be unambiguous and mutually exclusive.
+## ADR-002 — Three-version release pathway
 
-## ADR-002 — Explicit verified device integration
+**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development, v0.2.0 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
 
-**Decision:** every device must present a cryptographic identity and short-lived one-time verification challenge. The mobile owner reviews capabilities and explicitly approves each role grant. Discovery never grants trust.
+**Reason:** first prove a useful vertical slice before expanding into runtimes and distributed infrastructure.
 
-## ADR-003 — Separate software per device class
+## ADR-003 — Mandatory G0–G9
 
-**Decision:** Android, iOS, Linux, Windows, macOS, SBC and MCU targets receive platform-appropriate software/firmware and role capabilities. No universal binary or blanket platform support is assumed.
+**Decision:** every version must document and pass all ten gates G0 through G9. A release is blocked if any gate is not PASS with evidence. See RELEASE_GATES.md.
 
-## ADR-004 — Role-based worker fleet
+## ADR-004 — First release is static hosting
 
-**Decision:** devices may be assigned Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery or Edge Gateway roles. Each role has separate permissions, resources, health and revocation.
+**Decision:** v0.1.0 includes the main Android app, Rust static server, folder/ZIP import, local preview, optional LAN hosting, foreground lifecycle, backup/recovery and physical-device acceptance. It does not require Workbench, TypeScript compilation, Python/Node or public ingress.
 
-## ADR-005 — Central mobile runtime placement for 0.1.0
+## ADR-005 — Website import capacity
 
-**Decision:** user-selected language runtime packs execute only on the mobile website-serving node. Other devices perform bounded infrastructure jobs and fixed-purpose native worker tasks; they do not silently become customer-language runtime hosts.
+**Decision:** v0.1.0 accepts a maximum of 500,000,000 bytes for a ZIP archive and independently 500,000,000 bytes for extracted website contents. Folder imports use the extracted-content limit. File count is 5,000, total entries 10,000 and nesting depth 32. Unsafe paths, symlinks and sensitive key/secret files remain rejected.
 
-**Reason:** this preserves the requested central runtime manager while distributing storage, build, traffic and operations work. Static hosting remains independent of optional language runtimes.
+**Separate limit:** Rust static responses remain capped at 50 MiB per file unless a later evidence-based decision changes it.
 
-## ADR-006 — Multi-transport integration
+## ADR-006 — Preserve Design Language V1
 
-**Decision:** Wi-Fi/LAN is preferred for control and bulk data; Bluetooth is for discovery/proximity/small control; USB uses only supported platform APIs; remote transport uses authenticated encrypted sessions. All transports share the same identity and authorization policy.
+**Decision:** this roadmap does not authorize a visual redesign. Keep the established monochrome visual language, calligraphic brand treatment, typography, themes, login/account layout, hamburger structure and mobile interaction model. Fix functional defects without changing brand identity.
 
-## ADR-007 — Independent components and fault domains
+## ADR-007 — Static serving independent of runtimes
 
-**Decision:** host, role, job, runtime, storage, traffic, tunnel, control plane and edge gateway have distinct lifecycle, state, health, permissions and recovery.
+**Decision:** static HTML/CSS/browser JavaScript must work with no runtime companion installed. Python and Node are optional separate server-side runtimes and are assigned to v0.1.1 acceptance.
 
-## ADR-008 — Control/data plane separation and autonomy
+## ADR-008 — Runtime implementations are existing, not complete
 
-**Decision:** owner management and device administration are never exposed through visitor ingress. Devices retain accepted assignments and continue during mobile/control-plane outage.
+**Decision:** CPython 3.11 and Node.js mobile 24.22.1 already exist in runtime-worker. They currently ship together in a companion APK and share its UID. They remain in progress; do not describe them as independent downloadable packages or hardened per-project sandboxes.
 
-## ADR-009 — Independent tunnel providers
+## ADR-009 — Separate operator console
 
-**Decision:** Local Network, AssayFlux Relay and Cloudflare Tunnel are separate choices; Relay and Cloudflare may run concurrently. Failure in one does not stop the others.
+**Decision:** React + TypeScript + Vite in web-console is a separate browser operator client. It is not the Android main app, not a server-side runtime and not the main app TypeScript compiler.
 
-## ADR-010 — DemonCore remains separately deployable
+## ADR-010 — Workbench draft/production separation
 
-**Decision:** DemonCore owns MCU firmware, DCP, board safety and constrained device behavior. Pocket Host integrates through an authenticated allow-listed edge adapter.
+**Decision:** Workbench is v0.1.1. Draft save and local commit never mutate the live website. Publishing requires validation, owner approval, atomic activation and rollback.
 
-## ADR-011 — Version 0.1.0 baseline
+## ADR-011 — Device trust is explicit
 
-**Decision:** 0.1.0 is the product and architecture baseline. Each component declares its own release version, protocol compatibility, provenance and rollback path.
+**Decision:** discovery is untrusted. Devices require unique identity, proof of possession, owner approval and exact bounded role grants. Revocation and job authorization are versioned and auditable. Production device-fabric acceptance belongs to v0.2.0.
+
+## ADR-012 — Separate software per device class
+
+**Decision:** each supported device OS/architecture receives a separately installable product/agent. Interoperability comes from shared protocol contracts, not from one universal binary.
+
+## ADR-013 — Control plane is optional for local hosting
+
+**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Public ingress providers are independent and are assigned to v0.2.0 acceptance.
+
+## ADR-014 — Evidence defines release status
+
+**Decision:** code presence, documentation, UI presence, compilation or a simulated environment cannot close a gate that requires an installable artifact, physical device or external network. Every release stores exact commit, build, artifact digest, target, test result and reviewer.

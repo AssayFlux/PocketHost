@@ -1,52 +1,42 @@
-# Web Toolchain Boundaries
-
-**Status:** accepted architecture decision for Pocket Host 0.1.0.
+# Pocket Host — Web Toolchain Boundaries
 
 ## Purpose
 
-Keep the browser operator experience, the main mobile website-authoring toolchain and optional server-side runtimes independent. They solve different problems and must not be bundled together merely because they use related languages.
+Keep the browser operator console, Android website authoring/build tools, static website serving and optional server-side runtimes independent.
 
 ## Technology ownership
 
-| Technology | Product location | Purpose | Included in main Android APK? |
+| Technology | Repository | Function | Release |
 |---|---|---|---|
-| React + React DOM | `web-console/` | UI framework for the separate browser operator console | No |
-| TypeScript + Vite + React plugin | `web-console/` | Type-checking, transpilation and bundling of the operator console | No |
-| Built-in TypeScript compiler/transpiler | `app/` | Compile a user's website TypeScript source into browser JavaScript before publish | Yes; implementation and acceptance remain open |
-| HTML + CSS + browser JavaScript | Main Pocket Host app + bundled Rust engine | Default website authoring and static delivery | Yes |
-| Python 3.11 | `runtime-worker/` companion APK | Optional server-side WSGI runtime | No; separate companion |
-| Node.js 24.22.1 | `runtime-worker/` companion APK | Optional server-side JavaScript runtime | No; separate companion |
+| HTML/CSS/browser JavaScript | Main app + rust-engine | Static website serving | v0.1.0 |
+| React 18 + TypeScript 5.7 + Vite 6 | web-console/ | Separate browser operator console | v0.2.0 scope |
+| TypeScript compiler | Main Android app | Compile website TypeScript to browser JavaScript | v0.1.1 |
+| Python 3.11 | runtime-worker/ companion | Optional WSGI backend runtime | v0.1.1 |
+| Node.js mobile 24.22.1 | runtime-worker/ companion | Optional server-side JavaScript runtime | v0.1.1 |
 
-## Main-app TypeScript contract
+## v0.1.0 static hosting contract
 
-The main app must compile user TypeScript source to ordinary browser JavaScript before a site is activated. The compiler is a bounded authoring/build tool, not a server-side runtime.
+The main app serves already-built static assets. A React/Vite site is supported after a production build on another machine or CI; import the dist output. The main app does not install npm packages, resolve arbitrary dependencies or compile JSX/TypeScript in v0.1.0.
 
-- Do not serve raw `.ts` or `.tsx` as executable browser scripts.
-- Do not require React, Vite, npm, Node.js or the runtime companion to build a basic TypeScript website.
-- Do not bundle the web-console dependencies into the Android application.
-- The initial built-in compiler scope is standalone TypeScript compilation with explicit diagnostics and bounded input/output. Full npm dependency resolution, arbitrary package scripts, native add-ons and general-purpose Node execution are out of scope.
-- Build into an app-private staging directory. A failed build must leave the current published site untouched.
-- Validate generated paths, file count and byte limits before preview and owner-approved activation.
-- Browser output is served through the existing Rust static server and its JavaScript MIME mapping.
+## v0.1.1 TypeScript compiler contract
+
+The built-in compiler is a bounded authoring/build tool, not a server runtime. It must:
+- Compile supported TypeScript source to ordinary browser JavaScript.
+- Report file/line diagnostics.
+- Reject unsafe paths and oversized projects.
+- Bound CPU, memory, disk and execution time.
+- Avoid arbitrary package scripts and unrestricted process execution.
+- Produce deterministic staged outputs and content digests.
+- Work without requiring the optional runtime companion for the basic TypeScript path.
 
 ## Operator console contract
 
-The React/TypeScript/Vite application remains a separate secondary operator client under `web-console/`. Its npm lockfile and build pipeline belong to that component. It may communicate with the Pocket Host control plane through documented APIs, but its frontend toolchain is not a dependency of the Android server.
+web-console is a separately built browser app. Its dependencies do not become main Android app dependencies. It communicates with the control plane only under the v0.2.0 authenticated API contract.
 
 ## Optional server-side runtime contract
 
-Python and Node.js remain separate optional server-side runtimes in the existing `runtime-worker/` companion APK. Their current integrations are in progress and are not independent downloadable packages yet. They are not prerequisites for static sites or the built-in TypeScript-to-JavaScript workflow.
+Python and Node exist in the separate runtime-worker APK. They currently ship together, share its application UID and are in progress. They are not independent download packages or hardened per-project sandboxes. Static hosting must work with the companion absent, disabled or crashed.
 
-The future Runtime Library may split language runtimes into individual downloadable packages after the five-step baseline. It must not change the main-app defaults.
+## Acceptance
 
-## Acceptance gates
-
-1. A clean main-app installation serves HTML, CSS and JavaScript without the runtime companion.
-2. A clean main-app installation compiles a TypeScript fixture without Node.js, npm, React or Vite installed.
-3. Successful compilation emits browser-compatible JavaScript and diagnostics identify source errors.
-4. A failed or over-budget build does not alter the active site.
-5. Traversal, symlink, output-size and file-count attacks are rejected.
-6. The React/Vite console builds independently using only `web-console/package-lock.json`.
-7. Python and Node.js companion acceptance is tested separately from the main-app web baseline.
-
-Until these checks pass on CI and supported Android devices, TypeScript support remains specified but not implemented/verified.
+Verify a clean main-app install serves static HTML/CSS/JS without companion runtimes; Vite dist output works; the v0.1.1 TypeScript compiler produces browser-valid output; operator console builds separately; Python/Node lifecycle and isolation tests pass before runtime support is claimed.

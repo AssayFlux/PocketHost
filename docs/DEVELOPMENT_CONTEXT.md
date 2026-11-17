@@ -1,50 +1,55 @@
-# Pocket Host 0.1.0 — Engineering Context
+# Pocket Host — Engineering Context
 
-Read [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md), [MASTER_PLAN.md](MASTER_PLAN.md) and [HOST_AGENT_CONTRACT.md](HOST_AGENT_CONTRACT.md) before changing system boundaries.
+This file is the contributor handover for the new release pathway.
 
-## Non-negotiable product model
+## Active release
 
-- Mobile command center is the primary owner interface.
-- Mobile has exactly two mutually exclusive modes: Server only and Command Center + Server. Both serve the website; only the combined mode administers the fleet.
-- Every external device must be cryptographically verified and explicitly approved by the mobile command center.
-- Separate software/firmware is built for each supported OS, architecture and board.
-- Device roles are assigned explicitly: Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery and Edge Gateway.
-- Python and Node.js currently execute through the separate Android `runtime-worker` companion on the mobile serving node; they are in-progress optional runtimes, not main-app dependencies. The future Runtime Library is post-baseline. Worker devices run bounded infrastructure jobs and signed fixed-purpose native tasks.
-- Wi-Fi/LAN is preferred for control and bulk transfer; BLE is for discovery/small control; USB is only supported through documented platform APIs; remote channels are authenticated.
-- Discovery, IP, MAC, Bluetooth visibility, QR or a pairing code alone never grants ongoing trust.
-- Hosts persist approved assignments and continue local work during mobile/control-plane outages.
-- Each host, role, job, runtime, storage namespace, traffic route and MCU gateway has separate permissions, health, limits and recovery.
-- Local Network, AssayFlux Relay and Cloudflare Tunnel remain independent selectable visitor providers.
-- DemonCore remains a separately deployable MCU firmware project connected through a scoped adapter.
+Work on **v0.1.0 — First Hosting** until the owner approves the next release. The former five-step sequence is retired. The three planned releases are v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.2.0 Connected Device Fabric.
 
-## Five-step execution order
+## Product rules
 
-1. Freeze architecture, threat model, identity, role, job and transport contracts.
-2. Implement mobile command center, device verification and role assignment.
-3. Deliver autonomous platform-specific node agents and worker roles.
-4. Deliver main-app HTML/CSS/JavaScript hosting, built-in TypeScript-to-JavaScript compilation, site lifecycle and verified publishing. Python/Node optional server runtimes remain separate companion software; the wider Runtime Library is post-baseline.
-5. Complete fleet resilience, connectivity, security, physical-device acceptance and signed releases.
-
-Do not skip contract and threat-model approval to start incompatible platform implementations.
+- Mobile modes are exactly Server only and Command Center + Server; both include website serving.
+- No standalone Command Center-only mode.
+- Preserve Pocket Host Design Language V1. Do not redesign branding, login, account menu, hamburger navigation, typography, palettes or theme behavior as part of this roadmap.
+- v0.1.0 is static website hosting on Android. Python/Node and Workbench are not dependencies.
+- Folder/ZIP import: 500,000,000 bytes for compressed ZIP input and independently 500,000,000 bytes for expanded site contents; 5,000 files, 10,000 entries, 32 levels.
+- Rust static response limit remains 50 MiB per file; it is not the import cap.
+- React/Vite is the separate web-console app. Raw React/TypeScript source is not built by v0.1.0; import its built static output.
+- Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
+- Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
+- Device trust, workers, control plane, Relay and public ingress acceptance are v0.2.0 work.
+- Every version must pass G0–G9. See RELEASE_GATES.md.
 
 ## Repository boundaries
 
-- `app/`: Android mobile website server, owner UI and optional command-center layer.
-- `runtime-worker/`: Android language runtime companion.
-- `rust-engine/`: Rust website ingress and routing engine.
-- `control-plane/`: optional remote identity, registry, command and audit service.
-- `web-console/`: secondary browser operator client.
-- DemonCore: separate MCU firmware, DCP and board profiles.
+| Path | Responsibility |
+|---|---|
+| app/ | Android owner application and hosting lifecycle |
+| rust-engine/ | Static HTTP engine and native Android library |
+| runtime-worker/ | Optional Python/Node Android companion |
+| web-console/ | Separate React/TypeScript/Vite browser client |
+| agents/ | Platform-specific device agents |
+| control-plane/ | Optional remote fleet coordination |
+| protocol/ | Shared versioned device contracts |
+| runtime-library/catalog/ | Future language catalog metadata |
+| scripts/ | Build and validation helpers |
+| docs/ | Product, release, architecture and acceptance documentation |
 
 ## Implementation rules
 
-- Preserve native OS lifecycle, permissions and secure key storage.
-- Prefer narrow, versioned adapters over shared mutable state.
-- Do not create unnecessary microservices; isolate actual trust/failure boundaries.
-- No arbitrary remote shell, unrestricted filesystem or generic process-execution API.
-- Commands are typed, scoped, expiring, idempotent and audited.
-- Each role has independent credentials, queue, resource budget, health and rollback.
-- Build workers never activate a live website release directly.
-- Customer runtimes are not silently moved to worker nodes.
-- Every component update is staged and independently rollback-capable.
-- Record exact-SHA tests on named target devices; never claim support from compilation alone.
+1. Read the relevant code and tests before changing behavior.
+2. Reuse SiteRegistry, SiteImporter, backup and current UI foundations; avoid duplicate stores.
+3. Keep ZIP compressed-size and expanded-size counters independent and overflow-safe.
+4. Validate paths, entry counts, depth, filenames and file types before activation.
+5. Keep staging separate from active website; preserve last-known-good on failure.
+6. Keep website static serving independent of optional runtimes and public ingress.
+7. Do not expand the Rust per-file response limit merely because total import increased.
+8. Test UI, API, code and docs for every quota change.
+9. Build APK artifacts explicitly; do not call compile-only a build.
+10. Verify on named Android hardware and record exact OS, ABI, logs and artifact hash.
+11. Update the gate ledger only with reproducible evidence.
+12. Preserve Android system settings, safe areas, scrolling, keyboard insets, font scaling and permission flows.
+
+## Current next actions
+
+Close the v0.1.0 hosting path: align and test 500 MB import/backup quotas, verify local and LAN serving, exercise service lifecycle and recovery, package the main APK and complete physical-device acceptance.

@@ -14,7 +14,7 @@ data class ImportReport(val fileCount: Int, val totalBytes: Long, val source: St
 object SiteImporter {
     private const val MAX_FILES = 5_000
     private const val MAX_ENTRIES = 10_000
-    private const val MAX_BYTES = 50L * 1024L * 1024L
+    internal const val MAX_IMPORT_BYTES = 500_000_000L
     private const val MAX_DEPTH = 32
     private val blockedNames = setOf(
         ".git", ".ssh", ".pockethost", "id_rsa", "id_ed25519",
@@ -42,7 +42,7 @@ object SiteImporter {
         if (!stagingBase.mkdirs()) throw IOException("Could not create a staging directory.")
         val counter = Counter()
         try {
-            ZipInputStream(CappedInputStream(input, MAX_BYTES).buffered()).use { zip ->
+            ZipInputStream(CappedInputStream(input, MAX_IMPORT_BYTES).buffered()).use { zip ->
                     while (true) {
                         val entry = zip.nextEntry ?: break
                         counter.entries++
@@ -72,7 +72,7 @@ object SiteImporter {
                                     val count = zip.read(buffer)
                                     if (count < 0) break
                                     counter.bytes += count
-                                    if (counter.bytes > MAX_BYTES) throw IOException("Uncompressed website exceeds the 50 MB import limit.")
+                                    if (counter.bytes > MAX_IMPORT_BYTES) throw IOException("Uncompressed website exceeds the 500 MB import limit.")
                                     output.write(buffer, 0, count)
                                 }
                             }
@@ -145,7 +145,7 @@ object SiteImporter {
                 } else if (child.isFile) {
                     counter.files++
                     counter.bytes += child.length()
-                    if (counter.files > MAX_FILES || counter.bytes > MAX_BYTES) {
+                    if (counter.files > MAX_FILES || counter.bytes > MAX_IMPORT_BYTES) {
                         throw IOException("Prepared website exceeds the import safety limits.")
                     }
                 } else {
@@ -210,7 +210,7 @@ object SiteImporter {
                         } else {
                             files++
                             val size = java.nio.file.Files.size(path)
-                            if (size > MAX_BYTES - bytes) false
+                            if (size > MAX_IMPORT_BYTES - bytes) false
                             else {
                                 bytes += size
                                 files <= MAX_FILES
@@ -314,7 +314,7 @@ object SiteImporter {
         private fun account(count: Int) {
             if (count > 0) {
                 consumed += count
-                if (consumed > limit) throw IOException("Compressed ZIP exceeds the 50 MB import limit.")
+                if (consumed > limit) throw IOException("Compressed ZIP exceeds the 500 MB import limit.")
             }
         }
         override fun read(): Int {
@@ -379,7 +379,7 @@ object SiteImporter {
                     val read = stream.read(buffer)
                     if (read < 0) break
                     counter.bytes += read
-                    if (counter.bytes > MAX_BYTES) throw IOException("Website exceeds the 50 MB import limit.")
+                    if (counter.bytes > MAX_IMPORT_BYTES) throw IOException("Website exceeds the 500 MB import limit.")
                     output.write(buffer, 0, read)
                 }
             }

@@ -1,84 +1,49 @@
-# Pocket Host 0.1.0 — System Acceptance
+# Pocket Host — Connected Device Acceptance (v0.2.0)
 
-Record exact commit SHA, build provenance, device/board model, OS/firmware version, architecture, test command, result, logs and artifact digest. Use PASS, FAIL or NOT TESTED. Compilation and simulated devices do not prove production support.
+**Release assignment:** v0.2.0 — Connected Device Fabric.  
+**Status:** acceptance plan; not a statement that the fabric is production-ready.
 
-## 1. Mobile modes and command center
+## 1. Mobile modes
 
-- Android exposes exactly two mutually exclusive modes: Server only and Command Center + Server. Website serving remains enabled in both; Server only cannot enroll, approve or assign fleet devices.
-- iOS must not introduce a standalone Command Center-only mode. Advertise the two-mode experience only where the website-serving role passes platform lifecycle acceptance; otherwise clearly mark the iOS deliverable as not yet supported under this product contract.
-- iOS platform restrictions must be handled through capability/availability messaging, not by redefining the product as Command Center-only.
-- Turning mobile Server off does not stop other device assignments.
-- Force-stop, reboot, battery loss and uninstall of mobile app do not stop autonomous jobs on enrolled worker nodes.
-- Replacement-phone recovery and owner re-enrollment work.
+- Server only: website serving enabled; fleet controls unavailable.
+- Command Center + Server: website serving plus owner fleet controls.
+- No standalone Command Center-only mode.
+- Local hosting must work without the control plane or workers.
 
 ## 2. Device verification and transports
 
-- **Current implementation:** test the Android manual challenge/proof exchange, metadata binding, owner approval and local registry.
-- **Future transport acceptance:** pair via authenticated Wi-Fi/LAN and one-time code; verify candidate key and owner approval.
-- Test wrong, expired, replayed, brute-forced and already-used codes.
-- Verify unknown devices cannot receive jobs, access namespaces or proxy traffic.
-- Test BLE discovery and control separately from bulk transfer when implemented; not currently accepted.
-- Test USB only on named hardware/OS combinations with supported APIs; not currently accepted.
-- Switching transport preserves the same device identity and does not bypass authorization.
-- Revocation closes active sessions and cancels queued unstarted jobs.
+- Device identity is derived from its public key.
+- Candidate proves possession of the private key.
+- Challenge is single-use, owner/device-bound and short-lived.
+- Owner reviews platform, software provenance, capabilities, permissions and requested role.
+- Explicit approval issues a signed, scoped grant.
+- Wi-Fi/LAN, BLE, USB and remote transports use the same identity and authorization model.
+- Revocation, expiry and generation changes are enforced by the agent.
 
 ## 3. Role assignment
 
-For each supported device, install the role-specific package and test:
-- Storage-only cannot execute or proxy.
-- Traffic-only cannot access management, runtime broker or MCU controls.
-- Build/publish worker cannot sign or activate directly.
-- Native backend/job worker accepts only signed allow-listed packages.
-- Backup worker cannot browse unrelated live files.
-- Edge gateway exposes only board-verified MCU capabilities.
-- Multiple roles on one device are tested for isolation and resource contention.
+Roles include storage, backup/recovery, traffic, build/publish preparation, native jobs and edge gateway. Each role must have a least-privilege permission set, resource budget, data namespace, network scope, health check, update policy and revocation path. Arbitrary shell and unrestricted filesystem access are not accepted.
 
-## 4. Mobile runtime and website serving
+## 4. Website serving and runtimes
 
-- Static hosting works with no language runtime installed.
-- Static hosting works without the runtime companion. Python/Node companion behavior is tested separately; independent runtime packages are future work.
-- Multiple selected languages serve one site through declared routes.
-- Each project/component must have distinct OS-enforced identity and scoped data/network before untrusted code is supported. Current Python/Node companion shares its application UID and is not a per-project sandbox.
-- Runtime crash does not interrupt static serving or sibling runtimes.
-- Worker build artifact is signature/digest checked, staged and health-tested before activation.
-- Failed build/deployment leaves active release untouched and rollback works.
+Static hosting works without a runtime companion. Python 3.11 and Node.js 24.22.1 are optional integrations in the separate runtime-worker APK and are accepted separately in v0.1.1. Runtime crashes must not interrupt static serving.
 
-## 5. Worker and fleet autonomy
+## 5. Agent and job acceptance
 
-- Device reboot resumes accepted jobs safely.
-- Phone/control-plane loss does not stop local accepted work.
-- Network partition, duplicate delivery, expired lease and interrupted job reconcile deterministically.
-- One worker failure does not stop sibling workers.
-- Storage exhaustion, CPU/memory pressure, thermal derating and power loss remain contained.
-- Update rollback and device replacement preserve data without cloning identity.
+A real second device must enroll, receive a grant, accept a signed typed job, report a result, survive a reconnect and reject a revoked/expired grant. Job delivery is at-least-once; mutations must be idempotent. The agent revalidates grant, target, expiry, capability and budget before side effects.
 
-## 6. Platform and hardware matrix
+## 6. Platform matrix
 
-For every advertised Android, iOS, Linux, Windows, macOS, SBC and MCU role:
-- Install, enroll, reboot, update, revoke and uninstall.
-- Verify exact OS permissions, architecture, resource limits and transport support.
-- Test real hardware and lifecycle constraints.
-- For MCU, verify pin mapping, watchdog, firmware signature, safe state and physical behavior.
+Do not claim generic Linux, Windows, macOS, iOS, SBC or MCU support. Record exact OS version, architecture, board, installer, signature and tested roles. Only named accepted targets may be advertised as supported.
 
 ## 7. Connectivity
 
-- Local LAN works without public tunnels.
-- AssayFlux Relay and Cloudflare Tunnel operate independently and concurrently.
-- Provider failure leaves other providers and local ingress available.
-- Public routes reach only approved website ingress.
-- Management, runtime broker, worker control and MCU endpoints remain private.
+Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers. Test DNS/TLS and visitor access from an independent network. Visitor ingress must not expose management API, control plane, runtime broker or MCU controls.
 
 ## 8. Security, storage and recovery
 
-- Test identity spoofing, role escalation, replay, malicious worker, artifact tampering and cross-namespace access.
-- Test encrypted backup, wrong key, corruption, interruption, low storage and restore.
-- Verify revocation and credential rotation.
-- Verify MCU gateway failure does not affect website serving.
-- Complete independent security review for production boundaries.
+Test credential theft/revocation, replay, role escalation, device clone, cross-role access, control-plane outage, worker crash, network partition, storage exhaustion, signed update rollback and restore. Accepted local work may continue only within its stored grant and lease.
 
 ## 9. Release
 
-- Signed platform-specific packages and firmware.
-- SBOM, provenance, checksums and compatibility declarations.
-- Install/upgrade/rollback verified on named devices.
-- Published support matrix matches observed evidence.
+All v0.2.0 G0–G9 gates must pass. Required evidence includes artifact hashes, device/OS matrix, enrollment and job logs, revocation test, fault/recovery report, security review, provider tests and owner sign-off.

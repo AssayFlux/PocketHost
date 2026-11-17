@@ -1,35 +1,29 @@
-# Pocket Host 0.1.0 — Project Storage Contract
+# Pocket Host — Runtime Project Storage Contract
 
 ## Ownership
 
-Every website component has a stable project identity and a dedicated data namespace. The host supervisor owns metadata and policy. A runtime cell receives only its own project files, explicitly granted persistent volumes and short-lived scoped capabilities.
+Every website component has a stable project identity and dedicated data namespace. The host supervisor owns metadata and policy. A runtime receives only its project files, explicitly granted persistent volumes and short-lived scoped capabilities.
 
-## Android provider behavior
+## Android provider
 
-The Android host validates project roots as canonical descendants of approved app-private storage. Project transfer to the runtime companion uses bounded archives and a read-only descriptor over the protected Binder contract. The companion validates entries, rejects traversal and unsafe paths, enforces file/count/expanded-size limits, and extracts into a staged component directory before activation.
+The Android host validates project roots as canonical descendants of approved app-private storage. Transfer to the runtime companion uses bounded archives and a read-only descriptor over the protected Binder contract. The companion validates entries, rejects traversal and unsafe paths, enforces file/count/expanded-size limits and extracts into a staged component directory before activation.
 
-The companion package UID is shared by its projects today; therefore storage placement and archive validation do not provide per-project OS isolation. Only owner-trusted code may execute until distinct per-project isolation and egress denial pass adversarial tests.
+## Release placement
 
-## Cross-platform storage contract
+- v0.1.0: only static website storage/import and website backup are release-critical.
+- v0.1.1: finish runtime project transfer, quota enforcement, multi-site workspace separation and runtime lifecycle.
+- v0.2.0: optional encrypted remote namespaces and worker-assisted backup/restore.
 
-Each host adapter declares:
-- Project root and volume identity.
-- Read/write/execute permissions.
-- Quotas and inode/file-count limits.
-- Persistence and backup policy.
-- Encryption-at-rest capability.
-- Snapshot and restore support.
-- Atomic deployment activation and rollback.
-- Data locality and replication constraints.
+## Requirements
 
-Do not assume Android private storage, Linux paths, Windows ACLs, macOS sandbox containers and MCU flash have identical semantics.
-
-## Security requirements
-
-- No shared writable project roots.
-- No parent-directory or sibling-project access.
-- Secrets are stored separately and injected as scoped capabilities.
-- Reject symlinks, traversal, duplicate paths, special files and archive bombs.
+- Canonicalize paths and reject traversal, symlinks and unexpected filesystem types.
 - Enforce quotas before extraction and during runtime.
-- Preserve last-known-good release if staging fails.
-- Do not clone device identity or device-bound secrets during restore.
+- Keep runtime project files separate from active static website and Workbench draft data.
+- Keep credentials out of source archives, backups and logs unless explicitly encrypted and scoped.
+- Bound file count, expanded bytes, depth, open files and temporary staging.
+- Preserve atomic activation and cleanup failed staging.
+- Audit read/write/delete and transfer operations without logging source contents.
+
+## Acceptance
+
+Test cross-project access, symlink/path escape, oversized archive, too many files, low storage, interrupted extraction, runtime crash and restore. Verify that static hosting remains independent of runtime project storage.

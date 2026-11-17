@@ -1,101 +1,78 @@
 # Pocket Host — Repository Deep Audit
 
-**Audit branch:** `Alpha` (confirmed repository default branch)  
-**Repository:** [AssayFlux/PocketHost](https://github.com/AssayFlux/PocketHost)  
-**Product baseline:** 0.1.0  
-**Audit method:** recursive Git tree inventory, source/config inspection, cross-document consistency review, workflow inspection and available CI evidence.  
-**Scope snapshot:** 236 tracked files before this audit's documentation updates; the count is a snapshot, not a permanent repository invariant.
+**Audited branch:** Alpha  
+**Audited baseline:** afb0cceadfabca840590eb42eb4b5f3aaf9eac3e  
+**Active release target:** v0.1.0 — First Hosting  
+**Audit result:** substantial foundations exist; no production release is certified by source inspection alone.
 
 ## 1. Executive finding
 
-Pocket Host is not a blank scaffold. It contains a meaningful Android hosting application, a native Rust static web engine, a separate Android Python/Node runtime companion, a partial cryptographic device-trust implementation, a Linux agent preview, an optional Rust control plane, a separate React/Vite browser console, and visitor-ingress integrations.
+Pocket Host is not a blank scaffold. The repository contains an Android Compose app, a Rust static website engine, a website importer and backup manager, a first Workbench workspace, a Python/Node runtime companion, Android device-trust foundations, a Linux agent preview, a Rust control plane, a browser operator console and visitor-ingress integrations.
 
-However, the repository is not yet a complete production device-fabric platform. Several architecture documents had drifted beyond the code: they described iOS as first-class, described the TypeScript compiler as if already built in, or implied that Python/Node were independent packages. This audit aligns those statements to the source.
+The key planning error in the former roadmap was making all of those workstreams part of one first release. The new pathway separates them:
+- v0.1.0 proves Android static website hosting.
+- v0.1.1 completes Workbench and optional runtime development.
+- v0.2.0 completes the connected device fabric and public-ingress operations.
 
 ## 2. Product boundaries confirmed
 
-1. Mobile has exactly two modes: **Server only** and **Command Center + Server**. Website serving remains enabled in both.
-2. There is no Command Center-only mode.
-3. The main Android app owns the website-serving UI, hosting lifecycle, Rust ingress, site management and owner-facing controls.
-4. The separate `runtime-worker/` APK contains the current Python and Node.js runtime implementations. It is optional for static websites.
-5. The browser operator console is separate from the Android app.
-6. External devices are intended to run separate OS/architecture-specific agent software.
-7. The 20-language Runtime Library is post-five-step work; current catalog entries are manifests, not runtime downloads.
+- Android has exactly two modes: Server only and Command Center + Server. Both serve websites.
+- There is no standalone Command Center-only mode.
+- Static website hosting must not require Python, Node.js or a companion APK.
+- Python and Node.js exist in the separate runtime-worker APK, but are in progress, shipped together and share the companion UID.
+- React/TypeScript/Vite are in the separate web-console browser client.
+- The main-app TypeScript compiler is not verified in the Android dependency graph.
+- Workbench currently has private workspace/editor and local commit foundations, not complete preview/publish/rollback.
+- Control plane is not required for local website hosting.
+- Relay and Cloudflare source integration does not prove external public reachability.
 
-## 3. Component audit
+## 3. Hosting path review
 
-| Component | Verified source footprint | What can be claimed | What must not be claimed |
-|---|---|---|---|
-| Android main app | `app/src/main`, `app/build.gradle.kts` | Kotlin/Compose app; foreground hosting service; site UI/import/registry; local API; diagnostics; tunnel and runtime client integration | Production-ready mobile hosting across all devices; completed full fleet command path |
-| Native website engine | `rust-engine/`, JNI bridge | Rust Tokio/Hyper native library with static serving foundation | Complete web build pipeline or TypeScript compiler |
-| Site lifecycle | `SiteImporter`, `SiteFileManager`, `SiteRegistry`, backup managers, site screens | Folder/ZIP/file import, hostname registry, staging/recovery and backup foundations | Full production CMS, arbitrary npm build, complete preview/atomic release acceptance |
-| TypeScript authoring | No compiler dependency/source found in main app Gradle graph or app source tree | Requirement is defined in Step 4 | Built-in compiler currently bundled or working |
-| Browser console | `web-console/package.json`, lockfile, Vite config and TSX source | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; independent CI build | Console is part of the Android app |
-| Python | `runtime-worker/src/main/python/pockethost_runtime.py`, Chaquopy module | CPython 3.11 WSGI integration foundation, loopback serving, bounded workers/requests, host tests | Independent Python APK/package, hostile-code sandbox, physical acceptance |
-| Node.js | `runtime-worker/src/main/cpp`, JNI/Kotlin worker services and pinned SDK fetch | Node.js mobile 24.22.1 native integration for arm64-v8a, armeabi-v7a and x86_64; host metrics smoke test | Independently downloadable Node package, complete Android ABI/device acceptance or secure sandbox |
-| Runtime IPC | `app/.../runtime/`, `runtime-worker/.../worker/` | Typed Binder client/provider foundation, project transfer and lifecycle controls | Separate OS identity per project; package UID boundary is not a per-project sandbox |
-| Android trust | `DeviceTrustStore.kt`, Devices screen and instrumentation source | P-256 owner key, signed five-minute challenges, candidate metadata proof, role grants, encrypted registry, generation revocation | End-to-end LAN/BLE/USB pairing, per-use Keystore key auth, production mTLS or agent automation |
-| Control plane | `control-plane/src`, migrations, OpenAPI, Compose/Caddy | Rust/Axum + PostgreSQL service foundation, sessions/passkeys-related tables, commands, audit and deployment config | Production deployment or full mobile-to-agent fleet orchestration |
-| Linux agent | `agents/linux/`, Python tests | P-256 identity, signed grant/job validation, durable SQLite jobs, HTTPS poll/ack preview, allow-listed health and local snapshot/backup operations | Production-grade mTLS, automatic grant renewal/revocation, full mobile provisioning, Windows/macOS/SBC support |
-| AssayFlux Relay | `control-plane/src/relay.rs`, `RelayAgent.kt` | Bounded HTTP request/response visitor relay source path | General TCP/WebSocket tunnel or publicly accepted service |
-| Cloudflare Tunnel | Android tunnel classes, token store, build helper | Android cloudflared integration foundation and encrypted token storage | External DNS/TLS reachability or 24/7 Android uptime guarantee |
-| Backup | Site/application backup managers and tests | Android backup/restore and interrupted-recovery foundations | Universal cross-host backup or full restore certification |
-| DemonCore | External repository reference only | Separate MCU/edge project dependency | Embedded DemonCore source or board acceptance in Pocket Host repository |
+### Android service
 
-## 4. Build and workflow audit
+HostingService starts a foreground notification, runs interrupted backup/site activation recovery, starts the local management API and remote-control agent, creates a starter site when absent, and starts the Rust native engine. The Rust engine binds to loopback unless LAN access is explicitly enabled. Cloudflare Tunnel is optional and starts only when configured.
 
-| Workflow | Purpose | Observed limitations |
-|---|---|---|
-| `quality.yml` | Rust, Python/Linux agent, console, Node smoke, Gradle wrapper and control-plane checks | Does not build APKs or run Android instrumentation |
-| `android-integration.yml` | Builds Android cloudflared native libraries and compiles app/instrumentation Kotlin | APK packaging and emulator tests are manual workflow-dispatch paths |
-| `protocol-contracts.yml` | JSON Schema/policy validation and protocol trust simulations | Must be checked independently from quality workflow |
-| `lock-dependencies.yml` | Resolve and commit dependency locks | Must push to the current default branch |
-| `release.yml` | Manual signed Android release workflow | Requires protected signing secrets; no release is implied by workflow presence |
-| `deploy-control-plane.yml` | Manual deployment to configured production host | Must fetch/clone the current default branch, Alpha |
+Acceptance still needs a physical device: notification permission, foreground-service restrictions, Doze/battery saver, screen-off, network transitions, process death, reboot, stop/restart and thermal/storage behavior.
 
-Branch rename correction: repository metadata reports `default_branch=Alpha` and the only listed branch at the audit snapshot is `Alpha`. Workflow branch filters, dependency-lock pushes, deployment fetch/reset and clone operations must all target `Alpha`, not the former `main`.
+### Website importer
 
-## 5. CI evidence interpretation
+SiteImporter stages folder/ZIP contents, checks file and entry counts, nesting, path traversal, sensitive filenames, index.html and activation/recovery. It currently has a 5,000-file cap, 10,000-entry cap and 32-level depth cap.
 
-The quality workflow at commit `4372d1c58eaa68514456e446729db2277967a59c` completed successfully across its six jobs: Rust, control plane, Python runtime/Linux agent, console, Node runtime smoke and Gradle wrapper. See [run 44046355538](https://github.com/AssayFlux/PocketHost/actions/runs/44046355538).
+The former source had a 50 MB ZIP input and 50 MB expanded-site limit. The new v0.1.0 requirement is 500,000,000 bytes for each independent limit. UI, ZIP input cap, expanded byte counter, folder copy, prepared-directory validation, backup/restore and instrumentation tests must all use the same value. The limit must be tested at, below and above the boundary.
 
-Earlier Android integration run `44031177422` compiled the app and instrumentation sources, but its emulator smoke and APK packaging jobs were skipped. Therefore it is not evidence of a completed Android instrumentation run or a distributable APK.
+### Static engine
 
-A green quality workflow is useful repository evidence, not proof of:
-- Android foreground-service lifecycle on physical devices;
-- Python/Node native runtime operation on every declared ABI;
-- complete end-to-end device enrollment, remote grant, job, revocation and reconnect;
-- public Relay/Cloudflare visitor reachability;
-- production isolation of untrusted runtime projects;
-- signed release or platform certification.
+The Rust server uses loopback by default and 0.0.0.0 only when LAN is enabled. It has a separate 50 MiB per-file response cap and bounded connection/resource behavior. Increasing website import size must not silently increase the per-response cap. Document this distinction and test a site with large total size made of many smaller assets.
 
-## 6. Cross-document corrections made in this audit
+## 4. Workbench review
 
-- Set repository canonical/default branch to `Alpha`.
-- Changed workflow triggers, dependency-lock push target and control-plane deployment checkout to `Alpha`.
-- Clarified that iOS is planned and absent from the current source tree.
-- Clarified that React/TypeScript/Vite are only in `web-console/`.
-- Clarified that the main-app TypeScript compiler is a Step 4 requirement, not an implemented dependency.
-- Documented Python and Node.js as existing in-progress integrations inside one separate companion APK.
-- Clarified that the companion package UID is not per-project isolation.
-- Distinguished the Runtime Library's 20 manifests from actual downloadable runtime packages.
-- Updated the implementation inventory and README to avoid conflating code presence, CI success and device acceptance.
+WorkbenchWorkspaceManager and PocketHostWorkbenchScreen provide a per-site draft workspace, nested explorer, basic editor, file/folder creation, rename/delete, change digest and immutable local commit snapshots. The screen is exposed in both mobile modes.
 
-Workbench source added since the initial audit snapshot: `WorkbenchWorkspaceManager.kt`, `PocketHostWorkbenchScreen.kt` and `WorkbenchWorkspaceManagerTest.kt`. The app navigation now exposes Workbench in both operating modes. The first implementation isolates editable drafts from the live website, provides bounded text editing and local immutable commit snapshots. Android integration run [44050320129](https://github.com/AssayFlux/PocketHost/actions/runs/44050320129) compiled the app and instrumentation sources successfully; emulator execution and APK packaging were skipped. This does not establish physical-device acceptance or production deployment readiness.
+Missing for v0.1.1: complete editor behavior, upload/move/recursive operations, per-file diffs, isolated preview, TypeScript build, deployment history, owner-approved atomic activation, rollback and full Android acceptance. Existing Websites & Files operations still target the deployed site tree; they are not a substitute for safe Workbench publishing.
 
-## 7. Priority engineering risks
+## 5. Runtime review
 
-1. **Android lifecycle and device acceptance:** compile success is not runtime acceptance; verify foreground service, Doze, battery saver, screen-off, reboot and process death.
-2. **Runtime isolation:** Python and Node share the companion UID; do not market this as a hostile multi-tenant sandbox.
-3. **Trust integration:** mobile trust store, control plane and Linux agent need a complete authenticated end-to-end lifecycle, including credential delivery, revocation and status.
-4. **Transport gap:** LAN mutual authentication and discovery are incomplete; BLE/USB are not implemented acceptance claims.
-5. **Step 4 gap:** TypeScript compiler, build diagnostics, Workbench diff/preview, validated release staging, owner-approved atomic publish and rollback must be implemented and tested.
-6. **Visitor ingress:** Relay is bounded HTTP request/response; public deployment, TLS/DNS, abuse controls and external acceptance remain.
-7. **Release engineering:** manual release workflow needs protected signing credentials and verification; no production release should be claimed before the full matrix passes.
+Python 3.11 uses Chaquopy in runtime-worker. Node.js mobile 24.22.1 uses JNI/libnode and native SDK assets. Both have host-side test foundations, but both are shipped together in one companion APK and share its UID. This is not hostile multi-tenant isolation. Android device acceptance, crash/restart, package/IPC lifecycle, ABI verification, egress restrictions and isolation remain open. These are v0.1.1 work and do not block v0.1.0 static hosting.
 
-## 8. Gate discipline
+## 6. Device fabric review
 
-- Keep Step 1–5 open until their own exit criteria have evidence.
-- Keep the future Runtime Library separate from the five-step baseline.
-- Do not build the final APK until all five steps pass their implementation and acceptance gates, as required by the project delivery plan.
-- Update this audit when the source tree or platform claims materially change.
+The protocol schemas and policy validator exist. Android has P-256 owner identity, challenge/proof and grant foundations. The Linux agent is a preview package with durable SQLite jobs and HTTPS polling, but manual provisioning, bearer transport limitations, grant renewal/revocation propagation, other OS packages and role adapters remain open. The control plane is a foundation, not a local hosting dependency. This work belongs to v0.2.0.
+
+## 7. Workflow and artifact review
+
+The Android integration workflow has a compile-only job and a manually dispatched APK/emulator path. A compile-only run is not APK packaging. The release workflow is manual and requires protected signing inputs. A successful workflow is not physical-device acceptance. Every release must retain the workflow URL, artifact SHA-256, device model, Android version and test evidence.
+
+## 8. Priority risks
+
+1. 500 MB import limits must be aligned across ZIP input, extracted contents, folder import, prepared restore, backup and UI.
+2. 500 MB total import does not guarantee that a single 500 MB file can be served: the Rust engine's per-file cap remains 50 MiB.
+3. Android background behavior varies by OEM and Android release; test on actual devices.
+4. LAN binding exposes the website to the local network; require explicit opt-in and explain the risk.
+5. Backup export currently requires hosting to be stopped; user guidance must say so.
+6. Runtime companion processes share one app UID; do not call it a hardened project sandbox.
+7. TypeScript build, Workbench preview and safe publishing are not v0.1.0 features.
+8. Public Relay/Cloudflare connectivity must be tested from an independent network before claiming reachability.
+
+## 9. Audit policy
+
+This audit describes the audited source snapshot. Refresh it when code changes. Release status is determined by the G0–G9 ledger, not by this document. No feature is considered complete because its source file exists.

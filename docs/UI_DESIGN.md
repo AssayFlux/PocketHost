@@ -1,142 +1,61 @@
-# Pocket Host Mobile Design System 0.1.0
+# Pocket Host — Mobile Design System V1
 
-**Current platform:** Android application. iOS is a future target; no iOS source project exists in this repository.  
-**Design language:** Pocket Host Design Language V1  
-**Purpose:** serve websites from the mobile device in both operating modes, with fleet administration available only in the combined mode.
+**Design status:** existing approved visual language; preserve it.  
+**Roadmap effect:** no redesign is authorized by v0.1.0, v0.1.1 or v0.2.0.
 
 ## 1. Brand and visual language
 
 - Elegant calligraphic/script Pocket Host wordmark for brand moments only.
 - Refined readable display typography for page titles; legible sans-serif for controls and body.
 - Minimal monochrome line icons; semantic colours only for state.
-- Ten palettes: Classic Ivory, Midnight, Forest, Burgundy, Ocean, Graphite, Sandstone, Lavender, Copper and Arctic.
+- Classic palettes: Classic Ivory, Midnight, Forest, Burgundy, Ocean, Graphite, Sandstone, Lavender, Copper and Arctic.
 - Appearance: System, Light and Dark.
-- Respect Android font/display scaling, iOS Dynamic Type, accessibility contrast, reduced motion and platform safe areas.
+- Preserve the established login, owner/account menu, hamburger navigation and app layout.
+- Respect Android font/display scaling, contrast, reduced motion, keyboard/IME insets and platform safe areas.
 
 ## 2. Mobile operating modes
 
-A prominent mode control exposes exactly two mutually exclusive choices:
+Exactly two mutually exclusive modes:
+- **Server only:** website serving and website settings; fleet discovery, enrollment, approvals, role assignment and worker management hidden/disabled.
+- **Command Center + Server:** website serving plus fleet administration when those capabilities are delivered and accepted.
 
-- **Server only:** serve websites from this mobile device. Show website status, domains, runtime manager, local server settings and serving health. Hide fleet discovery, device enrollment, device approvals, role assignment, worker management and fleet command controls.
-- **Command Center + Server:** serve websites and provide the complete fleet command center, including device discovery, verification, owner approvals, role assignment, jobs, monitoring and recovery.
+There is no standalone Command Center-only mode. Both modes retain website serving.
 
-There is no Command Center-only mode. Both modes include the mobile website server. The distinction is whether fleet command capabilities are enabled.
+## 3. Navigation and release scope
 
-Switching modes must not revoke or stop already-authorized worker assignments. Entering Command Center + Server requires owner authentication. Switching to Server only removes access to fleet administration on this phone but does not erase enrolled devices or cancel their accepted autonomous work.
+The established hamburger structure remains the navigation source. v0.1.0 prioritizes Overview, Websites & Files, hosting settings, diagnostics, account and settings. Future destinations may remain visible only when clearly labelled as unavailable/planned; no control may imply an unimplemented capability.
 
-iOS displays only capabilities that pass its platform lifecycle and distribution requirements; never imply arbitrary always-on hosting.
+Workbench remains a planned first-class destination and completes in v0.1.1. Device administration becomes fully functional in v0.2.0.
 
-## 3. Home and navigation
+## 4. v0.1.0 hosting UX
 
-Top bar: brand, fleet selector, notifications and separate owner menu.
+- Show website import progress and validation errors.
+- State the 500 MB ZIP and 500 MB expanded-site limits, plus file/entry quotas.
+- Distinguish loopback/local preview from LAN access.
+- Make LAN binding explicit opt-in and show the active address/port.
+- Show foreground service and notification state.
+- Explain Android notification, battery and network restrictions.
+- Provide clear start/stop/restart, recovery and backup status.
+- Avoid clipped options, unscrollable pages, hidden actions and fixed bars that overlap the keyboard.
 
-Primary drawer:
-- Overview and operating mode.
-- Devices and pairing.
-- Role assignments and job queues.
-- Websites and publishing.
-- Runtime Companion / Runtime Manager (mobile server only; clearly distinguish currently available Python/Node companion from future independent runtime packs).
-- Storage and backups.
-- Traffic and tunnels.
-- Build/publish activity.
-- Edge devices / DemonCore.
-- Monitoring, security, approvals and audit.
-- Settings and help.
+## 5. v0.1.1 Workbench UX
 
-Every destination must work. Unsupported capabilities are labelled unavailable, not shown as active controls.
+Workbench has Explorer, Editor, Preview, Changes, Commits and Deployments. On phones prioritize a single-pane editor with a collapsible file drawer and compact tab strip. On tablets, use a resizable two-pane layout where supported. Dirty state and unsaved-change protection are mandatory. Preview and deployment states must be distinguishable.
 
-## 4. Fleet dashboard
+## 6. v0.2.0 device UX
 
-The home screen is a fleet overview:
-- Device counts by healthy, degraded, offline and pending approval.
-- Current jobs and assigned roles.
-- Website/server status and installed runtimes in both modes.
-- Storage, traffic and build/publish health.
-- Recent security approvals and alerts.
-- Clear stale/offline timestamps.
+Device cards show identity, platform, software version, roles, trust state, connection, health, resource pressure and last-seen time. Enrollment shows fingerprint, requested permissions, resource budget and explicit owner approval. Revocation and role changes show impact before confirmation.
 
-The dashboard must not vertically overflow. Use compact summaries and dedicated detail screens for long lists. Each device card shows identity, platform, assigned roles, connection, health, resource pressure and last seen.
+## 7. Accessibility and Android behavior
 
-## 5. Device discovery and verification
+- Respect system font/display scale and portrait/landscape.
+- Ensure every screen scrolls fully and bottom actions remain reachable.
+- Handle status/navigation bars, edge-to-edge insets and keyboard resize.
+- Keep touch targets accessible and labels meaningful.
+- Support screen readers, contrast, reduced motion and focus order.
+- Respect Android permission and notification settings; explain denied permissions rather than repeatedly prompting.
+- Test low-memory, background, process death and OEM battery-management behavior.
 
-- Scan QR, enter device ID/code, discover on LAN or BLE, or use supported USB/remote enrollment.
-- Show device fingerprint, model, OS, software signature/version, capability profile, requested roles and permissions.
-- One-time verification code is short-lived, single-use and bound to the candidate device key.
-- Owner explicitly approves each role and capability.
-- Show states: discovered, verification pending, owner approval pending, enrolled, connected, stale, offline, revoked and recovery required.
-- Discovery alone never creates a trusted device.
+## 8. Acceptance
 
-## 6. Device details and role assignment
-
-Show:
-- Identity and trust status.
-- Hardware/OS capabilities and unsupported capabilities.
-- Installed Pocket Host node software and version.
-- Assigned roles, individual job queue and permission scopes.
-- CPU, memory, storage, thermal, battery and network health.
-- Data namespaces, peer links, updates, logs and audit.
-
-Role assignment is an explicit flow: choose role, show required permissions/data/network access/resource budget, validate compatibility, request owner approval, then dispatch. Provide pause, reassign and revoke with clear impact.
-
-Roles: Storage, Traffic, Build/Publish, Native Backend/Jobs, Backup/Recovery, Edge Gateway and Mobile Website Server.
-
-## 7. Website and Runtime Companion
-
-- Website workspace supports importing static HTML/CSS/JavaScript sites and displaying site/deployment status.
-- TypeScript authoring/build is a planned built-in main-app feature; do not show it as available until compiler bundling and tests are complete.
-- Python 3.11 and Node.js 24.22.1 are available as in-progress optional integrations through the separate runtime companion APK, not as independent downloadable packs.
-- Clearly label companion availability, install state, process health and trusted-code warning. Both runtimes share the companion UID; never present them as a hardened multi-tenant sandbox.
-- Future Runtime Library package selection, ABI, size, license, signature and compatibility UI is future work; current JSON manifests are not installable packages.
-- Static content remains available if the companion is absent or a runtime fails.
-- Build worker artifacts are verified and staged before explicit activation on the mobile serving node.
-
-## 8. Workbench
-
-Add **Workbench** as a first-class destination in the hamburger sidebar, adjacent to Websites & Files. It is available in both Server only and Command Center + Server modes. Keep Websites & Files for import/backup/site administration; Workbench is the development workspace.
-
-Workbench has a project selector and six clear destinations: **Explorer**, **Editor**, **Preview**, **Changes**, **Commits** and **Deployments**. Explorer uses a navigable nested tree, not a flat unbounded file dump. Editor supports tabs, dirty indicators, save state, syntax-aware colors and accessible controls. Changes shows per-file status and reviewable diffs. Commits and Deployments show durable history and clear active/failed/rollback states.
-
-On mobile, prioritize a single-pane editor with a collapsible file drawer and compact tab strip; on tablets use a resizable two-pane explorer/editor layout where supported. Respect system font scaling, IME/keyboard insets, landscape, large touch targets and long filenames. Avoid horizontal clipping and never hide editor actions behind fixed bottom bars when the keyboard is open.
-
-Visually distinguish **Workspace / Draft** from **Live / Production** at all times. Preview is marked as a development preview and uses an isolated origin. Deploy is a deliberate review-and-approve action with changed-file summary, validation results and rollback target. Never style Save, Commit and Deploy as interchangeable actions. Destructive file operations and production deployment require clear confirmation.
-
-See [Workbench specification](WORKBENCH.md) for behavior, security boundaries and acceptance.
-
-## 9. Storage, traffic and publishing
-
-- Storage nodes: namespace, quota, encryption, replication and backup health.
-- Traffic nodes: exact site routes, proxy/cache policy, upstream and provider health.
-- Build/publish workers: source scope, build log, artifact digest, provenance, test result and activation approval.
-- Never expose active release activation as a worker-side arbitrary command.
-
-## 9. Connectivity and edge devices
-
-- Local Network, AssayFlux Relay and Cloudflare Tunnel are separate provider controls.
-- Show provider-specific health and hostname routes; support independent and concurrent use.
-- Edge devices show board identity, firmware, safe capabilities, last telemetry and explicit command approval.
-- Never expose raw GPIO or unrestricted MCU shell as ordinary controls.
-
-## 10. Resilience and security UX
-
-Show the smallest failing component and what remains healthy. Display offline state, last sync, expired grants, resource limits and recovery options. Every sensitive action names target device, role, data and consequences. Include revoke, rotate, restore and rollback with audit outcomes.
-
-## 11. Accessibility and platform behavior
-
-- Android: respect system font scale, display size, insets, keyboard, foreground-service requirements, Doze and battery policies.
-- Future iOS implementation: native navigation, safe areas, Dynamic Type, VoiceOver, Keychain/Secure Enclave and background restrictions; not implemented in this repository.
-- Touch targets at least 48dp / 44pt as appropriate.
-- Screen-reader labels, logical focus, contrast, reduced motion, portrait/landscape and tablet layouts.
-- No clipped controls at large text sizes.
-
-## 12. Acceptance
-
-Test both modes, device verification/revocation, role assignment and job lifecycle, large text, screen readers, app termination, phone reboot, offline hosts, stale telemetry, role-specific permissions, runtime installation and worker artifact approval. No UI control may imply an unimplemented capability.
-
-
-## Built-in web baseline and optional runtimes
-
-- The mobile server app includes HTML/CSS static hosting by default in both operating modes.
-- TypeScript belongs to the built-in web toolchain and is compiled to JavaScript before publication; never present raw TypeScript as directly browser-executable.
-- Additional server-side language runtimes appear as separate signed/versioned optional packs in Runtime Manager. Installing one must not be required for basic HTML/CSS/TypeScript websites.
-- Clearly distinguish the built-in web toolchain from optional server-side runtime packs in setup, status, storage and update screens.
-- Do not show a runtime as installed/ready until its package verification and health checks pass.
+UI acceptance is G8 for every release. Test both mobile modes, all v0.1.0 hosting flows, long text, font scaling, keyboard, scrolling, system appearance and permissions. Preserve the visual language while correcting implementation defects.

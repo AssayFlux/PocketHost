@@ -1,68 +1,58 @@
-# Pocket Host 0.1.0 — Security and Isolation Design
+# Pocket Host — Security and Isolation Design
 
 ## Security objective
 
-Only owner-approved devices may join a Pocket Host fleet. Each enrolled device receives explicit, revocable role grants. A compromise in one device, role, job, runtime or transport must not grant control over the fleet or unrelated components.
+Pocket Host must keep website visitors, owner controls, website files, optional runtimes, worker devices and edge hardware in separate trust domains. Local hosting should remain useful without remote infrastructure.
 
-## Trust hierarchy
+## Release placement
 
-1. Owner identity and recovery.
-2. Mobile command-center client identity.
-3. Enrolled device identity bound to a cryptographic key.
-4. Individual role grant with least-privilege capabilities.
-5. Individual job/deployment identity.
-6. Website component/runtime identity.
-7. Edge/MCU identity and board-level capability.
+- v0.1.0: Android static serving, safe import/activation, LAN opt-in, website backup/restore and Android permission/lifecycle handling.
+- v0.1.1: Workbench workspace isolation, preview, build boundaries, publishing approval and optional runtime hardening.
+- v0.2.0: device identity, enrollment, authenticated transport, least-privilege role grants, agents, control plane and public ingress.
+- Later: further runtime packages, OS agents, SBC and MCU profiles.
 
-These identities are distinct. A pairing code is not a credential for ongoing access. A device key does not imply every role. A role grant does not authorize another role.
+## v0.1.0 website safety
 
-## Enrollment
+- Import into an app-private staging directory; validate before activation.
+- Enforce independent 500,000,000-byte ZIP input and expanded-site limits.
+- Enforce 5,000 files, 10,000 entries and 32 directory levels.
+- Reject absolute paths, traversal, unsafe names, symlinks and unsupported filesystem entries.
+- Exclude private key and credential material, including known SSH key files, .env files, PEM/key/P12/PFX files and internal Pocket Host metadata.
+- Preserve the current live website until the replacement is validated and activated.
+- Recover the last-known-good site after interrupted activation.
+- Keep Rust static response cap at 50 MiB per file unless separately reviewed and tested.
+- Bind to loopback by default. LAN binding is explicit opt-in and exposes the website listener to the local network.
+- Never expose management API or device-control endpoints through the visitor listener.
+- Encrypt website backups and require a strong passphrase.
 
-- Device generates a key pair; hardware-backed storage is used where supported.
-- A short-lived, single-use, rate-limited verification code is bound to the candidate key and enrollment challenge.
-- Owner reviews fingerprint, software version/provenance, capability profile, requested role and permissions.
-- Approval issues a scoped revocable credential.
-- Discovery by LAN, BLE, USB, QR, IP or MAC is never sufficient.
-- Replayed, expired, guessed, wrong-owner and revoked challenges are rejected.
-- Revocation invalidates sessions, queued jobs and future role renewals.
+## Android platform safety
 
-## Transport security
+Test foreground-service restrictions, notification permission, storage provider behavior, network permission, Doze, battery saver, screen-off, app process death, reboot, thermal state and low-storage behavior. Explain Android/OEM limits; do not promise 24/7 hosting on every phone.
 
-Wi-Fi/LAN, BLE, USB and remote transport all map to the same device identity and authorization policy. Use reviewed standard cryptography and authenticated encryption. Do not invent cryptographic protocols. Bluetooth is not treated as a secure authorization boundary. USB access requires explicit OS permission and a supported API. iOS arbitrary USB device control is not assumed.
+## v0.1.1 Workbench/runtime safety
 
-## Role isolation
+- Draft workspace and production release are separate roots and permissions.
+- Preview is isolated and cannot read owner secrets or modify production.
+- Build inputs, outputs, CPU, memory, time, disk and network are bounded.
+- Publishing stages an immutable artifact, verifies digest and paths, requires explicit owner approval and activates atomically.
+- Rollback selects a previously verified immutable release.
+- Python and Node currently share the runtime companion UID. This is not per-project OS isolation. Use trusted owner-controlled code until adversarial isolation and egress tests pass.
+- A runtime failure must not stop static hosting or unrelated components.
 
-- Storage: encrypted named namespaces; no execution, proxy or management access by default.
-- Traffic: exact hostname/site routes, bounded proxy/cache; no management, runtime broker or MCU control.
-- Build/publish: scoped source inputs and artifact outputs; no owner/device identity keys; no direct release activation.
-- Backend/job: signed fixed-purpose native packages and declared APIs; no unrestricted shell or customer language runtime.
-- Backup: encrypted snapshots and constrained restore staging.
-- Mobile website server: Rust ingress and user-selected runtime packs.
-- Edge gateway: board-specific allow-listed DCP operations.
+## v0.2.0 device and ingress safety
 
-Each role has its own credential, queue, resource budget, health and audit stream. If the OS cannot enforce adequate separation, do not co-locate mutually untrusted roles on that device.
-
-## Runtime security
-
-Python 3.11 and Node.js 24.22.1 currently execute through the separate Android `runtime-worker` companion APK on the mobile website-serving node. Both integrations are in progress and share the companion application UID; therefore the package boundary is not per-project isolation and untrusted customer code must not be treated as sandboxed. The main app's static HTML/CSS/JavaScript serving remains available without the companion. The built-in TypeScript compiler is a separate Step 4 authoring tool, not a server-side runtime. Any future per-language runtime package must prove OS-enforced project isolation, scoped filesystem/network capabilities, resource limits, supervision and adversarial tests.
-
-## Artifact and update security
-
-- Signed agent, runtime, firmware and workload artifacts.
-- Verify signature, digest, platform, ABI, version and compatibility before activation.
-- Stage in restricted storage; validate paths, quotas and metadata.
-- Atomic activation and last-known-good rollback.
-- Build worker cannot sign or activate a release without explicit approved flow.
-- MCU OTA verifies signatures and board compatibility before flashing.
+- Distinct device identity, owner proof, single-use short-lived challenge and explicit role approval.
+- Default-deny capability policy; unknown roles/capabilities are rejected.
+- Grants bind owner, device, role, capabilities, budgets, expiry and generation.
+- Authenticated transport, replay protection, revocation and idempotent jobs.
+- No arbitrary shell or unrestricted filesystem role.
+- Visitor ingress reaches website routes only, never management, runtime broker or MCU control.
+- Provider credentials are separate, short-lived/rotatable and never logged.
 
 ## Threat tests
 
-Rogue device, replayed code, device cloning, stolen credentials, role escalation, malicious worker, compromised storage, malicious artifact, archive traversal, runtime escape, cross-project access, proxy route abuse, secret exfiltration, denial of service, control-plane outage, phone loss and unsafe MCU command.
-
-## Protocol source of truth
-
-The machine-readable device hello, enrollment challenge, role grant and job envelope schemas plus default-deny role/job policies live in [`../protocol/`](../protocol/README.md). The normative ceremony, canonical signing rules, transport matrix and threat mitigations are in [`STEP_1_TRUST_AND_PROTOCOL.md`](STEP_1_TRUST_AND_PROTOCOL.md). Platform code must enforce the same role allow-list locally; UI visibility is not an authorization boundary.
+Archive traversal, duplicate path collision, symlink escape, oversized compressed and expanded content, sensitive-file import, storage exhaustion, malicious MIME/path, LAN exposure, management-route pivot, backup tampering, preview escape, cross-site access, runtime egress, device cloning, replay, role escalation, stolen credential, job replay and provider outage.
 
 ## Acceptance
 
-Security claims require adversarial tests on named devices and OS versions. A successful pairing UI, signature check or process start alone is not proof of fleet isolation.
+Security and privacy are mandatory G1/G8 items for each release. See [RELEASE_GATES.md](RELEASE_GATES.md). A threat model is not a substitute for test evidence.

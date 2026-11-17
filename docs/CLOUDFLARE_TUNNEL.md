@@ -1,79 +1,58 @@
-# Cloudflare Tunnel — Provider Specification 0.1.0
+# Cloudflare Tunnel — Provider Specification
 
-**Product version:** 0.1.0  
-**Provider role:** independent public visitor-ingress adapter for eligible Pocket Host host nodes. Reuse them; never create a duplicate.
+**Release assignment:** v0.2.0 public ingress acceptance.  
+**Role:** independent optional visitor-ingress adapter.
 
-## 1. Purpose
+## Purpose
 
-Cloudflare Tunnel is one optional public-connectivity path. The selected Pocket Host host node is the website origin and its website ingress is the only allowed tunnel destination. The tunnel creates outbound connectivity from the phone; it does not provide Pocket Host capacity control, visitor identity by itself or an uptime guarantee.
+Cloudflare Tunnel provides an outbound connection from the Android host to an existing Cloudflare tunnel. It does not provide Pocket Host capacity management, visitor identity by itself or an uptime guarantee.
 
-AssayFlux Relay is a separate first-party provider and may operate concurrently with Cloudflare Tunnel. A bounded HTTP request/response path is now implemented in source, but it is not deployed or production-approved. WebSocket/streaming, TLS lifecycle, DNSSEC and external acceptance remain open. Local Network mode remains independent of both.
+AssayFlux Relay and Local Network are independent. A provider failure must not stop another provider or local hosting.
 
-## 2. Current connector integration
+## Existing repository integration
 
-- Upstream: cloudflare/cloudflared.
-- Pinned source tag: `2026.11.0`.
-- Build helper: `scripts/build-cloudflared-android.sh`.
-- Declared ABIs: arm64-v8a, armeabi-v7a, x86_64.
+- Upstream cloudflared source is pinned by the build helper.
+- Android native build helper: scripts/build-cloudflared-android.sh.
+- Declared Android ABIs: arm64-v8a, armeabi-v7a and x86_64.
 - NDK minimum API: 26.
-- Runtime uses `--no-autoupdate`; connector metrics bind to loopback.
-- Tunnel token is passed through the intended environment channel, not command-line arguments.
-- Token is encrypted at rest with AES-256-GCM and an Android Keystore key.
+- Runtime uses --no-autoupdate and connector metrics bind to loopback.
+- Token is passed through the intended environment channel, not command-line arguments.
+- Token is encrypted at rest using AES-256-GCM and Android Keystore.
 
-The current cloudflared build helper targets Android ABIs. Other host platforms require their own verified cloudflared packages and lifecycle adapters.
+This is integration source, not proof of public reachability or production certification.
 
-## 3. Connect the existing named tunnel
+## Safe use of an existing named tunnel
 
-1. Open the existing named tunnel in Cloudflare Zero Trust.
-2. Identify the token for that exact tunnel. Treat it as a password.
-3. In Pocket Host tunnel settings, enter it through the secure token field. Never paste it into chat, source, screenshots or logs.
-4. Inspect the existing Public Hostname route.
-5. Ensure its service points to the Pocket Host Rust website listener and correct local port.
-6. Never point the public hostname at the management API, console dev server or control-plane administration route.
-7. Start Pocket Host hosting, then enable the connector.
-8. From mobile data or another independent network, request the hostname and verify TLS plus the expected website response.
-9. Preserve the existing tunnel and DNS configuration when it already works; change only the origin if required.
+1. Use the owner's existing named tunnel; do not create a duplicate unnecessarily.
+2. Treat the tunnel token as a password.
+3. Enter it only through the secure token field in Pocket Host.
+4. Confirm the public hostname routes to the Rust website listener and correct port.
+5. Never route the public hostname to management API, browser dev server or control-plane administration.
+6. Start local hosting before enabling the connector.
+7. Test the hostname from mobile data or another independent network.
+8. Verify expected site content and TLS.
 
-## 4. Distinguish connection states
+Never share tunnel tokens in chat, source, screenshots or logs.
+
+## Connection states
 
 | State | Meaning | Does not prove |
 |---|---|---|
-| Token configured | Encrypted credential is stored | Connector is running |
-| Connector ready | Local cloudflared process and health probe are ready | Public hostname works |
-| External HTTPS verified | Independent client reaches expected site over valid TLS | Long-term uptime |
-| Visitor access secured | Cloudflare Access or site policy blocks unauthorized visitors | Management API is safe unless separately tested |
+| Token configured | Encrypted credential stored | Connector running |
+| Connector ready | Local process/health probe ready | Public hostname reachable |
+| External HTTPS verified | Independent client reaches expected site with valid TLS | Long-term uptime |
+| Visitor access secured | Access policy tested | Management API safety without separate tests |
 
-## 5. Provider independence and mobile control
+## Security and operations
 
-- **Cloudflare Tunnel:** use existing named tunnel and account.
-- **AssayFlux Relay:** independent first-party provider. Each eligible host establishes its own authenticated outbound session; provider health, hostnames and credentials are independent of Cloudflare.
-- **Local Network:** LAN-only hosting without public edge.
-- **Direct hosting:** advanced owner-managed networking; not recommended as default.
+- Rotate exposed credentials.
+- Never log token or put it in process arguments.
+- Keystore protects stored credentials but not a rooted device or process memory.
+- Public website traffic terminates at Rust; management API remains private.
+- Use Cloudflare Access for private sites where appropriate.
+- Test reconnect, Wi-Fi/mobile transition, screen-off, battery saver, process restart and Android lifecycle.
+- Do not promise 24/7 uptime.
 
-The mobile command center can configure and observe providers across enrolled hosts. Local Network, AssayFlux Relay and Cloudflare Tunnel are independent; Relay and Cloudflare may run concurrently. Failure in one must not stop the others.
+## Acceptance
 
-## 6. Security and operations
-
-- Tunnel token is a device secret; rotate in Cloudflare if exposed.
-- Do not log tokens or place them in process arguments.
-- Keystore encryption protects stored credentials but not a rooted/compromised device or secrets in process memory.
-- Public website traffic must terminate at Rust. Management API stays loopback-only and authenticated.
-- Use Cloudflare Access for private websites where required; tunnel connectivity alone is not visitor authentication.
-- Monitor connector restart count, reconnect delay, network transitions and device battery/thermal state.
-- Explain Android background restrictions; do not promise 24/7 availability.
-
-## 7. Acceptance checklist
-
-- [ ] Existing named tunnel reused; no duplicate created.
-- [ ] Token entered through secure UI and encrypted at rest.
-- [ ] Token absent from logs, process arguments, backups and diagnostics.
-- [ ] Connector reaches local ready state.
-- [ ] Public Hostname targets Rust listener only.
-- [ ] External HTTPS returns intended site from another network.
-- [ ] Unknown host rejected.
-- [ ] Management API cannot be reached through public hostname.
-- [ ] Access policy verified for private sites.
-- [ ] Wi-Fi/mobile transition, screen-off, battery saver and process restart tested on physical device.
-- [ ] Token rotation invalidates old connector session.
-
-A successful local readiness probe is not external verification.
+Verify token encryption, connector start/stop, public DNS/TLS, correct website origin, unknown-host rejection, management-route isolation, access policy, token rotation and independent provider failure. A local readiness probe is not external verification. Apply v0.2.0 G0–G9.

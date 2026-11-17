@@ -1,70 +1,39 @@
-# AssayFlux Relay — Pocket Host 0.1.0 Provider Contract
+# AssayFlux Relay — Public Visitor Ingress Contract
+
+**Release assignment:** v0.2.0 — Connected Device Fabric.  
+**Current source:** bounded HTTP request/response visitor path; public production operation not certified.
 
 ## Purpose
 
-AssayFlux Relay is Pocket Host's first-party public visitor-ingress provider. Eligible host nodes establish authenticated outbound connections to the Relay gateway. Visitors connect to verified hostnames; the gateway forwards authorized website traffic to the selected host's website ingress.
-
-The mobile command center configures and monitors Relay. The mobile application does not carry visitor traffic and is not required for an active host agent to maintain its connection.
+AssayFlux Relay is a first-party public visitor-ingress provider. An eligible host establishes an authenticated outbound connection to a Relay gateway. Visitors connect to verified hostnames; the gateway forwards authorized website traffic to the host's Rust website ingress.
 
 ## Provider independence
 
-- Local Network, AssayFlux Relay and Cloudflare Tunnel are separate connectivity providers.
-- Relay and Cloudflare may be enabled simultaneously.
-- Each provider has independent credentials, hostname routes, connection state, health, limits and diagnostics.
-- A provider failure must not stop local hosting, another provider or unrelated services.
-- Route changes and failover are explicit and auditable.
+Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers. Relay and Cloudflare may operate simultaneously. Each has separate credentials, hostname routes, health, limits and diagnostics. Failure in one must not stop local hosting or another provider.
 
 ## Architecture
 
-```
-Visitor -> Relay TLS gateway -> verified hostname/site route
-        -> authenticated host session
-        -> host Relay agent -> Rust website ingress
-        -> site router -> static or isolated component
-```
+Visitor → Relay TLS gateway → verified hostname/site route → authenticated host session → host Relay agent → Rust website ingress.
 
-Services:
-1. Public TLS gateway and hostname router.
-2. Owner enrollment, device identity and revocation.
-3. Host Relay agent with reconnect and network-change handling.
-4. Bounded stream/request transport with flow control and cancellation.
-5. Domain ownership registry and certificate manager.
-6. Visitor access policy enforcement.
-7. Abuse controls, quotas, metrics, audit and incident operations.
+The provider must include domain ownership proof, host binding, TLS, bounded request transport, backpressure, cancellation, quotas, audit and abuse controls.
 
-## Security requirements
+## Security and privacy
 
-- Standard reviewed TLS; no custom cryptography.
-- Device-bound identity and short-lived, revocable credentials.
+- Device-bound identity and short-lived revocable credentials.
 - DNS TXT or equivalent domain ownership proof.
-- Hostname bound to owner, host identity and site/component ID.
-- Public visitor listener has no management, runtime broker, debug or MCU-control routes.
+- Hostname bound to owner, host identity and site ID.
+- Visitor listener has no management, runtime broker, debug or MCU routes.
 - Strict request/header/body/queue/connection limits.
-- Backpressure, deadlines, cancellation, replay resistance and bounded reconnect.
-- Visitor credentials are distinct from owner and device-management credentials.
-- Relay forwards only to the host's website ingress, never directly to arbitrary local ports.
+- Standard TLS only; no custom cryptography.
+- Visitor credentials are distinct from owner/device-management credentials.
+- Relay forwards only to website ingress, never arbitrary local ports.
 
-## Privacy
+In standard TLS termination mode, the gateway can inspect HTTP content and metadata. Disclose this. Hiding the host's public IP from visitors does not hide it from the Relay operator or network provider.
 
-In standard TLS termination mode, the gateway can inspect HTTP content and metadata; disclose this to users. Hiding a host's public IP from ordinary visitors does not hide it from the Relay operator, carrier or network provider. Any end-to-end TLS pass-through mode requires a separate design and acceptance.
+## Current source boundary
 
-## Host agent lifecycle
-
-The host agent owns its connection, process lifecycle, health and reconnect state. It runs independently of the mobile app and optional control plane after enrollment. Credential revocation closes sessions and rejects subsequent traffic. Host reboot recovery uses the locally stored authorized configuration and device-bound credential.
-
-## Current source contract
-
-The repository contains a bounded HTTP request/response visitor path between the control-plane gateway and Android Relay agent. It is not a general TCP, WebSocket or unrestricted streaming tunnel. The documented source limits include 8 MiB request/response bodies, a 45-second request deadline and four concurrent local requests per device. These source limits are not a production service guarantee.
-
-Public operation requires deployed gateway, verified DNS/TLS, real external HTTPS tests, reconnect/soak/load testing, abuse controls and security review. A connected agent alone does not prove visitor reachability.
+The repository contains a bounded HTTP request/response path. Documented source limits include 8 MiB request/response bodies, a 45-second request deadline and four concurrent local requests per device. This is not a general TCP, WebSocket or unrestricted streaming tunnel, and is not a production service guarantee.
 
 ## Acceptance
 
-- Enrollment, ownership proof, host binding and immediate revocation.
-- Host reboot, phone outage and control-plane outage do not terminate eligible host-local service lifecycle.
-- Host network change, reconnect and session replacement cancel stale requests safely.
-- Concurrent bounded requests, backpressure, cancellation and timeouts.
-- No hostname route to management or device administration.
-- Cloudflare and Local Network continue when Relay is unavailable.
-- External DNS/TLS/visitor policy tested from an independent network.
-- Load, abuse, privacy and operational readiness reviewed.
+Prove domain ownership, host binding, revocation, external DNS/TLS, request limits, cancellation, timeout, backpressure, reconnect, abuse controls and management-route isolation from an independent network. Test Relay failure while Local Network and Cloudflare remain available. Apply v0.2.0 G0–G9.

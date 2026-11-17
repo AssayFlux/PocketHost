@@ -1,55 +1,56 @@
-# Pocket Host 0.1.0 — Website Deployment and Runtime Placement
+# Pocket Host — Website Deployment Contract
 
 ## Serving model
 
-The mobile website-serving node is the final website origin in the 0.1.0 product baseline. The mobile owner selects exactly one of two modes: Server only or Command Center + Server. Server only is a serving-only mode and cannot enroll or assign worker devices. Python 3.11 and Node.js 24.22.1 are currently optional runtimes in the separate Android `runtime-worker` companion APK on this serving node; both are in progress. The future independent Runtime Library is post-baseline.
+The Android phone is the first website-serving node. It serves static website files through the bundled Rust engine in both mobile modes:
 
-Worker devices support the serving node through assigned infrastructure jobs: storage, traffic proxy/cache, build and publish preparation, backups and approved native backend/job adapters. They do not silently host customer-selected language runtime projects in this baseline.
+| Mode | Static website server | Fleet controls |
+|---|---|---|
+| Server only | Enabled | Hidden/disabled |
+| Command Center + Server | Enabled | Enabled when fleet release is accepted |
 
-## Website composition
+Local static hosting is independent of the remote control plane, Relay, Cloudflare and optional language runtimes.
 
-A website may contain:
-- Static frontend.
-- One or more customer-selected language components.
-- Persistent data and object-storage references.
-- Build artifacts and deployment releases.
-- Approved worker-backed storage, cache or native job services.
+## v0.1.0 website composition
 
-A component declares language/runtime version, resource limits, health check, storage namespace, network permissions, secrets and release compatibility.
+Supported baseline: HTML, CSS, browser JavaScript and static assets such as images, fonts, icons, JSON and downloadable files, subject to importer and per-file response limits.
 
-## Current runtime reality and future manager
+A website root contains <code>index.html</code>. ZIP import accepts the file at archive root or inside one top-level folder. Folder import selects the website root directly.
 
-- The main app's static HTML/CSS/JavaScript server works without Python or Node.js.
-- Python 3.11 (Chaquopy) and Node.js mobile 24.22.1 (JNI/libnode) are present in the separate `runtime-worker` companion APK; they are currently delivered together, not as independent packages.
-- The app has host-side runtime client/lifecycle integration, but both runtime implementations remain in progress and require Android device acceptance.
-- Both runtimes share the companion application UID. This is not per-project OS isolation; execute only trusted owner-controlled projects until adversarial isolation and egress tests pass.
-- The future Runtime Library will provide one separately signed/downloadable package per language. Its 20 manifests are catalog metadata only; no independent package artifacts or completed Runtime Manager are present.
-- The main-app TypeScript-to-JavaScript compiler is a separate Step 4 requirement and is not yet bundled/verified. It is not a server-side runtime.
+### Import limits
 
-## Workbench and live release separation
+- ZIP archive input: 500,000,000 bytes maximum.
+- Expanded website contents: 500,000,000 bytes maximum.
+- Folder imports: 500,000,000 bytes total.
+- Files: 5,000 maximum.
+- Entries: 10,000 maximum.
+- Nesting: 32 levels maximum.
+- Unsafe paths, traversal, symlinks and sensitive files are rejected.
 
-Workbench is the editing and release-review surface for a site. It keeps a distinct workspace from the active immutable release. Visitors continue to receive the active release while the owner edits, saves, previews and commits. A local commit is not itself a deployment.
+The Rust engine's 50 MiB per-file response limit is separate. A site may contain many files whose combined size is up to the import cap, but an individual asset above the server response cap will not be served until that engine limit is changed and separately accepted.
 
-Publishing validates and stages an immutable artifact, previews and health-checks it, presents a diff and requires explicit owner approval before atomic activation. A failed build or interrupted activation must preserve or restore the previous known-good release. Rollback is an audited activation of a prior immutable release. See [Workbench specification](WORKBENCH.md).
+## Static build handling
 
-The current `WorkbenchWorkspaceManager` and `PocketHostWorkbenchScreen` provide a first-pass per-site draft workspace, nested explorer, basic text editing, change summary and local commit snapshots. These do not yet implement preview or production deployment. The existing SiteFileManager still targets the deployed site tree and is not sufficient as the final Workbench data model. SiteImporter release activation/recovery code must be inspected and tested before being relied on for this workflow. Android integration run [44050320129](https://github.com/AssayFlux/PocketHost/actions/runs/44050320129) compiled app and instrumentation sources, but emulator tests were skipped.
+v0.1.0 hosts already-built static output. For a Vite/React project, run the build on a desktop/CI environment and import the contents of the production dist directory. Raw TypeScript and JSX are not directly browser-executable. The main-app TypeScript compiler and Workbench build integration are v0.1.1.
 
-## Build and publish
+## Import and activation lifecycle
 
-1. Owner chooses source and target release.
-2. Assigned build worker receives only scoped source/build inputs.
-3. Worker builds/tests and returns immutable artifact plus digest and provenance.
-4. Mobile serving node verifies signature/digest/compatibility and scans metadata.
-5. Release is staged in isolated storage and health-checked.
-6. Owner-authorized deployment atomically activates routes.
-7. Last-known-good release remains available for rollback.
+1. User selects a folder or ZIP.
+2. Importer creates a unique app-private staging directory.
+3. Stream limits, path/name checks, file/entry/depth quotas and index validation are applied.
+4. The old active site remains intact during validation.
+5. A valid replacement is activated by filesystem rename; prior active content is retained as a release.
+6. Interrupted activation is recovered to a safe last-known-good release.
+7. Failed import removes staging and preserves the active site.
 
-Build workers cannot directly write the active serving directory, change DNS, alter tunnel routes or activate a release.
+## Host listener
 
-## Storage and traffic workers
+The Rust engine defaults to loopback. LAN mode explicitly binds to all network interfaces and must be user-enabled. The port is configurable. Public ingress is not a v0.1.0 release requirement.
 
-Storage nodes expose only encrypted, owner-assigned namespaces. Traffic nodes receive exact approved site routes and bounded proxy/cache permissions. Neither role can access owner management, runtime brokers, device enrollment or MCU control.
+## v0.1.1 Workbench publishing
 
-## Acceptance
+Workbench has a separate private draft workspace. Save and commit do not change the active release. Publishing later adds isolated preview, diff, immutable staging, digest verification, explicit owner approval, atomic activation and rollback. See [WORKBENCH.md](WORKBENCH.md).
 
-Test static hosting with the companion absent/stopped, Python/Node lifecycle and companion process failures, trusted-code acknowledgement, cross-project access and network escape, TypeScript compilation once implemented, invalid artifact, build failure, interrupted activation, rollback, storage outage, traffic worker outage and command-center disconnect.
+## v0.2.0 public ingress
+
+Local Network, AssayFlux Relay and Cloudflare Tunnel are independent providers. Public hostname verification, DNS/TLS, access policy and management-route isolation require external acceptance. Tunnel readiness is not proof of public reachability.
