@@ -106,7 +106,12 @@ class MainActivity : ComponentActivity() {
             .getBoolean("biometric_unlock_enabled", false)
         unlocked = mutableStateOf(!enabled)
         setContent {
-            PocketHostTheme(darkTheme = isSystemInDarkTheme()) {
+            val appearance = getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            val savedMode = appearance.getString("appearance_mode", null)
+                ?: if (appearance.contains("dark_theme")) { if (appearance.getBoolean("dark_theme", false)) "Dark" else "Light" } else "System"
+            val useDark = when (savedMode) { "Dark" -> true; "Light" -> false; else -> isSystemInDarkTheme() }
+            val savedTheme = appearance.getString("appearance_theme", "Classic") ?: "Classic"
+            PocketHostTheme(darkTheme = useDark, themeName = savedTheme) {
                 if (unlocked.value) PocketHostDashboard()
                 else BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
             }
