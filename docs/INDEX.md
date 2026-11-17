@@ -21,6 +21,8 @@ This documentation set follows the new three-version pathway. The former five-st
 - [User Guide](LEARN_GUIDE.md)
 - [Security and Isolation](SECURITY_ISOLATION_DESIGN.md)
 - [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md)
+- [AssayFlux Relay](ASSAYFLUX_RELAY.md)
+- [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Pocket Host Design Language V1](UI_DESIGN.md)
 
 ## v0.1.1 — Workbench & Runtime Development
@@ -41,8 +43,6 @@ This documentation set follows the new three-version pathway. The former five-st
 - [Device Agents and Workers](STEP_3_DEVICE_AGENTS.md)
 - [Remote Control Acceptance](REMOTE_CONTROL_ACCEPTANCE.md)
 - [Control Plane Deployment](CONTROL_PLANE_DEPLOYMENT.md)
-- [AssayFlux Relay](ASSAYFLUX_RELAY.md)
-- [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Release Signing and Provenance](RELEASE_SIGNING.md)
 
 ## Product, security and competitive references
