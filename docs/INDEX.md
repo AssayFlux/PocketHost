@@ -20,6 +20,7 @@ This documentation set follows the new three-version pathway. The former five-st
 - [Capacity and Operations](ADAPTIVE_CAPACITY_SECURITY_OPERATIONS.md)
 - [User Guide](LEARN_GUIDE.md)
 - [Security and Isolation](SECURITY_ISOLATION_DESIGN.md)
+- [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md)
 - [Pocket Host Design Language V1](UI_DESIGN.md)
 
 ## v0.1.1 — Workbench & Runtime Development
