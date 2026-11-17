@@ -143,13 +143,14 @@ object RelayAgent {
 
     private fun forwardRequest(context: Context, endpoint: String, token: String, message: JSONObject) {
         val id = message.optString("id")
+        val siteId = message.optString("site_id")
         try {
             require(id.matches(Regex("[0-9a-fA-F-]{36}"))) { "Invalid Relay request ID." }
+            require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid Relay site ID." }
             val method = message.getString("method")
             require(method in setOf("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS")) { "Unsupported Relay method." }
             val hostname = message.getString("hostname")
             require(hostname.length in 1..253 && hostname.none { it.isWhitespace() }) { "Invalid Relay hostname." }
-            val siteId = message.getString("site_id")
             val localHostname = SiteRegistry.localHostnameForRelay(context, siteId)
                 ?: throw SecurityException("Relay route does not identify an enabled local site with a hostname.")
             val path = message.getString("path")
@@ -162,6 +163,7 @@ object RelayAgent {
             )
             postResponse(endpoint, token, id, JSONObject()
                 .put("id", id)
+                .put("site_id", siteId)
                 .put("status", localResponse.status)
                 .put("headers", localResponse.headers)
                 .put("set_cookies", JSONArray(localResponse.setCookies))
@@ -170,6 +172,7 @@ object RelayAgent {
             runCatching {
                 postResponse(endpoint, token, id, JSONObject()
                     .put("id", id)
+                    .put("site_id", siteId)
                     .put("status", 502)
                     .put("headers", JSONObject().put("content-type", "text/plain; charset=utf-8").put("cache-control", "no-store"))
                     .put("body_base64", Base64.encodeToString(
