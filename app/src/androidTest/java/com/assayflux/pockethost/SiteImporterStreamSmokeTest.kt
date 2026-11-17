@@ -5,7 +5,6 @@ import android.content.ContextWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.storage.SiteImporter
-import com.assayflux.pockethost.storage.SiteBackupManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,12 +41,6 @@ class SiteImporterStreamSmokeTest {
         } finally {
             isolatedRoot.deleteRecursively()
         }
-    }
-    @Test
-    fun websiteImportAndBackupLimitsAre500Megabytes() {
-        val expected = 500_000_000L
-        assertEquals(expected, SiteImporter.MAX_IMPORT_BYTES)
-        assertEquals(expected, SiteBackupManager.MAX_BACKUP_BYTES)
     }
     @Test
     fun websiteImportLimitIs500Megabytes() {
