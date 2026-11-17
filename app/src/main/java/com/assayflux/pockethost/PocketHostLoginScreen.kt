@@ -117,8 +117,8 @@ internal fun PocketHostLoginScreen(context: Context, onAuthenticated: (String) -
                                 runCatching {
                                     if (ownerExists) {
                                         val account = HostAccountStore.verify(context, enteredUsername, enteredPassword.toCharArray())
-                                            ?: error("The username or password is incorrect.")
-                                        require(account.role == "OWNER") { "Only the Owner account can unlock this workspace." }
+                                            ?: throw IllegalArgumentException("The username or password is incorrect.")
+                                        if (account.role != "OWNER") throw IllegalArgumentException("Only the Owner account can unlock this workspace.")
                                         account
                                     } else {
                                         HostAccountStore.create(context, enteredUsername, enteredPassword.toCharArray(), "OWNER")
