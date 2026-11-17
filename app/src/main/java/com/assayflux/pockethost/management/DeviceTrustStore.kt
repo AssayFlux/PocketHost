@@ -96,6 +96,85 @@ object DeviceTrustStore {
         return fingerprint(pair.public.encoded) to Base64.encodeToString(pair.public.encoded, Base64.NO_WRAP)
     }
 
+    /** Wire document for the shared enrollment-challenge schema. */
+    fun enrollmentChallengeDocument(value: EnrollmentChallenge): JSONObject = JSONObject()
+        .put("protocol", "pockethost.device/1.0")
+        .put("challenge_id", value.challengeId)
+        .put("owner_id", value.ownerDeviceId)
+        .put("device_id", value.candidateDeviceId)
+        .put("challenge_nonce", value.nonce)
+        .put("issued_at", Instant.ofEpochSecond(value.issuedAt).toString())
+        .put("expires_at", Instant.ofEpochSecond(value.expiresAt).toString())
+        .put("single_use", true)
+        .put("transport", value.transport)
+        .put("signature", JSONObject().put("algorithm", "ecdsa-p256-sha256")
+            .put("key_id", value.ownerDeviceId).put("value", value.ownerSignature))
+
+    /** Candidate-side verifier: checks owner identity, target binding, expiry and owner signature. */
+    fun verifyEnrollmentChallenge(document: JSONObject, ownerPublicKeySpki: String,
+                                  expectedDeviceId: String, nowSeconds: Long = System.currentTimeMillis() / 1000L): Boolean = runCatching {
+        require(document.optString("protocol") == "pockethost.device/1.0")
+        require(document.optBoolean("single_use", false))
+        val ownerId = document.getString("owner_id")
+        val deviceId = document.getString("device_id")
+        require(deviceId == expectedDeviceId)
+        val publicBytes = Base64.decode(ownerPublicKeySpki, Base64.NO_WRAP)
+        require(fingerprint(publicBytes) == ownerId)
+        val issued = Instant.parse(document.getString("issued_at")).epochSecond
+        val expires = Instant.parse(document.getString("expires_at")).epochSecond
+        require(issued <= nowSeconds && expires > nowSeconds && expires - issued <= CHALLENGE_TTL_SECONDS)
+        val signature = document.getJSONObject("signature")
+        require(signature.optString("algorithm") == "ecdsa-p256-sha256" && signature.optString("key_id") == ownerId)
+        val challenge = EnrollmentChallenge(document.getString("challenge_id"), ownerId, deviceId,
+            document.getString("challenge_nonce"), issued, expires, document.getString("transport"),
+            signature.getString("value"))
+        val verifier = Signature.getInstance("SHA256withECDSA")
+        verifier.initVerify(java.security.KeyFactory.getInstance("EC").generatePublic(
+            java.security.spec.X509EncodedKeySpec(publicBytes)))
+        verifier.update(challengeBytes(challenge))
+        verifier.verify(Base64.decode(challenge.ownerSignature, Base64.NO_WRAP))
+    }.getOrDefault(false)
+
+    /** Worker-side grant verifier. Call immediately before accepting a role or side effect. */
+    fun verifyRoleGrant(document: JSONObject, ownerPublicKeySpki: String, expectedDeviceId: String,
+                        nowSeconds: Long = System.currentTimeMillis() / 1000L,
+                        minimumGeneration: Long = 1L): Boolean = runCatching {
+        require(document.optString("protocol") == "pockethost.device/1.0")
+        require(document.optString("device_id") == expectedDeviceId)
+        val ownerId = document.getString("owner_id")
+        val publicBytes = Base64.decode(ownerPublicKeySpki, Base64.NO_WRAP)
+        require(fingerprint(publicBytes) == ownerId)
+        val role = document.getString("role")
+        val allowed = ROLE_CAPABILITIES[role] ?: error("unknown_role")
+        val capsArray = document.getJSONArray("capabilities")
+        val caps = (0 until capsArray.length()).map { capsArray.getString(it) }
+        require(caps.isNotEmpty() && caps.distinct().size == caps.size && caps.all { it in allowed })
+        require(document.getJSONArray("denied_capabilities").length() == 0)
+        val generation = document.getLong("generation")
+        require(generation >= minimumGeneration)
+        val issued = Instant.parse(document.getString("issued_at")).epochSecond
+        val expires = Instant.parse(document.getString("expires_at")).epochSecond
+        require(issued <= nowSeconds && expires > nowSeconds)
+        require(document.optString("policy_version") == "1.0")
+        val budgetJson = document.getJSONObject("resource_budget")
+        val budget = mapOf("cpu_millis" to budgetJson.getLong("cpu_millis"),
+            "memory_bytes" to budgetJson.getLong("memory_bytes"),
+            "storage_bytes" to budgetJson.getLong("storage_bytes"),
+            "network_bytes_per_day" to budgetJson.getLong("network_bytes_per_day"))
+        require(budget.values.all { it >= 0L } && budget.getValue("cpu_millis") > 0L &&
+            budget.getValue("memory_bytes") > 0L)
+        val signed = document.getJSONObject("signature")
+        require(signed.optString("algorithm") == "ecdsa-p256-sha256" && signed.optString("key_id") == ownerId)
+        val grant = SignedRoleGrant(expectedDeviceId, ownerId, role, caps.sorted(), generation,
+            issued, expires, signed.getString("value"), ownerPublicKeySpki,
+            document.getString("grant_id"), budget)
+        val verifier = Signature.getInstance("SHA256withECDSA")
+        verifier.initVerify(java.security.KeyFactory.getInstance("EC").generatePublic(
+            java.security.spec.X509EncodedKeySpec(publicBytes)))
+        verifier.update(grantBytes(grant))
+        verifier.verify(Base64.decode(grant.signature, Base64.NO_WRAP))
+    }.getOrDefault(false)
+
     @Synchronized
     fun createChallenge(candidateDeviceId: String, nowSeconds: Long = System.currentTimeMillis() / 1000L): EnrollmentChallenge {
         require(candidateDeviceId.matches(Regex("[a-f0-9]{64}"))) { "candidate_device_id_invalid" }
