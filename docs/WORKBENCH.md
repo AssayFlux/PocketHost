@@ -69,7 +69,7 @@ Preview must serve the workspace on a separate loopback-only endpoint or isolate
 
 ## 7. Relationship to current repository implementation
 
-The repository already contains SiteFileManager with bounded text-file editing, listing, upload, create, rename, delete and index selection. The existing Websites & Files screen currently edits the deployed filesDir/site tree and disables many edits while hosting. This is a useful foundation, **not** the Workbench product described here: it does not yet provide an isolated workspace, full tree navigation/editor experience, change tracking, commit history, separate preview or immutable atomic release deployment.
+The repository already contains SiteFileManager with bounded text-file editing, listing, upload, create, rename, delete and index selection. A first isolated WorkbenchWorkspaceManager foundation has now been added for per-project workspace initialization, bounded text edits, change digests and immutable local commit snapshots; it is not yet connected to the app UI or a deployment pipeline. The existing Websites & Files screen currently edits the deployed filesDir/site tree and disables many edits while hosting. This is a useful foundation, **not** the Workbench product described here: it does not yet provide an isolated workspace, full tree navigation/editor experience, change tracking, commit history, separate preview or immutable atomic release deployment.
 
 The existing SiteImporter release/activation and recovery mechanisms should be audited and extended for Workbench rather than bypassed. Verify actual semantics before relying on them for production activation.
 
