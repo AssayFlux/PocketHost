@@ -147,3 +147,16 @@ This section supersedes the earlier sequencing and verification statements above
 - Gate 7 source increment: first-publish guidance is now present in the Sites empty state, with a test asserting the first-publish heading, top-level `index.html` guidance and start-hosting direction. This closes that narrow source/documentation task only; terminal-free publication execution and API-matrix execution remain unverified.
 - Gate 2 remains open by owner instruction. Gates 3–7 remain open pending their implementation and evidence gaps; Gate 8 remains open for signed release, physical-device, external connectivity and independent review.
 - Do not infer runtime correctness, release readiness, production isolation or gate closure from successful compilation/APK packaging.
+
+
+## Android API 26 failure analysis — 2026-11-17 00:35 UTC
+
+This evidence update supersedes the earlier statement that API 26 instrumentation was still running.
+
+- Workflow [43983407943](https://github.com/AssayFlux/PocketHost/actions/runs/43983407943), implementation SHA `4f7d887ab26935dca0ca19a135b55e4b2f779d92`: API 26 emulator job completed **failure**, 50/55 tests passed and 5 failed. The test report artifact is [14286232244](https://github.com/AssayFlux/PocketHost/actions/runs/43983407943/artifacts/14286232244).
+- `PocketHostNavigationAccessibilityTest.allFiveDestinationsExposeLabelsAndRenderTheirOwnScreen`: the Sites accessibility node was found but is not clickable; the test did not navigate and then timed out waiting for `WEBSITE`. The separate empty-Sites first-publish test passed.
+- `PythonRuntimeSmokeTest` and `PythonMultiSiteSmokeTest`: both timed out waiting for the separately installed runtime companion Binder service. The captured per-test logcat did not establish the companion process's root cause; do not paper over this with a longer timeout.
+- `RuntimeIsolationProbeTest`: the API 26 abstract Unix-socket client blocked while flushing before the service could accept it. The probe must coordinate the writer and Binder accept operation without blocking the test thread.
+- `RuntimeWorkerSeccompTest.isolatedCellClosesInheritedSocketsDeniesNewSocketsAndAcceptsHostUnixListener`: setup failed with `EAFNOSUPPORT` while connecting its IPv4 loopback test socket. Use an API-26-supported deterministic socket-pair fixture or explicitly separate unavailable emulator networking from the isolation assertion; do not count this as a pass.
+- At the time of this update, API 33 remained in progress and API 35 remained queued. No API 26/33/35 matrix pass is claimed.
+- The above are unresolved defects. Gates 2 and 7 remain open; runtime migration and Android acceptance remain unverified. APK compilation and the six-job quality workflow are not substitutes for these tests.
