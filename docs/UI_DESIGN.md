@@ -136,8 +136,8 @@ The redesign is not complete until:
 
 ## 9. Current implementation and honest gaps
 
-**Source implemented on `ui/owner-home-shell` (2026-11-17):**
-- The native entry/locked screen remains the existing optional biometric app lock, with a redesigned branded card and fingerprint action. There is no native username/password account-login API; management-console login is separate.
+**Source implementation merged into `main` (2026-11-17):**
+- The native entry/locked screen remains the existing optional biometric app lock, with a redesigned branded card and fingerprint action. The screen follows Android system appearance by default and scrolls on compact/large-font layouts; a saved in-app theme override is respected. There is no native username/password account-login API; management-console login is separate.
 - The new home shell is the initial authenticated destination. It has Pocket Host / AssayFlux branding, a hamburger control, an account/app dropdown, and no bottom navigation bar.
 - The hamburger drawer exposes Home, Hosting, Websites & Files, Relay & Networking, Python & Node Runtimes, Security & Access, Capacity & Performance, Backups & Recovery, Activity & Logs, Learn, Settings and About. Destinations are mapped to existing native Dashboard, Sites, Activity, Learn and Settings General/Network/Runtimes/About flows.
 - The home carousel presents Hosting, Websites, Relay & Tunnels, Runtimes, Security, Capacity and Backups as horizontally swipeable cards with adjacent-card previews and page indicators. Service status and metrics are bound to current app state; planned capabilities are not represented as verified.
