@@ -5,96 +5,74 @@
 </p>
 
 <p align="center"><strong>Your devices. Your services. Your control.</strong></p>
-<p align="center">A mobile-first, distributed self-hosting ecosystem managed from Android or iPhone.</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-8B9EAD?style=flat-square" alt="Version 0.1.0">
-  <img src="https://img.shields.io/github/license/AssayFlux/PocketHost?style=flat-square" alt="Apache 2.0">
-  <img src="https://img.shields.io/github/actions/workflow/status/AssayFlux/PocketHost/quality.yml?branch=main&style=flat-square&label=quality" alt="Quality CI">
-</p>
+<p align="center">A mobile command center for a verified, role-assigned device fleet.</p>
 
 ## What is Pocket Host?
 
-Pocket Host lets people manage interconnected devices as their own hosting and service infrastructure. Android and iOS mobile applications are the primary command centers. The fleet may include Android devices, Linux/Windows/macOS computers, VPSs, dedicated servers, Raspberry Pi-class boards, embedded Linux gateways and microcontrollers.
+Pocket Host lets an owner install separate software on different devices, verify each device from an Android or iPhone command center, and assign it a specific job: website serving, storage, traffic handling, builds and publishing, native backend jobs, backup or edge gateway.
 
-The phone is the owner's control center, not the system's single point of failure. Each host independently supervises its services and continues its last authorized configuration if the phone or remote control plane is unavailable.
+The mobile device has three independent modes:
+- **Command Center:** manages the fleet; mobile website serving is off.
+- **Server:** serves websites from the mobile device.
+- **Command Center + Server:** manages the fleet and serves websites from the same mobile device.
 
-## Product principles
+The mobile command center approves every device integration and every role grant. Unknown devices cannot join the trusted fleet.
 
-- **Mobile-first:** manage the fleet from Android or iPhone.
-- **Device freedom:** use capable devices you already own.
-- **Independent components:** separate identities, processes, permissions, state, health and recovery.
-- **Secure interconnection:** authenticated, encrypted, versioned and bounded communication.
-- **Local autonomy:** hosts keep working through mobile/control-plane outages.
-- **Multi-runtime websites:** one website can contain static, Python, Node and other supported components.
-- **Fault containment:** one broken service must not break unrelated sites, runtimes, hosts or tunnels.
-- **Honest compatibility:** each exact device and workload combination must pass verification.
+## Core architecture
 
-## System at a glance
-
-```text
-Android command center        iOS command center
-          \                       /
-           authenticated control API
-                      |
-          optional remote control plane
-                      |
-      +---------------+----------------+
-      |               |                |
-  Android host     Linux/PC host     SBC/edge gateway
-      |               |                |
-  service cells   service cells     DemonCore / MCU
-      +---------------+----------------+
-                      |
-              authenticated data plane
-
-Visitors -> Local ingress / AssayFlux Relay / Cloudflare Tunnel
-         -> website ingress -> site router -> isolated components
-```
+- **Mobile command center:** Android and iOS owner apps, device discovery, verification, approvals, role assignments, health and recovery.
+- **Separate node software:** Android, Linux, Windows, macOS and supported SBC agents; MCU firmware for supported boards.
+- **Role-based workers:** storage, traffic, build/publish, native backend/job, backup and edge gateway.
+- **Central runtime placement:** in 0.1.0, user-selected language runtime packs execute only on the mobile website-serving node. Worker nodes handle bounded infrastructure jobs and do not silently become arbitrary Python/Node hosting nodes.
+- **Device transports:** Wi-Fi/LAN for secure control and bulk transfer; Bluetooth for discovery/proximity/small control messages; USB only through supported OS APIs; authenticated remote links when needed.
+- **DemonCore:** MCU and edge-device integration through a board-aware gateway.
 
 ## Device roles
 
-| Device | Role |
+| Role | Example device |
 |---|---|
-| Android phone/tablet | Command center and supported host |
-| iPhone/iPad | Command center |
-| Linux, Windows, macOS | General-purpose host agents |
-| VPS/dedicated server | Always-on host |
-| Raspberry Pi and SBC | Compact Linux host or gateway |
-| ESP32 and other MCUs | Bounded edge services, telemetry and device control |
-| Sensors and constrained devices | Events and measurements |
+| Command Center | Android phone or iPhone |
+| Mobile Website Server | Supported Android phone/tablet |
+| Storage / Backup | NAS, PC, server, Raspberry Pi |
+| Traffic | Linux server, SBC, eligible desktop |
+| Build / Publish | Desktop, laptop, server |
+| Native Backend / Jobs | Approved server or SBC worker |
+| Edge Gateway | Raspberry Pi, embedded Linux |
+| MCU / Sensor / Actuator | DemonCore-supported boards, ESP32-class devices |
+
+Role assignment is capability-aware and explicitly approved. A device is not automatically trusted or eligible because it is visible on the network.
 
 ## Repository components
 
-- `app/` — Android mobile application and host client.
-- `runtime-worker/` — Android runtime companion.
+- `app/` — Android command center and optional mobile host.
+- `runtime-worker/` — Android language runtime companion.
 - `rust-engine/` — Rust website ingress and routing engine.
-- `control-plane/` — optional remote identity, fleet and command service.
+- `control-plane/` — optional remote fleet identity, registry and command service.
 - `web-console/` — secondary browser operator console.
-- [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — separate MCU firmware and device-fleet project.
+- [AssayFlux/DemonCore](https://github.com/AssayFlux/DemonCore) — MCU firmware and device-fleet project.
 
-The iOS command-center app and additional desktop/server host agents are defined as product deliverables; this repository baseline does not claim them implemented.
+The iOS command center and additional desktop/server/SBC node packages are product deliverables; their implementation is not claimed complete in this baseline.
 
-## Version 0.1.0 documentation
+## Normative 0.1.0 documents
 
 1. [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
-2. [Host Agent Contract](docs/HOST_AGENT_CONTRACT.md)
-3. [Master Plan](docs/MASTER_PLAN.md)
+2. [Master Plan — five execution steps](docs/MASTER_PLAN.md)
+3. [Host Agent and Role Contract](docs/HOST_AGENT_CONTRACT.md)
 4. [Roadmap](docs/ROADMAP.md)
-5. [Baseline inventory](docs/PROJECT_BASELINE.md)
-6. [Mobile and product UI design](docs/UI_DESIGN.md)
-7. [Security isolation](docs/SECURITY_ISOLATION_DESIGN.md)
-8. [Remote control acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
-9. [Documentation index](docs/INDEX.md)
+5. [Repository Baseline](docs/PROJECT_BASELINE.md)
+6. [Mobile UI Design](docs/UI_DESIGN.md)
+7. [Security Isolation](docs/SECURITY_ISOLATION_DESIGN.md)
+8. [Remote Control Acceptance](docs/REMOTE_CONTROL_ACCEPTANCE.md)
+9. [Documentation Index](docs/INDEX.md)
 
 ## Build and verification
 
-Android build:
+Android:
 ```bash
 ./gradlew :app:assembleDebug :runtime-worker:assembleDebug
 ```
 
-Rust website engine:
+Rust engine:
 ```bash
 cargo test --manifest-path rust-engine/Cargo.toml --locked
 ```
@@ -109,7 +87,7 @@ Browser console:
 cd web-console && npm ci && npm run build
 ```
 
-Use the exact target/device matrix and acceptance gates in the documentation. A successful build does not imply every platform or workload is supported.
+A successful build does not prove a device role, transport or platform is supported. Use the named acceptance matrix in the documentation.
 
 ## License
 
