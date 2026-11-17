@@ -17,7 +17,7 @@ Make personal infrastructure approachable and owner-controlled. A user starts by
 
 ## Three-release journey
 
-- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, and publish it through Cloudflare Tunnel or the first-party AssayFlux Relay on the owner's domain over HTTP/HTTPS.
+- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, and publish it through Cloudflare Tunnel or an owner-operated AssayFlux Relay Node on the owner's domain over HTTP/HTTPS. The Relay Node runs on the owner's Termux/Android or Linux hardware; a paid VPS is not required, but public IPv4/IPv6 reachability is.
 - **v0.1.1 — Workbench & Runtime Development:** edit, preview, diff, commit and publish safely; complete optional Python/Node integrations.
 - **v0.2.0 — Connected Device Fabric:** enroll other devices, assign roles, coordinate work and scale Relay across multiple hosts/gateways with advanced failover.
 
