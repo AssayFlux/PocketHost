@@ -1,93 +1,129 @@
 # Pocket Host — Public Ingress v0.1.0
 
 **Release assignment:** v0.1.0 — First Hosting  
-**Status:** mandatory release scope; implementation and external acceptance remain open.
+**Status:** mandatory target; current source is only partially integrated and has not passed public-domain acceptance.
 
 ## 1. User outcome
 
-An owner can import a static website into the Android phone and make it reachable from any Internet-connected device through a custom domain. Pocket Host provides two independent public-ingress options:
+An owner imports a static website into the Android host and makes it reachable from ordinary Internet-connected browsers using the owner's domain. v0.1.0 has two public-ingress paths:
 
-1. **Cloudflare Tunnel** — use an owner-managed Cloudflare zone and named tunnel.
-2. **AssayFlux Relay** — use the first-party visitor gateway deployed on an owner-controlled public VPS/server.
+1. **Cloudflare Tunnel:** optional third-party tunnel integration using an owner-managed Cloudflare account and named tunnel.
+2. **AssayFlux Relay:** first-party, owner-operated relay gateway. It must be separately installable on owner-controlled hardware, including Termux/Android and Linux targets. A paid VPS, Cloudflare account or other managed relay provider must not be a product prerequisite.
 
-Local preview and LAN hosting continue to work when either provider, the Internet connection or the relay VPS is unavailable.
+The Android website host may sit behind mobile carrier NAT. It maintains an outbound authenticated connection to the owner-operated Relay Node. Visitors connect to the Relay Node's public hostname; the gateway forwards bounded website requests over that established connection.
 
-## 2. HTTP and HTTPS contract
+Local preview and LAN hosting must continue if either public provider or the Internet is unavailable.
 
-- Each verified public hostname accepts HTTP and HTTPS.
-- HTTPS must present a valid certificate for the exact hostname.
-- HTTP redirects to HTTPS by default (301/308). The owner may explicitly enable plain HTTP content serving after an insecure-transport warning.
-- Public TLS terminates at Cloudflare or the AssayFlux Relay edge. The Android website origin remains a loopback HTTP listener unless a separately tested origin-TLS mode is introduced.
-- Do not claim HTTPS merely because the local Rust server is listening on HTTP.
-- Never expose the Android management API, device enrollment, runtime broker, Workbench draft files, debug endpoints or MCU controls through a visitor hostname.
+## 2. Public reachability is still required
 
-## 3. Provider selection and DNS
+“No VPS required” does **not** mean “no publicly reachable endpoint required.” The owner-operated Relay Node must be reachable from the Internet through one of these arrangements:
 
-A hostname is bound to one provider at a time. The owner may use separate names (for example, `www` through Cloudflare and `relay` through AssayFlux Relay). Pointing the same hostname at both providers simultaneously requires a separately configured DNS/load-balancer failover layer; Pocket Host must not imply automatic active-active routing by simply enabling both connectors.
+- Public IPv4 address with router port forwarding for TCP 80/443.
+- Globally routed IPv6 address with firewall rules permitting the required inbound ports.
+- Another owner-controlled always-on device/network that has one of the above.
+
+The owner's DNS A/AAAA records must resolve to that reachable node. Dynamic IPv4 may use a user-selected DDNS mechanism. If the only available network is behind carrier-grade NAT (CGNAT), has no global IPv6 and offers no inbound port forwarding, that device cannot be the public gateway. A different reachable owner-owned node or the optional Cloudflare Tunnel is then required. DNS records alone cannot bypass CGNAT.
+
+A phone hosting the website may remain behind CGNAT because it connects outbound to the Relay Node. The Relay Node itself cannot be behind an unreachable NAT if it is expected to accept visitor connections.
+
+## 3. HTTP and HTTPS contract
+
+Target behavior for each verified public hostname:
+
+- HTTPS presents a valid certificate for that hostname.
+- HTTP redirects to HTTPS by default (301/308).
+- Plain HTTP content serving is an explicit owner opt-in with an insecure-transport warning.
+- TLS terminates at the selected public edge. The Android website origin remains loopback HTTP unless a separately reviewed origin-TLS mode is added.
+- A local HTTP listener or connector-ready status is not evidence of public HTTPS.
+
+**Current-source distinction:** the existing AssayFlux Relay Caddyfile redirects port 80 to HTTPS and the Relay visitor handler rejects requests without a trusted HTTPS frontend. There is no plain-HTTP content opt-in in the current Relay code. Cloudflare's HTTP/HTTPS behavior is configured in the owner's Cloudflare zone; Pocket Host does not currently manage that policy.
+
+Never expose the Android management API, device enrollment, runtime broker, Workbench drafts, debug endpoints or MCU controls through a visitor hostname.
+
+## 4. Provider selection and DNS
+
+A hostname is assigned to one provider at a time. Separate hostnames may use separate providers. Enabling both providers does not create automatic same-host active-active failover; that requires an explicit DNS/load-balancer design.
 
 ### Cloudflare Tunnel
 
-- The owner creates/reuses a named tunnel in their Cloudflare account.
-- The owner configures the public hostname route to the local Rust origin, normally `http://127.0.0.1:8080` (or the configured website port).
-- Pocket Host stores the tunnel token encrypted using Android Keystore; the token is never placed in command arguments, logs, backups or diagnostics.
-- Cloudflare edge DNS/TLS and public reachability must be verified independently.
-- A connector-ready state is not the same as a working public hostname.
+- Owner creates or reuses a named tunnel in their Cloudflare account.
+- Owner maps the public hostname to the Android Rust origin, normally `http://127.0.0.1:8080` (or the configured static-server port).
+- Pocket Host stores the tunnel token encrypted with Android Keystore.
+- The owner configures DNS, hostname routing, edge TLS and HTTP redirect policy in Cloudflare.
+- A successful local cloudflared readiness probe does not prove the public hostname is configured correctly.
 
-### AssayFlux Relay
+### AssayFlux Relay Node
 
-- The owner deploys the first-party gateway on a public VPS/server with stable DNS and public TCP 80/443.
-- The gateway uses the repository's separate visitor listener and TLS reverse proxy; management endpoints remain restricted to the owner.
-- The owner proves hostname ownership with the Relay DNS TXT challenge.
-- The hostname is bound to an owner, authenticated host identity and Pocket Host site ID.
-- The Android host establishes an outbound authenticated HTTPS/SSE stream. It does not open an unsolicited Internet-facing listener.
-- The gateway forwards only bounded HTTP requests to the registered site. It never forwards arbitrary local ports.
-- Relay host credentials are visitor-ingress credentials, distinct from owner/admin credentials. Revoke them independently.
-- The current transport is bounded HTTP request/response, not general TCP, WebSocket or unlimited streaming.
+Target v0.1.0 contract:
 
-## 4. Current source foundations and gaps
+- Standalone Relay Node installable on Termux/Android and Linux; no Docker or PostgreSQL requirement.
+- Separate from the full fleet control plane and its owner/admin APIs.
+- Owner-controlled listener on public TCP 80/443, or another explicitly configured public ingress arrangement.
+- Owner proves domain control, binds hostname → site → host identity, and can revoke that binding.
+- Website host establishes an outbound authenticated HTTPS stream; it never accepts unsolicited Internet connections.
+- Relay forwards only bounded HTTP requests to the registered website origin, never arbitrary local ports.
+- Relay credentials are dedicated to visitor ingress and are not the fleet-control device token.
+- Visitor routes cannot reach management, runtime, device or debug endpoints.
 
-The repository already contains:
-- Android `cloudflared` process lifecycle, loopback readiness probe and reconnect supervisor.
-- Cloudflare token encryption using AES-256-GCM and Android Keystore.
-- Android `RelayAgent` outbound SSE stream, bounded request/response forwarding and reconnect behavior.
-- Rust Relay visitor gateway, DNS TXT hostname verification, route binding and a separate visitor listener.
-- Caddy reverse-proxy configuration for TLS at the Relay edge.
+The persistence format, certificate provisioning, local setup API and Termux service lifecycle must be frozen at G0/G1 before implementation.
 
-These are source foundations, not public-hosting acceptance. The current Relay agent is started through the remote-control agent configuration and uses its relay device token. v0.1.0 must verify or decouple this configuration so the website owner can use Relay without enabling the full fleet administration feature set. The Relay gateway also needs a real owner-controlled VPS deployment, DNS/TLS setup and operational monitoring.
+## 5. What the repository currently contains
 
-## 5. Limits and operating behavior
+### Present source foundations
 
-Current Relay transport limits documented by source include:
-- Request/response body: 8 MiB maximum.
-- Request deadline: 45 seconds.
-- Four concurrent local requests per device, with bounded queueing.
+- Android Cloudflare token store, cloudflared process runner, readiness probe and foreground-service reconnect supervisor.
+- Android RelayAgent using outbound HTTPS/SSE and bounded local HTTP forwarding.
+- Rust Relay visitor handler, DNS TXT hostname verification, route registration and a separate visitor listener.
+- PostgreSQL migration for Relay hostname/site records.
+- Caddy reverse-proxy/TLS configuration.
+- Browser-console Relay hostname registration, verification and deletion panel.
+
+### Current gaps — do not describe as completed
+
+- RelayAgent gets its endpoint and device token from RemoteControlAgent and starts only when remote-control configuration is present.
+- Relay registration currently uses registered fleet devices and the fleet owner/admin API.
+- Relay gateway and full fleet API share the same Rust executable; startup requires PostgreSQL, a control API hostname and administrator credentials.
+- Relay sessions and pending visitor requests are held in an in-memory RelayHub; they are lost on process restart.
+- The current Compose deployment is Docker/PostgreSQL/Caddy-oriented.
+- No standalone Termux Relay Node package, installer, independent credential flow or no-PostgreSQL deployment exists.
+- No independent public DNS/TLS/content acceptance is recorded.
+- HTTP-to-HTTPS redirect exists at the current Relay edge; optional plain HTTP serving does not.
+
+These source foundations must be decoupled and packaged into the standalone owner-operated Relay Node before the first-party path can be called independently self-hosted.
+
+## 6. Current Relay transport limits
+
+Current source-level limits include:
+
+- Request and response bodies: 8 MiB maximum.
+- Gateway request deadline: 45 seconds.
+- Android local request workers: 4 with a bounded queue.
+- Gateway pending requests: 32 global and 8 per device.
 - Supported methods: GET, HEAD, POST, PUT, DELETE and OPTIONS.
-- No general-purpose TCP or WebSocket forwarding.
+- No general TCP, WebSocket or unlimited streaming support.
 
-Cloudflare and Relay must expose independent configured/connecting/ready/error states, start/stop controls, reconnect behavior and useful redacted diagnostics. Provider failure must not stop local hosting or the other provider.
+The target standalone Relay may retain or revise these limits only through explicit tests and documented resource budgets.
 
-Android battery management, Doze, mobile data limits, carrier outages and device thermal state can interrupt hosting. Do not promise 24/7 uptime on every phone.
-
-## 6. Mandatory v0.1.0 acceptance
+## 7. Mandatory v0.1.0 acceptance
 
 | Gate | Required evidence |
 |---|---|
-| G0 | Frozen domain/provider/HTTP/HTTPS behavior, supported Android ABI/device matrix, DNS topology and relay deployment target |
-| G1 | Threat model for domain proof, credentials, TLS termination, public routes, abuse limits and management isolation |
-| G2 | Complete Cloudflare and Relay configuration, hostname binding, start/stop, reconnect, status and safe route mapping |
-| G3 | Unit/contract tests for route validation, DNS proof, token handling, HTTP forwarding limits, redirects and negative cases |
-| G4 | Main APK with required cloudflared ABIs and deployable Relay gateway image, signed/hash-identified artifacts |
-| G5 | Fresh install/upgrade, secure credential persistence, permission and lifecycle checks on named Android targets |
-| G6 | Independent mobile-data/external-network tests of the owner's real hostname through each enabled provider, both HTTP and HTTPS, expected site content and management-route denial |
-| G7 | Screen-off, Doze, Wi-Fi/mobile transitions, tunnel/relay reconnect, gateway outage and provider-failure isolation |
-| G8 | No token leakage, verified domain ownership, valid TLS, HTTP redirect default, visitor-only route access, rate/body/queue/time limits and abuse handling |
-| G9 | User runbook, DNS/TLS instructions, Relay VPS deployment, provider matrix, known limits, logs, APK/gateway hashes and owner sign-off |
+| G0 | Freeze domain/provider/HTTP/HTTPS behavior, public network topology, Termux/Linux target matrix, DNS, TLS and CGNAT guidance |
+| G1 | Threat model for domain proof, host credentials, TLS, visitor/admin isolation, abuse controls, NAT boundary and owner data |
+| G2 | Cloudflare integration plus standalone Relay Node, independent host credentials, hostname binding/revocation, Termux service lifecycle and safe request routing |
+| G3 | Tests for domain proof, route ownership, credential rotation/revocation, request limits, timeouts, redirects and negative cases |
+| G4 | Main APK plus versioned Relay Node artifact(s) for declared Termux/Linux targets, with hashes and provenance |
+| G5 | Fresh install/upgrade and service lifecycle on named Android/Termux/Linux targets |
+| G6 | Owner's real hostname reaches expected website from an independent network through each enabled provider; valid HTTPS, HTTP redirect, correct content and management-route denial |
+| G7 | Screen-off/Doze where applicable, network transitions, CGNAT guidance, gateway restart, host reconnect and provider-failure isolation |
+| G8 | No secret leakage, verified domain ownership, valid TLS, visitor-only routes, bounded resource use and abuse handling |
+| G9 | APK/Relay installation guide, DNS/TLS and router/IPv6 instructions, CGNAT troubleshooting, known limits, artifact hashes and owner sign-off |
 
-No v0.1.0 release claim is allowed until the required gates pass with reproducible evidence.
+No v0.1.0 public-hosting claim is allowed without reproducible external-network evidence.
 
-## 7. Required owner-provided infrastructure
+## 8. Owner-provided prerequisites
 
-- A registered domain with permission to edit its DNS records.
-- A Cloudflare account/zone and named tunnel token if Cloudflare ingress is selected.
-- A public VPS/server with stable address and ports 80/443 for AssayFlux Relay. A home/mobile phone alone cannot host the public Relay gateway reliably behind carrier NAT.
-- The website source or built static output. For React/Vite, import the production `dist/` contents; v0.1.0 does not compile the raw project on the phone.
+- A registered domain and permission to edit its DNS records.
+- Cloudflare account and named-tunnel token only if Cloudflare ingress is selected.
+- For self-hosted Relay: an owner-controlled device/network with public IPv4 port forwarding or globally routed IPv6, DNS A/AAAA records and inbound 80/443 access.
+- The website source or built static output. For React/Vite, import the production `dist/` contents; v0.1.0 does not build raw React/TypeScript source on the phone.
