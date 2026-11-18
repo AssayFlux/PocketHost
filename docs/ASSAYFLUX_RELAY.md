@@ -1,119 +1,91 @@
-# AssayFlux Relay — Owner-Operated Visitor Gateway
+# AssayFlux Relay — Native Android Public Visitor Gateway
 
-**Release assignment:** v0.1.0 — Native Android Relay service bundled in the Pocket Host APK; Linux-native packaging deferred to v0.1.1  
-**Source recheck:** Android now has an independent `RelayAgent`, a dedicated `RelayCredentialStore` encrypted with Android Keystore AES-GCM, and owner-facing Relay endpoint/credential controls in Network settings. The separate `relay-node/` directory still contains only `Cargo.toml`: there is no standalone executable, listener, independent node-side credential issuer, installer, service lifecycle or public acceptance.
+**Release:** v0.1.0 — First Hosting  
+**Architecture:** Kotlin Android foreground service + Rust/Tokio engine through JNI, bundled in the Pocket Host APK.  
+**Authoritative design:** [Native Android Relay Architecture](NATIVE_ANDROID_RELAY.md)  
+**Decision:** [ADR-020](DECISIONS.md#adr-020--native-android-relay-service-replaces-external-terminal-deployment)
 
 ## Purpose
 
-AssayFlux Relay is the first-party public visitor gateway for Pocket Host. It lets an Android website host remain behind carrier NAT while a separately operated Relay Node accepts browser traffic on the owner's public domain and forwards bounded HTTP requests over an authenticated outbound host connection.
+AssayFlux Relay is Pocket Host's first-party, owner-operated public visitor gateway. The native Android Relay service supports both:
 
-For v0.1.0, the Relay Node target is owner-controlled owner-controlled Android hardware running Pocket Host. Linux-native installation, packaging and service integration are deferred to v0.1.1. A paid VPS is not required. A public network path is required.
+- **Inbound:** accept public browser HTTP(S) requests for owner-verified hostnames and forward only the approved website route.
+- **Outbound:** accept authenticated, persistent host sessions initiated by Pocket Host website-host devices. A website-host phone can remain behind carrier NAT because it initiates the connection.
 
-## No-VPS operating model
+The Relay is bundled in the main Android APK. Kotlin owns Android service lifecycle and user-facing controls. Rust owns network listeners, TLS, hostname routing, host-session protocol, bounded request forwarding and durable state. The Relay does not depend on the fleet control plane.
 
-The v0.1.0 owner enables the Relay service in the Pocket Host Android app on an owner-controlled device. It is not installed or supervised by a separate terminal application. Linux home servers, mini PCs and other Linux-native installations are deferred to v0.1.1.
+## Current source status
 
-The node must have at least one publicly reachable ingress path:
+The Android host-side `RelayAgent` already implements an outbound HTTPS/SSE request/response client. Its dedicated `RelayCredentialStore` encrypts host credentials with Android Keystore AES-GCM. `HostingService` starts the host-side agent independently of remote-control configuration.
 
-- Public IPv4 with router port forwarding for TCP 80 and 443, or
-- Globally routed IPv6 with firewall rules allowing the required inbound ports.
+The existing visitor gateway remains in `control-plane/`, shares the fleet control-plane executable and PostgreSQL, and uses an in-memory `RelayHub`. The `relay-node/` directory contains only a Cargo manifest. The following v0.1.0 work is not yet implemented:
 
-DNS A/AAAA records must resolve to the reachable node. If the domain's DNS is hosted by Cloudflare but the owner wants a direct first-party Relay path, configure the hostname as DNS-only; enabling Cloudflare's orange-cloud proxy keeps Cloudflare in the visitor request path and is no longer a direct-only Relay route. If the device is behind CGNAT and has no global IPv6 or port-forwardable address, it cannot accept public browser traffic. In that case use a different owner-controlled reachable device/network or choose Cloudflare Tunnel as an optional third-party fallback. This is a network constraint; Pocket Host cannot bypass it by changing DNS.
+- Rust Relay gateway library and Android JNI bridge.
+- Kotlin Relay foreground service and owner-facing lifecycle/status controls.
+- Native inbound visitor listener and TLS/certificate lifecycle.
+- Independent node identity and node-side host credential issuance, rotation and revocation.
+- Durable hostname/site/host bindings and restart recovery.
+- Public network and physical-device acceptance.
 
-## Target architecture
+Do not describe the native Relay as implemented until these items and the release evidence are complete.
 
-```text
-Browser on Internet
-        |
-        | HTTPS / HTTP→HTTPS
-        v
-Owner's public AssayFlux Relay Node
-  - domain / TLS edge
-  - verified hostname → site → host route
-  - bounded HTTP request queue
-        |
-        | authenticated outbound stream
-        v
-Pocket Host Android website host
-  - RelayAgent
-  - loopback Rust website engine
-```
+## Native component boundaries
 
-The public visitor listener and the owner/admin control interface must be separate. The visitor listener must never proxy arbitrary ports or expose management, runtime, device, Workbench, debug or MCU endpoints.
+| Component | Responsibility |
+|---|---|
+| Kotlin Relay foreground service | Start/stop/status, notification, Android permissions, network changes, recovery and owner controls |
+| Rust Relay engine | Inbound visitor listener, outbound host sessions, TLS, route validation, request forwarding, persistence and limits |
+| Android Keystore | Node identity protection and host-side credential encryption |
+| Embedded durable store | Hostname proofs, route bindings, credential verifiers, revocations and certificate metadata |
+| Existing RelayAgent | Outbound authenticated SSE session from a website-host device; preserve the current wire contract or version it deliberately |
+| Existing Rust website engine | Serve the selected local site; remain independent of Relay availability |
 
-## HTTP and HTTPS
+The native Relay library must be built for every ABI declared by the main APK and packaged alongside the existing Rust static-host library. Gradle's current `cargo-ndk` pipeline must be extended; the Relay is not a separate terminal-managed install or APK.
 
-Target behavior:
+## Network and public endpoint requirements
 
-- HTTPS with a valid certificate for the registered hostname.
-- HTTP redirects to HTTPS by default.
-- Plain HTTP content serving is optional, explicitly enabled and warned about.
-- TLS terminates at the Relay Node; the Android origin remains local HTTP.
-- The Relay Node must not claim a working public hostname until DNS, TLS and actual visitor content are externally verified.
+An ordinary unrooted Android app cannot bind TCP ports below 1024. The initial native listeners therefore use unprivileged ports (proposed defaults: HTTP 8080 and HTTPS 8443). For conventional public URLs, the owner's router/firewall/reverse proxy must forward public TCP 80 to 8080 and public TCP 443 to 8443. IPv6 requires equivalent edge forwarding or proxying; a global IPv6 address alone does not let an ordinary app bind port 443.
 
-The current source Caddyfile redirects port 80 to HTTPS, and the current Relay visitor handler requires a trusted HTTPS frontend. There is no configurable plain-HTTP serving mode yet.
+The Relay device needs a publicly reachable IPv4 path with port forwarding or globally routed IPv6 with the required edge forwarding. CGNAT without global IPv6 or inbound forwarding cannot accept public visitors. DNS does not bypass CGNAT. Cloudflare Tunnel remains an optional, independent fallback.
 
-## Current repository implementation
+## Hostname, TLS and security contract
 
-### Android host
+- Require DNS TXT proof before activating a public hostname.
+- Bind each verified hostname to an explicit site and authenticated host session.
+- Serve valid HTTPS and redirect HTTP to HTTPS by default.
+- Define and test certificate issuance and renewal against the public edge forwarding topology before claiming automated TLS.
+- Keep owner management and pairing local-only in v0.1.0.
+- Use independent high-entropy, scoped, revocable Relay credentials; never reuse fleet admin, RemoteControlAgent or Cloudflare tokens.
+- Store credential verifiers on the Relay node and protect host-side secrets with Android Keystore.
+- Public visitor routes may reach only verified website routes. They must never reach owner settings, pairing, device commands, local management APIs, runtime brokers, Workbench drafts, fleet APIs or MCU controls.
+- Fail closed for unknown/revoked hostnames, invalid credentials, expired certificates and invalid route state.
+- Bound request size, response size, concurrency, pending queues, timeouts and per-host resource use.
+- v0.1.0 is bounded HTTP forwarding, not arbitrary TCP, generic proxy/VPN or WebSocket support.
 
-`app/src/main/java/com/assayflux/pockethost/management/RelayAgent.kt` contains an outbound HTTPS/SSE client. It receives visitor requests, validates bounded fields, forwards to the local Rust website engine and posts the response to the gateway. It does not open an Internet-facing listener.
+## Existing host-session wire contract
 
-The current Android Relay client is independent of the fleet control plane: it reads the endpoint and token from `RelayCredentialStore`, which validates HTTPS for public endpoints and encrypts the token with an Android Keystore AES-GCM key. Network settings expose Save, Connect/Start, status and Disconnect controls. This completes the Android-side credential/configuration separation; it does not complete the Relay Node that must issue and validate the host credential.
+The current Android client uses:
 
-### Native Android Relay Node scaffold
+- `GET /v1/device/relay/stream` — Bearer host credential, Server-Sent Events.
+- `POST /v1/device/relay/responses/{id}` — same credential, JSON response.
 
-`relay-node/Cargo.toml` declares the `assayflux-relay-node` Rust package and dependencies. The directory currently contains no `src/main.rs`, library source, tests, config, installer or service integration. It is not a runnable binary and is not yet included in the Quality workflow. Do not treat the manifest or the general CI result as evidence of a working standalone gateway.
+The native gateway must preserve this contract or update the Android client and protocol tests in the same reviewed change. It must authenticate every stream and response, handle reconnects and reject stale/duplicate request IDs.
 
-### Existing gateway
+## Implementation sequence
 
-- `control-plane/src/main.rs` implements hostname registration, DNS TXT verification, TLS authorization check, visitor routing and device SSE/response endpoints.
-- `control-plane/src/relay.rs` implements the in-memory active-session and pending-request hub.
-- PostgreSQL stores devices and verified hostname/site bindings.
-- The same Rust executable contains both fleet admin/device API and Relay visitor API. It requires PostgreSQL, `DATABASE_URL`, an admin token and a control-plane hostname.
-- It binds separate control and visitor listeners (defaults 8080 and 8081); Caddy publishes ports 80/443 and performs on-demand TLS for verified Relay hostnames.
-- `control-plane/compose.yaml` currently uses PostgreSQL, Docker Compose and Caddy. This is not the native Android Relay service planned for the Pocket Host APK.
-- `RelayHub` is in memory. Active streams and pending requests are lost on gateway restart and must reconnect/recover.
-- `web-console/src/ui/RemoteControlPlane.tsx` contains a browser UI for hostname registration, DNS TXT proof, verification and deletion. Android Network settings now expose an independent Relay endpoint and credential setup flow; hostname registration/DNS proof remains a Relay Node/server-side requirement.
-
-### Current transport limits
-
-- HTTP request/response only; not a general TCP or WebSocket tunnel.
-- Methods: GET, HEAD, POST, PUT, DELETE and OPTIONS.
-- Body maximum: 8 MiB in each direction.
-- Gateway timeout: 45 seconds.
-- Android local forwarding uses four request workers and a bounded queue.
-- Gateway pending requests are capped at 32 globally and 8 per device.
-
-These are current source-level limits, not tested production throughput guarantees.
-
-## v0.1.0 implementation work
-
-1. Implement the standalone Relay Node binary in `relay-node/`, using the existing Android wire contract as the compatibility baseline: `GET /v1/device/relay/stream` (Bearer host credential, `text/event-stream`) and `POST /v1/device/relay/responses/{id}` (same credential, JSON response).
-2. Remove mandatory dependency on fleet device registration and fleet-control bearer credentials. Create dedicated host identity, pairing and revocable visitor-ingress credentials; never accept the fleet device token as a substitute.
-3. Provide an owner setup flow inside the Pocket Host Android app: enable/disable, start/stop, status, host pairing, domain registration, DNS TXT proof, TLS, route binding and revocation. Linux-native packaging and service integration are v0.1.1 deliverables.
-4. Avoid mandatory Docker and PostgreSQL for the standalone profile. Use a small durable local store and bounded in-memory request state with safe restart recovery.
-5. Complete the standalone node-side host enrollment/credential issuance flow that pairs with the already-independent Android `RelayCredentialStore`; keep it independent of RemoteControlAgent and fleet control plane.
-6. Preserve strict visitor/admin separation and only forward to a registered site origin.
-7. Add public IPv4/IPv6, DNS, TLS, CGNAT, restart, reconnect and external-network tests.
-8. Document that a publicly reachable owner-controlled network endpoint is mandatory; a paid VPS is not.
-
-## Linux-native installation — v0.1.1
-
-Linux-native Relay installation is not a v0.1.0 release blocker. The v0.1.1 implementation must define supported distributions and CPU architectures, package the standalone node, provide an installer plus upgrade/uninstall behavior, integrate a hardened service lifecycle, keep credentials outside command-line arguments and logs, and document firewall/DNS/TLS requirements. Every declared Linux target must pass clean install, upgrade, restart, reconnect and external visitor acceptance before being listed as supported. The Linux installer must not be represented as available before those checks pass.
-
-## Security and privacy
-
-- Verify domain ownership before issuing public TLS or forwarding visitor traffic.
-- Use separate, revocable host-ingress credentials; never reuse admin tokens or fleet device tokens.
-- Keep secrets out of argv, logs, diagnostics and backups.
-- Validate hostname, site, method, path, headers, body size, timeout, concurrency and response framing.
-- Never accept an arbitrary local target URL or port from a visitor.
-- Rate-limit abusive visitors and bound memory, queues, file descriptors and request time.
-- Do not log raw visitor bodies or customer site content by default.
-- TLS termination means the Relay operator can inspect visitor HTTP content. State this clearly to the owner.
-- Revocation must stop new requests and cancel pending requests for that hostname/site.
+1. Implement the Rust Relay engine in `relay-node/` as an Android-compatible native library with a JNI lifecycle boundary.
+2. Extend Gradle's NDK build to produce Relay libraries for all supported ABIs and verify APK packaging.
+3. Implement Kotlin foreground-service lifecycle and owner-facing enable/start/stop/status/health/recovery controls.
+4. Implement node identity, short-lived owner-approved host pairing, independent credential issuance/rotation/revocation and durable route state.
+5. Implement DNS TXT hostname proof, TLS certificate issuance/renewal, inbound visitor listener and strict visitor/host/owner route separation.
+6. Connect inbound visitor requests to authenticated outbound host sessions and the local Rust website origin with bounded queues, body sizes, concurrency and timeouts.
+7. Add Rust, protocol, persistence, JNI, Kotlin service and security-negative tests.
+8. Complete named physical-device and independent public-network acceptance, including port-forwarding topology, DNS, TLS, visitor content, revocation and restart recovery.
 
 ## Acceptance
 
-The v0.1.0 native Android Relay target is not complete until the main APK can start the foreground Relay service on a named physical device, register and verify a real domain, obtain/serve valid HTTPS, redirect HTTP, receive visitors from an independent network, forward to a separate Pocket Host Android host behind NAT, survive service/process/network restarts, revoke credentials and hostnames, and prove that no management route is exposed. Linux-native installation and service acceptance are explicitly deferred to v0.1.1.
+The native Relay is not accepted until a signed main APK runs the service on named physical Android devices; the node registers and verifies a real hostname; public visitors from an independent network receive the correct site over valid HTTPS; a separate host phone behind NAT connects outbound and serves requests; HTTP redirects correctly; unknown/revoked hosts fail closed; no management route is reachable; and process death, reboot, network changes and host reconnect recover without corrupting local hosting.
+
+Record source SHA, APK SHA-256, device model, Android version, ABI, edge forwarding configuration, public DNS/TLS observations, logs, resource/soak results and G0–G9 evidence. A design document or CI compile does not close physical-device or public-network gates.
+
+Linux-native Relay packaging remains a v0.1.1 deliverable. Multi-node scheduling, regional scale and advanced failover remain v0.1.2.
