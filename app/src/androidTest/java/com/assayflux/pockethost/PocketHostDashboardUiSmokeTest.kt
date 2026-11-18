@@ -21,11 +21,7 @@ class PocketHostDashboardUiSmokeTest {
             .putBoolean("biometric_unlock_enabled", false)
             .commit()
 
-        val owner = com.assayflux.pockethost.management.HostAccountStore.list(context).firstOrNull { it.role == "OWNER" }
-            ?: com.assayflux.pockethost.management.HostAccountStore.create(
-                context, "uiowner", "PocketHost-UI-Owner-Password-42".toCharArray(), "OWNER"
-            )
-        PocketHostOwnerSession.username = owner.username
+        PocketHostUiTestLogin.ensureOwnerAccount(context)
         val device = UiDevice.getInstance(instrumentation)
         val externalFiles = checkNotNull(context.getExternalFilesDir(null)) { "App external files directory is unavailable" }
         val screenshotDir = File(externalFiles, "screenshots")
@@ -36,6 +32,7 @@ class PocketHostDashboardUiSmokeTest {
         hierarchy.delete()
 
         ActivityScenario.launch(MainActivity::class.java).use {
+            PocketHostUiTestLogin.signInIfRequired(device)
             instrumentation.waitForIdleSync()
             // Capture first so the artifact remains useful even when an accessibility
             // selector regresses on an older Compose/Android combination.
