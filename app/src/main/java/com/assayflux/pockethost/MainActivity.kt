@@ -340,7 +340,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 }
                 result.onSuccess {
                     nativeRelayConfigured = true
-                    status = "Native Relay configuration encrypted with Android Keystore. Start the Relay Node when ready."
+                    nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                    nativeRelayCredentialToken = null
+                    status = "Native Relay configuration encrypted with Android Keystore and stored transactionally. Start the Relay Node when ready."
                 }.onFailure {
                     status = it.message ?: "Could not import native Relay configuration."
                 }
