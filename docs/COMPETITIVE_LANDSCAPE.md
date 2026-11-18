@@ -30,11 +30,11 @@ Pocket Host differentiates through a mobile-first owner experience, local-first 
 
 ## Explicit non-goals for v0.1.0
 
-Do not block first hosting on multi-device orchestration, multi-host Relay scaling, arbitrary language runtimes, full Workbench, TypeScript compilation or cross-platform fleet agents. Public hosting through Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node is part of v0.1.0. The v0.1.0 Relay Node installs on Termux/Android; Linux-native installation is v0.1.1. No paid VPS, Docker or PostgreSQL is required, but a publicly reachable IPv4/IPv6 endpoint is.
+Do not block first hosting on multi-device orchestration, multi-host Relay scaling, arbitrary language runtimes, full Workbench, TypeScript compilation or cross-platform fleet agents. Public hosting through Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node is part of v0.1.0. The v0.1.0 Relay runs natively inside the Pocket Host Android APK; Linux-native packaging is v0.1.1. No paid VPS, Docker or PostgreSQL is required, but a publicly reachable IPv4/IPv6 endpoint is.
 
 ## Proof of product
 
-The first demonstrable vertical slice is: install APK → import a 500 MB-bounded website → start host → open locally → open from another device on same Wi-Fi → reach the real custom domain over HTTP/HTTPS through Cloudflare and a self-hosted Termux/Android Relay Node → verify assets/navigation and visitor/admin isolation → stop/restart → restore backup. Test the Relay Node from a public IPv4/IPv6 network and record CGNAT limitations. All G0–G9 gates then determine release readiness.
+The first demonstrable vertical slice is: install APK → import a 500 MB-bounded website → start host → open locally → open from another device on same Wi-Fi → reach the real custom domain over HTTP/HTTPS through Cloudflare and the native Android Relay service bundled in the Pocket Host APK → verify assets/navigation and visitor/admin isolation → stop/restart → restore backup. Test the Relay Node from a public IPv4/IPv6 network and record CGNAT limitations. All G0–G9 gates then determine release readiness.
 
 ## Decision
 
