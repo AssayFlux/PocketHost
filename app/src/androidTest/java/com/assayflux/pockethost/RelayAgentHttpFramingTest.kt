@@ -29,6 +29,19 @@ class RelayAgentHttpFramingTest {
     }
 
     @Test
+    fun sseLineReaderAcceptsMaximumRelayEventAndRejectsOneCharacterOver() {
+        val maxLine = 12 * 1024 * 1024 + 5
+        val accepted = "data:" + "x".repeat(maxLine - 5)
+        assertEquals(maxLine, RelayAgent.readBoundedSseLine(
+            java.io.PushbackReader(java.io.StringReader(accepted), 1), maxLine
+        )?.length)
+        val rejected = accepted + "x"
+        assertTrue(runCatching {
+            RelayAgent.readBoundedSseLine(java.io.PushbackReader(java.io.StringReader(rejected), 1), maxLine)
+        }.isFailure)
+    }
+
+    @Test
     fun chunkTrailersRejectMalformedAndFramingOverrides() {
         RelayAgent.validateChunkTrailer("x-checksum: abc123")
         assertTrue(runCatching { RelayAgent.validateChunkTrailer("not-a-header") }.isFailure)
