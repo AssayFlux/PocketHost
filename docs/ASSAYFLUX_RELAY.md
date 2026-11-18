@@ -1,7 +1,7 @@
 # AssayFlux Relay — Owner-Operated Visitor Gateway
 
 **Release assignment:** v0.1.0 — First Hosting  
-**Current source status (Alpha `0784b329`):** the existing fleet-coupled Relay path exists; `relay-node/Cargo.toml` is a new package manifest scaffold only. There is no standalone executable, independent host credential flow, installer or public acceptance.
+**Source recheck:** Android now has an independent `RelayAgent`, a dedicated `RelayCredentialStore` encrypted with Android Keystore AES-GCM, and owner-facing Relay endpoint/credential controls in Network settings. The separate `relay-node/` directory still contains only `Cargo.toml`: there is no standalone executable, listener, independent node-side credential issuer, installer, service lifecycle or public acceptance.
 
 ## Purpose
 
@@ -59,7 +59,7 @@ The current source Caddyfile redirects port 80 to HTTPS, and the current Relay v
 
 `app/src/main/java/com/assayflux/pockethost/management/RelayAgent.kt` contains an outbound HTTPS/SSE client. It receives visitor requests, validates bounded fields, forwards to the local Rust website engine and posts the response to the gateway. It does not open an Internet-facing listener.
 
-Important coupling: `RelayAgent.start()` checks `RemoteControlAgent.isConfigured()`, takes the endpoint from `RemoteControlAgent.endpoint()` and takes the Relay device token from the remote-control credential store. `RemoteControlAgent.start()` starts RelayAgent. Therefore the current Relay client is not an independent website-hosting provider.
+The current Android Relay client is independent of the fleet control plane: it reads the endpoint and token from `RelayCredentialStore`, which validates HTTPS for public endpoints and encrypts the token with an Android Keystore AES-GCM key. Network settings expose Save, Connect/Start, status and Disconnect controls. This completes the Android-side credential/configuration separation; it does not complete the Relay Node that must issue and validate the host credential.
 
 ### Standalone Relay Node scaffold
 
@@ -74,7 +74,7 @@ Important coupling: `RelayAgent.start()` checks `RemoteControlAgent.isConfigured
 - It binds separate control and visitor listeners (defaults 8080 and 8081); Caddy publishes ports 80/443 and performs on-demand TLS for verified Relay hostnames.
 - `control-plane/compose.yaml` currently uses PostgreSQL, Docker Compose and Caddy. This is not a standalone Termux installation.
 - `RelayHub` is in memory. Active streams and pending requests are lost on gateway restart and must reconnect/recover.
-- `web-console/src/ui/RemoteControlPlane.tsx` contains a browser UI for hostname registration, DNS TXT proof, verification and deletion. The Android app does not currently expose an independent Relay setup flow.
+- `web-console/src/ui/RemoteControlPlane.tsx` contains a browser UI for hostname registration, DNS TXT proof, verification and deletion. Android Network settings now expose an independent Relay endpoint and credential setup flow; hostname registration/DNS proof remains a Relay Node/server-side requirement.
 
 ### Current transport limits
 
@@ -93,7 +93,7 @@ These are current source-level limits, not tested production throughput guarante
 2. Remove mandatory dependency on fleet device registration and fleet-control bearer credentials. Create dedicated host identity, pairing and revocable visitor-ingress credentials; never accept the fleet device token as a substitute.
 3. Provide a minimal owner setup flow for Termux/Linux: install, start/stop, status, domain registration, DNS TXT proof, TLS, route binding and revocation.
 4. Avoid mandatory Docker and PostgreSQL for the standalone profile. Use a small durable local store and bounded in-memory request state with safe restart recovery.
-5. Make the Android Relay connector configurable independently of RemoteControlAgent and the fleet control plane.
+5. Complete the standalone node-side host enrollment/credential issuance flow that pairs with the already-independent Android `RelayCredentialStore`; keep it independent of RemoteControlAgent and fleet control plane.
 6. Preserve strict visitor/admin separation and only forward to a registered site origin.
 7. Add public IPv4/IPv6, DNS, TLS, CGNAT, restart, reconnect and external-network tests.
 8. Document that a publicly reachable owner-controlled network endpoint is mandatory; a paid VPS is not.
