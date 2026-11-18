@@ -17,7 +17,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 - React/Vite is the separate web-console app. Raw React/TypeScript source is not built by v0.1.0; import its built static output.
 - Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
 - Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
-- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.1.2 work. Cloudflare Tunnel and a standalone owner-operated AssayFlux Relay Node on native Android is mandatory v0.1.0 work; Linux-native installation is v0.1.1. No paid VPS is required, but public IPv4/IPv6 reachability is.
+- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.1.2 work. Cloudflare Tunnel and the native Android Relay service (Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK) are mandatory v0.1.0 work; Linux-native packaging is v0.1.1. No paid VPS is required, but public IPv4/IPv6 reachability is.
 - Every version must pass G0–G9. See RELEASE_GATES.md.
 
 ## Repository boundaries
@@ -30,7 +30,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 | web-console/ | Separate React/TypeScript/Vite browser client |
 | agents/ | Platform-specific device agents |
 | control-plane/ | Optional remote fleet coordination; current Relay gateway is coupled here and must be extracted |
-| Relay Node (planned) | Standalone native Android owner-operated public visitor gateway for v0.1.0; Linux-native install is v0.1.1; not present in current source |
+| Relay Node (planned) | Native Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK; inbound visitor listener and node-side identity are not present yet; Linux-native packaging is v0.1.1 |
 | protocol/ | Shared versioned device contracts |
 | runtime-library/catalog/ | Future language catalog metadata |
 | scripts/ | Build and validation helpers |
@@ -53,4 +53,4 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 
 ## Current next actions
 
-Close the remaining v0.1.0 hosting path: verify local and LAN serving, complete Cloudflare Tunnel and the native Android Relay Node service integrated into the Pocket Host APK, implement node-side host credential issuance and durable routing, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK and Relay Node, and complete physical-device/external-network acceptance. The Android Relay client already has independent credentials and lifecycle; the standalone gateway is still missing.
+Close the remaining v0.1.0 hosting path: verify local and LAN serving, complete Cloudflare Tunnel and the native Android Relay Node service integrated into the Pocket Host APK, implement node-side host credential issuance and durable routing, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK with Relay JNI libraries, and complete physical-device/external-network acceptance. The Android Relay client already has independent credentials and lifecycle; the standalone gateway is still missing.
