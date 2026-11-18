@@ -17,7 +17,7 @@ Make personal infrastructure approachable and owner-controlled. A user starts by
 
 ## Three-release journey
 
-- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, and publish it through Cloudflare Tunnel or an owner-operated AssayFlux Relay Node on the owner's domain over HTTP/HTTPS. The v0.1.0 Relay Node runs on the owner's owner-controlled Android hardware running Pocket Host; Linux-native installation is v0.1.1. A paid VPS is not required, but public IPv4/IPv6 reachability is.
+- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, and publish it through Cloudflare Tunnel or an owner-operated AssayFlux Relay Node on the owner's domain over HTTP/HTTPS. The v0.1.0 Relay runs as a Kotlin foreground service with a Rust/Tokio JNI engine bundled in the Pocket Host APK; Linux-native packaging is v0.1.1. A paid VPS is not required, but public IPv4/IPv6 reachability is.
 - **v0.1.1 — Workbench, Runtime & Linux Relay Installation:** edit, preview, diff, commit and publish safely; complete optional Python/Node integrations.
 - **v0.1.2 — Connected Device Fabric:** enroll other devices, assign roles, coordinate work and scale Relay across multiple hosts/gateways with advanced failover.
 
