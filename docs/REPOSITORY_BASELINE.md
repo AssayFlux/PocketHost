@@ -81,13 +81,13 @@ The nine SVGs under `Assets/` total approximately 115.6 MB. The root-level `Pock
 ### AssayFlux Relay
 
 - Android `RelayAgent.kt` exists. It uses an outbound authenticated HTTPS Server-Sent Events stream and posts bounded visitor responses back to the gateway. It does not open an unsolicited public listener on the phone.
-- The Relay agent currently obtains its endpoint and device token from `RemoteControlAgent`. It starts only when remote-control configuration is present. It is therefore **not an independent website-hosting connector yet**.
+- The Relay agent obtains its endpoint and dedicated token from `RelayCredentialStore`, encrypted with Android Keystore AES-GCM. Android Network settings provide independent endpoint/credential configuration and connection controls. Node-side credential issuance remains open.
 - The Relay client forwards bounded HTTP requests to the local Rust website engine. Current source limits request/response bodies to 8 MiB, allows GET/HEAD/POST/PUT/DELETE/OPTIONS, and uses bounded concurrency/queueing and a 45-second gateway wait.
 - `control-plane/src/relay.rs` contains an in-memory Relay session/pending-request hub. The hub limits pending work to 32 global and 8 per device; sessions and pending requests are not durable across process restart.
 - `control-plane/src/main.rs` contains the visitor gateway, DNS TXT hostname proof, route registration, and a separate visitor listener. Hostname route records are stored in PostgreSQL; the live Relay session hub is in memory.
 - The same executable also contains the full admin/device control API and requires `DATABASE_URL`, PostgreSQL migrations, a long administrator token and a control API hostname at startup. It starts separate control and visitor listeners (defaults 8080 and 8081).
 - `control-plane/compose.yaml` provides PostgreSQL, the Rust service, Caddy public TLS profile and an optional Cloudflare Tunnel profile. Caddy owns public ports 80/443; its current HTTP listener redirects to HTTPS. Relay visitor requests require a trusted HTTPS frontend. There is no configurable plain-HTTP content mode in the current Relay implementation.
-- `web-console/src/ui/RemoteControlPlane.tsx` includes Relay hostname registration, DNS TXT challenge display, verification and deletion UI. The native Android app does not have an independent Relay configuration/hostname-management screen.
+- `web-console/src/ui/RemoteControlPlane.tsx` includes Relay hostname registration, DNS TXT challenge display, verification and deletion UI. Android Network settings now expose independent Relay endpoint/credential configuration; standalone-node hostname/TXT/TLS provisioning remains open.
 - The current Alpha tree now contains `relay-node/Cargo.toml`, but that directory has no `src/main.rs` or other implementation files, tests, installer or service unit. It is a Cargo manifest scaffold only, not a runnable standalone Termux Relay Node. The current Compose deployment is Docker/PostgreSQL-oriented and the existing Relay remains coupled to the fleet control-plane process and registered device credentials.
 
 ### What “self-hosted Relay without a VPS” means
@@ -128,7 +128,7 @@ The **target architecture** is a standalone, lightweight AssayFlux Relay Node th
 ## UI/source discrepancies found
 
 - The Settings > Network copy in `MainActivity.kt` says “No built-in visitor password yet” and recommends Cloudflare Access, but the Rust engine and SiteRegistry already implement private/restricted visitor credentials and Basic authentication. The copy is stale and should be corrected.
-- The Network UI currently exposes Cloudflare token controls and local hostname-to-site routing. It does not expose standalone AssayFlux Relay setup.
+- The Network UI exposes Cloudflare controls, local hostname-to-site routing and independent AssayFlux Relay endpoint/credential setup. It does not yet provision host identities or hostnames on a standalone Relay Node.
 - The app's optional biometric unlock is not a full mobile account/login page. The browser console has the separate owner/admin login and passkey flow.
 
 ## Build and verification evidence at the snapshot
