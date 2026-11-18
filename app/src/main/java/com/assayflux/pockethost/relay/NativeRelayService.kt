@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Build
 import android.os.IBinder
 import android.os.Handler
@@ -21,7 +23,40 @@ class NativeRelayService : Service() {
         Thread(runnable, "PocketHost-Native-Relay-Service").apply { isDaemon = true }
     }
     private val main = Handler(Looper.getMainLooper())
+    private lateinit var connectivity: ConnectivityManager
     @Volatile private var stopping = false
+    @Volatile private var ownerRequestedRunning = false
+    @Volatile private var activeNetwork: Network? = null
+
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            val previous = activeNetwork
+            activeNetwork = network
+            if (ownerRequestedRunning && previous != network) {
+                worker.execute { restartAfterNetworkChange("network became available") }
+            }
+        }
+
+        override fun onLost(network: Network) {
+            if (activeNetwork == network) {
+                activeNetwork = null
+                if (ownerRequestedRunning) {
+                    worker.execute {
+                        if (!ownerRequestedRunning || stopping) return@execute
+                        val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: \${it.message}" }
+                        OperationalLog.record(this@NativeRelayService, "WARN", "NATIVE_RELAY_NETWORK_LOST",
+                            "Network lost; listener stopped until a usable network returns. $result")
+                        main.post {
+                            if (ownerRequestedRunning && !stopping) {
+                                getSystemService(NotificationManager::class.java)
+                                    .notify(NOTIFICATION_ID, notification("Waiting for network…"))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -30,14 +65,21 @@ class NativeRelayService : Service() {
                 NotificationChannel(channelId, "AssayFlux Relay", NotificationManager.IMPORTANCE_LOW)
             )
         }
+        connectivity = getSystemService(ConnectivityManager::class.java)
+        runCatching { connectivity.registerDefaultNetworkCallback(networkCallback) }
+            .onFailure {
+                OperationalLog.record(this, "WARN", "NATIVE_RELAY_NETWORK_MONITOR",
+                    it.message ?: "Could not register Relay network recovery callback.")
+            }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
                 stopping = true
+                ownerRequestedRunning = false
                 worker.execute {
-                    val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
+                    val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: \${it.message}" }
                     if (result != "OK") OperationalLog.record(this, "WARN", "NATIVE_RELAY_STOP", result)
                     main.post { stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(startId) }
                 }
@@ -45,37 +87,51 @@ class NativeRelayService : Service() {
             }
             ACTION_START, null -> {
                 stopping = false
+                ownerRequestedRunning = true
                 startForeground(NOTIFICATION_ID, notification("Starting native Relay…"))
-                worker.execute {
-                    val result = runCatching {
-                        val config = RelayNodeConfigStore.read(this)
-                            ?: throw IllegalStateException("Relay node is not configured. Complete Relay setup first.")
-                        val identity = RelayNodeIdentityStore.getOrCreate()
-                        OperationalLog.record(this, "INFO", "NATIVE_RELAY_NODE_IDENTITY", identity.nodeId)
-                        if (NativeRelay.status() == "RUNNING") "OK" else NativeRelay.start(config)
-                    }.getOrElse { "ERROR: ${it.message ?: "Relay startup failed"}" }
-                    main.post {
-                        if (stopping) return@post
-                        if (result == "OK") {
-                            getSystemService(NotificationManager::class.java)
-                                .notify(NOTIFICATION_ID, notification("Native Relay active"))
-                        } else {
-                            OperationalLog.record(this, "ERROR", "NATIVE_RELAY_START", result)
-                            getSystemService(NotificationManager::class.java)
-                                .notify(NOTIFICATION_ID, notification("Relay stopped: ${result.removePrefix("ERROR: ").take(120)}"))
-                            stopForeground(STOP_FOREGROUND_REMOVE)
-                            stopSelf(startId)
-                        }
-                    }
-                }
+                worker.execute { startRelay("owner/service start") }
                 return START_STICKY
             }
             else -> return START_NOT_STICKY
         }
     }
 
+    private fun restartAfterNetworkChange(reason: String) {
+        if (!ownerRequestedRunning || stopping) return
+        val stopResult = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: \${it.message}" }
+        OperationalLog.record(this, "INFO", "NATIVE_RELAY_NETWORK_RECOVERY",
+            "Reinitializing native Relay after $reason. $stopResult")
+        startRelay(reason)
+    }
+
+    private fun startRelay(reason: String) {
+        if (!ownerRequestedRunning || stopping) return
+        val result = runCatching {
+            val config = RelayNodeConfigStore.read(this)
+                ?: throw IllegalStateException("Relay node is not configured. Complete Relay setup first.")
+            val identity = RelayNodeIdentityStore.getOrCreate()
+            OperationalLog.record(this, "INFO", "NATIVE_RELAY_NODE_IDENTITY", identity.nodeId)
+            if (NativeRelay.status() == "RUNNING") "OK" else NativeRelay.start(config)
+        }.getOrElse { "ERROR: \${it.message ?: "Relay startup failed"}" }
+
+        main.post {
+            if (stopping || !ownerRequestedRunning) return@post
+            if (result == "OK") {
+                getSystemService(NotificationManager::class.java)
+                    .notify(NOTIFICATION_ID, notification("Native Relay active"))
+                OperationalLog.record(this, "INFO", "NATIVE_RELAY_READY", "Native Relay is active after $reason.")
+            } else {
+                OperationalLog.record(this, "ERROR", "NATIVE_RELAY_START", result)
+                getSystemService(NotificationManager::class.java)
+                    .notify(NOTIFICATION_ID, notification("Relay unavailable: \${result.removePrefix("ERROR: ").take(100)}"))
+            }
+        }
+    }
+
     override fun onDestroy() {
         stopping = true
+        ownerRequestedRunning = false
+        runCatching { connectivity.unregisterNetworkCallback(networkCallback) }
         runCatching { NativeRelay.stop() }
         worker.shutdownNow()
         super.onDestroy()
