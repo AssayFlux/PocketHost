@@ -1,6 +1,6 @@
 # Pocket Host — Project Baseline
 
-**Current source snapshot:** branch `Alpha`, commit `0784b3294f2de9f435479c7a290f336e85b78df0`, checked 2026-11-17. Current recursive Git tree: 257 tracked files across 72 directories. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
+**Current source snapshot:** branch `Alpha`, commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`, checked 2026-11-18. Current recursive Git tree: 259 tracked files across 72 directories. The remediation branch contains follow-up source changes; see `docs/REMEDIATION_AUDIT.md`. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
 **Complete file-level record:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md). That document lists every tracked file and directory, module boundaries, source status, exact limits and verification evidence.
 
 ## Product invariants
@@ -18,7 +18,7 @@
 | Component | Current source present | Actual status |
 |---|---|---|
 | Android main app | Kotlin/Compose screens, foreground hosting service, local API, pairing, diagnostics, themes, biometric gate, site/file screens | Implemented foundation; v0.1.0 device acceptance open |
-| Rust website engine | Tokio/Hyper JNI static HTTP server, hostname routes, visitor access modes, range/MIME/SPA handling, rate and connection limits | Source and tests present; 50 MiB per-file serving cap; device acceptance open |
+| Rust website engine | Tokio/Hyper JNI static HTTP server, hostname routes, visitor access modes, range/MIME/SPA handling, rate and connection limits | Source and tests present; 500,000,000-byte (500 MB decimal) per-file serving cap; device acceptance open |
 | Website importer | Folder/ZIP staging and validation | 500,000,000-byte ZIP and expanded-content caps; actual 500 MB boundary/low-storage/device tests open |
 | Full-app backup | `ApplicationBackupManager.kt` | 500,000,000-byte static site, 50 MiB Python, 100 MiB Node, 650,000,000-byte total uncompressed, 680,000,000-byte encrypted archive; static-site limit matches importer expanded-content cap |
 | Workbench | Private draft workspace, nested explorer, basic editor, save, file/folder operations, change digests, local commit snapshots | Initial foundation exists; isolated preview, TypeScript build, owner-approved publish and rollback incomplete |
@@ -37,7 +37,7 @@
 ## Critical limits and discrepancies
 
 - Import limit: 500,000,000 bytes for ZIP input and independently for expanded site contents; 5,000 files, 10,000 entries, depth 32.
-- Rust serving limit: 50 MiB per individual file; independent of total import size.
+- Rust serving limit: 500,000,000 bytes (500 MB decimal) per individual file; independent of total import size. Manual single-file import is 50 MiB; text editing is 256 KiB.
 - Backup limits: 500,000,000-byte static site, 50 MiB Python, 100 MiB Node, 650,000,000-byte total uncompressed, 680,000,000-byte encrypted archive. Near-limit physical-device and interruption tests remain open.
 - Relay current body limit: 8 MiB; gateway timeout 45 seconds; pending requests 32 global/8 per device; HTTP methods only, not arbitrary TCP/WebSocket.
 - Current Relay HTTP listener redirects port 80 to HTTPS; there is no configurable plain-HTTP content mode.

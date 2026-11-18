@@ -80,7 +80,7 @@ The persistence format, certificate provisioning, local setup API and Termux ser
 
 ### Current gaps — do not describe as completed
 
-- Android RelayAgent now reads a dedicated endpoint and host token from RelayCredentialStore; HostingService starts Relay independently of RemoteControlAgent configuration.
+- RelayAgent reads a dedicated endpoint and host token from RelayCredentialStore; HostingService starts Relay independently of RemoteControlAgent configuration.
 - Relay registration currently uses registered fleet devices and the fleet owner/admin API.
 - Relay gateway and full fleet API share the same Rust executable; startup requires PostgreSQL, a control API hostname and administrator credentials.
 - Relay sessions and pending visitor requests are held in an in-memory RelayHub; they are lost on process restart.

@@ -39,7 +39,7 @@ The Relay Node is separate from the Android website-host app and the full fleet 
 
 ### Current implementation versus target
 
-Current Android RelayAgent is coupled to RemoteControlAgent endpoint/device credentials. Current gateway lives inside the Rust/Axum fleet control-plane executable, requires PostgreSQL/admin configuration, and uses an in-memory RelayHub. There is no standalone Termux Relay Node or independent host-credential flow in the audited source. The standalone path is planned work, not a current feature.
+The Android RelayAgent reads a dedicated endpoint and host token from RelayCredentialStore; HostingService starts Relay independently from RemoteControlAgent. Current gateway lives inside the Rust/Axum fleet control-plane executable, requires PostgreSQL/admin configuration, and uses an in-memory RelayHub. There is no standalone Termux Relay Node executable or node-side credential issuer in the audited source; the Android host-side credential store is already independent. The standalone path is planned work, not a current feature.
 
 ## 4. v0.1.1 — Workbench & Runtime Development
 
@@ -55,9 +55,9 @@ Mobile command center ↔ authenticated control plane ↔ separately installed a
 |---|---|---|
 | Android app | Kotlin/Compose UI, hosting service, site/file UI, settings, local API, Cloudflare controls, Workbench foundation | v0.1.0 host; v0.1.1 Workbench completion |
 | Rust website engine | Tokio/Hyper static HTTP JNI library, host routes, access modes, bounded connections | v0.1.0 |
-| Site import/backup | Folder/ZIP staging, safe activation, encrypted backup | v0.1.0; source quotas align for the static-site root; near-limit physical-device acceptance remains open |
+| Site import/backup | Folder/ZIP staging, safe activation, encrypted backup | v0.1.0; source quota alignment is present; physical-device acceptance remains open |
 | Cloudflare Tunnel | Android token store, process runner, readiness, build helper | v0.1.0 public acceptance |
-| AssayFlux Relay client | Android outbound SSE request/response client with dedicated RelayCredentialStore and independent HostingService lifecycle | Android-side separation implemented; node-side credential issuer remains open |
+| AssayFlux Relay client | Android outbound SSE request/response client, configured independently from remote control | Android-side separation implemented; node-side issuer remains open |
 | AssayFlux Relay gateway | Visitor handler, DNS TXT proof, Caddy TLS, PostgreSQL route registry in combined control-plane process | Extract standalone Termux/Linux Relay Node in v0.1.0 |
 | Workbench | Draft workspace, explorer, basic editor, local commits | v0.1.1 completion |
 | TypeScript compiler | Not present as a verified main-app compiler | v0.1.1 |
