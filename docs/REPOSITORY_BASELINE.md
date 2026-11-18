@@ -121,8 +121,8 @@ The **target architecture** is a standalone, lightweight AssayFlux Relay Node th
 ### Backup and storage limits
 
 - The current full-app backup path is `ApplicationBackupManager.kt`, not the legacy `SiteBackupManager.kt`.
-- Full-app backup limits are 50 MiB static website root, 50 MiB Python project, 100 MiB Node project, 200 MiB total uncompressed and 220 MiB encrypted archive. Device-bound credentials and selected secrets are excluded.
-- Consequently, a website imported near the 500 MB importer limit cannot currently be fully backed up. This is an unresolved release blocker/owner decision.
+- Full-app backup limits are 500,000,000 bytes static website root, 50 MiB Python project, 100 MiB Node project, 650,000,000 bytes total uncompressed and 680,000,000 bytes encrypted archive. Device-bound credentials and selected secrets are excluded.
+- The static-site backup cap matches the 500,000,000-byte importer expanded-content allowance. Near-limit backup/restore, free-space preflight and physical-device recovery tests remain open.
 - Other independent limits exist in Python/Node project importers, Workbench, remote deployment artifact transfer and Rust per-file serving; do not conflate them.
 
 ## UI/source discrepancies found
