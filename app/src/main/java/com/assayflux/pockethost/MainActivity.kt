@@ -264,6 +264,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var nativeRelayIdentity by remember { mutableStateOf(runCatching { if (RelayNodeIdentityStore.exists()) RelayNodeIdentityStore.getOrCreate() else null }.getOrNull()) }
     var nativeRelayHostIdText by remember { mutableStateOf("") }
     var nativeRelayCredentialToken by remember { mutableStateOf<String?>(null) }
+    var nativeRelayPairingInvite by remember { mutableStateOf<String?>(null) }
     var nativeRelayHostIds by remember { mutableStateOf(runCatching { RelayCredentialIssuer.registeredHostIds(context) }.getOrDefault(emptyList())) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
@@ -1036,6 +1037,19 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = {
+                                    runCatching { NativeRelay.createPairingInvite(nativeRelayHostIdText) }
+                                        .onSuccess { invite ->
+                                            if (invite.startsWith("ERROR:")) {
+                                                nativeRelayPairingInvite = null
+                                                status = invite
+                                            } else {
+                                                nativeRelayPairingInvite = invite
+                                                status = "A single-use pairing invite was created. It expires in 2 minutes and is bound to this host UUID."
+                                            }
+                                        }
+                                        .onFailure { status = it.message ?: "Could not create Relay pairing invite." }
+                                }, enabled = nativeRelayStatus == "RUNNING") { Text("Create 2-minute pairing invite") }
+                                OutlinedButton(onClick = {
                                     runCatching { RelayCredentialIssuer.issueOrRotate(context, nativeRelayHostIdText) }
                                         .onSuccess { issued ->
                                             nativeRelayCredentialToken = issued.token
@@ -1061,6 +1075,15 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                         }
                                         .onFailure { status = it.message ?: "Could not revoke Relay host." }
                                 }) { Text("Revoke host") }
+                            }
+                            nativeRelayPairingInvite?.let { invite ->
+                                Text("Single-use pairing invite (expires in 2 minutes):", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                                Text(invite, color = palette.onSurface, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                                OutlinedButton(onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("AssayFlux Relay pairing invite", invite))
+                                    Toast.makeText(context, "Pairing invite copied", Toast.LENGTH_SHORT).show()
+                                }) { Text("Copy pairing invite") }
                             }
                             nativeRelayCredentialToken?.let { token ->
                                 Text("Copy this credential to the host device. It is shown only for this issuance:", color = palette.onSurfaceVariant, fontSize = 12.sp)
