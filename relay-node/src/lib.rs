@@ -135,7 +135,7 @@ struct Hub {
 #[derive(Clone)]
 struct RelayState(Arc<Mutex<Hub>>, Arc<Mutex<Connection>>);
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct PairingRequest {
     invite_code: String,
