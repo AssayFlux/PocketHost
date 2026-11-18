@@ -719,6 +719,40 @@ mod tests {
         assert!(!constant_time_equal("abc", "abd"));
     }
 
+    #[test]
+    fn dns_txt_parser_requires_matching_owner_and_extracts_txt_chunks() {
+        let name = "_pockethost-verify.example.com";
+        let value = "pockethost-verification-unit-test-random-value";
+        let mut packet = vec![0x12, 0x34, 0x81, 0x80, 0, 1, 0, 1, 0, 0, 0, 0];
+        for label in name.split('.') {
+            packet.push(label.len() as u8);
+            packet.extend_from_slice(label.as_bytes());
+        }
+        packet.push(0);
+        packet.extend_from_slice(&[0, 16, 0, 1]);
+        packet.extend_from_slice(&[0xc0, 0x0c]);
+        packet.extend_from_slice(&[0, 16, 0, 1, 0, 0, 0, 60]);
+        let txt_length = 1 + value.len();
+        packet.extend_from_slice(&(txt_length as u16).to_be_bytes());
+        packet.push(value.len() as u8);
+        packet.extend_from_slice(value.as_bytes());
+
+        assert_eq!(parse_dns_txt_answers(&packet, name), vec![value.to_string()]);
+        assert!(parse_dns_txt_answers(&packet, "wrong.example.com").is_empty());
+        packet[2] |= 0x02;
+        assert!(parse_dns_txt_answers(&packet, name).is_empty());
+    }
+
+    #[test]
+    fn dns_challenge_names_allow_underscores_but_reject_malformed_labels() {
+        assert_eq!(
+            normalize_dns_name("_pockethost-verify.Example.com.").unwrap(),
+            "_pockethost-verify.example.com"
+        );
+        assert!(normalize_dns_name("_bad..example.com").is_err());
+        assert!(normalize_dns_name(&"x".repeat(254)).is_err());
+    }
+
     #[tokio::test]
     async fn route_config_rejects_unpaired_hosts_and_duplicate_hostnames() {
         let device = Uuid::new_v4();
