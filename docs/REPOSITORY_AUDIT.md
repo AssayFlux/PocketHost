@@ -2,7 +2,7 @@
 
 **Audited source branch:** `Alpha`  
 **Source snapshot:** `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` (259 tracked files, 72 directories)  
-**Remediation branch:** `audit/remediation-baseline-2026-11` (260 tracked blobs, 72 directories at baseline snapshot)  
+**Historical remediation branch snapshot:** `audit/remediation-baseline-2026-11` (260 tracked blobs, 72 directories at the recorded snapshot; not the active documentation branch)  
 **Audit date:** 2026-11-18  
 **Complete inventory:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md)
 
@@ -128,3 +128,8 @@ The Quality and Protocol workflows both completed successfully for the current A
 ## 8. Remediation findings register
 
 See [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md) for the severity-ranked findings, evidence, fixes and verification states. It supersedes earlier point-in-time statements in this document where explicitly marked. Source changes have been made on the isolated remediation branch; no test result or release acceptance is claimed until the listed checks run.
+
+
+## Current source pointer after dependency-lock update
+
+The current Alpha head checked for the release-document realignment is `9debd9b630d460c5feed92d07b3c20da319a9e4d` (260 tracked files, 72 directories). It is the previous audit source snapshot `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` plus the resolved application dependency-lock commit. The findings in this audit remain the outstanding code-review baseline; no code fixes are implied by the documentation-only branch `docs/release-version-realignment-2026-11`.

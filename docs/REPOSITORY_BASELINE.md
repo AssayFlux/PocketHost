@@ -565,8 +565,8 @@ web-console/vite.config.ts  [132 bytes]  [blob 1826ab6ad8e4]
 
 ## Current Alpha tree delta (checked 2026-11-18; refreshed after dependency-lock commit)
 
-- Current Alpha source head at snapshot: `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`.
-- Current recursive Git tree: **260 tracked files, 72 directories**.
+- Previous Alpha source head at snapshot: `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`.
+- Previous recursive Git tree: **259 tracked files, 72 directories**.
 - The current `relay-node/` directory contains exactly one tracked file: `Cargo.toml`.
 - That manifest defines the `assayflux-relay-node` Rust package and dependencies. There is no binary target, `src/main.rs`, library source, tests, config sample, installer, Termux service script, Linux service unit or operational documentation shipped inside the crate.
 - Therefore the Relay Node remains **not implemented / not runnable**. Do not count the manifest or passing general CI as a completed gateway.
@@ -577,7 +577,7 @@ web-console/vite.config.ts  [132 bytes]  [blob 1826ab6ad8e4]
 
 ## Remediation snapshot addendum (2026-11-18)
 
-The complete recursive Git tree at Alpha commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contained 259 blobs across 72 directories (`truncated=false`). The remediation branch is isolated from Alpha. The detailed path inventory earlier in this file remains a historical inventory from the older `4185ea0` snapshot; it is not represented as a current per-path listing. Use the recorded Git tree for the exact current inventory. The remediation findings and corrected limits are maintained in [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).
+The complete recursive Git tree at the previous Alpha commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contained 259 blobs across 72 directories (`truncated=false`). The later dependency-lock commit advanced Alpha to `9debd9b630d460c5feed92d07b3c20da319a9e4d`, adding one tracked file; its current tree contains 260 blobs across 72 directories. The former remediation branch is a historical snapshot and is isolated from the current Alpha history. The detailed path inventory earlier in this file remains a historical inventory from the older `4185ea0` snapshot; it is not represented as a current per-path listing. Use the recorded Git tree for the exact current inventory. The remediation findings and corrected limits are maintained in [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).
 
 
 ## Remediation branch snapshot
