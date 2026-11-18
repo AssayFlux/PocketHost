@@ -64,6 +64,38 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  relay-android-abi:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools ndk;27.2.12479018"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build native Relay for all declared Android ABIs
+        run: |
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o "$RUNNER_TEMP/relay-jni" build --manifest-path relay-node/Cargo.toml --release --locked
+      - name: Verify Relay ELF architectures
+        run: |
+          set -euo pipefail
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            file "$RUNNER_TEMP/relay-jni/$abi/libassayflux_relay_node.so"
+            "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h "$RUNNER_TEMP/relay-jni/$abi/libassayflux_relay_node.so"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-android-jni
+          path: ${{ runner.temp }}/relay-jni/**
+          if-no-files-found: error
+          retention-days: 7
+
   cloudflared-android:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
