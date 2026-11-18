@@ -563,7 +563,7 @@ web-console/vite.config.ts  [132 bytes]  [blob 1826ab6ad8e4]
 **Baseline rule:** any later source change must update this baseline when module boundaries, implemented capabilities, build inputs, limits, or verification evidence change. Planned behavior belongs in roadmap/specification documents and must remain explicitly labelled as planned or in progress.
 
 
-## Current Alpha tree delta (checked 2026-11-17)
+## Current Alpha tree delta (checked 2026-11-18)
 
 - Current Alpha source head at snapshot: `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`.
 - Current recursive Git tree: **259 tracked files, 72 directories**.
@@ -582,4 +582,4 @@ The complete recursive Git tree at Alpha commit `2087938a35dc88ed7588d97ffed8bd6
 
 ## Remediation branch snapshot
 
-At commit `c00eac2735ca353b0ef965fd5a40ece9fbcc7085`, the remediation branch contained 260 blobs across 72 directories (complete recursive tree, not truncated). This includes the new `docs/REMEDIATION_AUDIT.md`. Alpha itself remains at the 259-blob source snapshot recorded above. The older detailed path inventory is historical and should not be treated as a current exhaustive listing.
+At commit `66c904c59b841786b9212f0871cfc590cd0de386` (tree `fee696d4b8c4f4c46d8ada3b3a8e0813b254e064`), the remediation branch contained 260 blobs across 72 directories (complete recursive tree, not truncated). This includes the new `docs/REMEDIATION_AUDIT.md`. Alpha itself remains at the 259-blob source snapshot recorded above. The older detailed path inventory is historical and should not be treated as a current exhaustive listing.
