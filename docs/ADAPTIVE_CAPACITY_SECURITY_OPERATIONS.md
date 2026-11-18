@@ -11,7 +11,7 @@ Keep Android hosting predictable under bounded CPU, memory, storage, network and
 - Maximum files: 5,000.
 - Maximum total entries: 10,000.
 - Maximum directory depth: 32.
-- Rust static response maximum: 50 MiB per file (separate from import limits).
+- Rust static response maximum: 500,000,000 bytes (500 MB decimal) per file (separate from import limits). Manual single-file import is capped at 50 MiB and the text editor at 256 KiB.
 - Rust engine connection and per-site concurrency limits remain independently enforced.
 
 The UI must distinguish import quota from per-file response limit. Reject oversized input before replacing the active site. Avoid reading the whole archive into memory; use streaming counters and bounded buffers.

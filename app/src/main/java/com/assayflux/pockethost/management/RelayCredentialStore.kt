@@ -36,7 +36,7 @@ object RelayCredentialStore {
         val normalizedEndpoint = endpoint.trim().trimEnd('/')
         val uri = URI(normalizedEndpoint)
         require(uri.scheme == "https" ||
-            (uri.scheme == "http" && uri.host == "127.0.0.1")) {
+            (uri.scheme == "http" && uri.host in setOf("127.0.0.1", "localhost", "::1"))) {
             "Use HTTPS for the public AssayFlux Relay endpoint. HTTP is allowed only for localhost development."
         }
         require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null &&

@@ -53,7 +53,7 @@ object RemoteControlAgent {
     fun configure(context: Context, endpoint: String, token: String) {
         val restartAgent = running
         val uri = URI(endpoint.trim().trimEnd('/'))
-        require(uri.scheme == "https" || (uri.scheme == "http" && uri.host == "127.0.0.1")) {
+        require(uri.scheme == "https" || (uri.scheme == "http" && uri.host in setOf("127.0.0.1", "localhost"))) {
             "Use HTTPS for remote control. HTTP is allowed only for localhost development."
         }
         require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null) {

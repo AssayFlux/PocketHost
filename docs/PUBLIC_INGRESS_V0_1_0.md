@@ -80,7 +80,7 @@ The persistence format, certificate provisioning, local setup API and Termux ser
 
 ### Current gaps — do not describe as completed
 
-- RelayAgent gets its endpoint and device token from RemoteControlAgent and starts only when remote-control configuration is present.
+- RelayAgent reads a dedicated endpoint and host token from RelayCredentialStore and HostingService starts it independently of RemoteControlAgent configuration.
 - Relay registration currently uses registered fleet devices and the fleet owner/admin API.
 - Relay gateway and full fleet API share the same Rust executable; startup requires PostgreSQL, a control API hostname and administrator credentials.
 - Relay sessions and pending visitor requests are held in an in-memory RelayHub; they are lost on process restart.

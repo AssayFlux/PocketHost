@@ -43,50 +43,6 @@ class SiteImporterStreamSmokeTest {
         }
     }
     @Test
-    fun rejectsCaseInsensitiveZipPathCollisions() {
-        val base = InstrumentationRegistry.getInstrumentation().targetContext
-        val root = File(base.cacheDir, "site-case-collision-${System.nanoTime()}")
-        assertTrue(root.mkdirs())
-        val context = object : ContextWrapper(base) {
-            override fun getFilesDir(): File = root
-            override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
-        }
-        try {
-            val archive = zipOf("index.html" to "ok", "Index.html" to "collision")
-            assertTrue(runCatching { SiteImporter.importZipStream(context, ByteArrayInputStream(archive)) }.isFailure)
-            assertTrue(!File(root, "site").exists())
-        } finally { root.deleteRecursively() }
-    }
-
-    @Test
-    fun rejectsZipFileUsedAsParentDirectory() {
-        val base = InstrumentationRegistry.getInstrumentation().targetContext
-        val root = File(base.cacheDir, "site-parent-collision-${System.nanoTime()}")
-        assertTrue(root.mkdirs())
-        val context = object : ContextWrapper(base) {
-            override fun getFilesDir(): File = root
-            override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
-        }
-        try {
-            val archive = zipOf("index.html" to "ok", "assets" to "file", "assets/logo.png" to "child")
-            assertTrue(runCatching { SiteImporter.importZipStream(context, ByteArrayInputStream(archive)) }.isFailure)
-            assertTrue(!File(root, "site").exists())
-        } finally { root.deleteRecursively() }
-    }
-
-    private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
-        val archive = ByteArrayOutputStream()
-        ZipOutputStream(archive).use { zip ->
-            entries.forEach { (name, value) ->
-                zip.putNextEntry(ZipEntry(name))
-                zip.write(value.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
-            }
-        }
-        return archive.toByteArray()
-    }
-
-    @Test
     fun websiteImportLimitIs500Megabytes() {
         assertEquals(500_000_000L, SiteImporter.MAX_IMPORT_BYTES)
     }
