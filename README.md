@@ -39,7 +39,7 @@
 
 ## ABOUT POCKET HOST
 
-**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an owner-operated AssayFlux Relay Node. The v0.1.0 Relay target is owner-controlled owner-controlled Android hardware running Pocket Host; Linux-native installation and service packaging are deferred to v0.1.1. A paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an owner-operated AssayFlux Relay Node. The v0.1.0 Relay is a native Kotlin foreground service with a Rust/Tokio JNI engine bundled in the Pocket Host APK; it does not require a terminal application or external runtime. Linux-native packaging remains v0.1.1. A paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
 
 A desktop, laptop, server, NAS or supported single-board computer may eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Device products remain separate for their platforms and interoperate through shared contracts. Network discovery never establishes trust.
 
@@ -91,7 +91,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, Cloudflare Tunnel and the planned standalone AssayFlux Relay Node are separate ingress paths; public HTTP/HTTPS acceptance is a v0.1.0 target. The Android client has independent host credentials, but the standalone Relay Node is not yet implemented. native Android is the v0.1.0 install target; Linux-native installation moves to v0.1.1.
+      Local Network, Cloudflare Tunnel and the native Android AssayFlux Relay service are separate ingress paths. The Android host client has independent credentials; the native inbound Relay engine and service integration remain to be implemented and accepted in v0.1.0. Linux-native packaging remains v0.1.1.
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -124,7 +124,7 @@ The first release has one primary promise: **a website imported into Pocket Host
 - A second device on the same Wi-Fi can open the website.
 - Public custom-domain hosting through Cloudflare Tunnel or the owner-operated AssayFlux Relay Node.
 - Public HTTP and HTTPS with valid edge TLS; HTTP redirects to HTTPS by default. Plain HTTP content serving is a target opt-in; the current Relay edge does not implement that opt-in.
-- The Relay Node does not require a paid VPS, but it must run on an owner-controlled device with public IPv4/port forwarding or globally routed IPv6. CGNAT without global IPv6 cannot accept inbound visitors.
+- The native Android Relay does not require a paid VPS, but its device needs a public IPv4 path with port forwarding or globally routed IPv6 plus edge forwarding to the app's unprivileged listener ports. CGNAT without global IPv6 cannot accept inbound visitors.
 - External DNS/TLS/content verification and strict separation between visitor and management routes.
 - Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
 - Encrypted full-app backup/restore and useful hosting diagnostics (static website backups support the full 500,000,000-byte import allowance; optional Python/Node projects have separate limits).
@@ -177,7 +177,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
 | Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
 | Cloudflare Tunnel | <code>app/.../tunnel/</code> + native connector | Outbound public ingress for custom domains | v0.1.0 |
-| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Standalone owner-operated native Android Relay Node is the v0.1.0 target; Linux-native installation is deferred to v0.1.1; the node executable is not yet implemented | v0.1.0 |
+| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Native Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK is the v0.1.0 target; native gateway/service integration is not yet implemented; Linux-native packaging is deferred to v0.1.1 | v0.1.0 |
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
@@ -242,7 +242,7 @@ The Android module declares min SDK 26, target SDK 35 and native ABI targets arm
 |---|---|---|
 | Android phone/tablet | Pocket Host main app | Hosting foundation present; physical acceptance open |
 | Android runtime provider | Separate companion APK | Python + Node integrations in progress |
-| native Android / owner-owned Android device | AssayFlux Relay Node | Planned v0.1.0 product; standalone package/installer not yet present; public IP/IPv6 reachability required
+| Android phone/tablet | Pocket Host Relay service | Planned Kotlin foreground service + Rust JNI engine bundled in the main APK; native gateway implementation and public acceptance remain open; public IP/IPv6 plus edge forwarding required
 | Owner-owned Linux device | Relay Node package and service | v0.1.1; Linux-native installer, service integration and support matrix deferred |
 | Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
 | Windows / macOS | Native worker agent | Planned |
