@@ -8,7 +8,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-002 — Three-version release pathway
 
-**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development, v0.1.2 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
+**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench, Runtime & Linux Relay Installation, v0.1.2 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
 
 **Reason:** first prove a useful vertical slice before expanding into runtimes and distributed infrastructure.
 
@@ -92,6 +92,6 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-019 — Corrected three-release numbering and immutable v0.1.0 baseline
 
-**Decision:** the approved release sequence is exactly v0.1.0 First Hosting → v0.1.1 Workbench, Runtime & Linux Relay Installation → v0.1.2 Connected Device Fabric. All references to the former v0.2.0 milestone are superseded by v0.1.2. No separate v0.2.0 milestone remains in the initial three-release pathway.
+**Decision:** the approved release sequence is exactly v0.1.0 First Hosting → v0.1.1 Workbench, Runtime & Linux Relay Installation → v0.1.2 Connected Device Fabric. All references to the former v0.1.2 milestone are superseded by v0.1.2. No separate v0.1.2 milestone remains in the initial three-release pathway.
 
 **Baseline rule:** after v0.1.0 passes all G0–G9 gates and its release is approved, its source commit is preserved by an immutable release tag and protected baseline ref where repository permissions allow. The release artifact digests, source SHA, workflow evidence, support matrix and gate ledger are recorded. No later feature or fix is committed to that baseline; subsequent work branches from it into v0.1.1. Any exceptional security correction requires a separately reviewed successor patch release and must never rewrite the original baseline tag.

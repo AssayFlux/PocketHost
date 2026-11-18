@@ -4,7 +4,7 @@
 
 Pocket Host is a modular personal infrastructure platform. The first release proves Android static website hosting with local, LAN and public custom-domain access. Public ingress options are Cloudflare Tunnel (optional third party) and the planned owner-operated AssayFlux Relay Node. The Relay Node is a separate software product for owner-controlled Termux/Android or Linux hardware; it does not require a paid VPS, but it does require a publicly reachable IPv4/IPv6 network endpoint.
 
-The three release milestones are v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.1.2 Connected Device Fabric.
+The three release milestones are v0.1.0 First Hosting, v0.1.1 Workbench, Runtime & Linux Relay Installation and v0.1.2 Connected Device Fabric.
 
 ## 2. Mobile operating modes
 
@@ -33,7 +33,7 @@ The owner configures the named tunnel, public hostname, DNS and edge HTTP/TLS po
 
 Browser → owner's public AssayFlux Relay Node → verified hostname/site/host route → authenticated outbound host stream → Android RelayAgent → local Rust HTTP origin.
 
-The Relay Node is separate from the Android website-host app and the full fleet control plane. v0.1.0 must provide an installable Termux/Android and Linux target, independent host-ingress credentials, domain proof, TLS, route binding, revocation and visitor-only forwarding. No paid VPS, Docker or PostgreSQL should be required for the standalone Relay profile.
+The Relay Node is separate from the Android website-host app and the full fleet control plane. v0.1.0 must provide an installable Termux/Android target; Linux-native installation is v0.1.1, independent host-ingress credentials, domain proof, TLS, route binding, revocation and visitor-only forwarding. No paid VPS, Docker or PostgreSQL should be required for the standalone Relay profile.
 
 **Public network constraint:** the Relay Node must have public IPv4 with router port forwarding or globally routed IPv6. A device behind CGNAT without global IPv6 cannot accept inbound visitor traffic. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled public endpoint is available, Cloudflare Tunnel remains an optional fallback; the project must not claim that DNS alone bypasses CGNAT.
 
@@ -41,7 +41,7 @@ The Relay Node is separate from the Android website-host app and the full fleet 
 
 The Android RelayAgent reads a dedicated endpoint and host token from RelayCredentialStore; HostingService starts Relay independently from RemoteControlAgent. Current gateway lives inside the Rust/Axum fleet control-plane executable, requires PostgreSQL/admin configuration, and uses an in-memory RelayHub. There is no standalone Termux Relay Node executable or node-side credential issuer in the audited source; the Android host-side credential store is already independent. The standalone path is planned work, not a current feature.
 
-## 4. v0.1.1 — Workbench & Runtime Development
+## 4. v0.1.1 — Workbench, Runtime & Linux Relay Installation
 
 Workbench owns a per-site private draft workspace. Editor and build tools operate on drafts. Preview must be isolated. A validated immutable artifact is staged and owner-approved before atomic activation. Python and Node remain optional separate companion runtimes and do not become dependencies of static serving.
 
@@ -58,7 +58,7 @@ Mobile command center ↔ authenticated control plane ↔ separately installed a
 | Site import/backup | Folder/ZIP staging, safe activation, encrypted backup | v0.1.0; source quota alignment is present; physical-device acceptance remains open |
 | Cloudflare Tunnel | Android token store, process runner, readiness, build helper | v0.1.0 public acceptance |
 | AssayFlux Relay client | Android outbound SSE request/response client, configured independently from remote control | Android-side separation implemented; node-side issuer remains open |
-| AssayFlux Relay gateway | Visitor handler, DNS TXT proof, Caddy TLS, PostgreSQL route registry in combined control-plane process | Extract standalone Termux/Linux Relay Node in v0.1.0 |
+| AssayFlux Relay gateway | Visitor handler, DNS TXT proof, Caddy TLS, PostgreSQL route registry in combined control-plane process | Standalone Termux/Android Relay Node in v0.1.0; Linux-native installer and service integration in v0.1.1 |
 | Workbench | Draft workspace, explorer, basic editor, local commits | v0.1.1 completion |
 | TypeScript compiler | Not present as a verified main-app compiler | v0.1.1 |
 | Runtime companion | CPython 3.11 and Node.js 24.22.1 in one companion APK | v0.1.1 acceptance |

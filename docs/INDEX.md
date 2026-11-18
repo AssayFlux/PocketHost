@@ -28,7 +28,7 @@ This documentation set follows the new three-version pathway. The former five-st
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Pocket Host Design Language V1](UI_DESIGN.md)
 
-## v0.1.1 — Workbench & Runtime Development
+## v0.1.1 — Workbench, Runtime & Linux Relay Installation
 - [Workbench Specification](WORKBENCH.md)
 - [Web Toolchain Boundaries](WEB_TOOLCHAIN_BOUNDARIES.md)
 - [Runtime Companion](RUNTIME_COMPANION.md)
