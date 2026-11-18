@@ -63,6 +63,9 @@ import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.management.RemoteControlAgent
 import com.assayflux.pockethost.management.RelayAgent
 import com.assayflux.pockethost.management.RelayCredentialStore
+import com.assayflux.pockethost.relay.NativeRelay
+import com.assayflux.pockethost.relay.NativeRelayService
+import com.assayflux.pockethost.relay.RelayNodeConfigStore
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -253,6 +256,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var relayTokenText by remember { mutableStateOf("") }
     var relayConfigured by remember { mutableStateOf(RelayCredentialStore.isConfigured(context)) }
     var relayStatus by remember { mutableStateOf(RelayAgent.status()) }
+    var nativeRelayStatus by remember { mutableStateOf(runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")) }
+    var nativeRelayConfigured by remember { mutableStateOf(RelayNodeConfigStore.isConfigured(context)) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
@@ -309,6 +314,33 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         startHosting(!granted)
     }
 
+    val nativeRelayConfigPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val result = runCatching {
+                    val configJson = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                            ?: error("Could not read the Relay configuration file.")
+                    }
+                    check(configJson.toByteArray(Charsets.UTF_8).size <= 256 * 1024) {
+                        "Relay configuration exceeds 256 KiB."
+                    }
+                    check(RelayNodeConfigStore.save(context, configJson)) {
+                        "Could not encrypt and save the Relay configuration."
+                    }
+                }
+                result.onSuccess {
+                    nativeRelayConfigured = true
+                    status = "Native Relay configuration encrypted with Android Keystore. Start the Relay Node when ready."
+                }.onFailure {
+                    status = it.message ?: "Could not import native Relay configuration."
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         var lastIdleTelemetryAt = 0L
@@ -328,6 +360,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             nodeHosting = runCatching { NodeHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
             tunnelStatus = CloudflareTunnelRuntime.status()
             relayStatus = RelayAgent.status()
+            nativeRelayStatus = runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")
             pendingPairingCode = ManagementApiServer.pendingApprovalCode()
             preferences.getString("service_status", null)?.let { status = it }
             recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
@@ -903,6 +936,62 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 }
                 if (selectedTab == "Settings") {
                 if (settingsSection == "Network") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = palette.surface)
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("NATIVE ASSAYFLUX RELAY NODE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            when (nativeRelayStatus) {
+                                "RUNNING" -> "Native visitor gateway is running. Public access still depends on valid DNS proof, TLS and your network edge."
+                                "UNAVAILABLE" -> "Native Relay library is unavailable in this APK."
+                                else -> if (nativeRelayConfigured) "Node configuration is encrypted on this device. Relay is stopped." else "No native Relay Node configuration has been imported."
+                            },
+                            color = palette.onSurfaceVariant, fontSize = 14.sp
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { nativeRelayConfigPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }
+                            ) { Text(if (nativeRelayConfigured) "Replace node config" else "Import node config") }
+                            OutlinedButton(
+                                onClick = {
+                                    NativeRelayService.start(context)
+                                    status = "Starting native Relay Node foreground service…"
+                                },
+                                enabled = nativeRelayConfigured && nativeRelayStatus != "RUNNING"
+                            ) { Text("Start Node") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    NativeRelayService.stop(context)
+                                    status = "Stopping native Relay Node…"
+                                },
+                                enabled = nativeRelayStatus == "RUNNING"
+                            ) { Text("Stop Node") }
+                            OutlinedButton(
+                                onClick = {
+                                    NativeRelayService.stop(context)
+                                    runCatching { RelayNodeConfigStore.clear(context) }
+                                        .onSuccess {
+                                            nativeRelayConfigured = false
+                                            nativeRelayStatus = "STOPPED"
+                                            status = "Native Relay Node configuration and Keystore key cleared."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not clear native Relay configuration." }
+                                },
+                                enabled = nativeRelayConfigured
+                            ) { Text("Remove config") }
+                        }
+                        Text(
+                            "This is the inbound gateway running on this phone. It is separate from the outbound host connection below. The JSON configuration includes DNS TXT proof, host credential verifiers and TLS PEM material; it is encrypted at rest with Android Keystore. Pairing and automatic certificate renewal are still being completed.",
+                            color = palette.onSurfaceVariant, fontSize = 13.sp
+                        )
+                    }
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
