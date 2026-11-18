@@ -39,7 +39,8 @@ This plan is the execution checklist for the approved native Android Relay archi
 - [x] Add a dedicated, non-exported Relay foreground service with explicit start/stop/status and persistent notification.
 - [x] Add initial owner controls to import the encrypted node config and start/stop/remove the service; this remains an engineering import flow, not final pairing.
 - [x] Validate non-overlapping listener ports (HTTP 8082, HTTPS 8444 by default).
-- [x] Add owner-enabled boot recovery for the native Relay service when encrypted Relay configuration exists.\n- [ ] Add network-change recovery and verify failure isolation from local hosting and Cloudflare Tunnel.
+- [x] Add owner-enabled boot recovery for the native Relay service when encrypted Relay configuration exists.
+- [x] Add network-change recovery; device verification and failure-isolation tests remain pending.
 - [ ] Add service/JNI instrumentation tests and notification/permission tests.
 
 ### R2 — TLS, hostname proof and route lifecycle
@@ -66,7 +67,8 @@ This plan is the execution checklist for the approved native Android Relay archi
 - [x] Implement the visitor-to-authenticated-outbound-SSE host-session request/response path using the existing host-side RelayAgent wire contract.
 - [x] Enforce initial request/response body, queue, concurrency and timeout limits.
 - [x] Strip untrusted request headers and allow-list response headers.
-- [x] Add native visitor-path rejection tests for Relay control namespaces, traversal, encoded separators/dots, double-encoding, malformed escapes and repeated slashes.\n- [ ] Verify visitor routes cannot reach owner management, pairing, device-control, Workbench or runtime APIs with integrated automated negative tests.
+- [x] Add native visitor-path rejection tests for Relay control namespaces, traversal, encoded separators/dots, double-encoding, malformed escapes and repeated slashes.
+- [ ] Verify visitor routes cannot reach owner management, pairing, device-control, Workbench or runtime APIs with integrated automated negative tests.
 - [ ] Test disconnect/reconnect, stale request IDs, duplicate responses, host revocation and route removal.
 - [ ] Verify Relay can start/stop independently and cannot break local/LAN website hosting or Cloudflare Tunnel.
 
