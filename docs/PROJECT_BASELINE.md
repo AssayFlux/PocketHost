@@ -54,7 +54,7 @@ Cloudflare Tunnel remains an optional fallback, not a dependency of the first-pa
 ## Build and verification evidence
 
 - [Quality workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819401) on historical source commit `0784b3294f2de9f435479c7a290f336e85b78df0`: Rust tests, PostgreSQL/control-plane tests and migrations, Caddy/Compose validation, Python/Linux agent tests, Node metrics smoke test, web-console TypeScript/Vite build and Gradle wrapper validation passed.
-- [Protocol contract workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294) on current source commit `0784b3294f2de9f435479c7a290f336e85b78df0`.
+- [Protocol contract workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294) on historical source commit `0784b3294f2de9f435479c7a290f336e85b78df0`.
 - [Android integration workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44079487947) on code commit `5d90c1d`: cloudflared Android builds/ELF checks and Kotlin/instrumentation-source compilation passed. APK packaging and emulator jobs were skipped.
 - No main APK build, signed release, physical-device test, live Cloudflare hostname test, standalone Relay Node deployment or external public-domain acceptance is recorded.
 
