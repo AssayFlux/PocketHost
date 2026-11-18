@@ -594,7 +594,6 @@ fn start(config_json: &str) -> Result<(), String> {
     }
     let http_bind = SocketAddr::new(bind_ip, config.http_port);
     let https_bind = SocketAddr::new(bind_ip, config.https_port);
-    let state = RelayState::from_config(config).await?;
     let mut slot = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?;
     if slot.is_some() { return Err("Relay is already running".into()); }
     let (stop_tx, stop_rx) = oneshot::channel();
@@ -605,6 +604,10 @@ fn start(config_json: &str) -> Result<(), String> {
             Err(error) => { let _ = ready_tx.send(Err(format!("Relay runtime failed: {error}"))); return; }
         };
         runtime.block_on(async move {
+            let state = match RelayState::from_config(config).await {
+                Ok(state) => state,
+                Err(error) => { let _ = ready_tx.send(Err(error)); return; }
+            };
             let http_listener = match TcpListener::bind(http_bind).await {
                 Ok(listener) => listener,
                 Err(error) => { let _ = ready_tx.send(Err(format!("Relay HTTP listener failed: {error}"))); return; }
