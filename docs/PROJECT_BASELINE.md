@@ -29,8 +29,8 @@
 | Runtime companion | Separate APK with CPython 3.11/Chaquopy and Node.js mobile 24.22.1/JNI | Both in same companion APK, in progress; not hardened sandbox |
 | Runtime Library | 20 catalog JSON manifests | Python/Node in progress; remaining 18 planned metadata only |
 | Browser console | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; remote control and Relay hostname panel | Separate browser app; build passes; not an Android runtime |
-| Android device trust | P-256 identity, challenge/proof and grant foundations | In progress; v0.1.2 acceptance |
-| Linux agent | Python package, P-256 identity, HTTPS polling, SQLite job store, typed jobs | Preview; v0.1.2 acceptance |
+| Android device trust | P-256 identity, challenge/proof and grant foundations | In progress; v0.2.0 acceptance |
+| Linux agent | Python package, P-256 identity, HTTPS polling, SQLite job store, typed jobs | Preview; v0.2.0 acceptance |
 | Control plane | Rust/Axum, PostgreSQL migrations, admin sessions/passkeys, device commands, audit, Relay visitor listener | Source/tests present; combined fleet/Relay executable; full fleet acceptance open |
 | Protocol | Protocol 1.0 schemas, default-deny role/job policies and validators | Contract tests pass; device-fabric integration incomplete |
 

@@ -9,7 +9,7 @@ Keep the browser operator console, Android website authoring/build tools, static
 | Technology | Repository | Function | Release |
 |---|---|---|---|
 | HTML/CSS/browser JavaScript | Main app + rust-engine | Static website serving | v0.1.0 |
-| React 18 + TypeScript 5.7 + Vite 6 | web-console/ | Separate browser operator console | v0.2.0 scope |
+| React 18 + TypeScript 5.7 + Vite 6 | web-console/ | Separate browser operator console | v0.1.2 scope |
 | TypeScript compiler | Main Android app | Compile website TypeScript to browser JavaScript | v0.1.1 |
 | Python 3.11 | runtime-worker/ companion | Optional WSGI backend runtime | v0.1.1 |
 | Node.js mobile 24.22.1 | runtime-worker/ companion | Optional server-side JavaScript runtime | v0.1.1 |
@@ -31,7 +31,7 @@ The built-in compiler is a bounded authoring/build tool, not a server runtime. I
 
 ## Operator console contract
 
-web-console is a separately built browser app. Its dependencies do not become main Android app dependencies. It communicates with the control plane only under the v0.2.0 authenticated API contract.
+web-console is a separately built browser app. Its dependencies do not become main Android app dependencies. It communicates with the control plane only under the v0.1.2 authenticated API contract.
 
 ## Optional server-side runtime contract
 

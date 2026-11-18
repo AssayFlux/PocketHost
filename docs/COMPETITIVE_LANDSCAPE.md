@@ -14,7 +14,7 @@ Pocket Host differentiates through a mobile-first owner experience, local-first 
 |---|---|---|
 | P0 | v0.1.0 | A real website imports and serves from Android locally, over same-Wi-Fi LAN and publicly through Cloudflare Tunnel or AssayFlux Relay on a custom domain |
 | P1 | v0.1.1 | Safe editing, isolated preview, versioned publishing and optional runtime integration |
-| P2 | v0.2.0 | Verified devices, bounded worker roles, authenticated coordination and multi-host Relay scaling/failover |
+| P2 | v0.1.2 | Verified devices, bounded worker roles, authenticated coordination and multi-host Relay scaling/failover |
 
 ## Lessons to adopt
 
@@ -30,11 +30,11 @@ Pocket Host differentiates through a mobile-first owner experience, local-first 
 
 ## Explicit non-goals for v0.1.0
 
-Do not block first hosting on multi-device orchestration, multi-host Relay scaling, arbitrary language runtimes, full Workbench, TypeScript compilation or cross-platform fleet agents. Public hosting through Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node is part of v0.1.0. The Relay Node must install on Termux/Android and Linux without a paid VPS, Docker or PostgreSQL, while still requiring a publicly reachable IPv4/IPv6 endpoint.
+Do not block first hosting on multi-device orchestration, multi-host Relay scaling, arbitrary language runtimes, full Workbench, TypeScript compilation or cross-platform fleet agents. Public hosting through Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node is part of v0.1.0. The v0.1.0 Relay Node installs on Termux/Android; Linux-native installation is v0.1.1. No paid VPS, Docker or PostgreSQL is required, but a publicly reachable IPv4/IPv6 endpoint is.
 
 ## Proof of product
 
-The first demonstrable vertical slice is: install APK → import a 500 MB-bounded website → start host → open locally → open from another device on same Wi-Fi → reach the real custom domain over HTTP/HTTPS through Cloudflare and a self-hosted Termux/Linux Relay Node → verify assets/navigation and visitor/admin isolation → stop/restart → restore backup. Test the Relay Node from a public IPv4/IPv6 network and record CGNAT limitations. All G0–G9 gates then determine release readiness.
+The first demonstrable vertical slice is: install APK → import a 500 MB-bounded website → start host → open locally → open from another device on same Wi-Fi → reach the real custom domain over HTTP/HTTPS through Cloudflare and a self-hosted Termux/Android Relay Node → verify assets/navigation and visitor/admin isolation → stop/restart → restore backup. Test the Relay Node from a public IPv4/IPv6 network and record CGNAT limitations. All G0–G9 gates then determine release readiness.
 
 ## Decision
 

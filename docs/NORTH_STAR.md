@@ -17,9 +17,9 @@ Make personal infrastructure approachable and owner-controlled. A user starts by
 
 ## Three-release journey
 
-- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, and publish it through Cloudflare Tunnel or an owner-operated AssayFlux Relay Node on the owner's domain over HTTP/HTTPS. The v0.1.0 Relay Node runs on the owner's Termux/Android hardware; Linux-native installation is v0.1.1. A paid VPS is not required, but public IPv4/IPv6 reachability is.
+- **v0.1.0 — First Hosting:** import a static website (500 MB compressed ZIP and 500 MB expanded site), serve locally and over Wi-Fi, and publish it through Cloudflare Tunnel or an owner-operated AssayFlux Relay Node on the owner's domain over HTTP/HTTPS. The Relay Node runs on the owner's Termux/Android or Linux hardware; a paid VPS is not required, but public IPv4/IPv6 reachability is.
 - **v0.1.1 — Workbench & Runtime Development:** edit, preview, diff, commit and publish safely; complete optional Python/Node integrations.
-- **v0.1.2 — Connected Device Fabric:** enroll other devices, assign roles, coordinate work and scale Relay across multiple hosts/gateways with advanced failover.
+- **v0.2.0 — Connected Device Fabric:** enroll other devices, assign roles, coordinate work and scale Relay across multiple hosts/gateways with advanced failover.
 
 The roadmap can expand after these first three versions.
 
@@ -30,7 +30,7 @@ The roadmap can expand after these first three versions.
 | Server only | On | Off |
 | Command Center + Server | On | On |
 
-No standalone Command Center-only mode exists. Switching modes must not silently cancel already accepted autonomous work. v0.1.0 release acceptance includes local/LAN/public website serving; full fleet operation and multi-host Relay scaling are v0.1.2.
+No standalone Command Center-only mode exists. Switching modes must not silently cancel already accepted autonomous work. v0.1.0 release acceptance includes local/LAN/public website serving; full fleet operation and multi-host Relay scaling are v0.2.0.
 
 ## Device fabric
 

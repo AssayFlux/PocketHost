@@ -2,7 +2,7 @@
 
 **Release assignment:** v0.1.0 — First Hosting  
 **Scope:** main Android Pocket Host app and bundled Rust static website engine.  
-**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node (Termux/Android and Linux targets) are mandatory v0.1.0 public-ingress scope.
+**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node on Termux/Android are mandatory v0.1.0 public-ingress scope. Linux-native packaging and service installation are v0.1.1.
 
 ## 1. Release promise
 
@@ -22,8 +22,8 @@ A user can import a static website into the Android app, start hosting, open it 
 - Foreground hosting service, notification, start/stop/restart and recovery.
 - Basic encrypted website backup/restore.
 - Cloudflare Tunnel with encrypted token storage and external custom-domain HTTP/HTTPS verification.
-- Standalone AssayFlux Relay Node installable on owner-controlled Termux/Android or Linux hardware; DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only route. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability remains required.
-- Minimal owner-facing Relay hostname setup/verification surface plus Termux/Linux install, start/stop, status and restart/reconnect flow.
+- Standalone AssayFlux Relay Node installable on owner-controlled Termux/Android hardware; DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only route. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability remains required.
+- Minimal owner-facing Relay hostname setup/verification surface plus Termux/Android install, start/stop, status and restart/reconnect flow.
 - Clear error, diagnostics and Android permission/lifecycle behavior.
 
 ## 3. Static response safety
@@ -56,4 +56,4 @@ All ten G0–G9 gates must pass. The critical acceptance journey is folder/ZIP i
 
 ## 7. Deferred work
 
-Workbench preview, diff, TypeScript compilation, commits/deployment history, owner-approved publishing and rollback are v0.1.1. Python/Node acceptance is v0.1.1. Device trust, agents, full fleet control-plane acceptance and multi-host Relay scaling are v0.2.0.
+Workbench preview, diff, TypeScript compilation, commits/deployment history, owner-approved publishing and rollback are v0.1.1. Python/Node acceptance is v0.1.1. Device trust, agents, full fleet control-plane acceptance and multi-host Relay scaling are v0.1.2.
