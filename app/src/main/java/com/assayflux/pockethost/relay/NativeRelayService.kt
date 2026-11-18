@@ -43,7 +43,7 @@ class NativeRelayService : Service() {
                 if (ownerRequestedRunning) {
                     worker.execute {
                         if (!ownerRequestedRunning || stopping) return@execute
-                        val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: \${it.message}" }
+                        val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
                         OperationalLog.record(this@NativeRelayService, "WARN", "NATIVE_RELAY_NETWORK_LOST",
                             "Network lost; listener stopped until a usable network returns. $result")
                         main.post {
@@ -79,7 +79,7 @@ class NativeRelayService : Service() {
                 stopping = true
                 ownerRequestedRunning = false
                 worker.execute {
-                    val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: \${it.message}" }
+                    val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
                     if (result != "OK") OperationalLog.record(this, "WARN", "NATIVE_RELAY_STOP", result)
                     main.post { stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(startId) }
                 }
@@ -98,7 +98,7 @@ class NativeRelayService : Service() {
 
     private fun restartAfterNetworkChange(reason: String) {
         if (!ownerRequestedRunning || stopping) return
-        val stopResult = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: \${it.message}" }
+        val stopResult = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
         OperationalLog.record(this, "INFO", "NATIVE_RELAY_NETWORK_RECOVERY",
             "Reinitializing native Relay after $reason. $stopResult")
         startRelay(reason)
@@ -112,7 +112,7 @@ class NativeRelayService : Service() {
             val identity = RelayNodeIdentityStore.getOrCreate()
             OperationalLog.record(this, "INFO", "NATIVE_RELAY_NODE_IDENTITY", identity.nodeId)
             if (NativeRelay.status() == "RUNNING") "OK" else NativeRelay.start(config)
-        }.getOrElse { "ERROR: \${it.message ?: "Relay startup failed"}" }
+        }.getOrElse { "ERROR: ${it.message ?: "Relay startup failed"}" }
 
         main.post {
             if (stopping || !ownerRequestedRunning) return@post
@@ -123,7 +123,7 @@ class NativeRelayService : Service() {
             } else {
                 OperationalLog.record(this, "ERROR", "NATIVE_RELAY_START", result)
                 getSystemService(NotificationManager::class.java)
-                    .notify(NOTIFICATION_ID, notification("Relay unavailable: \${result.removePrefix("ERROR: ").take(100)}"))
+                    .notify(NOTIFICATION_ID, notification("Relay unavailable: ${result.removePrefix("ERROR: ").take(100)}"))
             }
         }
     }
