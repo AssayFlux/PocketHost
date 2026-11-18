@@ -8,7 +8,7 @@
 - Exactly two Android operating modes: **Server only** and **Command Center + Server**. Both retain website hosting.
 - Static HTML/CSS/browser JavaScript hosting must not require Python, Node, the browser console, the fleet control plane or a Relay provider.
 - Main Android app and optional runtime companion are separate installable APKs. Python and Node currently ship together in the companion.
-- Cloudflare Tunnel is optional and third-party. AssayFlux Relay is intended to be owner-operated on the user's own reachable hardware; a paid VPS is not required, but a public IPv4/IPv6 ingress path is.
+- Cloudflare Tunnel is optional and third-party. AssayFlux Relay is an owner-operated native Android service bundled in the Pocket Host APK; a paid VPS is not required, but a public IPv4/IPv6 ingress path and edge forwarding to unprivileged listener ports are required.
 - No software can make a CGNAT-only device accept unsolicited public traffic without a publicly reachable gateway or external tunnel provider.
 - Source presence, successful compilation and CI tests are not the same as physical-device or public-domain acceptance.
 - Preserve Pocket Host Design Language V1; this audit does not authorize a redesign.
@@ -47,7 +47,7 @@
 
 ## Public hosting direction without a VPS
 
-v0.1.0 must deliver a standalone AssayFlux Relay Node installable on native Android; Linux-native installation is v0.1.1, independent of the fleet control plane, PostgreSQL and Docker. The user can host it on their own spare phone or home machine **only if** the network provides public IPv4 with port forwarding or globally routed IPv6 and firewall access for the public listener. A device behind CGNAT without global IPv6 cannot be the public gateway. The Android website host itself can remain behind CGNAT because it connects outbound to the Relay Node.
+v0.1.0 must deliver the native Android Relay service inside the main Pocket Host APK: Kotlin foreground service + Rust/Tokio engine through JNI, independent of the fleet control plane, PostgreSQL and Docker. The owner can enable it on an Android device **only if** the network provides public IPv4 with forwarding or globally routed IPv6 plus edge forwarding/proxying to the app's unprivileged listener ports. A device behind CGNAT without global IPv6 or inbound forwarding cannot be the public gateway. A separate website-host phone can remain behind CGNAT because it connects outbound to the Relay.
 
 Cloudflare Tunnel remains an optional fallback, not a dependency of the first-party Relay.
 
@@ -56,7 +56,7 @@ Cloudflare Tunnel remains an optional fallback, not a dependency of the first-pa
 - [Quality workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819401) on historical source commit `0784b3294f2de9f435479c7a290f336e85b78df0`: Rust tests, PostgreSQL/control-plane tests and migrations, Caddy/Compose validation, Python/Linux agent tests, Node metrics smoke test, web-console TypeScript/Vite build and Gradle wrapper validation passed.
 - [Protocol contract workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294) on historical source commit `0784b3294f2de9f435479c7a290f336e85b78df0`.
 - [Android integration workflow — success](https://github.com/AssayFlux/PocketHost/actions/runs/44079487947) on code commit `5d90c1d`: cloudflared Android builds/ELF checks and Kotlin/instrumentation-source compilation passed. APK packaging and emulator jobs were skipped.
-- No main APK build, signed release, physical-device test, live Cloudflare hostname test, standalone Relay Node deployment or external public-domain acceptance is recorded.
+- No signed release APK, physical-device Relay-service test, live Cloudflare hostname test, native Relay public-domain deployment or external public-domain acceptance is recorded.
 
 See [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md) for the historical file-level inventory and current-tree delta.
 
