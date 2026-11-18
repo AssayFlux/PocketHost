@@ -8,7 +8,7 @@
 - Branch: `Alpha`
 - Historical detailed-inventory source commit: `4185ea0f5e258c0d4c024f79de0a59f4757af9af`
 - Current Alpha source head checked: `0784b3294f2de9f435479c7a290f336e85b78df0`
-- Snapshot date: 2026-11-17
+- Snapshot date: 2026-11-18
 - Historical tracked files at the detailed-inventory snapshot: **252**
 - Historical tracked directories at that snapshot: **71**
 - Current tracked files at Alpha head: **257**

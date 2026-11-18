@@ -53,7 +53,7 @@ In scope:
 - External verification from mobile data or an unrelated network, including DNS, TLS, expected site content and management-route isolation.
 - Foreground hosting service, visible notification, start/stop/restart and Android lifecycle behavior.
 - Permission, network, battery and thermal-state feedback.
-- Existing encrypted full-app backup/restore and interrupted activation recovery, with the backup/import capacity mismatch explicitly resolved before release.
+- Existing encrypted full-app backup/restore and interrupted activation recovery, with the backup capacity documented against source limits; near-limit device acceptance required.
 - Diagnostics for host startup, import failure and visitor connection.
 - APK build, install, fresh-install/upgrade checks and physical Android acceptance.
 
