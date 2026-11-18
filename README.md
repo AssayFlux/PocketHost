@@ -122,7 +122,7 @@ The first release has one primary promise: **a website imported into Pocket Host
 - HTML, CSS, browser JavaScript and static assets.
 - Local phone preview, configurable HTTP port and optional LAN binding.
 - A second device on the same Wi-Fi can open the website.
-- Public custom-domain hosting through Cloudflare Tunnel or the owner-operated AssayFlux Relay Node.
+- Public custom-domain hosting through Cloudflare Tunnel or the native Android AssayFlux Relay service bundled in the Pocket Host APK.
 - Public HTTP and HTTPS with valid edge TLS; HTTP redirects to HTTPS by default. Plain HTTP content serving is a target opt-in; the current Relay edge does not implement that opt-in.
 - The native Android Relay does not require a paid VPS, but its device needs a public IPv4 path with port forwarding or globally routed IPv6 plus edge forwarding to the app's unprivileged listener ports. CGNAT without global IPv6 cannot accept inbound visitors.
 - External DNS/TLS/content verification and strict separation between visitor and management routes.
@@ -242,7 +242,7 @@ The Android module declares min SDK 26, target SDK 35 and native ABI targets arm
 |---|---|---|
 | Android phone/tablet | Pocket Host main app | Hosting foundation present; physical acceptance open |
 | Android runtime provider | Separate companion APK | Python + Node integrations in progress |
-| Android phone/tablet | Pocket Host Relay service | Planned Kotlin foreground service + Rust JNI engine bundled in the main APK; native gateway implementation and public acceptance remain open; public IP/IPv6 plus edge forwarding required
+| Android phone/tablet | Pocket Host Relay service | Planned Kotlin foreground service + Rust JNI engine bundled in the main APK; native gateway implementation and public acceptance remain open; public IP/IPv6 plus edge forwarding required |
 | Owner-owned Linux device | Relay Node package and service | v0.1.1; Linux-native installer, service integration and support matrix deferred |
 | Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
 | Windows / macOS | Native worker agent | Planned |
