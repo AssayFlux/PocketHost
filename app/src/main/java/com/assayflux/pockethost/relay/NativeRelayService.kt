@@ -33,6 +33,8 @@ class NativeRelayService : Service() {
     private lateinit var connectivity: ConnectivityManager
     @Volatile private var stopping = false
     @Volatile private var ownerRequestedRunning = false
+    private val renewalScheduler = Executors.newSingleThreadScheduledExecutor()
+    private var renewalTask: ScheduledFuture<*>? = null
     @Volatile private var activeNetwork: Network? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
