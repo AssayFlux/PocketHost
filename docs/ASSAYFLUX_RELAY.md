@@ -98,6 +98,10 @@ These are current source-level limits, not tested production throughput guarante
 7. Add public IPv4/IPv6, DNS, TLS, CGNAT, restart, reconnect and external-network tests.
 8. Document that a publicly reachable owner-controlled network endpoint is mandatory; a paid VPS is not.
 
+## Linux-native installation — v0.1.1
+
+Linux-native Relay installation is not a v0.1.0 release blocker. The v0.1.1 implementation must define supported distributions and CPU architectures, package the standalone node, provide an installer plus upgrade/uninstall behavior, integrate a hardened service lifecycle, keep credentials outside command-line arguments and logs, and document firewall/DNS/TLS requirements. Every declared Linux target must pass clean install, upgrade, restart, reconnect and external visitor acceptance before being listed as supported. The Linux installer must not be represented as available before those checks pass.
+
 ## Security and privacy
 
 - Verify domain ownership before issuing public TLS or forwarding visitor traffic.
