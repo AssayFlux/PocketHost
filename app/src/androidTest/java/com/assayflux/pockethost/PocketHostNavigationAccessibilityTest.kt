@@ -36,11 +36,7 @@ class PocketHostNavigationAccessibilityTest {
         val visitorSiteId = "ui-visitor-" + System.nanoTime()
         val visitorHostname = "ui-" + System.nanoTime() + ".local"
         val visitorSiteRoot = File(context.filesDir, "ui-visitor-site-${System.nanoTime()}")
-        val owner = com.assayflux.pockethost.management.HostAccountStore.list(context).firstOrNull { it.role == "OWNER" }
-            ?: com.assayflux.pockethost.management.HostAccountStore.create(
-                context, "uiowner", "PocketHost-UI-Owner-Password-42".toCharArray(), "OWNER"
-            )
-        PocketHostOwnerSession.username = owner.username
+        PocketHostUiTestLogin.ensureOwnerAccount(context)
         val device = UiDevice.getInstance(instrumentation)
         val screenshotDir = File(checkNotNull(context.getExternalFilesDir(null)), "screenshots")
         assertTrue(screenshotDir.mkdirs() || screenshotDir.isDirectory)
@@ -77,6 +73,7 @@ class PocketHostNavigationAccessibilityTest {
                 enabled = true
             ))
             ActivityScenario.launch(MainActivity::class.java).use {
+            PocketHostUiTestLogin.signInIfRequired(device)
             val firstDrawer = device.wait(Until.findObject(By.desc("Open app navigation")), 10_000)
             assertTrue("Hamburger navigation control is missing", firstDrawer != null)
             firstDrawer!!.click()
@@ -153,15 +150,12 @@ class PocketHostNavigationAccessibilityTest {
         val context = instrumentation.targetContext
         val registry = context.getSharedPreferences("pockethost_site_registry", 0)
         val previousRegistry = registry.getString("sites", "[]") ?: "[]"
-        val owner = com.assayflux.pockethost.management.HostAccountStore.list(context).firstOrNull { it.role == "OWNER" }
-            ?: com.assayflux.pockethost.management.HostAccountStore.create(
-                context, "uiowner", "PocketHost-UI-Owner-Password-42".toCharArray(), "OWNER"
-            )
-        PocketHostOwnerSession.username = owner.username
+        PocketHostUiTestLogin.ensureOwnerAccount(context)
         val device = UiDevice.getInstance(instrumentation)
         try {
             registry.edit().putString("sites", "[]").commit()
             ActivityScenario.launch(MainActivity::class.java).use {
+                PocketHostUiTestLogin.signInIfRequired(device)
                 val menu = device.wait(Until.findObject(By.desc("Open app navigation")), 20_000)
                 assertTrue("Hamburger navigation control is missing", menu != null)
                 menu!!.click()
