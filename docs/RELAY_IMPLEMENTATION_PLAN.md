@@ -47,7 +47,7 @@ This plan is the execution checklist for the approved native Android Relay archi
 - [x] Select Rustls with the ring crypto provider and add a native HTTPS listener; Android ABI verification remains pending.
 - [ ] Implement certificate/key generation, automatic ACME issuance/renewal and expiry monitoring. The current engineering import accepts an owner-supplied PEM certificate/key.
 - [x] Require a DNS TXT ownership challenge at startup before activating configured host routes.
-- [ ] Persist hostname/site/host binding and verification/revocation state in durable standalone storage; the current encrypted configuration is a temporary persistence layer.
+- [x] Persist encrypted hostname/site/host configuration in transactional SQLite and record host revocations in a separate transactional table; migration/corruption recovery tests remain pending.
 - [ ] Keep unknown, unverified, expired and revoked hostnames fail-closed; DNS TXT is currently rechecked at startup, while certificate expiry/revocation lifecycle remains open.
 - [x] Redirect HTTP to HTTPS when TLS is configured.
 - [x] Keep plaintext host-session authentication disabled on public interfaces; public binding requires TLS material and verified DNS TXT routes.
@@ -56,10 +56,10 @@ This plan is the execution checklist for the approved native Android Relay archi
 
 - [x] Generate a stable P-256 node identity protected by Android Keystore; expose only its public identity and domain-separated challenge signatures.
 - [ ] Implement short-lived, single-use, owner-approved pairing.
-- [ ] Issue independent high-entropy host ingress credentials; store only verifiers on the Relay node.
-- [ ] Store host-side credentials encrypted by that host device's Android Keystore.
-- [ ] Implement rotation, individual revocation, node reset and disconnect.
-- [ ] Persist state transactionally and recover fail-closed after corruption or interrupted writes.
+- [x] Issue 256-bit host ingress credentials in the owner UI; persist only SHA-256 verifiers in the encrypted node config.
+- [x] Reuse the dedicated host-side RelayCredentialStore, which encrypts credentials with that host device's Android Keystore.
+- [x] Implement host credential rotation and individual revocation; revocation removes the host's routes and persists a tombstone. Node-reset ceremony and live-disconnect integration tests remain open.
+- [x] Commit config replacement and host-revocation tombstones in SQLite transactions; corruption/interrupted-write recovery tests remain open.
 
 ### R4 — End-to-end integration and hardening
 
@@ -96,6 +96,6 @@ Android non-root applications cannot bind privileged ports 80/443 directly. The 
 
 ## Current engineering checkpoint
 
-The Rust gateway and JNI lifecycle boundary, Rustls HTTPS listener, DNS TXT startup verification, Android Keystore-backed encrypted configuration, P-256 node identity, foreground service, initial owner controls and owner-enabled boot recovery are present in source. Visitor path validation now rejects reserved control namespaces and common encoded/double-encoded traversal forms. These are engineering milestones, not release acceptance. Owner-approved pairing, credential issuance/rotation/revocation, ACME issuance/renewal, durable transactional route/revocation state, continuous DNS proof lifecycle, network-change recovery, integrated isolation/lifecycle tests, ABI/APK verification and physical/public-network acceptance remain open.
+The Rust gateway/JNI boundary, Rustls listener, startup DNS TXT verification, Android Keystore P-256 node identity, foreground service, owner-enabled boot recovery and network-change listener recovery are present in source. Relay node configuration (including host verifiers and route bindings) is encrypted and stored in transactional SQLite; host credential issuance/rotation and individual revocation with durable tombstones are exposed in the owner UI. Visitor path validation and Android credential-store instrumentation tests have been added. These are engineering milestones, not release acceptance. Short-lived single-use pairing, ACME issuance/renewal, continuous DNS proof lifecycle, integrated visitor/owner isolation and live-revocation tests, Android ABI/APK verification and physical/public-network acceptance remain open.
 
 **Release rule:** no G0–G9 gate is considered PASS based on this plan, a source file, compilation or emulator-only evidence. v0.1.0 remains open until every required gate is evidenced and the owner accepts the physical-device/public-network results.
