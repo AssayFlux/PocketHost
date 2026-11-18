@@ -91,7 +91,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, Cloudflare Tunnel and the native Android AssayFlux Relay service are separate ingress paths. The Android host client has independent credentials; the native inbound Relay engine and service integration remain to be implemented and accepted in v0.1.0. Linux-native packaging remains v0.1.1.
+      Local Network, Cloudflare Tunnel and the native Android AssayFlux Relay service are separate ingress paths. The Android host client has independent credentials; an initial native HTTP gateway/JNI foundation is now present, but TLS, Android foreground-service integration, durable identity/credentials and public acceptance remain open. Linux-native packaging remains v0.1.1.
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -177,7 +177,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
 | Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
 | Cloudflare Tunnel | <code>app/.../tunnel/</code> + native connector | Outbound public ingress for custom domains | v0.1.0 |
-| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Native Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK is the v0.1.0 target; native gateway/service integration is not yet implemented; Linux-native packaging is deferred to v0.1.1 | v0.1.0 |
+| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Initial Rust gateway/JNI source and Gradle native build task exist; TLS, service lifecycle, identity, persistence and acceptance remain open; Linux-native packaging is deferred to v0.1.1 | v0.1.0 |
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
@@ -220,7 +220,7 @@ The audit findings and remediation register are maintained in [Remediation Audit
 
 The current Alpha source tree contains 260 tracked files across 72 directories after the dependency-lock commit. The previous audit snapshot at `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contained 259 tracked files; the historical remediation snapshot contained 260 blobs including its audit register: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
 
-**Important:** the native Android Relay engine and foreground service are not implemented in the Pocket Host APK yet. The Android Relay agent now uses independent encrypted host credentials; the gateway implementation remains coupled to the fleet control-plane process/PostgreSQL. Linux-native installation is deferred to v0.1.1. The approved Kotlin foreground-service + Rust/JNI implementation plan is [Native Android Relay Architecture](docs/NATIVE_ANDROID_RELAY.md). The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
+**Important:** an initial standalone native Android Relay HTTP gateway and JNI build target now exist, but the listener is restricted to loopback. TLS, Android foreground-service integration, DNS ownership, independent node identity/pairing, durable route state and public acceptance are still incomplete. The existing host-side RelayAgent remains distinct from the inbound gateway. Linux-native installation is deferred to v0.1.1. The approved Kotlin foreground-service + Rust/JNI implementation plan is [Native Android Relay Architecture](docs/NATIVE_ANDROID_RELAY.md). The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
 
 ## ANDROID APPLICATION
 
