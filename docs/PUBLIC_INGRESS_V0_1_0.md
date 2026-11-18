@@ -8,7 +8,7 @@
 An owner imports a static website into the Android host and makes it reachable from ordinary Internet-connected browsers using the owner's domain. v0.1.0 has two public-ingress paths:
 
 1. **Cloudflare Tunnel:** optional third-party tunnel integration using an owner-managed Cloudflare account and named tunnel.
-2. **AssayFlux Relay:** first-party, owner-operated relay gateway. It must be separately installable on owner-controlled hardware, including Termux/Android and Linux targets. A paid VPS, Cloudflare account or other managed relay provider must not be a product prerequisite.
+2. **AssayFlux Relay:** first-party, owner-operated relay gateway. It must be separately installable on owner-controlled hardware, on Termux/Android. Linux-native packaging and service installation are v0.1.1. A paid VPS, Cloudflare account or other managed relay provider must not be a product prerequisite.
 
 The Android website host may sit behind mobile carrier NAT. It maintains an outbound authenticated connection to the owner-operated Relay Node. Visitors connect to the Relay Node's public hostname; the gateway forwards bounded website requests over that established connection.
 
@@ -56,7 +56,7 @@ A hostname is assigned to one provider at a time. Separate hostnames may use sep
 
 Target v0.1.0 contract:
 
-- Standalone Relay Node installable on Termux/Android and Linux; no Docker or PostgreSQL requirement.
+- Standalone Relay Node installable on Termux/Android; no Docker or PostgreSQL requirement. Linux-native installation is v0.1.1.
 - Separate from the full fleet control plane and its owner/admin APIs.
 - Owner-controlled listener on public TCP 80/443, or another explicitly configured public ingress arrangement.
 - Owner proves domain control, binds hostname → site → host identity, and can revoke that binding.
@@ -108,12 +108,12 @@ The target standalone Relay may retain or revise these limits only through expli
 
 | Gate | Required evidence |
 |---|---|
-| G0 | Freeze domain/provider/HTTP/HTTPS behavior, public network topology, Termux/Linux target matrix, DNS, TLS and CGNAT guidance |
+| G0 | Freeze domain/provider/HTTP/HTTPS behavior, public network topology, Termux/Android target matrix; Linux target matrix is v0.1.1, DNS, TLS and CGNAT guidance |
 | G1 | Threat model for domain proof, host credentials, TLS, visitor/admin isolation, abuse controls, NAT boundary and owner data |
 | G2 | Cloudflare integration plus standalone Relay Node, independent host credentials, hostname binding/revocation, Termux service lifecycle and safe request routing |
 | G3 | Tests for domain proof, route ownership, credential rotation/revocation, request limits, timeouts, redirects and negative cases |
-| G4 | Main APK plus versioned Relay Node artifact(s) for declared Termux/Linux targets, with hashes and provenance |
-| G5 | Fresh install/upgrade and service lifecycle on named Android/Termux/Linux targets |
+| G4 | Main APK plus versioned Relay Node artifact(s) for declared Termux/Android target, with hashes and provenance |
+| G5 | Fresh install/upgrade and service lifecycle on named Android/Termux targets; Linux install/upgrade acceptance is v0.1.1 |
 | G6 | Owner's real hostname reaches expected website from an independent network through each enabled provider; valid HTTPS, HTTP redirect, correct content and management-route denial |
 | G7 | Screen-off/Doze where applicable, network transitions, CGNAT guidance, gateway restart, host reconnect and provider-failure isolation |
 | G8 | No secret leakage, verified domain ownership, valid TLS, visitor-only routes, bounded resource use and abuse handling |

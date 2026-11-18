@@ -1,7 +1,7 @@
-# Android Device Trust Implementation — v0.2.0 Workstream
+# Android Device Trust Implementation — v0.1.2 Workstream
 
 **Status:** implementation foundation committed; end-to-end device-fabric acceptance remains open.  
-**Release assignment:** v0.2.0.
+**Release assignment:** v0.1.2.
 
 ## Existing Android foundation
 
@@ -35,7 +35,7 @@
 ### Control-plane preview
 The app has a preview control-plane client foundation for bootstrap/session exchange, worker registration, signed grant/health-check command queueing and bounded command history/result display. This is not yet end-to-end production device enrollment.
 
-## Remaining v0.2.0 work
+## Remaining v0.1.2 work
 
 1. Per-use owner key authentication and protected key lifecycle.
 2. Authenticated transport/mutual device identity.

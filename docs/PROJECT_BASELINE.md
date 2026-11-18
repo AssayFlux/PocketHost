@@ -1,6 +1,6 @@
 # Pocket Host — Project Baseline
 
-**Current source snapshot:** branch `Alpha`, commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`, checked 2026-11-18. Current recursive Git tree: 259 tracked files across 72 directories. The remediation branch contains follow-up source changes and one additional audit document (260 blobs, 72 directories at the recorded snapshot); see `docs/REMEDIATION_AUDIT.md`. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
+**Current source snapshot:** branch `Alpha`, commit `9debd9b630d460c5feed92d07b3c20da319a9e4d`, checked 2026-11-18. The complete recursive Git tree contains 260 tracked files across 72 directories. The detailed 252-file path inventory below originated at `4185ea0` and is historical; see [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md) for the later snapshot deltas and exact commit identities. Audit findings remain in [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).  
 **Complete file-level record:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md). That document lists every tracked file and directory, module boundaries, source status, exact limits and verification evidence.
 
 ## Product invariants
@@ -25,12 +25,12 @@
 | Cloudflare Tunnel | Android token store, cloudflared process, readiness probe, reconnect supervisor, Settings controls, build script | Connector source/build present; public hostname/DNS/TLS acceptance open |
 | AssayFlux Relay client | Android outbound SSE request/response agent, dedicated Android Keystore-backed `RelayCredentialStore`, independent Network settings controls | Android-side configuration and credentials are independent of RemoteControlAgent; node-side credential issuance and live public acceptance remain open |
 | AssayFlux Relay gateway | Rust visitor handler, DNS TXT proof, hostname routes, separate visitor listener, Caddy TLS | Exists inside full control-plane process; PostgreSQL and fleet credentials required; not standalone |
-| Relay Node for Termux/Linux | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host credential issuer, installer, service unit or Termux lifecycle; not runnable and not release-ready |
+| Relay Node for Termux/Android | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host credential issuer, installer, service unit or Termux lifecycle; not runnable and not release-ready; v0.1.0 target is Termux/Android, Linux-native install is v0.1.1 |
 | Runtime companion | Separate APK with CPython 3.11/Chaquopy and Node.js mobile 24.22.1/JNI | Both in same companion APK, in progress; not hardened sandbox |
 | Runtime Library | 20 catalog JSON manifests | Python/Node in progress; remaining 18 planned metadata only |
 | Browser console | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; remote control and Relay hostname panel | Separate browser app; build passes; not an Android runtime |
-| Android device trust | P-256 identity, challenge/proof and grant foundations | In progress; v0.2.0 acceptance |
-| Linux agent | Python package, P-256 identity, HTTPS polling, SQLite job store, typed jobs | Preview; v0.2.0 acceptance |
+| Android device trust | P-256 identity, challenge/proof and grant foundations | In progress; v0.1.2 acceptance |
+| Linux agent | Python package, P-256 identity, HTTPS polling, SQLite job store, typed jobs | Preview; v0.1.2 acceptance |
 | Control plane | Rust/Axum, PostgreSQL migrations, admin sessions/passkeys, device commands, audit, Relay visitor listener | Source/tests present; combined fleet/Relay executable; full fleet acceptance open |
 | Protocol | Protocol 1.0 schemas, default-deny role/job policies and validators | Contract tests pass; device-fabric integration incomplete |
 
@@ -47,7 +47,7 @@
 
 ## Public hosting direction without a VPS
 
-v0.1.0 must deliver a standalone AssayFlux Relay Node installable on Termux/Android and Linux, independent of the fleet control plane, PostgreSQL and Docker. The user can host it on their own spare phone or home machine **only if** the network provides public IPv4 with port forwarding or globally routed IPv6 and firewall access for the public listener. A device behind CGNAT without global IPv6 cannot be the public gateway. The Android website host itself can remain behind CGNAT because it connects outbound to the Relay Node.
+v0.1.0 must deliver a standalone AssayFlux Relay Node installable on Termux/Android; Linux-native installation is v0.1.1, independent of the fleet control plane, PostgreSQL and Docker. The user can host it on their own spare phone or home machine **only if** the network provides public IPv4 with port forwarding or globally routed IPv6 and firewall access for the public listener. A device behind CGNAT without global IPv6 cannot be the public gateway. The Android website host itself can remain behind CGNAT because it connects outbound to the Relay Node.
 
 Cloudflare Tunnel remains an optional fallback, not a dependency of the first-party Relay.
 

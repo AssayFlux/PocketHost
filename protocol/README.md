@@ -1,7 +1,7 @@
 # Pocket Host Interoperability Protocol
 
 **Protocol ID:** pockethost.device/1.0  
-**Release assignment:** v0.2.0 Connected Device Fabric
+**Release assignment:** v0.1.2 Connected Device Fabric
 
 This directory contains the machine-readable contracts shared by Android Pocket Host, the optional control plane and separately installed device agents. Implementations must consume the schemas and policies here rather than inventing platform-specific message formats.
 
@@ -28,6 +28,6 @@ Candidate agent presents identity and proof. Mobile owner verifies and approves 
 
 The mobile device remains the website-serving node in both operating modes. server_only disables fleet administration; command_center_server enables it. Neither mode creates a standalone command-center-only configuration.
 
-Static website serving does not depend on this protocol, control plane or remote agents. The protocol is used for the v0.2.0 connected device fabric. Python/Node runtime companion IPC is a separate Android integration and must not be confused with the cross-device agent protocol.
+Static website serving does not depend on this protocol, control plane or remote agents. The protocol is used for the v0.1.2 connected device fabric. Python/Node runtime companion IPC is a separate Android integration and must not be confused with the cross-device agent protocol.
 
 See [Device Trust and Protocol](../docs/STEP_1_TRUST_AND_PROTOCOL.md), [Host Agent Contract](../docs/HOST_AGENT_CONTRACT.md) and [Release Gates](../docs/RELEASE_GATES.md).

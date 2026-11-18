@@ -1,7 +1,7 @@
 # Python Runtime — Existing Companion Implementation
 
 **Status:** IN PROGRESS  
-**Release assignment:** v0.1.1 — Workbench & Runtime Development  
+**Release assignment:** v0.1.1 — Workbench, Runtime & Linux Relay Installation  
 **Location:** runtime-worker/
 
 ## 1. Placement

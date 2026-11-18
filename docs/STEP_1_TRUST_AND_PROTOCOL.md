@@ -1,7 +1,7 @@
-# Device Trust and Protocol Contract — v0.2.0 Foundation
+# Device Trust and Protocol Contract — v0.1.2 Foundation
 
 **Protocol:** pockethost.device/1.0  
-**Release assignment:** v0.2.0 — Connected Device Fabric  
+**Release assignment:** v0.1.2 — Connected Device Fabric  
 **Normative machine-readable source:** protocol/
 
 This document defines the shared trust contract for Android owner app, separately installed agents and the optional control plane. It is not a v0.1.0 static hosting dependency.
@@ -59,4 +59,4 @@ Rogue/cloned devices, pairing replay, stolen phone, role escalation, compromised
 
 ## 9. Acceptance
 
-Schema/policy validation is necessary but not sufficient. v0.2.0 must prove end-to-end owner enrollment, authenticated transport, role grant, job execution, revocation and reconnect on a real second device. Use G0–G9.
+Schema/policy validation is necessary but not sufficient. v0.1.2 must prove end-to-end owner enrollment, authenticated transport, role grant, job execution, revocation and reconnect on a real second device. Use G0–G9.

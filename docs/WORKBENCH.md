@@ -1,6 +1,6 @@
 # Pocket Host Workbench — v0.1.1 Specification
 
-**Release assignment:** v0.1.1 — Workbench & Runtime Development  
+**Release assignment:** v0.1.1 — Workbench, Runtime & Linux Relay Installation  
 **Current repository status:** initial workspace/editor foundation exists; acceptance remains open.
 
 ## 1. Product promise

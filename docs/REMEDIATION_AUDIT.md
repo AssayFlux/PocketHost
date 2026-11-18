@@ -3,7 +3,7 @@
 **Audit date:** 2026-11-18  
 **Repository:** `AssayFlux/PocketHost`  
 **Protected source branch:** `Alpha`  
-**Remediation branch:** `audit/remediation-baseline-2026-11`  
+**Historical remediation branch:** `audit/remediation-baseline-2026-11` (no longer the active work branch; its recorded code commits are ancestors of Alpha commit `2a5193d1acdbe36cdff8c70eb420693029f898a6`)  
 **Starting source commit:** `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`  
 **Starting recursive tree:** 259 blobs, 72 directories; GitHub reported `truncated=false`.
 
@@ -76,3 +76,40 @@ MB is decimal; MiB is binary. Do not call 500,000,000 bytes 500 MiB.
 ## 6. Audit limitations
 
 This is a source/configuration audit with targeted cross-file tracing, not a formal penetration test, full compiler run or exhaustive manual line-by-line proof of every file. The starting Git tree was complete (not truncated), but audit depth varies by subsystem. No production credentials, deployment environment, physical device or live public Relay endpoint were exercised.
+
+
+## 7. Follow-up deep-audit findings and release placement
+
+The following issues were identified in the subsequent code/UI/build review. They are distinct from PH-001–PH-010 above. Unless a row explicitly says otherwise, these remain OPEN and must not be treated as fixed. The release assignment below is the planning target; the implementation must be rechecked against current source before a fix is committed.
+
+| ID | Priority | Classification | Finding / affected area | Required correction and regression proof | Release |
+|---|---|---|---|---|---|
+| PH-011 | P0 | v0.1.0 product blocker | No standalone AssayFlux Relay Node executable, listener, node-side credential issuer, durable store or Termux installer exists; `relay-node/` is a manifest scaffold. Current gateway is coupled to fleet control-plane/PostgreSQL. | Implement a standalone visitor-only Termux/Android node with independent host identity/credentials, durable hostname/site binding, bounded forwarding, restart recovery, installer/service lifecycle and real external-network acceptance. | v0.1.0 |
+| PH-012 | P0 | Security defect | Static-site import filtering is incomplete for common credential files/directories such as `.aws/credentials`, `.npmrc`, `.git-credentials`, `.docker/config.json`, service-account files and kubeconfig. The server can serve ordinary dotfiles. | Centralize sensitive-path policy across folder/ZIP/single-file import, create/rename, backup restore and serving. Add secret-file fixtures and prove they cannot be imported or served. | v0.1.0 |
+| PH-013 | P0 | Public-ingress security defect | Caddy does not establish a narrowly scoped trusted-proxy chain for Cloudflared; visitor IP forwarding can collapse to the Cloudflared container address. | Trust only the exact configured Cloudflared peer ranges and derive the visitor address from verified proxy metadata. Add integration tests for spoofed/untrusted peers and distinct visitor rate-limit buckets. | v0.1.0 |
+| PH-014 | P1 | Mode-enforcement defect | Server Only mode changes a preference/UI but HostingService still starts RemoteControlAgent when credentials exist. | Enforce the operating mode in service start/stop and agent polling/command execution; switching to Server Only must stop fleet management while leaving website serving and public visitor ingress intact. | v0.1.0 |
+| PH-015 | P1 | Archive-integrity defect | Full-app backup restore has weaker ZIP collision checks than SiteImporter, including case-folded and file/directory prefix conflicts. | Reuse one portable archive validator for imports and backup restore; add duplicate, case-only, explicit/implicit directory and file-as-parent tests. | v0.1.0 |
+| PH-016 | P1 | Android security hardening | Rust local loopback client-IP logic trusts `CF-Connecting-IP` from any loopback peer, allowing another local app to forge the rate-limit identity. | Do not trust client-supplied forwarding headers from arbitrary loopback clients. Introduce an authenticated local proxy contract or use the socket peer; test spoof attempts. | v0.1.0 |
+| PH-017 | P1 | Android build/release gap | Android integration workflow does not run on pull requests, so the quality PR workflow can pass without compiling the Android app. | Add Android compile/instrumentation coverage to PR CI, explicit ABI selection and required status checks; prove a deliberately broken Kotlin change fails before merge. | v0.1.0 |
+| PH-018 | P1 | UI/security/reliability | MainActivity polling is not lifecycle-aware; status refresh can overwrite transient operation feedback. Accessibility contrast and font-size issues remain, and screenshot smoke coverage can pass without verifying rendered content. | Use lifecycle-aware state collection, separate persistent service status from transient messages, fix contrast/scale, and strengthen UI tests to wait for stable content and assert meaningful UI semantics/screenshots. | v0.1.0 |
+| PH-019 | P1 | Data-integrity defect | Website file manager lists only the first 150 paths and stops at depth 8 while importer accepts larger/deeper trees. | Add paginated/searchable navigation and a visible completeness indicator; test sites exceeding 150 entries and depth 8. | v0.1.0 |
+| PH-020 | P1 | Build/reliability defect | Control-plane `cargo check --locked` failed in the latest observed quality workflow; exact failure cause was not captured in the audit record. | Retrieve and record the failing compiler output, correct the root cause, and require locked check/test success. Do not guess the cause or waive the failure. | v0.1.2 |
+| PH-021 | P1 | Reliability/security | Linux agent timeout and memory budgets are validated but not enforced by OS/process limits; storage hashing reads entire files into memory. | Apply process/OS resource limits, stream hashing, and test timeout/OOM/large archive behavior. | v0.1.2 |
+| PH-022 | P1 | Data lifecycle | Failed/expired remote deployment commands can leave uploaded artifact files/rows behind; device command and audit-event tables have no demonstrated retention policy. | Add lifecycle-aware cleanup, quotas, orphan reconciliation and bounded audit/command retention with tests for failed, expired and abandoned deployments. | v0.1.2 |
+| PH-023 | P2 | Workbench correctness | Workbench change summaries accept a live root but compare against an older baseline, so live-site drift can be missed. | Compare against the current live release or explicitly reject stale base revisions; test production changes made outside Workbench. | v0.1.1 |
+| PH-024 | P2 | Workbench data integrity | Workbench rename moves a file before validation and does not restore it if validation fails. | Validate in staging or roll back the move on failure; test invalid destination names and filesystem errors. | v0.1.1 |
+| PH-025 | P2 | Workbench capacity consistency | Workbench workspace cap is 50 MiB while website import/hosting supports up to 500,000,000 bytes; the lower limit is not prominent in UI. | Either align the capacity with measured device budgets or disclose the lower Workbench limit before opening a project; test boundary behavior. | v0.1.1 |
+| PH-026 | P2 | Runtime isolation / product claim | Python and Node execute under a shared companion UID; the network sandbox probe is not wired into ordinary customer execution. This is a documented design limitation, not proof of an exploit. | Either implement and verify per-project OS isolation, egress restrictions and resource quotas, or explicitly constrain supported use to trusted owner code and remove sandbox/security claims. | v0.1.1 |
+| PH-027 | P2 | Web-console hardening | Web console has no dedicated test/lint scripts; it polls while hidden, imports Google Fonts, and the repository does not define a CSP (deployment may add one). | Add UI tests/lint, visibility-aware polling, document font/privacy dependency, and verify/set CSP at the actual hosting edge. | v0.1.2 |
+| PH-028 | P2 | Maintainability | MainActivity is approximately 1,457 lines and mixes navigation, state, polling, import, pairing and remote actions. CSS is heavily compressed. | Extract ViewModels/use cases and format styles without changing approved design; require UI regression coverage. | v0.1.1 |
+| PH-029 | P2 | Runtime/agent scope gap | Linux agent executor implements only a subset (4 of 9) of schema job kinds; unsupported jobs are default-denied. | Keep unsupported jobs explicitly rejected, document the accepted subset and implement additional kinds only with role-specific resource and negative tests. | v0.1.2 |
+| PH-030 | P2 | Relay reliability | Existing RelayHub keeps active sessions and pending requests in memory; gateway restart loses them. | Use durable route/session recovery semantics and reconnect-safe request handling; test node restart with active and pending traffic. | v0.1.0 |
+| PH-031 | P1 | Acceptance evidence gap | No recorded physical Android device and independent public-network acceptance proves the full v0.1.0 journey yet. | Complete the G0–G9 acceptance matrix on named hardware and external networks; record artifact hashes, DNS/TLS/content and management-route isolation evidence. | v0.1.0 |
+
+## 8. Required implementation order
+
+1. Close v0.1.0 public-ingress and static-site security blockers first: PH-011–PH-019 and PH-030–PH-031.
+2. Complete v0.1.0 Android build, physical-device, recovery and external-network acceptance; keep G0–G9 open until evidence is recorded.
+3. Complete v0.1.1 Workbench and optional runtime corrections: PH-023–PH-026 and PH-028.
+4. Complete v0.1.2 fleet/control-plane and Linux-agent hardening: PH-020–PH-022, PH-027 and PH-029.
+5. After v0.1.0 gates all pass and the owner approves the release, lock the exact commit/artifacts under the policy in [RELEASE_BASELINE_POLICY.md](RELEASE_BASELINE_POLICY.md). No later feature or ordinary fix is committed to that baseline.

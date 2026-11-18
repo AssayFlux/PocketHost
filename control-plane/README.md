@@ -1,6 +1,6 @@
 # Pocket Host — Fleet Control Plane Source
 
-**Release placement:** v0.2.0 fleet control plane.  
+**Release placement:** v0.1.2 fleet control plane.  
 **Current source:** Rust/Axum fleet API and a partially integrated Relay visitor gateway share this executable. This repository directory is not yet the standalone Termux Relay Node product.
 
 ## What is present
@@ -42,7 +42,7 @@ The GitHub deployment workflow is manual and requires an SSH host, user, path, d
 
 The first-party Relay must be extracted into a separately installable owner-operated Relay Node:
 
-- Termux/Android and Linux targets.
+- Termux/Android in v0.1.0; Linux-native installation in v0.1.1.
 - No paid VPS, Docker or PostgreSQL prerequisite.
 - Independent Relay host identity and revocable ingress credentials.
 - Durable hostname/site/host binding.
@@ -56,7 +56,7 @@ A public network endpoint is still required: public IPv4 with router port forwar
 
 The Android `RelayAgent` obtains its endpoint and host token from the dedicated `RelayCredentialStore`; `HostingService` starts Relay independently of remote-control configuration. The node-side credential issuer and standalone gateway remain unimplemented. v0.1.0 must give Relay its own configuration, host identity, credential rotation/revocation and lifecycle. Public website hosting must not require fleet enrollment or admin credentials.
 
-## v0.2.0 fleet control-plane scope
+## v0.1.2 fleet control-plane scope
 
 - Owner sessions/passkeys and role-based access.
 - Device registration, enrollment, approval, credential rotation and revocation.
