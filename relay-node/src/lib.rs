@@ -15,7 +15,7 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use base64::{engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD}, Engine as _};
 use futures_util::StreamExt;
 use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_ASN1};
 use rusqlite::{params, Connection, OptionalExtension};
@@ -302,9 +302,7 @@ impl RelayState {
     fn complete_pairing(&self, request: PairingRequest) -> Result<PairingResponse, StatusCode> {
         if request.invite_code.len() != 32
             || !request.invite_code.bytes().all(|byte| byte.is_ascii_hexdigit())
-            || request.credential_token.len() < 32
-            || request.credential_token.len() > 256
-            || request.credential_token.bytes().any(|byte| byte.is_ascii_whitespace()) {
+            || URL_SAFE_NO_PAD.decode(&request.credential_token).map(|token| token.len()).ok() != Some(32) {
             return Err(StatusCode::UNAUTHORIZED);
         }
         let device_id = Uuid::parse_str(&request.device_id).map_err(|_| StatusCode::BAD_REQUEST)?;
