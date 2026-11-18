@@ -2,7 +2,7 @@
 
 **Audited source branch:** `Alpha`  
 **Source snapshot:** `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` (259 tracked files, 72 directories)  
-**Remediation branch:** `audit/remediation-baseline-2026-11`  
+**Remediation branch:** `audit/remediation-baseline-2026-11` (260 tracked blobs, 72 directories at baseline snapshot)  
 **Audit date:** 2026-11-18  
 **Complete inventory:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md)
 
@@ -10,7 +10,7 @@
 
 Pocket Host is not a blank scaffold. The repository contains a Kotlin/Compose Android app, Rust static HTTP engine, website importer and backup manager, initial Workbench, Python/Node runtime companion, Android device-trust foundation, Linux agent preview, Rust/Axum fleet control plane, browser operator console, Cloudflare Tunnel integration and a partial first-party Relay visitor path.
 
-However, **the current Relay implementation is not yet the independent self-hosted Relay product the project needs**. It is coupled to the fleet control plane, PostgreSQL and remote-control device credentials. There is no standalone Termux Relay Node package or installer. The previous documentation described a VPS deployment as though it were the required product shape; that is corrected by this audit.
+However, **the current Relay implementation is not yet the independent self-hosted Relay product the project needs**. The gateway remains coupled to the fleet control plane and PostgreSQL, and uses fleet device credentials. The Android host-side RelayAgent already has an independent RelayCredentialStore and lifecycle. There is no standalone Termux Relay Node executable or installer. The previous documentation described a VPS deployment as though it were the required product shape; that is corrected by this audit.
 
 ## 2. Product and UI boundaries confirmed
 
@@ -20,7 +20,7 @@ However, **the current Relay implementation is not yet the independent self-host
 - General settings contain System/Light/Dark appearance, named classic themes, optional biometric app unlock and auto-start preference.
 - The biometric feature is a local app gate, not a mobile account login page. The browser console contains owner/admin session and passkey flows.
 - Main Android app has Cloudflare named-tunnel controls, local hostname-to-site routing and independent Relay endpoint/credential controls in Network settings. Relay credentials use a dedicated Android Keystore-backed AES-GCM store.
-- MainActivity's Network copy says no visitor password exists, but the Rust engine and SiteRegistry implement private/restricted visitor credentials and Basic auth. Correct the stale copy.
+- The LAN-access toggle warns that LAN access itself does not provide visitor authentication. Keep this warning unless end-to-end tests prove the selected LAN/IP route enforces the site's hostname-based private/restricted policy; do not imply that the UI toggle adds authentication.
 - Main app is vertically scrollable in its root content column; physical Android font scale, keyboard, safe-area, navigation and service behavior still need named-device acceptance.
 
 ## 3. Website hosting review

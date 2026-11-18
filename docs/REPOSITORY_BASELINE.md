@@ -7,11 +7,11 @@
 - Repository: `AssayFlux/PocketHost`
 - Branch: `Alpha`
 - Historical detailed-inventory source commit: `4185ea0f5e258c0d4c024f79de0a59f4757af9af`
-- Current Alpha source head checked: `0784b3294f2de9f435479c7a290f336e85b78df0`
+- Current Alpha source head checked: `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`
 - Snapshot date: 2026-11-18
 - Historical tracked files at the detailed-inventory snapshot: **252**
 - Historical tracked directories at that snapshot: **71**
-- Current tracked files at Alpha head: **257**
+- Current tracked files at Alpha head: **259**
 - Current tracked directories at Alpha head: **72**
 - Sum of tracked file sizes: **131,990,753 bytes**
 - Markdown files: **41**
@@ -88,7 +88,7 @@ The nine SVGs under `Assets/` total approximately 115.6 MB. The root-level `Pock
 - The same executable also contains the full admin/device control API and requires `DATABASE_URL`, PostgreSQL migrations, a long administrator token and a control API hostname at startup. It starts separate control and visitor listeners (defaults 8080 and 8081).
 - `control-plane/compose.yaml` provides PostgreSQL, the Rust service, Caddy public TLS profile and an optional Cloudflare Tunnel profile. Caddy owns public ports 80/443; its current HTTP listener redirects to HTTPS. Relay visitor requests require a trusted HTTPS frontend. There is no configurable plain-HTTP content mode in the current Relay implementation.
 - `web-console/src/ui/RemoteControlPlane.tsx` includes Relay hostname registration, DNS TXT challenge display, verification and deletion UI. Android Network settings now expose independent Relay endpoint/credential configuration; standalone-node hostname/TXT/TLS provisioning remains open.
-- The current Alpha tree now contains `relay-node/Cargo.toml`, but that directory has no `src/main.rs` or other implementation files, tests, installer or service unit. It is a Cargo manifest scaffold only, not a runnable standalone Termux Relay Node. The current Compose deployment is Docker/PostgreSQL-oriented and the existing Relay remains coupled to the fleet control-plane process and registered device credentials.
+- The current Alpha tree contains `relay-node/Cargo.toml`, but that directory has no `src/main.rs` or other implementation files, tests, installer or service unit. It is a Cargo manifest scaffold only, not a runnable standalone Termux Relay Node. The current gateway remains coupled to the fleet control-plane process/PostgreSQL and registered fleet device credentials; the Android host-side RelayCredentialStore is already independent.
 
 ### What “self-hosted Relay without a VPS” means
 
@@ -578,3 +578,8 @@ web-console/vite.config.ts  [132 bytes]  [blob 1826ab6ad8e4]
 ## Remediation snapshot addendum (2026-11-18)
 
 The complete recursive Git tree at Alpha commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contained 259 blobs across 72 directories (`truncated=false`). The remediation branch is isolated from Alpha. The detailed path inventory earlier in this file remains a historical inventory from the older `4185ea0` snapshot; it is not represented as a current per-path listing. Use the recorded Git tree for the exact current inventory. The remediation findings and corrected limits are maintained in [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).
+
+
+## Remediation branch snapshot
+
+At commit `c00eac2735ca353b0ef965fd5a40ece9fbcc7085`, the remediation branch contained 260 blobs across 72 directories (complete recursive tree, not truncated). This includes the new `docs/REMEDIATION_AUDIT.md`. Alpha itself remains at the 259-blob source snapshot recorded above. The older detailed path inventory is historical and should not be treated as a current exhaustive listing.
