@@ -17,7 +17,7 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - Optional LAN binding and access from a second device on the same Wi-Fi.
 - Cloudflare Tunnel public ingress for an owner-configured custom hostname, using an encrypted tunnel token and an outbound-only Android connector.
 - First-party AssayFlux Relay Node for owner-controlled Termux/Android hardware, with DNS TXT hostname proof and an independent authenticated outbound host session. The Termux/Android install path remains in v0.1.0. Linux-native installation, packaging and service integration are deferred to v0.1.1. No paid VPS is required; the gateway device must have public IPv4 with port forwarding or globally routed IPv6.
-- Minimal owner-facing Relay setup surface and standalone Termux/Android install/start/stop/status tooling, hostname binding, DNS TXT challenge display and route revocation; Linux-native installation and service tooling move to v0.1.1. The full fleet operator console remains v0.2.0.
+- Minimal owner-facing Relay setup surface and standalone Termux/Android install/start/stop/status tooling, hostname binding, DNS TXT challenge display and route revocation; Linux-native installation and service tooling move to v0.1.1. The full fleet operator console remains v0.1.2.
 - Public HTTP and HTTPS for verified hostnames; valid HTTPS at the edge and HTTP-to-HTTPS redirect by default. Plain HTTP content serving is an explicit owner opt-in target; current Relay edge only redirects HTTP and has no plain-HTTP opt-in.
 - Independent provider controls, health, reconnect, diagnostics and manual provider failover.
 - End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation for Cloudflare and the standalone self-hosted Relay Node.
@@ -62,7 +62,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 ### Explicit exclusions
 Production device-fabric support, arbitrary untrusted worker code execution and the full 20-language Runtime Library are not delivered by this version.
 
-## v0.2.0 — Connected Device Fabric
+## v0.1.2 — Connected Device Fabric
 
 **User outcome:** connect separately installed devices, assign bounded roles and operate a resilient personal device fabric.
 

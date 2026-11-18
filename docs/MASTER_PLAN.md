@@ -3,7 +3,7 @@
 **Repository:** AssayFlux/PocketHost  
 **Working branch:** Alpha  
 **Current delivery target:** v0.1.0 — First Hosting  
-**Roadmap:** v0.1.0 → v0.1.1 → v0.2.0  
+**Roadmap:** v0.1.0 → v0.1.1 → v0.1.2  
 **Planning rule:** Every version passes G0–G9 before release
 
 ## 1. Product objective
@@ -47,7 +47,7 @@ In scope:
 - Access from another device on the same Wi-Fi.
 - Public custom-domain hosting through Cloudflare Tunnel, using an owner-created named tunnel and encrypted Android token storage.
 - Standalone first-party AssayFlux Relay Node installable on Termux/Android and Linux owner hardware, with DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only routing to the selected static website. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability is required.
-- Minimal owner-facing Relay setup surface and Termux/Linux install/start/stop/status flow for registering a host/site, creating a hostname binding, displaying the DNS TXT proof challenge and revoking the route. The existing web-console panel is currently coupled to the fleet control plane; the v0.1.0 setup flow must work independently. The full browser operator console remains v0.2.0.
+- Minimal owner-facing Relay setup surface and Termux/Linux install/start/stop/status flow for registering a host/site, creating a hostname binding, displaying the DNS TXT proof challenge and revoking the route. The existing web-console panel is currently coupled to the fleet control plane; the v0.1.0 setup flow must work independently. The full browser operator console remains v0.1.2.
 - Public HTTP and HTTPS entry points for verified custom hostnames; HTTPS certificates are validated at the public edge and HTTP redirects to HTTPS by default. Plain HTTP content serving is an explicit owner opt-in target; current Relay edge does not implement this option.
 - Independent provider status, start/stop, reconnect and diagnostics for Cloudflare Tunnel and the standalone AssayFlux Relay Node. Same-host manual failover is not automatic and requires DNS/load-balancer changes.
 - External verification from mobile data or an unrelated network, including DNS, TLS, expected site content and management-route isolation.
@@ -83,7 +83,7 @@ In scope:
 
 The existing companion currently contains both runtime implementations in one APK. Independent per-language package distribution is a packaging goal, not a claim about the current artifact.
 
-### v0.2.0 — Connected Device Fabric
+### v0.1.2 — Connected Device Fabric
 
 **Promise:** the owner can safely connect separately installed devices and delegate explicit infrastructure roles, then scale and coordinate infrastructure beyond the first phone host.
 
