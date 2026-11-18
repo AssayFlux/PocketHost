@@ -285,14 +285,17 @@ impl RelayState {
         let invite_hash = hex_sha256(invite_code.as_bytes());
         let expires_at = unix_now() + 120;
         let connection = self.1.lock().map_err(|_| "Relay database lock poisoned")?;
-        connection.execute(
+        let transaction = connection.unchecked_transaction()
+            .map_err(|error| format!("Could not begin pairing invite transaction: {error}"))?;
+        transaction.execute(
             "DELETE FROM relay_pairing_invites WHERE expires_at <= ?1 OR device_id = ?2",
             params![unix_now(), device_id.to_string()]
         ).map_err(|error| format!("Could not clear stale pairing invites: {error}"))?;
-        connection.execute(
+        transaction.execute(
             "INSERT INTO relay_pairing_invites(invite_hash, device_id, expires_at) VALUES (?1, ?2, ?3)",
             params![invite_hash, device_id.to_string(), expires_at]
         ).map_err(|error| format!("Could not persist pairing invite: {error}"))?;
+        transaction.commit().map_err(|error| format!("Could not commit pairing invite: {error}"))?;
         Ok(invite_code)
     }
 
