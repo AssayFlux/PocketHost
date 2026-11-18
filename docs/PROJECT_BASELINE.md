@@ -23,9 +23,9 @@
 | Full-app backup | `ApplicationBackupManager.kt` | 500,000,000-byte static site, 50 MiB Python, 100 MiB Node, 650,000,000-byte total uncompressed, 680,000,000-byte encrypted archive; static-site limit matches importer expanded-content cap |
 | Workbench | Private draft workspace, nested explorer, basic editor, save, file/folder operations, change digests, local commit snapshots | Initial foundation exists; isolated preview, TypeScript build, owner-approved publish and rollback incomplete |
 | Cloudflare Tunnel | Android token store, cloudflared process, readiness probe, reconnect supervisor, Settings controls, build script | Connector source/build present; public hostname/DNS/TLS acceptance open |
-| AssayFlux Relay client | Android outbound SSE request/response agent | Coupled to RemoteControlAgent endpoint/device token; no independent Relay settings/credentials |
+| AssayFlux Relay client | Android outbound SSE request/response agent, dedicated Android Keystore-backed `RelayCredentialStore`, independent Network settings controls | Android-side configuration and credentials are independent of RemoteControlAgent; node-side credential issuance and live public acceptance remain open |
 | AssayFlux Relay gateway | Rust visitor handler, DNS TXT proof, hostname routes, separate visitor listener, Caddy TLS | Exists inside full control-plane process; PostgreSQL and fleet credentials required; not standalone |
-| Relay Node for Termux/Linux | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host-agent protocol, installer, service unit or Termux lifecycle; not runnable and not release-ready |
+| Relay Node for Termux/Linux | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host credential issuer, installer, service unit or Termux lifecycle; not runnable and not release-ready |
 | Runtime companion | Separate APK with CPython 3.11/Chaquopy and Node.js mobile 24.22.1/JNI | Both in same companion APK, in progress; not hardened sandbox |
 | Runtime Library | 20 catalog JSON manifests | Python/Node in progress; remaining 18 planned metadata only |
 | Browser console | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; remote control and Relay hostname panel | Separate browser app; build passes; not an Android runtime |
