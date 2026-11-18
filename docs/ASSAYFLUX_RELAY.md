@@ -18,18 +18,11 @@ The Relay is bundled in the main Android APK. Kotlin owns Android service lifecy
 
 The Android host-side `RelayAgent` already implements an outbound HTTPS/SSE request/response client. Its dedicated `RelayCredentialStore` encrypts host credentials with Android Keystore AES-GCM. `HostingService` starts the host-side agent independently of remote-control configuration.
 
-An initial standalone `relay-node/` Rust library now provides a JNI lifecycle boundary, bounded HTTP visitor routing, authenticated outbound SSE host sessions and correlated responses. A Kotlin JNI declaration and a separate Gradle NDK task have been added. The current HTTP-only listener is loopback-restricted; it is not exposed publicly and must not be treated as a deployable public gateway.
+The standalone `relay-node/` Rust library now provides a JNI lifecycle boundary, bounded HTTP visitor routing, authenticated outbound SSE host sessions, correlated responses, Rustls HTTPS termination, HTTP-to-HTTPS redirects and DNS TXT ownership checks before routes activate. The Kotlin app includes a Keystore AES-GCM encrypted node configuration store, a dedicated non-exported foreground service and initial import/start/stop/remove controls. The current config import is an engineering bridge, not final pairing.
 
-The following v0.1.0 work remains open:
-- Commit the generated Relay Cargo lockfile and pass Rust tests plus all three Android ABI builds.
-- TLS listener, certificate issuance/renewal and HTTP-to-HTTPS behavior.
-- DNS TXT hostname ownership proof and durable hostname/site/host route state.
-- Android Keystore-backed node identity/configuration, owner-approved pairing and independent credential issuance/rotation/revocation.
-- Dedicated Kotlin Relay foreground service, lifecycle recovery and owner-facing setup/status controls.
-- Full visitor/host/owner route isolation, quotas, persistence and security-negative tests.
-- Physical-device, independent-network and public DNS/TLS acceptance.
+The Relay Cargo lockfile is committed. Initial Rust host tests have passed; Android ABI and APK verification are in CI. Remaining v0.1.0 work includes physical verification of all Android ABIs and packaged native libraries, automated ACME issuance/renewal and certificate expiry handling, node identity and owner-approved pairing, credential rotation/revocation, durable transactional route state, service reboot/network recovery, security-negative route isolation tests and independent public-network acceptance.
 
-The detailed execution checklist is [Native Android Relay Implementation Plan](RELAY_IMPLEMENTATION_PLAN.md). Do not describe the native Relay as implemented or close a release gate until these items and the required evidence are complete.
+The current JSON config schema and manual certificate/DNS challenge steps are documented in [Native Relay Node Configuration](RELAY_NODE_CONFIGURATION.md). Do not describe the native Relay as release-complete or close a gate until the remaining implementation and evidence are complete.
 
 ## Native component boundaries
 
