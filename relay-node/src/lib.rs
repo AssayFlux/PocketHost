@@ -298,22 +298,52 @@ fn validate_visitor_path(path: &str) -> Result<(), StatusCode> {
     {
         return Err(StatusCode::BAD_REQUEST);
     }
+
+    // Validate escapes before forwarding. Encoded dot/separator/percent bytes are
+    // rejected so neither this edge nor a downstream server can reinterpret a
+    // traversal or double-encoded control path differently.
     let path_only = path.split('?').next().unwrap_or("/");
+    let bytes = path_only.as_bytes();
+    let mut index = 0usize;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            if index + 2 >= bytes.len()
+                || !bytes[index + 1].is_ascii_hexdigit()
+                || !bytes[index + 2].is_ascii_hexdigit()
+            {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+            let hex = |value: u8| -> u8 {
+                match value {
+                    b'0'..=b'9' => value - b'0',
+                    b'a'..=b'f' => value - b'a' + 10,
+                    b'A'..=b'F' => value - b'A' + 10,
+                    _ => 0,
+                }
+            };
+            let decoded = (hex(bytes[index + 1]) << 4) | hex(bytes[index + 2]);
+            if matches!(decoded, b'.' | b'/' | b'\\' | b'%' | 0..=0x1f | 0x7f) {
+                return Err(StatusCode::NOT_FOUND);
+            }
+            index += 3;
+        } else {
+            index += 1;
+        }
+    }
+
     let lower = path_only.to_ascii_lowercase();
-    if lower.starts_with("/v1/")
+    if path_only.contains("//")
+        || lower == "/v1" || lower.starts_with("/v1/")
         || lower == "/health"
-        || lower.starts_with("/_pockethost/")
+        || lower == "/_pockethost" || lower.starts_with("/_pockethost/")
+        || lower == "/.well-known/pockethost"
         || lower.starts_with("/.well-known/pockethost/")
-        || lower.contains("%2e")
-        || lower.contains("%2f")
-        || lower.contains("%5c")
         || path_only.split('/').any(|segment| segment == "." || segment == "..")
     {
         return Err(StatusCode::NOT_FOUND);
     }
     Ok(())
 }
-
 fn normalize_dns_name(input: &str) -> Result<String, String> {
     let value = input.trim().trim_end_matches('.').to_ascii_lowercase();
     if value.is_empty() || value.len() > 253
@@ -737,16 +767,18 @@ mod tests {
 
     #[test]
     fn visitor_paths_cannot_reach_relay_control_surfaces_or_traverse() {
-        for path in ["/v1/device/relay/stream", "/v1/owner/pair", "/_pockethost/admin",
+        for path in ["/v1", "/v1/device/relay/stream", "/v1/owner/pair", "/_pockethost",
+            "/_pockethost/admin", "/.well-known/pockethost",
             "/.well-known/pockethost/internal", "/%2e%2e/secrets", "/%2Fetc/passwd",
+            "/%252e%252e/secrets", "/%252fadmin", "/bad%zz", "/folder//private",
             "/folder/../private", "/folder\\\\..\\\\private"] {
             assert!(validate_visitor_path(path).is_err(), "path should be rejected: {path}");
         }
-        for path in ["/", "/index.html", "/assets/app.css?version=2", "/products/item"] {
+        for path in ["/", "/index.html", "/assets/app.css?version=2", "/products/item",
+            "/search?q=%2Fsafe%2Fquery"] {
             assert!(validate_visitor_path(path).is_ok(), "path should be accepted: {path}");
         }
     }
-
     #[test]
     fn constant_time_digest_comparison_and_sha256_vector() {
         assert_eq!(hex_sha256(b"secret"),
