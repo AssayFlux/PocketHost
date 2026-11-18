@@ -32,7 +32,7 @@ object RelayNodeConfigStore {
     private val AAD = "AssayFlux Pocket Host Relay Node Config v2".toByteArray(StandardCharsets.UTF_8)
 
     private class StateDb(context: Context) : SQLiteOpenHelper(
-        context.applicationContext, DATABASE, null, 2
+        context.applicationContext, DATABASE, null, 3
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
@@ -41,12 +41,26 @@ object RelayNodeConfigStore {
             db.execSQL(
                 "CREATE TABLE relay_revocations (device_id TEXT PRIMARY KEY NOT NULL, revoked_at INTEGER NOT NULL, reason TEXT NOT NULL)"
             )
+            db.execSQL(
+                "CREATE TABLE relay_host_credentials (device_id TEXT PRIMARY KEY NOT NULL, credential_sha256 TEXT NOT NULL, created_at INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "CREATE TABLE relay_pairing_invites (invite_hash TEXT PRIMARY KEY NOT NULL, device_id TEXT NOT NULL, expires_at INTEGER NOT NULL)"
+            )
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS relay_revocations (device_id TEXT PRIMARY KEY NOT NULL, revoked_at INTEGER NOT NULL, reason TEXT NOT NULL)"
+                )
+            }
+            if (oldVersion < 3) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS relay_host_credentials (device_id TEXT PRIMARY KEY NOT NULL, credential_sha256 TEXT NOT NULL, created_at INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS relay_pairing_invites (invite_hash TEXT PRIMARY KEY NOT NULL, device_id TEXT NOT NULL, expires_at INTEGER NOT NULL)"
                 )
             }
         }
@@ -88,6 +102,20 @@ object RelayNodeConfigStore {
                 check(db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
                     "Could not persist encrypted Relay configuration."
                 }
+                for (index in 0 until configuredHosts.length()) {
+                    val host = configuredHosts.optJSONObject(index) ?: continue
+                    val deviceId = host.optString("device_id")
+                    val verifier = host.optString("credential_sha256")
+                    if (deviceId.isBlank() || verifier.length != 64) continue
+                    val credential = ContentValues().apply {
+                        put("device_id", deviceId)
+                        put("credential_sha256", verifier.lowercase())
+                        put("created_at", System.currentTimeMillis())
+                    }
+                    check(db.insertWithOnConflict("relay_host_credentials", null, credential, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
+                        "Could not persist Relay host credential verifier."
+                    }
+                }
                 if (!revokedDeviceId.isNullOrBlank()) {
                     val revocation = ContentValues().apply {
                         put("device_id", revokedDeviceId)
@@ -97,6 +125,7 @@ object RelayNodeConfigStore {
                     check(db.insertWithOnConflict("relay_revocations", null, revocation, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
                         "Could not persist Relay host revocation."
                     }
+                    db.delete("relay_host_credentials", "device_id = ?", arrayOf(revokedDeviceId))
                 }
                 db.setTransactionSuccessful()
             } finally {
@@ -139,6 +168,15 @@ object RelayNodeConfigStore {
     }
 
     @Synchronized
+    fun activeHostIds(context: Context): Set<String> =
+        withDatabase(context, writable = false) { db ->
+            db.query("relay_host_credentials", arrayOf("device_id"), null, null, null, null, null)
+                .use { cursor ->
+                    buildSet { while (cursor.moveToNext()) add(cursor.getString(0)) }
+                }
+        }
+
+    @Synchronized
     fun revokedDeviceIds(context: Context): Set<String> =
         withDatabase(context, writable = false) { db ->
             db.query("relay_revocations", arrayOf("device_id"), null, null, null, null, null)
@@ -154,6 +192,21 @@ object RelayNodeConfigStore {
         withDatabase(context, writable = true) { db ->
             db.beginTransaction()
             try {
+                val activeIds = db.query(
+                    "relay_host_credentials", arrayOf("device_id"), null, null, null, null, null
+                ).use { cursor ->
+                    buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
+                }
+                for (deviceId in activeIds) {
+                    val revocation = ContentValues().apply {
+                        put("device_id", deviceId)
+                        put("revoked_at", System.currentTimeMillis())
+                        put("reason", "node_config_removed")
+                    }
+                    db.insertWithOnConflict("relay_revocations", null, revocation, SQLiteDatabase.CONFLICT_REPLACE)
+                }
+                db.delete("relay_host_credentials", null, null)
+                db.delete("relay_pairing_invites", null, null)
                 db.delete(TABLE, "state_key = ?", arrayOf(ROW_CONFIG))
                 if (clearRevocations) db.delete("relay_revocations", null, null)
                 db.setTransactionSuccessful()
