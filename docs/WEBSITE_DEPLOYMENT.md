@@ -27,7 +27,7 @@ A website root contains <code>index.html</code>. ZIP import accepts the file at 
 - Nesting: 32 levels maximum.
 - Unsafe paths, traversal, symlinks and sensitive files are rejected.
 
-The Rust engine's 50 MiB per-file response limit is separate. A site may contain many files whose combined size is up to the import cap, but an individual asset above the server response cap will not be served until that engine limit is changed and separately accepted. The current full-app backup has a 50 MiB static-site cap and 200 MiB total uncompressed cap, so it does not back up the full 500 MB import allowance. This must be resolved or explicitly approved before v0.1.0 release.
+The Rust engine's 50 MiB per-file response limit is separate. A site may contain many files whose combined size is up to the import cap, but an individual asset above the server response cap will not be served until that engine limit is changed and separately accepted. The current full-app backup supports a 500,000,000-byte static-site root, 650,000,000-byte total uncompressed data and a 680,000,000-byte encrypted archive, so its static-site root limit matches the 500,000,000-byte importer expanded-content allowance. Optional Python and Node project roots are separately limited to 50 MiB and 100 MiB. Near-limit backup/restore, free-space and physical-device acceptance remain open.
 
 ## Separate website source repository
 
