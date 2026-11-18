@@ -22,6 +22,7 @@ object RelayNodeIdentityStore {
     private const val KEY_ALIAS = "assayflux.pockethost.relay-node-identity.p256.v1"
     private const val KEYSTORE = "AndroidKeyStore"
     private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
+    private val SIGNING_CONTEXT = "AssayFlux Pocket Host Relay Pairing v1:".toByteArray(Charsets.UTF_8)
 
     data class Identity(
         val nodeId: String,
@@ -59,6 +60,7 @@ object RelayNodeIdentityStore {
             ?: throw IllegalStateException("Relay node identity has not been created.")
         return Signature.getInstance(SIGNATURE_ALGORITHM).run {
             initSign(privateKey)
+            update(SIGNING_CONTEXT)
             update(challenge)
             sign()
         }
