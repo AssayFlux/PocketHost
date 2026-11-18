@@ -24,7 +24,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Decision:** v0.1.0 accepts a maximum of 500,000,000 bytes for a ZIP archive and independently 500,000,000 bytes for extracted website contents. Folder imports use the extracted-content limit. File count is 5,000, total entries 10,000 and nesting depth 32. Unsafe paths, symlinks and sensitive key/secret files remain rejected.
 
-**Separate limit:** Rust static responses remain capped at 50 MiB per file unless a later evidence-based decision changes it.
+**Separate limit:** Rust static responses are capped at 500,000,000 bytes (500 MB decimal) per file; manual single-file import is capped at 50 MiB and text editing at 256 KiB unless a later evidence-based decision changes it.
 
 ## ADR-006 — Preserve Design Language V1
 
@@ -87,4 +87,4 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Network constraint:** a self-hosted public gateway still needs public IPv4 with router port forwarding or globally routed IPv6, public DNS A/AAAA and an allowed inbound path for the visitor listener. A device behind CGNAT without global IPv6 or port forwarding cannot accept inbound public visitors. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled reachable node exists, Cloudflare Tunnel remains an optional fallback; the product must never imply that DNS or application code alone bypasses CGNAT.
 
-**Current-source status:** the repository has a partial Relay client and gateway, but no standalone Termux package/installer. The client is coupled to RemoteControlAgent credentials; the gateway shares the fleet control-plane executable and PostgreSQL. This ADR defines the target architecture, not a claim that it is implemented.
+**Current-source status:** the repository has a partial Relay client and gateway, but no standalone Termux package/installer. The Android client uses independent RelayCredentialStore credentials and HostingService lifecycle; the gateway still shares the fleet control-plane executable and PostgreSQL and has no standalone node-side credential issuer. This ADR defines the target architecture, not a claim that it is implemented.

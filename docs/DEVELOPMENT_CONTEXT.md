@@ -13,7 +13,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 - Preserve Pocket Host Design Language V1. Do not redesign branding, login, account menu, hamburger navigation, typography, palettes or theme behavior as part of this roadmap.
 - v0.1.0 is Android static website hosting with optional public access through Cloudflare Tunnel and AssayFlux Relay. Python/Node and Workbench are not dependencies.
 - Folder/ZIP import: 500,000,000 bytes for compressed ZIP input and independently 500,000,000 bytes for expanded site contents; 5,000 files, 10,000 entries, 32 levels.
-- Rust static response limit remains 50 MiB per file; it is not the import cap.
+- Rust static response limit is 500,000,000 bytes (500 MB decimal) per file. Manual single-file import is 50 MiB; text editing is 256 KiB.
 - React/Vite is the separate web-console app. Raw React/TypeScript source is not built by v0.1.0; import its built static output.
 - Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
 - Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
@@ -53,4 +53,4 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 
 ## Current next actions
 
-Close the v0.1.0 hosting path: resolve/document the 500 MB import versus backup limits, verify local and LAN serving, complete Cloudflare Tunnel and the standalone Termux/Linux Relay Node, decouple RelayAgent from RemoteControlAgent credentials, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK and Relay Node, and complete physical-device/external-network acceptance.
+Close the remaining v0.1.0 hosting path: verify local and LAN serving, complete Cloudflare Tunnel and the standalone Termux/Android Relay Node, implement node-side host credential issuance and durable routing, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK and Relay Node, and complete physical-device/external-network acceptance. The Android Relay client already has independent credentials and lifecycle; the standalone gateway is still missing.

@@ -23,7 +23,7 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation for Cloudflare and the standalone self-hosted Relay Node.
 - Foreground service, persistent notification, start/stop/restart and Android lifecycle behavior.
 - Clear permission, network, battery and thermal-state handling.
-- Existing encrypted full-app backup/restore, interrupted-activation recovery and basic diagnostics. Current backup capacity is below the 500 MB import limit and must be aligned or explicitly documented before release.
+- Existing encrypted full-app backup/restore, interrupted-activation recovery and basic diagnostics. Current full-app backup limits are 500,000,000 bytes for the static site tree, 650,000,000 bytes total uncompressed and 680,000,000 bytes encrypted; Python and Node roots are separately capped at 50 MiB and 100 MiB. These source values do not indicate a static-site backup/import mismatch.
 - Main APK build, install/upgrade and physical Android acceptance.
 
 ### Explicit exclusions

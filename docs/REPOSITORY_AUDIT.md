@@ -1,15 +1,16 @@
 # Pocket Host — Repository Deep Audit
 
-**Audited branch:** `Alpha`  
-**Current source snapshot checked:** `0784b3294f2de9f435479c7a290f336e85b78df0` (257 tracked files, 72 directories)  
-**Audit date:** 2026-11-17  
+**Audited source branch:** `Alpha`  
+**Source snapshot:** `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` (259 tracked files, 72 directories)  
+**Remediation branch:** `audit/remediation-baseline-2026-11` (260 tracked blobs, 72 directories at baseline snapshot)  
+**Audit date:** 2026-11-18  
 **Complete inventory:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md)
 
 ## 1. Executive finding
 
 Pocket Host is not a blank scaffold. The repository contains a Kotlin/Compose Android app, Rust static HTTP engine, website importer and backup manager, initial Workbench, Python/Node runtime companion, Android device-trust foundation, Linux agent preview, Rust/Axum fleet control plane, browser operator console, Cloudflare Tunnel integration and a partial first-party Relay visitor path.
 
-However, **the current Relay implementation is not yet the independent self-hosted Relay product the project needs**. It is coupled to the fleet control plane, PostgreSQL and remote-control device credentials. There is no standalone Termux Relay Node package or installer. The previous documentation described a VPS deployment as though it were the required product shape; that is corrected by this audit.
+However, **the current Relay implementation is not yet the independent self-hosted Relay product the project needs**. The gateway remains coupled to the fleet control plane and PostgreSQL, and uses fleet device credentials. The Android host-side RelayAgent already has an independent RelayCredentialStore and lifecycle. There is no standalone Termux Relay Node executable or installer. The previous documentation described a VPS deployment as though it were the required product shape; that is corrected by this audit.
 
 ## 2. Product and UI boundaries confirmed
 
@@ -19,7 +20,7 @@ However, **the current Relay implementation is not yet the independent self-host
 - General settings contain System/Light/Dark appearance, named classic themes, optional biometric app unlock and auto-start preference.
 - The biometric feature is a local app gate, not a mobile account login page. The browser console contains owner/admin session and passkey flows.
 - Main Android app has Cloudflare named-tunnel controls, local hostname-to-site routing and independent Relay endpoint/credential controls in Network settings. Relay credentials use a dedicated Android Keystore-backed AES-GCM store.
-- MainActivity's Network copy says no visitor password exists, but the Rust engine and SiteRegistry implement private/restricted visitor credentials and Basic auth. Correct the stale copy.
+- The LAN-access toggle warns that LAN access itself does not provide visitor authentication. Keep this warning unless end-to-end tests prove the selected LAN/IP route enforces the site's hostname-based private/restricted policy; do not imply that the UI toggle adds authentication.
 - Main app is vertically scrollable in its root content column; physical Android font scale, keyboard, safe-area, navigation and service behavior still need named-device acceptance.
 
 ## 3. Website hosting review
@@ -32,7 +33,7 @@ HostingService starts the foreground service, recovers interrupted site/backup o
 
 SiteImporter source/UI is set to 500,000,000 bytes for ZIP input and independently for expanded website contents. It also caps files at 5,000, total ZIP entries at 10,000 and depth at 32. Existing instrumentation coverage checks the configured constant and ZIP happy path; it does not prove a real 500 MB import. Boundary, low-storage, memory-pressure and physical-device tests remain open.
 
-The Rust engine has a separate 50 MiB per-file response cap. A site may import successfully while an individual file larger than 50 MiB cannot be served.
+The Rust engine has a separate 500,000,000-byte (500 MB decimal) per-file response cap. Manual single-file import remains 50 MiB; text editing is 256 KiB.
 
 ### Backup capacity — source recheck
 
@@ -119,6 +120,11 @@ The repository baseline records source presence and the exact CI runs. No item i
 
 ## 11. Current Alpha snapshot delta
 
-The current recursive tree at `0784b3294f2de9f435479c7a290f336e85b78df0` contains 257 tracked files across 72 directories. Since the original `4185ea0` audit snapshot, a `relay-node/Cargo.toml` manifest has appeared. Inspection of the complete current `relay-node/` path list confirms that this is the only file in that directory. It declares dependencies and package metadata but does not provide an executable, tests, configuration, credentials, TLS, installer or service lifecycle. The previous audit conclusions about the absence of a working standalone Relay remain valid; only the wording “no package” is now outdated.
+The source snapshot at `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contains 259 tracked files across 72 directories. Since the original `4185ea0` audit snapshot, a `relay-node/Cargo.toml` manifest has appeared. Inspection of the complete current `relay-node/` path list confirms that this is the only file in that directory. It declares dependencies and package metadata but does not provide an executable, tests, configuration, credentials, TLS, installer or service lifecycle. The previous audit conclusions about the absence of a working standalone Relay remain valid; only the wording “no package” is now outdated.
 
 The Quality and Protocol workflows both completed successfully for the current Alpha head. These CI results validate the configured workflows; they do not prove that the Relay Node runs, that an APK is packaged, or that public-domain traffic reaches an Android host.
+
+
+## 8. Remediation findings register
+
+See [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md) for the severity-ranked findings, evidence, fixes and verification states. It supersedes earlier point-in-time statements in this document where explicitly marked. Source changes have been made on the isolated remediation branch; no test result or release acceptance is claimed until the listed checks run.

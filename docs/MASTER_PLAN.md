@@ -19,7 +19,7 @@ The old five-step delivery sequence is retired. The new three-version pathway is
 3. The existing Pocket Host Design Language V1 is preserved. No redesign is authorized by this roadmap. Keep the established minimal monochrome visual language, calligraphic brand treatment, readable typography, classic themes, light/dark/system appearance, intended login/account experience, owner menu and hamburger navigation. Source baseline note: the current native app has optional biometric unlock but no conventional login page yet; browser-console owner/passkey login is separate. Fix implementation defects without changing the design identity.
 4. v0.1.0 static hosting works without Python, Node.js or any companion APK.
 5. Website folder/ZIP import limit is 500,000,000 bytes for the ZIP archive and independently 500,000,000 bytes for extracted website contents. File count, entry count, depth, path and sensitive-file limits remain enforced.
-6. The Rust engine's 50 MiB per-file response cap is separate from the 500 MB website import limit.
+6. The Rust engine's 500,000,000-byte (500 MB decimal) per-file response cap is separate from the 500 MB website import limit.
 7. Python and Node.js already have repository implementations in the separate runtime-worker companion APK. They are optional, in progress and assigned to v0.1.1 acceptance; do not describe them as completed or securely sandboxed.
 8. React + TypeScript + Vite in web-console are the separate browser operator console. They are not Android app runtimes. A React/Vite website may be served in v0.1.0 from its prebuilt static output.
 9. The main-app TypeScript-to-JavaScript compiler is a v0.1.1 authoring/build feature, not a v0.1.0 static hosting dependency.
@@ -53,7 +53,7 @@ In scope:
 - External verification from mobile data or an unrelated network, including DNS, TLS, expected site content and management-route isolation.
 - Foreground hosting service, visible notification, start/stop/restart and Android lifecycle behavior.
 - Permission, network, battery and thermal-state feedback.
-- Existing encrypted full-app backup/restore and interrupted activation recovery, with the backup/import capacity mismatch explicitly resolved before release.
+- Existing encrypted full-app backup/restore and interrupted activation recovery, with the backup capacity documented against source limits; near-limit device acceptance required.
 - Diagnostics for host startup, import failure and visitor connection.
 - APK build, install, fresh-install/upgrade checks and physical Android acceptance.
 
@@ -127,4 +127,4 @@ The normative gate definitions and per-version matrix are in [RELEASE_GATES.md](
 
 ## 6. Active work order
 
-The current target is v0.1.0. Complete the import-and-host path, Cloudflare integration and the standalone owner-operated Termux/Linux Relay Node. First verify the 500 MB limits and backup mismatch, test folder/ZIP imports, run the Rust static engine, validate localhost/LAN, decouple RelayAgent from RemoteControlAgent credentials, implement the standalone public gateway, test DNS/TLS/HTTP/HTTPS from an independent network, exercise foreground/gateway lifecycle and recovery, build the APK and Relay Node artifacts, and test on named physical devices. Workbench completion, runtime acceptance and full device-fabric integration remain in later releases.
+The current target is v0.1.0. Complete the import-and-host path, Cloudflare integration and the standalone owner-operated Termux/Linux Relay Node. Verify 500 MB boundaries and backup recovery, test folder/ZIP imports, run the Rust static engine, validate localhost/LAN, implement the standalone public gateway and node-side credential issuance, test DNS/TLS/HTTP/HTTPS from an independent network, exercise foreground/gateway lifecycle and recovery, build the APK and Relay Node artifacts, and test on named physical devices. Workbench completion, runtime acceptance and full device-fabric integration remain in later releases.

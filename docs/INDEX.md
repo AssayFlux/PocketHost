@@ -10,6 +10,7 @@ This documentation set follows the new three-version pathway. The former five-st
 5. [Complete Repository File Inventory](REPOSITORY_BASELINE.md) — every tracked file/directory and detailed source status at the audit snapshot.
 6. [Project Baseline](PROJECT_BASELINE.md) — current module and release status.
 7. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
+8. [Remediation Audit Register](REMEDIATION_AUDIT.md) — severity-ranked findings, fixes, source-backed limits and verification state.
 8. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
 9. [Architecture Decisions](DECISIONS.md) — durable product decisions.
 10. [Product North Star](NORTH_STAR.md) — long-term direction.
