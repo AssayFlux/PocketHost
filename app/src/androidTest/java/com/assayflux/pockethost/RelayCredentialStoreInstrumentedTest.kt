@@ -49,6 +49,8 @@ class RelayCredentialStoreInstrumentedTest {
         }.isFailure)
         RelayCredentialStore.configure(context, "http://127.0.0.1:8080", token)
         assertTrue(RelayCredentialStore.isConfigured(context))
+        assertTrue(runCatching { RelayCredentialStore.configure(context, "http://localhost:8080", token) }.isFailure)
+        assertTrue(runCatching { RelayCredentialStore.configure(context, "http://[::1]:8080", token) }.isFailure)
         RelayCredentialStore.clear(context)
     }
 }
