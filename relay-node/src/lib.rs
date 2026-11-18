@@ -787,7 +787,7 @@ async fn pair_complete(
 fn router(state: RelayState) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route("/v1/pair/complete", post(pair_complete))
+        .route("/v1/pair/complete", post(pair_complete).layer(DefaultBodyLimit::max(4096)))
         .route("/v1/device/relay/stream", get(host_stream))
         .route("/v1/device/relay/responses/:id", post(host_response))
         .route("/*path", any(visitor))
@@ -1037,6 +1037,9 @@ mod tests {
                 RouteConfig { hostname: "EXAMPLE.COM.".into(), site_id: "site2".into(), device_id: device, dns_txt_name: "_pockethost-verify.example.com".into(), dns_txt_value: "pockethost-verification-token-000000000000".into() },
             ],
         };
-        assert!(RelayState::from_config(config).await.is_err());
+        let database_path = std::env::temp_dir()
+            .join(format!("pockethost-relay-test-{}.db", Uuid::new_v4()));
+        assert!(RelayState::from_config(config, database_path.to_str().unwrap()).await.is_err());
+        let _ = std::fs::remove_file(database_path);
     }
 }
