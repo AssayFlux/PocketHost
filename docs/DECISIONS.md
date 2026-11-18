@@ -70,7 +70,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-017 — Relay gateway is a visitor-only service
 
-**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. The v0.1.0 install target is Termux/Android; Linux-native packaging and service installation are v0.1.1. The node must not require Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.1.2.
+**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. The v0.1.0 target is a native Android service bundled in the Pocket Host APK; Linux-native packaging and service installation are v0.1.1. The node must not require Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.1.2.
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
@@ -83,11 +83,11 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-018 — AssayFlux Relay is owner-operated; no paid VPS prerequisite
 
-**Decision:** v0.1.0 must provide a standalone AssayFlux Relay Node installable on owner-controlled Termux/Android hardware. Linux-native packaging and service installation are v0.1.1. It must not require a paid VPS, Cloudflare, Docker, PostgreSQL or the full fleet control plane. The Android website host connects outbound using independent, revocable Relay credentials. The Relay Node accepts public visitors and forwards only to the registered website route.
+**Decision:** v0.1.0 must provide a standalone AssayFlux Relay Node installable on owner-controlled owner-controlled Android hardware running Pocket Host. Linux-native packaging and service installation are v0.1.1. It must not require a paid VPS, Cloudflare, Docker, PostgreSQL or the full fleet control plane. The Android website host connects outbound using independent, revocable Relay credentials. The Relay Node accepts public visitors and forwards only to the registered website route.
 
 **Network constraint:** a self-hosted public gateway still needs public IPv4 with router port forwarding or globally routed IPv6, public DNS A/AAAA and an allowed inbound path for the visitor listener. A device behind CGNAT without global IPv6 or port forwarding cannot accept inbound public visitors. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled reachable node exists, Cloudflare Tunnel remains an optional fallback; the product must never imply that DNS or application code alone bypasses CGNAT.
 
-**Current-source status:** the repository has a partial Relay client and gateway, but no standalone Termux package/installer. The Android client uses independent RelayCredentialStore credentials and HostingService lifecycle; the gateway still shares the fleet control-plane executable and PostgreSQL and has no standalone node-side credential issuer. This ADR defines the target architecture, not a claim that it is implemented.
+**Current-source status:** the repository has a partial Relay client and gateway, but no native Android JNI engine or foreground service. The Android client uses independent RelayCredentialStore credentials and HostingService lifecycle; the gateway still shares the fleet control-plane executable and PostgreSQL and has no standalone node-side credential issuer. This ADR defines the target architecture, not a claim that it is implemented.
 
 
 ## ADR-019 — Corrected three-release numbering and immutable v0.1.0 baseline
