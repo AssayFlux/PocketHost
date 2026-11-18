@@ -190,30 +190,31 @@ impl RelayState {
     }
 
     async fn dispatch(&self, device_id: Uuid, request: RelayRequest) -> Result<RelayResponse, StatusCode> {
+        let request_id = request.id;
         let (sender, receiver) = {
             let mut hub = self.0.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let sender = hub.sessions.get(&device_id).map(|s| s.1.clone())
                 .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
             let global = hub.pending.len();
             let per_host = hub.pending.values().filter(|p| p.device_id == device_id).count();
-            if global >= MAX_PENDING_GLOBAL || per_host >= MAX_PENDING_PER_HOST {
+            if global >= MAX_PENDING_GLOBAL || per_host >= MAX_PENDING_PER_HOST
+                || hub.pending.contains_key(&request_id) {
                 return Err(StatusCode::TOO_MANY_REQUESTS);
             }
             let (tx, rx) = oneshot::channel();
-            hub.pending.insert(request.id, Pending {
-                device_id, site_id: request.site_id.clone(), sender,
+            hub.pending.insert(request_id, Pending {
+                device_id, site_id: request.site_id.clone(), sender: tx,
             });
-            (hub.pending.get(&request.id).unwrap().sender.clone(), rx)
+            (sender, rx)
         };
         if sender.send(request).await.is_err() {
-            if let Ok(mut hub) = self.0.lock() { hub.pending.remove(&Uuid::nil()); }
+            if let Ok(mut hub) = self.0.lock() { hub.pending.remove(&request_id); }
             return Err(StatusCode::SERVICE_UNAVAILABLE);
         }
         match tokio::time::timeout(REQUEST_TIMEOUT, receiver).await {
             Ok(Ok(response)) => Ok(response),
             _ => {
-                // A timed-out visitor is removed; a late host response is rejected.
-                // The request id is recovered from the pending entry by response handlers.
+                if let Ok(mut hub) = self.0.lock() { hub.pending.remove(&request_id); }
                 Err(StatusCode::GATEWAY_TIMEOUT)
             }
         }
@@ -323,10 +324,11 @@ async fn visitor(
         hub.routes.get(&hostname).cloned().ok_or(StatusCode::NOT_FOUND)?
     };
     let method = request.method().as_str().to_string();
-    let path = request.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/");
+    let path = request.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/").to_string();
     if path.len() > 8192 || path.starts_with("//") || path.bytes().any(|b| b == 0 || b < 0x20) {
         return Err(StatusCode::BAD_REQUEST);
     }
+    let is_head = request.method() == Method::HEAD;
     let mut forwarded_headers = HashMap::new();
     for name in ["accept", "accept-encoding", "content-type", "cookie", "if-modified-since",
         "if-none-match", "range", "user-agent"] {
@@ -338,7 +340,7 @@ async fn visitor(
         .map_err(|_| StatusCode::PAYLOAD_TOO_LARGE)?;
     let id = Uuid::new_v4();
     let relay_request = RelayRequest {
-        id, method, path: path.to_string(), hostname, site_id: route.site_id.clone(),
+        id, method, path, hostname, site_id: route.site_id.clone(),
         headers: forwarded_headers, body_base64: STANDARD.encode(&body),
     };
     let response = state.dispatch(route.device_id, relay_request).await?;
@@ -365,12 +367,10 @@ async fn visitor(
             }
         }
     }
-    let bytes = if status == StatusCode::NO_CONTENT || status == StatusCode::NOT_MODIFIED
-        || request_method_is_head(&status) { Vec::new() } else { response_body };
+    let bytes = if is_head || status == StatusCode::NO_CONTENT
+        || status == StatusCode::NOT_MODIFIED { Vec::new() } else { response_body };
     output.body(Body::from(bytes)).map_err(|_| StatusCode::BAD_GATEWAY)
 }
-
-fn request_method_is_head(_status: &StatusCode) -> bool { false }
 
 fn router(state: RelayState) -> Router {
     Router::new()
@@ -398,7 +398,9 @@ fn set_status(value: &str) {
 fn start(config_json: &str) -> Result<(), String> {
     let config: RelayConfig = serde_json::from_str(config_json)
         .map_err(|e| format!("Invalid Relay configuration: {e}"))?;
-    let bind = format!("{}:{}", config.bind_address, config.http_port);
+    let bind_ip: IpAddr = config.bind_address.parse()
+        .map_err(|_| "Relay bind address must be a numeric IP address")?;
+    let bind = SocketAddr::new(bind_ip, config.http_port);
     let state = RelayState::from_config(config)?;
     let mut slot = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?;
     if slot.is_some() { return Err("Relay is already running".into()); }
