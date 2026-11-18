@@ -27,7 +27,7 @@ The current deployment therefore assumes a publicly reachable Docker-capable hos
 
 The first-party Relay Node must be a separate, owner-operated service:
 
-- Installable on Termux/Android and Linux targets declared by the device matrix.
+- v0.1.0 install target is Termux/Android; Linux-native packaging and service installation are v0.1.1.
 - No paid VPS, Docker or PostgreSQL requirement.
 - Independent host-ingress identity and revocation, not fleet admin or device-control credentials.
 - Durable hostname/site/host route records and bounded visitor request handling.

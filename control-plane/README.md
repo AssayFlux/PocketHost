@@ -42,7 +42,7 @@ The GitHub deployment workflow is manual and requires an SSH host, user, path, d
 
 The first-party Relay must be extracted into a separately installable owner-operated Relay Node:
 
-- Termux/Android and Linux targets.
+- Termux/Android in v0.1.0; Linux-native installation in v0.1.1.
 - No paid VPS, Docker or PostgreSQL prerequisite.
 - Independent Relay host identity and revocable ingress credentials.
 - Durable hostname/site/host binding.
