@@ -44,7 +44,7 @@ The native Relay library must be built for every ABI declared by the main APK an
 
 ## Network and public endpoint requirements
 
-An ordinary unrooted Android app cannot bind TCP ports below 1024. The initial native listeners therefore use unprivileged ports (proposed defaults: HTTP 8080 and HTTPS 8443). For conventional public URLs, the owner's router/firewall/reverse proxy must forward public TCP 80 to 8080 and public TCP 443 to 8443. IPv6 requires equivalent edge forwarding or proxying; a global IPv6 address alone does not let an ordinary app bind port 443.
+An ordinary unrooted Android app cannot bind TCP ports below 1024. The native listeners use configurable unprivileged ports with defaults HTTP 8082 and HTTPS 8444. These defaults avoid a known collision: the existing local website engine uses 8080 and the embedded Python runtime defaults to 8081. For conventional public URLs, the owner's router/firewall/reverse proxy must forward public TCP 80 to 8082 and public TCP 443 to 8444. Relay must reject a configuration that overlaps an active local-host listener. IPv6 requires equivalent edge forwarding or proxying; a global IPv6 address alone does not let an ordinary app bind port 443.
 
 The Relay device needs a publicly reachable IPv4 path with port forwarding or globally routed IPv6 with the required edge forwarding. CGNAT without global IPv6 or inbound forwarding cannot accept public visitors. DNS does not bypass CGNAT. Cloudflare Tunnel remains an optional, independent fallback.
 
