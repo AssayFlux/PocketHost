@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     routing::get,
-    Router,
+    Router, DefaultBodyLimit,
 };
 use instant_acme::{
     Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier,
@@ -9,6 +9,7 @@ use instant_acme::{
 };
 use serde::Serialize;
 use serde_json::Value;
+use futures_util::StreamExt;
 use std::{
     collections::HashMap,
     net::{IpAddr, SocketAddr},
@@ -16,7 +17,6 @@ use std::{
     time::Duration,
 };
 use tokio::net::TcpListener;
-use tower_http::limit::RequestBodyLimitLayer;
 
 pub struct AcmeRequest {
     pub bind_address: String,
@@ -113,7 +113,7 @@ pub async fn issue(request: AcmeRequest) -> Result<AcmeCertificateBundle, String
     let mut challenges = HashMap::new();
     {
         let mut authorizations = order.authorizations();
-        while let Some(authorization) = futures_util::StreamExt::next(&mut authorizations).await {
+        while let Some(authorization) = authorizations.next().await {
             let mut authorization = authorization
                 .map_err(|error| format!("Could not read ACME authorization: {error}"))?;
             match authorization.status {
@@ -143,7 +143,7 @@ pub async fn issue(request: AcmeRequest) -> Result<AcmeCertificateBundle, String
         let app = Router::new()
             .route(
                 "/.well-known/acme-challenge/:token",
-                get(challenge_response).layer(RequestBodyLimitLayer::new(1024)),
+                get(challenge_response).layer(DefaultBodyLimit::max(1024)),
             )
             .with_state(state);
         Some(tokio::spawn(async move {
