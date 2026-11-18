@@ -8,7 +8,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-002 — Three-version release pathway
 
-**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development, v0.2.0 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
+**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development, v0.1.2 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
 
 **Reason:** first prove a useful vertical slice before expanding into runtimes and distributed infrastructure.
 
@@ -48,7 +48,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-011 — Device trust is explicit
 
-**Decision:** discovery is untrusted. Devices require unique identity, proof of possession, owner approval and exact bounded role grants. Revocation and job authorization are versioned and auditable. Production device-fabric acceptance belongs to v0.2.0.
+**Decision:** discovery is untrusted. Devices require unique identity, proof of possession, owner approval and exact bounded role grants. Revocation and job authorization are versioned and auditable. Production device-fabric acceptance belongs to v0.1.2.
 
 ## ADR-012 — Separate software per device class
 
@@ -56,7 +56,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-013 — Control plane is optional for local hosting
 
-**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.2.0.
+**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.1.2.
 
 ## ADR-014 — Evidence defines release status
 
@@ -70,7 +70,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-017 — Relay gateway is a visitor-only service
 
-**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. It must install on declared Termux/Android and Linux targets without mandatory Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.2.0.
+**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. The v0.1.0 install target is Termux/Android; Linux-native packaging and service installation are v0.1.1. The node must not require Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.1.2.
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
@@ -83,8 +83,15 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-018 — AssayFlux Relay is owner-operated; no paid VPS prerequisite
 
-**Decision:** v0.1.0 must provide a standalone AssayFlux Relay Node installable on owner-controlled Termux/Android and Linux hardware. It must not require a paid VPS, Cloudflare, Docker, PostgreSQL or the full fleet control plane. The Android website host connects outbound using independent, revocable Relay credentials. The Relay Node accepts public visitors and forwards only to the registered website route.
+**Decision:** v0.1.0 must provide a standalone AssayFlux Relay Node installable on owner-controlled Termux/Android hardware. Linux-native packaging and service installation are v0.1.1. It must not require a paid VPS, Cloudflare, Docker, PostgreSQL or the full fleet control plane. The Android website host connects outbound using independent, revocable Relay credentials. The Relay Node accepts public visitors and forwards only to the registered website route.
 
 **Network constraint:** a self-hosted public gateway still needs public IPv4 with router port forwarding or globally routed IPv6, public DNS A/AAAA and an allowed inbound path for the visitor listener. A device behind CGNAT without global IPv6 or port forwarding cannot accept inbound public visitors. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled reachable node exists, Cloudflare Tunnel remains an optional fallback; the product must never imply that DNS or application code alone bypasses CGNAT.
 
 **Current-source status:** the repository has a partial Relay client and gateway, but no standalone Termux package/installer. The Android client uses independent RelayCredentialStore credentials and HostingService lifecycle; the gateway still shares the fleet control-plane executable and PostgreSQL and has no standalone node-side credential issuer. This ADR defines the target architecture, not a claim that it is implemented.
+
+
+## ADR-019 — Corrected three-release numbering and immutable v0.1.0 baseline
+
+**Decision:** the approved release sequence is exactly v0.1.0 First Hosting → v0.1.1 Workbench, Runtime & Linux Relay Installation → v0.1.2 Connected Device Fabric. All references to the former v0.2.0 milestone are superseded by v0.1.2. No separate v0.2.0 milestone remains in the initial three-release pathway.
+
+**Baseline rule:** after v0.1.0 passes all G0–G9 gates and its release is approved, its source commit is preserved by an immutable release tag and protected baseline ref where repository permissions allow. The release artifact digests, source SHA, workflow evidence, support matrix and gate ledger are recorded. No later feature or fix is committed to that baseline; subsequent work branches from it into v0.1.1. Any exceptional security correction requires a separately reviewed successor patch release and must never rewrite the original baseline tag.
