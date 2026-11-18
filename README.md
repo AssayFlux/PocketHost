@@ -106,7 +106,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
 | Version | Milestone | Release outcome |
 |---|---|---|
 | **v0.1.0** | First Hosting | Import and host a real static website from Android, locally, over LAN and publicly through the owner's domain |
-| **v0.1.1** | Workbench & Runtime Development | Edit, preview, version and safely publish websites; complete optional Python/Node runtime integration |
+| **v0.1.1** | Workbench, Runtime & Linux Relay Installation | Edit, preview, version and safely publish websites; complete optional Python/Node integration and add Linux-native Relay installation |
 | **v0.2.0** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and scale multi-host Relay/failover |
 
 This is the initial roadmap, not the final product boundary. It will be expanded after these three milestones. The old five-step delivery sequence is retired as the release roadmap.
@@ -134,7 +134,7 @@ The static website path does not require Python, Node.js or a companion runtime.
 
 The Rust engine has a separate **50 MiB per-file response safety cap**. That is not the overall import limit. The current full-app backup implementation supports a **500,000,000-byte static-site tree**, a **650,000,000-byte total uncompressed archive**, and a **680,000,000-byte encrypted archive**. Optional Python and Node project roots remain separately capped at 50 MiB and 100 MiB. The static-site backup limit therefore matches the importer’s 500,000,000-byte expanded-content allowance; real-device storage-headroom and large-backup tests remain required.
 
-## v0.1.1 — WORKBENCH & RUNTIME DEVELOPMENT
+## v0.1.1 — WORKBENCH, RUNTIME & LINUX RELAY INSTALLATION
 
 - Complete the GitHub-inspired Workbench: project explorer, editor, tabs, file operations, changes/diffs, commits and deployment history.
 - Keep private drafts separate from the live website.
@@ -142,6 +142,7 @@ The Rust engine has a separate **50 MiB per-file response safety cap**. That is 
 - Stage immutable website releases, require explicit owner approval, activate atomically and support rollback.
 - Complete and verify the existing Python 3.11 and Node.js 24.22.1 integrations in the separate runtime companion.
 - Keep optional runtimes separate from the main app; static hosting must work without them.
+- Add Linux-native Relay Node packaging, installation and service lifecycle tooling with a declared distribution/architecture support matrix.
 - Add larger-project, quota, crash-recovery and cross-site isolation tests.
 
 ## WEBSITE WORKBENCH
