@@ -16,11 +16,11 @@ This roadmap replaces the previous five-step delivery sequence. It defines the f
 - Local phone preview and configurable port.
 - Optional LAN binding and access from a second device on the same Wi-Fi.
 - Cloudflare Tunnel public ingress for an owner-configured custom hostname, using an encrypted tunnel token and an outbound-only Android connector.
-- First-party AssayFlux Relay Node for owner-controlled owner-controlled Android hardware running Pocket Host, with DNS TXT hostname proof and an independent authenticated outbound host session. The native Android install path remains in v0.1.0. Linux-native installation, packaging and service integration are deferred to v0.1.1. No paid VPS is required; the gateway device must have public IPv4 with port forwarding or globally routed IPv6.
+- First-party AssayFlux Relay implemented inside the Pocket Host Android APK as a Kotlin foreground service plus Rust/Tokio JNI engine. It supports inbound public visitor HTTP(S) and outbound authenticated host sessions, DNS TXT hostname proof, independent credentials, durable route state, TLS and visitor-only forwarding. No terminal app, Node.js, Docker or PostgreSQL dependency is permitted. Public access requires IPv4/IPv6 reachability and edge forwarding to unprivileged app listener ports; Linux-native packaging is deferred to v0.1.1.
 - Minimal owner-facing Relay setup, pairing, hostname binding, DNS TXT challenge, TLS status, start/stop, health, recovery and route revocation controls in the Android app. The Relay is a separately managed service component, not a separate terminal-managed installation or a fleet-control-plane dependency. Linux-native Relay packaging remains deferred to v0.1.1; the full fleet operator console remains v0.1.2.
 - Public HTTP and HTTPS for verified hostnames; valid HTTPS at the edge and HTTP-to-HTTPS redirect by default. Plain HTTP content serving is an explicit owner opt-in target; current Relay edge only redirects HTTP and has no plain-HTTP opt-in.
 - Independent provider controls, health, reconnect, diagnostics and manual provider failover.
-- End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation for Cloudflare and the standalone self-hosted Relay Node.
+- End-to-end external-network verification of DNS, certificates, host routing, website assets and management-route isolation for Cloudflare and the native Android Relay service.
 - Foreground service, persistent notification, start/stop/restart and Android lifecycle behavior.
 - Clear permission, network, battery and thermal-state handling.
 - Existing encrypted full-app backup/restore, interrupted-activation recovery and basic diagnostics. Current full-app backup limits are 500,000,000 bytes for the static site tree, 650,000,000 bytes total uncompressed and 680,000,000 bytes encrypted; Python and Node roots are separately capped at 50 MiB and 100 MiB. These source values do not indicate a static-site backup/import mismatch.
@@ -39,7 +39,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 7. Stop/restart hosting; background and foreground the app; test network change and process/device restart.
 8. Create and restore an encrypted website backup.
 9. Verify the custom domain from an independent network over HTTP and HTTPS through each configured provider; record DNS/TLS, response headers, content, provider status and management-route isolation.
-10. Record the source SHA, APK and Relay Node artifact digests, public network topology, device/Android version, logs and G0–G9 results.
+10. Record the source SHA, main APK SHA-256 (including Relay native libraries), public network topology, device/Android version, logs and G0–G9 results.
 
 ## v0.1.1 — Workbench, Runtime & Linux Relay Installation
 
