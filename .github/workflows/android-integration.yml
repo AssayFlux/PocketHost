@@ -204,6 +204,7 @@ jobs:
             grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/app-badging.txt"
             unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-contents.txt"
             grep -Fxq "lib/$abi/libpockethost.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libassayflux_relay_node.so" "$RUNNER_TEMP/apk-contents.txt"
             grep -Fxq "lib/$abi/libcloudflared.so" "$RUNNER_TEMP/apk-contents.txt"
             cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
             test "$cert" = "$worker_cert" || { echo "App and companion debug certificates differ."; exit 1; }
