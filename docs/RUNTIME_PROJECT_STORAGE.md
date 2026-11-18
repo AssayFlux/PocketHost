@@ -12,7 +12,7 @@ The Android host validates project roots as canonical descendants of approved ap
 
 - v0.1.0: only static website storage/import and website backup are release-critical.
 - v0.1.1: finish runtime project transfer, quota enforcement, multi-site workspace separation and runtime lifecycle.
-- v0.1.2: optional encrypted remote namespaces and worker-assisted backup/restore.
+- v0.2.0: optional encrypted remote namespaces and worker-assisted backup/restore.
 
 ## Requirements
 

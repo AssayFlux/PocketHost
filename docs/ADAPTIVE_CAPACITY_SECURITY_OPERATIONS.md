@@ -35,7 +35,7 @@ Import failure preserves active site. Interrupted activation recovers a known-go
 
 ## Later release capacity
 
-v0.1.1 adds Workbench workspace/build/runtime budgets. v0.1.2 adds per-device role budgets, leases, backpressure and distributed scheduling.
+v0.1.1 adds Workbench workspace/build/runtime budgets. v0.2.0 adds per-device role budgets, leases, backpressure and distributed scheduling.
 
 ## Acceptance
 
