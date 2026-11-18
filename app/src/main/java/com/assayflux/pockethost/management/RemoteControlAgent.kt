@@ -80,6 +80,14 @@ object RemoteControlAgent {
 
     @Synchronized
     fun start(context: Context) {
+        // Server-only mode must never poll the fleet control plane, even when
+        // credentials remain stored from an earlier Command Center session.
+        val operatingMode = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+            .getString("operating_mode", "SERVER_ONLY") ?: "SERVER_ONLY"
+        if (operatingMode != "COMMAND_CENTER_SERVER") {
+            stop()
+            return
+        }
         if (running || !isConfigured(context)) return
         generation += 1
         val runGeneration = generation
