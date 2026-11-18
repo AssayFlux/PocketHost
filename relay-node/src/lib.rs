@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
-    net::{IpAddr, SocketAddr},
+    net::{IpAddr, SocketAddr, UdpSocket},
     sync::{Arc, Mutex, OnceLock, mpsc as std_mpsc},
     thread::JoinHandle,
     time::Duration,
@@ -51,6 +51,8 @@ struct RelayConfig {
     tls_certificate_pem: Option<String>,
     #[serde(default)]
     tls_private_key_pem: Option<String>,
+    #[serde(default = "default_dns_resolver")]
+    dns_resolver: String,
     hosts: Vec<HostConfig>,
     routes: Vec<RouteConfig>,
 }
@@ -58,6 +60,7 @@ struct RelayConfig {
 fn default_bind() -> String { "127.0.0.1".into() }
 fn default_port() -> u16 { 8082 }
 fn default_https_port() -> u16 { 8444 }
+fn default_dns_resolver() -> String { "1.1.1.1:53".into() }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -73,6 +76,8 @@ struct RouteConfig {
     hostname: String,
     site_id: String,
     device_id: Uuid,
+    dns_txt_name: String,
+    dns_txt_value: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -129,7 +134,7 @@ struct Hub {
 struct RelayState(Arc<Mutex<Hub>>);
 
 impl RelayState {
-    fn from_config(config: RelayConfig) -> Result<Self, String> {
+    async fn from_config(config: RelayConfig) -> Result<Self, String> {
         if !(1024..=65535).contains(&config.http_port)
             || !(1024..=65535).contains(&config.https_port)
             || config.http_port == config.https_port {
@@ -141,6 +146,8 @@ impl RelayState {
         if config.hosts.is_empty() || config.routes.is_empty() {
             return Err("At least one paired host and one verified route are required".into());
         }
+        let dns_resolver = config.dns_resolver.clone();
+        let mut dns_proofs = Vec::new();
         let mut hub = Hub::default();
         for host in config.hosts {
             if host.credential_sha256.len() != 64
@@ -161,11 +168,22 @@ impl RelayState {
             if !valid_site_id(&route.site_id) {
                 return Err("Invalid Relay site ID".into());
             }
+            let txt_name = normalize_dns_name(&route.dns_txt_name)?;
+            if route.dns_txt_value.len() < 24 || route.dns_txt_value.len() > 255 {
+                return Err("DNS TXT ownership value must be between 24 and 255 characters".into());
+            }
+            dns_proofs.push((txt_name, route.dns_txt_value));
             if hub.routes.insert(hostname, Route {
                 device_id: route.device_id,
                 site_id: route.site_id,
             }).is_some() {
                 return Err("Duplicate Relay hostname".into());
+            }
+        }
+        for (name, expected_value) in dns_proofs {
+            let records = dns_txt_records(name.clone(), dns_resolver.clone()).await?;
+            if !records.iter().any(|value| constant_time_equal(value, &expected_value)) {
+                return Err(format!("DNS TXT ownership proof is missing for {name}"));
             }
         }
         Ok(Self(Arc::new(Mutex::new(hub))))
@@ -268,6 +286,133 @@ fn normalize_hostname(input: &str) -> Result<String, String> {
 fn valid_site_id(value: &str) -> bool {
     !value.is_empty() && value.len() <= 64
         && value.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+fn normalize_dns_name(input: &str) -> Result<String, String> {
+    let value = input.trim().trim_end_matches('.').to_ascii_lowercase();
+    if value.is_empty() || value.len() > 253
+        || value.split('.').any(|label| label.is_empty() || label.len() > 63
+            || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')) {
+        return Err("Invalid DNS TXT challenge name".into());
+    }
+    Ok(value)
+}
+
+fn read_dns_name(packet: &[u8], offset: &mut usize) -> Option<String> {
+    let mut cursor = *offset;
+    let mut jumped = false;
+    let mut jumps = 0usize;
+    let mut labels = Vec::new();
+    loop {
+        let length = *packet.get(cursor)?;
+        if length & 0xc0 == 0xc0 {
+            let low = *packet.get(cursor + 1)?;
+            let pointer = (((length & 0x3f) as usize) << 8) | low as usize;
+            if !jumped { *offset = cursor + 2; }
+            cursor = pointer;
+            jumped = true;
+            jumps += 1;
+            if jumps > 16 { return None; }
+            continue;
+        }
+        if length == 0 {
+            if !jumped { *offset = cursor + 1; }
+            break;
+        }
+        if length & 0xc0 != 0 || length > 63 { return None; }
+        let begin = cursor + 1;
+        let finish = begin.checked_add(length as usize)?;
+        let label = std::str::from_utf8(packet.get(begin..finish)?).ok()?;
+        if !label.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_') {
+            return None;
+        }
+        labels.push(label.to_ascii_lowercase());
+        cursor = finish;
+        if !jumped { *offset = cursor; }
+        if labels.iter().map(|label: &String| label.len() + 1).sum::<usize>() > 255 { return None; }
+    }
+    Some(labels.join("."))
+}
+
+fn parse_dns_txt_answers(packet: &[u8], expected_name: &str) -> Vec<String> {
+    if packet.len() < 12 { return Vec::new(); }
+    let flags = u16::from_be_bytes([packet[2], packet[3]]);
+    if flags & 0x8000 == 0 || flags & 0x7800 != 0 || flags & 0x0200 != 0 || flags & 0x000f != 0 {
+        return Vec::new();
+    }
+    let questions = u16::from_be_bytes([packet[4], packet[5]]) as usize;
+    let answers = u16::from_be_bytes([packet[6], packet[7]]) as usize;
+    if questions != 1 || answers > 256 { return Vec::new(); }
+    let mut offset = 12usize;
+    let Some(question_name) = read_dns_name(packet, &mut offset) else { return Vec::new(); };
+    if question_name != expected_name.trim_end_matches('.').to_ascii_lowercase()
+        || packet.get(offset..offset + 4).is_none()
+        || u16::from_be_bytes([packet[offset], packet[offset + 1]]) != 16
+        || u16::from_be_bytes([packet[offset + 2], packet[offset + 3]]) != 1 {
+        return Vec::new();
+    }
+    offset += 4;
+    let mut values = Vec::new();
+    for _ in 0..answers {
+        let Some(owner) = read_dns_name(packet, &mut offset) else { break };
+        if packet.get(offset..offset + 10).is_none() { break; }
+        let record_type = u16::from_be_bytes([packet[offset], packet[offset + 1]]);
+        let record_class = u16::from_be_bytes([packet[offset + 2], packet[offset + 3]]);
+        let length = u16::from_be_bytes([packet[offset + 8], packet[offset + 9]]) as usize;
+        offset += 10;
+        let Some(data) = packet.get(offset..offset.saturating_add(length)) else { break };
+        if record_type == 16 && record_class == 1 && owner == question_name {
+            let mut part = 0usize;
+            let mut text = Vec::new();
+            let mut valid = true;
+            while part < data.len() {
+                let size = data[part] as usize;
+                part += 1;
+                if part + size > data.len() { valid = false; break; }
+                text.extend_from_slice(&data[part..part + size]);
+                part += size;
+            }
+            if valid {
+                if let Ok(value) = String::from_utf8(text) { values.push(value); }
+            }
+        }
+        offset += length;
+    }
+    values
+}
+
+async fn dns_txt_records(name: String, resolver: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let resolver: SocketAddr = resolver.parse()
+            .map_err(|e| format!("Invalid DNS resolver address: {e}"))?;
+        let mut query = Vec::with_capacity(512);
+        let random_id = Uuid::new_v4();
+        let id = u16::from_be_bytes([random_id.as_bytes()[0], random_id.as_bytes()[1]]);
+        query.extend_from_slice(&id.to_be_bytes());
+        query.extend_from_slice(&[0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        if name.len() > 253 { return Err("DNS TXT name is too long".into()); }
+        for label in name.trim_end_matches('.').split('.') {
+            if label.is_empty() || label.len() > 63 { return Err("Invalid DNS TXT label".into()); }
+            query.push(label.len() as u8);
+            query.extend_from_slice(label.as_bytes());
+        }
+        query.push(0);
+        query.extend_from_slice(&16u16.to_be_bytes());
+        query.extend_from_slice(&1u16.to_be_bytes());
+        let bind_address = if resolver.is_ipv4() { "0.0.0.0:0" } else { "[::]:0" };
+        let socket = UdpSocket::bind(bind_address).map_err(|e| format!("DNS socket bind failed: {e}"))?;
+        socket.set_read_timeout(Some(Duration::from_secs(3))).map_err(|e| e.to_string())?;
+        socket.set_write_timeout(Some(Duration::from_secs(3))).map_err(|e| e.to_string())?;
+        socket.send_to(&query, resolver).map_err(|e| format!("DNS query failed: {e}"))?;
+        let mut response = [0u8; 4096];
+        let (length, source) = socket.recv_from(&mut response).map_err(|e| format!("DNS TXT lookup failed: {e}"))?;
+        if source != resolver || length < 12
+            || u16::from_be_bytes([response[0], response[1]]) != id
+            || response[2] & 0x80 == 0 || response[2] & 0x02 != 0 {
+            return Err("DNS TXT response failed validation".into());
+        }
+        Ok(parse_dns_txt_answers(&response[..length], &name))
+    }).await.map_err(|e| format!("DNS TXT worker failed: {e}"))?
 }
 
 fn hex_sha256(bytes: &[u8]) -> String {
@@ -449,7 +594,7 @@ fn start(config_json: &str) -> Result<(), String> {
     }
     let http_bind = SocketAddr::new(bind_ip, config.http_port);
     let https_bind = SocketAddr::new(bind_ip, config.https_port);
-    let state = RelayState::from_config(config)?;
+    let state = RelayState::from_config(config).await?;
     let mut slot = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?;
     if slot.is_some() { return Err("Relay is already running".into()); }
     let (stop_tx, stop_rx) = oneshot::channel();
@@ -572,17 +717,18 @@ mod tests {
     }
 
     #[test]
-    fn route_config_rejects_unpaired_hosts_and_duplicate_hostnames() {
+    #[tokio::test]
+    async fn route_config_rejects_unpaired_hosts_and_duplicate_hostnames() {
         let device = Uuid::new_v4();
         let config = RelayConfig {
             bind_address: "127.0.0.1".into(), http_port: 8082, https_port: 8444,
-            tls_certificate_pem: None, tls_private_key_pem: None,
+            tls_certificate_pem: None, tls_private_key_pem: None, dns_resolver: "127.0.0.1:53".into(),
             hosts: vec![HostConfig { device_id: device, credential_sha256: hex_sha256(b"secret") }],
             routes: vec![
-                RouteConfig { hostname: "example.com".into(), site_id: "site".into(), device_id: device },
-                RouteConfig { hostname: "EXAMPLE.COM.".into(), site_id: "site2".into(), device_id: device },
+                RouteConfig { hostname: "example.com".into(), site_id: "site".into(), device_id: device, dns_txt_name: "_pockethost-verify.example.com".into(), dns_txt_value: "pockethost-verification-token-000000000000".into() },
+                RouteConfig { hostname: "EXAMPLE.COM.".into(), site_id: "site2".into(), device_id: device, dns_txt_name: "_pockethost-verify.example.com".into(), dns_txt_value: "pockethost-verification-token-000000000000".into() },
             ],
         };
-        assert!(RelayState::from_config(config).is_err());
+        assert!(RelayState::from_config(config).await.is_err());
     }
 }
