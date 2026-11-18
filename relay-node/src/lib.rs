@@ -22,8 +22,10 @@ use rusqlite::{params, Connection, OptionalExtension};
 use jni::{objects::{JClass, JString}, sys::jstring, JNIEnv};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+mod acme;
+
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     net::{IpAddr, SocketAddr, UdpSocket},
     sync::{Arc, Mutex, OnceLock, mpsc as std_mpsc},
     thread::JoinHandle,
@@ -53,6 +55,14 @@ struct RelayConfig {
     tls_certificate_pem: Option<String>,
     #[serde(default)]
     tls_private_key_pem: Option<String>,
+    #[serde(default)]
+    acme_contact_email: Option<String>,
+    #[serde(default)]
+    acme_terms_accepted: bool,
+    #[serde(default)]
+    acme_directory_url: Option<String>,
+    #[serde(default)]
+    acme_account_credentials: Option<serde_json::Value>,
     #[serde(default = "default_dns_resolver")]
     dns_resolver: String,
     hosts: Vec<HostConfig>,
@@ -509,6 +519,8 @@ fn validate_visitor_path(path: &str) -> Result<(), StatusCode> {
         || lower == "/_pockethost" || lower.starts_with("/_pockethost/")
         || lower == "/.well-known/pockethost"
         || lower.starts_with("/.well-known/pockethost/")
+        || lower == "/.well-known/acme-challenge"
+        || lower.starts_with("/.well-known/acme-challenge/")
         || path_only.split('/').any(|segment| segment == "." || segment == "..")
     {
         return Err(StatusCode::NOT_FOUND);
@@ -818,6 +830,37 @@ fn set_status(value: &str) {
     }
 }
 
+fn issue_certificate(config_json: &str) -> Result<String, String> {
+    let config: RelayConfig = serde_json::from_str(config_json)
+        .map_err(|error| format!("Invalid Relay ACME configuration: {error}"))?;
+    let contact_email = config.acme_contact_email.clone().unwrap_or_default();
+    if !config.acme_terms_accepted {
+        return Err("Owner must accept the Let's Encrypt Terms of Service in Relay settings.".into());
+    }
+    let mut domains = HashSet::new();
+    for route in &config.routes {
+        domains.insert(normalize_hostname(&route.hostname)?);
+    }
+    let mut domains: Vec<String> = domains.into_iter().collect();
+    domains.sort();
+
+    let request = acme::AcmeRequest {
+        bind_address: config.bind_address,
+        http_port: config.http_port,
+        domains,
+        contact_email,
+        terms_accepted: config.acme_terms_accepted,
+        directory_url: config.acme_directory_url,
+        account_credentials: config.acme_account_credentials,
+    };
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build()
+        .map_err(|error| format!("Could not create ACME runtime: {error}"))?;
+    let bundle = runtime.block_on(acme::issue(request))?;
+    serde_json::to_string(&bundle)
+        .map_err(|error| format!("Could not serialize issued ACME certificate: {error}"))
+}
+
 fn start(config_json: &str, database_path: &str) -> Result<(), String> {
     let mut config: RelayConfig = serde_json::from_str(config_json)
         .map_err(|e| format!("Invalid Relay configuration: {e}"))?;
@@ -926,6 +969,17 @@ pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_start(
         Ok::<_, String>("OK".into())
     })();
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_issueCertificate(
+    mut env: JNIEnv, _class: JClass, config: JString,
+) -> jstring {
+    let result = (|| {
+        let config: String = env.get_string(&config).map_err(|error| error.to_string())?.into();
+        issue_certificate(&config)
+    })();
+    to_jstring(&mut env, result.unwrap_or_else(|error| format!("ERROR: {error}")))
 }
 
 #[no_mangle]
