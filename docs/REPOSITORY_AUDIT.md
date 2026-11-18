@@ -18,7 +18,7 @@ However, **the current Relay implementation is not yet the independent self-host
 - Main app contains Home, Dashboard, Sites/file operations, Workbench, Learn and Settings.
 - General settings contain System/Light/Dark appearance, named classic themes, optional biometric app unlock and auto-start preference.
 - The biometric feature is a local app gate, not a mobile account login page. The browser console contains owner/admin session and passkey flows.
-- Main Android app has Cloudflare named-tunnel token controls and local hostname-to-site routing. It has no independent Relay setup/credential screen.
+- Main Android app has Cloudflare named-tunnel controls, local hostname-to-site routing and independent Relay endpoint/credential controls in Network settings. Relay credentials use a dedicated Android Keystore-backed AES-GCM store.
 - MainActivity's Network copy says no visitor password exists, but the Rust engine and SiteRegistry implement private/restricted visitor credentials and Basic auth. Correct the stale copy.
 - Main app is vertically scrollable in its root content column; physical Android font scale, keyboard, safe-area, navigation and service behavior still need named-device acceptance.
 
@@ -57,12 +57,12 @@ Present source:
 - The web-console contains hostname registration, verification and deletion UI.
 
 Critical coupling/gaps:
-- RelayAgent reads its endpoint and device token from RemoteControlAgent; it is not independent of fleet remote-control setup.
+- Android RelayAgent uses its own RelayCredentialStore; it no longer requires fleet remote-control credentials. Node-side host credential issuance/pairing remains unimplemented.
 - The gateway shares the same executable as the fleet control plane and requires PostgreSQL, DATABASE_URL, admin token and control hostname.
 - Compose currently assumes Docker, PostgreSQL and Caddy.
 - The in-memory RelayHub loses active sessions and pending requests on process restart.
 - The current Caddy port-80 listener redirects to HTTPS; the Relay visitor handler requires a trusted HTTPS frontend. There is no plain-HTTP content opt-in.
-- The native Android app has no independent Relay setup screen.
+- Android Network settings expose independent Relay endpoint and credential setup, but not standalone-node hostname/TXT/TLS provisioning.
 - A `relay-node/Cargo.toml` package manifest has since been added, but there is still no `src/main.rs`, runnable gateway, installer, service unit, Termux lifecycle or public-network acceptance. It is a scaffold, not an implementation.
 
 ### Correct no-VPS product boundary
@@ -103,8 +103,7 @@ Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundatio
 ## 9. Priority correction list
 
 1. Implement standalone owner-operated AssayFlux Relay Node for Termux/Android and Linux; no paid VPS, Docker or PostgreSQL prerequisite.
-2. Decouple Android RelayAgent from RemoteControlAgent and fleet credentials.
-3. Add independent Relay setup/identity/hostname/revocation UI and service lifecycle.
+2. Implement standalone Relay Node host identity, credential issuance, hostname/TXT/TLS provisioning and revocation; the Android connector and its Network settings are already independent of fleet credentials.
 4. Define public IPv4/IPv6, router, DNS and CGNAT requirements honestly.
 5. Preserve HTTPS default and implement/test the optional plain-HTTP policy only if still required.
 6. Resolve/document the 500 MB importer versus lower backup capacity.
