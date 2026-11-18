@@ -34,9 +34,9 @@ SiteImporter source/UI is set to 500,000,000 bytes for ZIP input and independent
 
 The Rust engine has a separate 50 MiB per-file response cap. A site may import successfully while an individual file larger than 50 MiB cannot be served.
 
-### Backup mismatch
+### Backup capacity — source recheck
 
-The active full-app backup implementation is ApplicationBackupManager, not the older SiteBackupManager. It currently caps the static site root at 50 MiB, Python project at 50 MiB, Node project at 100 MiB, total uncompressed data at 200 MiB and encrypted archive at 220 MiB. A site near the 500 MB import limit cannot be fully backed up. Resolve the quota or clearly disclose/owner-approve the lower backup ceiling before release.
+The active full-app backup implementation is `ApplicationBackupManager`, not the older `SiteBackupManager`. The current Alpha source now sets the static website root limit to 500,000,000 bytes, Python to 50 MiB, Node to 100 MiB, total uncompressed data to 650,000,000 bytes and the encrypted archive to 680,000,000 bytes. The static website backup ceiling therefore covers the importer's 500,000,000-byte expanded-content limit. The previous 50 MiB / 200 MiB figures in this audit were stale and must not be used for release decisions. Remaining acceptance: exercise near-limit backup/restore on real devices, verify free-space preflight and interruption recovery, and test combined optional runtime roots against their documented per-root and total caps.
 
 ### Static engine
 
