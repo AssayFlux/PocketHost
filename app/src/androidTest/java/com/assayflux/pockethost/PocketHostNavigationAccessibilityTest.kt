@@ -87,7 +87,7 @@ class PocketHostNavigationAccessibilityTest {
             device.pressBack()
             expectedContent.forEach { (destinationName, expected) ->
                 val (headerName, expectedText, screenshotName) = expected
-                if (destinationName != "Home") openDrawerDestination(destinationName)
+                openDrawerDestination(destinationName)
                 assertTrue("Header did not reflect $headerName",
                     device.wait(Until.hasObject(By.text(headerName)), 15_000))
                 assertTrue("$destinationName screen did not render $expectedText",
