@@ -53,4 +53,4 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 
 ## Current next actions
 
-Close the v0.1.0 hosting path: resolve/document the 500 MB import versus backup limits, verify local and LAN serving, complete Cloudflare Tunnel and the standalone Termux/Linux Relay Node, decouple RelayAgent from RemoteControlAgent credentials, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK and Relay Node, and complete physical-device/external-network acceptance.
+Close the remaining v0.1.0 hosting path: verify local and LAN serving, complete Cloudflare Tunnel and the standalone Termux/Android Relay Node, implement node-side host credential issuance and durable routing, verify the owner's domain over external HTTP/HTTPS, exercise host/gateway lifecycle and recovery, package the main APK and Relay Node, and complete physical-device/external-network acceptance. The Android Relay client already has independent credentials and lifecycle; the standalone gateway is still missing.

@@ -67,7 +67,7 @@ The nine SVGs under `Assets/` total approximately 115.6 MB. The root-level `Pock
 - The app's main page is vertically scrollable. Native device settings, permissions, notification, foreground-service and battery behavior still require physical-device acceptance.
 - Static website folder and ZIP import exist in `SiteImporter.kt`. The source constant is **500,000,000 bytes** for ZIP input and independently for expanded website content; file count 5,000, total archive entries 10,000 and depth 32.
 - The Rust engine is a JNI library using Tokio/Hyper. It serves HTTP, binds loopback by default and can bind LAN when explicitly enabled. It implements hostname routing, static file/range/MIME handling, SPA index fallback, visitor access modes (public/private/restricted), Basic authentication and rate/connection limits.
-- The Rust engine has a separate **500,000,000-byte (500 MB decimal) per-file response cap**, 16 active connections, 32 queued connections and bounded per-site admission. The 500 MB import limit is independent of the Rust per-file serving cap of 500,000,000 bytes. Manual single-file import is 50 MiB.
+- The Rust engine has a separate **50 MiB per-file response cap**, 16 active connections, 32 queued connections and bounded per-site admission. The 500 MB import limit does not raise the serving cap for any individual file.
 - Android local management API, pairing/approval, diagnostics, service lifecycle, telemetry, encrypted backup and recovery source exist.
 
 ### Cloudflare Tunnel

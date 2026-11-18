@@ -32,7 +32,7 @@ HostingService starts the foreground service, recovers interrupted site/backup o
 
 SiteImporter source/UI is set to 500,000,000 bytes for ZIP input and independently for expanded website contents. It also caps files at 5,000, total ZIP entries at 10,000 and depth at 32. Existing instrumentation coverage checks the configured constant and ZIP happy path; it does not prove a real 500 MB import. Boundary, low-storage, memory-pressure and physical-device tests remain open.
 
-The Rust engine has a separate 500,000,000-byte (500 MB decimal) per-file response cap. A site may import successfully while an individual file larger than 500,000,000 bytes cannot be served.
+The Rust engine has a separate 50 MiB per-file response cap. A site may import successfully while an individual file larger than 50 MiB cannot be served.
 
 ### Backup capacity — source recheck
 
