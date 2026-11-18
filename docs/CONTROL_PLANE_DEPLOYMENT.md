@@ -7,7 +7,7 @@
 
 The control plane is the optional fleet coordination service. It handles owner sessions, devices, roles, desired state, typed commands, artifacts and audit. It is not the Android website origin and is not required for local or LAN static hosting.
 
-**Important boundary:** the current source also places the Relay visitor gateway in the same Rust executable. This is an implementation coupling, not the intended product boundary. v0.1.0 must extract the owner-operated Relay Node into a separately installable service so that public website hosting does not require the full fleet control plane or its PostgreSQL database.
+**Important boundary:** the current source also places the Relay visitor gateway in the same Rust executable. This is an implementation coupling, not the intended product boundary. v0.1.0 must move the owner-operated Relay data plane into the native Android service bundled in the main APK, so public website hosting does not require the full fleet control plane or its PostgreSQL database.
 
 ## Current source topology
 
@@ -25,7 +25,7 @@ The current deployment therefore assumes a publicly reachable Docker-capable hos
 
 ## Intended v0.1.0 Relay boundary
 
-The first-party Relay Node must be a separate, owner-operated service:
+The first-party v0.1.0 Relay must be an independently managed native Android service component inside the Pocket Host APK:
 
 - v0.1.0 target is a Kotlin foreground service with a Rust/Tokio JNI engine inside the Pocket Host APK; Linux-native packaging and service installation are v0.1.1.
 - No paid VPS, Docker or PostgreSQL requirement.
@@ -46,7 +46,7 @@ The detailed contract is in [AssayFlux Relay](ASSAYFLUX_RELAY.md) and [Public In
 - Artifact upload/delivery with checksums and bounded size.
 - Audit events and database backup/restore.
 - Linux/Android agent lifecycle and cross-device recovery.
-- Fleet health and multi-host Relay scheduling/advanced failover only after the standalone v0.1.0 Relay Node is stable.
+- Fleet health and multi-host Relay scheduling/advanced failover only after the native Android v0.1.0 Relay service is stable.
 
 ## Deployment requirements for the current Compose stack
 
@@ -56,4 +56,4 @@ Do not claim that this stack has been deployed or is running in production unles
 
 ## Acceptance
 
-For v0.1.2, test owner session lifecycle, device enrollment/revocation, role-grant signatures, typed job lease/idempotency, database recovery, audit, credential rotation, rate limits and mobile/agent reconnect. Verify visitor ingress cannot reach the management API. The v0.1.0 standalone Relay Node has its own G0–G9 acceptance and must not be treated as completed by control-plane CI alone.
+For v0.1.2, test owner session lifecycle, device enrollment/revocation, role-grant signatures, typed job lease/idempotency, database recovery, audit, credential rotation, rate limits and mobile/agent reconnect. Verify visitor ingress cannot reach the management API. The v0.1.0 native Android Relay service has its own G0–G9 acceptance and must not be treated as completed by control-plane CI alone.
