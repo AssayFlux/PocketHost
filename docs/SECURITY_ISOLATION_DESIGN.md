@@ -20,7 +20,7 @@ Pocket Host must keep website visitors, owner controls, website files, optional 
 - Exclude private key and credential material, including known SSH key files, .env files, PEM/key/P12/PFX files and internal Pocket Host metadata.
 - Preserve the current live website until the replacement is validated and activated.
 - Recover the last-known-good site after interrupted activation.
-- Keep Rust static response cap at 50 MiB per file unless separately reviewed and tested.
+- Keep Rust static response cap at 500,000,000 bytes (500 MB decimal) per file unless separately reviewed and tested.
 - Bind to loopback by default. LAN binding is explicit opt-in and exposes the website listener to the local network.
 - Never expose management API or device-control endpoints through the visitor listener.
 - Target: Cloudflare Tunnel and Relay host-ingress credentials are separate from owner/device-management credentials; redact tokens from logs, diagnostics and backups. Android now stores Relay endpoint/token separately in Android Keystore-backed `RelayCredentialStore`; node-side credential issuance, revocation and public ingress acceptance remain open.

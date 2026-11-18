@@ -24,7 +24,7 @@ Your website must have an <code>index.html</code> file at its root.
 - Maximum directory nesting: 32 levels.
 - Unsafe paths, traversal entries, symlinks and sensitive key/secret files are rejected.
 
-The limits are independent: a compressed ZIP can be below 500 MB but expand beyond 500 MB and be rejected. The Rust server also has a separate 500,000,000-byte (500 MB decimal) per-file response limit.
+The limits are independent: a compressed ZIP can be below 500 MB but expand beyond 500 MB and be rejected. The Rust server also has a separate 50 MiB per-file response limit.
 
 ## 4. Start local hosting
 

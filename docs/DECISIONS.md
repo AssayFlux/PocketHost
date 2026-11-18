@@ -24,7 +24,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Decision:** v0.1.0 accepts a maximum of 500,000,000 bytes for a ZIP archive and independently 500,000,000 bytes for extracted website contents. Folder imports use the extracted-content limit. File count is 5,000, total entries 10,000 and nesting depth 32. Unsafe paths, symlinks and sensitive key/secret files remain rejected.
 
-**Separate limit:** Rust static responses remain capped at 50 MiB per file unless a later evidence-based decision changes it.
+**Separate limit:** Rust static responses are capped at 500,000,000 bytes (500 MB decimal) per file; manual single-file import is capped at 50 MiB and text editing at 256 KiB unless a later evidence-based decision changes it.
 
 ## ADR-006 — Preserve Design Language V1
 
