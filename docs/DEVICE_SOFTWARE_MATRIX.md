@@ -1,6 +1,6 @@
 # Pocket Host — Device Software and Role Matrix
 
-**Roadmap placement:** v0.1.0 Android hosting; v0.1.1 optional runtime companion; v0.2.0 connected device fabric.
+**Roadmap placement:** v0.1.0 Android hosting; v0.1.1 optional runtime companion; v0.1.2 connected device fabric.
 
 ## Installable software products
 
@@ -9,11 +9,11 @@
 | Android phone/tablet | Pocket Host main APK | Kotlin/Compose app, Rust JNI hosting, site management, diagnostics and service foundations | v0.1.0 |
 | Android runtime provider | Separate runtime-worker APK | Existing CPython 3.11 and Node.js 24.22.1 implementations, shipped together | v0.1.1 |
 | Termux on Android | AssayFlux Relay Node | No standalone Termux package, installer or service exists in the audited source | v0.1.0 target |
-| Linux home server / mini PC | AssayFlux Relay Node | No standalone Relay Node package exists; current gateway is coupled to the fleet control plane | v0.1.0 target |
-| Browser | web-console | React/TypeScript/Vite operator console; Relay hostname panel source exists but is not a standalone gateway | v0.2.0 full console; minimal Relay setup in v0.1.0 |
-| Linux x86_64 | Linux Node Agent | Preview Python package with SQLite jobs and HTTPS polling | v0.2.0 |
-| Windows | Windows agent | Not present as a production package in audited tree | Later v0.2.x expansion |
-| macOS | macOS agent | Not present as a production package in audited tree | Later v0.2.x expansion |
+| Linux home server / mini PC | AssayFlux Relay Node | No standalone Relay Node package exists; Linux-native package, installer and service lifecycle are deferred to v0.1.1 | v0.1.1 target |
+| Browser | web-console | React/TypeScript/Vite operator console; Relay hostname panel source exists but is not a standalone gateway | v0.1.2 full console; minimal Relay setup in v0.1.0 |
+| Linux x86_64 | Linux Node Agent | Preview Python package with SQLite jobs and HTTPS polling | v0.1.2 |
+| Windows | Windows agent | Not present as a production package in audited tree | Later later expansion after v0.1.2 expansion |
+| macOS | macOS agent | Not present as a production package in audited tree | Later later expansion after v0.1.2 expansion |
 | Raspberry Pi/SBC | Board-specific agent/gateway | No certified board profile | Later expansion |
 | iOS | Mobile client | No iOS source project in this repository | Later expansion |
 | DemonCore/MCU | Separate firmware/board profiles | External project | Later adapter work |
@@ -34,11 +34,11 @@ The planned worker roles are storage, traffic, build/publish preparation, native
 | Role | Permission boundary | Planned release |
 |---|---|---|
 | Mobile website server | Rust HTTP ingress and site registry | v0.1.0 |
-| Storage | Named encrypted namespaces only | v0.2.0 |
-| Backup/recovery | Encrypted snapshots and constrained restore staging | v0.2.0 |
-| Traffic | Exact approved site routes and bounded proxy/cache | v0.2.0 |
-| Build/publish | Scoped source input and immutable staging output; no signing/activation authority | v0.2.0 |
-| Native job | Signed fixed-purpose operation; no arbitrary shell | v0.2.0 |
+| Storage | Named encrypted namespaces only | v0.1.2 |
+| Backup/recovery | Encrypted snapshots and constrained restore staging | v0.1.2 |
+| Traffic | Exact approved site routes and bounded proxy/cache | v0.1.2 |
+| Build/publish | Scoped source input and immutable staging output; no signing/activation authority | v0.1.2 |
+| Native job | Signed fixed-purpose operation; no arbitrary shell | v0.1.2 |
 | Edge gateway | Board-profile allow-listed operations | Later expansion |
 | Public Relay Node | Dedicated visitor-only HTTP gateway; no fleet admin authority | v0.1.0 |
 
