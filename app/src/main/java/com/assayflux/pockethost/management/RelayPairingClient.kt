@@ -30,6 +30,9 @@ object RelayPairingClient {
         val token = Base64.encodeToString(
             tokenBytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
         )
+        // Save before sending: if the server commits but the HTTP response is lost,
+        // the host still retains the only bearer that was registered on the node.
+        RelayCredentialStore.configure(context, normalizedEndpoint, token)
         val body = JSONObject()
             .put("invite_code", inviteCode.trim())
             .put("device_id", deviceId)
@@ -64,8 +67,6 @@ object RelayPairingClient {
             require(response.optString("status") == "paired" && response.optString("device_id") == deviceId) {
                 "Relay returned an invalid pairing confirmation."
             }
-            // Persist the raw bearer only on the host phone, encrypted by its own Keystore key.
-            RelayCredentialStore.configure(context, normalizedEndpoint, token)
             return deviceId
         } finally {
             connection.disconnect()
