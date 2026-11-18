@@ -128,7 +128,7 @@ The **target architecture** is a standalone, lightweight AssayFlux Relay Node th
 ## UI/source discrepancies found
 
 - The Settings > Network copy in `MainActivity.kt` says “No built-in visitor password yet” and recommends Cloudflare Access, but the Rust engine and SiteRegistry already implement private/restricted visitor credentials and Basic authentication. The copy is stale and should be corrected.
-- The Network UI exposes Cloudflare controls, local hostname-to-site routing and independent AssayFlux Relay endpoint/credential setup. It does not yet provision host identities or hostnames on a standalone Relay Node.
+- The Network UI exposes Cloudflare controls, local hostname-to-site routing and independent AssayFlux Relay endpoint/credential setup. It does not yet provision node identities, host credentials or hostnames on the native Android Relay service.
 - The app's optional biometric unlock is not a full mobile account/login page. The browser console has the separate owner/admin login and passkey flow.
 
 ## Build and verification evidence at the snapshot
@@ -572,7 +572,7 @@ web-console/vite.config.ts  [132 bytes]  [blob 1826ab6ad8e4]
 - Therefore the Relay Node remains **not implemented / not runnable**. Do not count the manifest or passing general CI as a completed gateway.
 - Quality CI passed for the current head: [run 44091819401](https://github.com/AssayFlux/PocketHost/actions/runs/44091819401).
 - Protocol contract CI passed for the current head: [run 44091819294](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294).
-- No current evidence establishes a packaged Android APK, standalone Relay Node executable, installed Android foreground service, physical-device acceptance or public-domain end-to-end acceptance.
+- No current evidence establishes a signed APK containing Relay native libraries, an installed native Relay foreground service, physical-device acceptance or public-domain end-to-end acceptance.
 
 
 ## Remediation snapshot addendum (2026-11-18)
