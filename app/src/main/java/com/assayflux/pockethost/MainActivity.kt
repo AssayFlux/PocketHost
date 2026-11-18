@@ -579,11 +579,13 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                 OutlinedButton(onClick = {
                                     operatingMode = "SERVER_ONLY"
                                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putString("operating_mode", operatingMode).apply()
+                                    RemoteControlAgent.stop()
                                     if (selectedTab == "Devices") selectedTab = "Home"
                                 }, modifier = Modifier.weight(1f)) { Text("Server only") }
                                 Button(onClick = {
                                     operatingMode = "COMMAND_CENTER_SERVER"
                                     context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putString("operating_mode", operatingMode).apply()
+                                    if (hosting) RemoteControlAgent.start(context)
                                 }, modifier = Modifier.weight(1f)) { Text("Command Center + Server") }
                             }
                             if (operatingMode == "COMMAND_CENTER_SERVER") {
