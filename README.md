@@ -39,7 +39,7 @@
 
 ## ABOUT POCKET HOST
 
-**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an owner-operated AssayFlux Relay Node. The v0.1.0 Relay is a native Kotlin foreground service with a Rust/Tokio JNI engine bundled in the Pocket Host APK; it does not require a terminal application or external runtime. Linux-native packaging remains v0.1.1. A paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an native Android AssayFlux Relay service bundled in the Pocket Host APK. The v0.1.0 Relay is a native Kotlin foreground service with a Rust/Tokio JNI engine bundled in the Pocket Host APK; it does not require a terminal application or external runtime. Linux-native packaging remains v0.1.1. A paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
 
 A desktop, laptop, server, NAS or supported single-board computer may eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Device products remain separate for their platforms and interoperate through shared contracts. Network discovery never establishes trust.
 
