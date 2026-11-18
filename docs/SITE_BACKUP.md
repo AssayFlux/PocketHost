@@ -18,16 +18,16 @@ It deliberately excludes Android Keystore credentials, owner/operator accounts, 
 
 | Item | Current limit |
 |---|---:|
-| Static website root | 50 MiB |
+| Static website root | 500,000,000 bytes |
 | Python project | 50 MiB |
 | Node.js project | 100 MiB |
-| Total uncompressed backup | 200 MiB |
-| Encrypted archive | 220 MiB |
+| Total uncompressed backup | 650,000,000 bytes |
+| Encrypted archive | 680,000,000 bytes |
 | Total files | 20,000 |
 | Total entries | 30,000 |
 | Directory depth | 32 |
 
-The current implementation therefore cannot back up a static website near the new 500 MB import allowance. **This is an open v0.1.0 capacity mismatch.** Before release, either raise backup limits safely and test them or explicitly approve, expose and document the lower backup ceiling. Do not claim a 500 MB imported site can be fully backed up.
+The static website root cap now matches the importer's 500,000,000-byte expanded-content allowance. Optional Python and Node roots remain separately capped at 50 MiB and 100 MiB; the combined uncompressed archive is capped at 650,000,000 bytes and the encrypted archive at 680,000,000 bytes. Near-limit backup/restore, low-storage preflight and physical-device interruption tests remain open. Do not infer that every combination of optional runtime projects fits merely because the static site alone fits.
 
 ## Passphrase handling
 
