@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import org.json.JSONObject
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -14,7 +15,13 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import java.io.ByteArrayInputStream
+import java.net.InetAddress
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 /** Owner-started foreground lifecycle for the native public visitor gateway. */
 class NativeRelayService : Service() {
@@ -71,6 +78,11 @@ class NativeRelayService : Service() {
                 OperationalLog.record(this, "WARN", "NATIVE_RELAY_NETWORK_MONITOR",
                     it.message ?: "Could not register Relay network recovery callback.")
             }
+        renewalTask = renewalScheduler.scheduleWithFixedDelay({
+            if (ownerRequestedRunning && !stopping) {
+                worker.execute { startRelay("scheduled ACME renewal check") }
+            }
+        }, 12, 12, TimeUnit.HOURS)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -112,11 +124,47 @@ class NativeRelayService : Service() {
         startRelay(reason)
     }
 
+    private fun certificateNeedsRenewal(configJson: String): Boolean {
+        val config = JSONObject(configJson)
+        val bindAddress = config.optString("bind_address", "127.0.0.1")
+        if (InetAddress.getByName(bindAddress).isLoopbackAddress) return false
+        val certificatePem = config.optString("tls_certificate_pem")
+        val privateKeyPem = config.optString("tls_private_key_pem")
+        if (certificatePem.isBlank() || privateKeyPem.isBlank()) return true
+        return runCatching {
+            val certificate = CertificateFactory.getInstance("X.509")
+                .generateCertificate(ByteArrayInputStream(certificatePem.toByteArray(Charsets.UTF_8))) as X509Certificate
+            certificate.notAfter.time <= System.currentTimeMillis() + TimeUnit.DAYS.toMillis(30)
+        }.getOrDefault(true)
+    }
+
     private fun startRelay(reason: String) {
         if (!ownerRequestedRunning || stopping) return
         val result = runCatching {
-            val config = RelayNodeConfigStore.read(this)
+            var config = RelayNodeConfigStore.read(this)
                 ?: throw IllegalStateException("Relay node is not configured. Complete Relay setup first.")
+            val configObject = JSONObject(config)
+            if (certificateNeedsRenewal(config)) {
+                if (configObject.optString("acme_contact_email").isBlank()) {
+                    throw IllegalStateException("Automatic TLS needs an ACME contact email and accepted Let's Encrypt Terms in Relay settings.")
+                }
+                if (NativeRelay.status() == "RUNNING") {
+                    val stopped = NativeRelay.stop()
+                    if (stopped != "OK") throw IllegalStateException("Could not stop Relay before ACME renewal: $stopped")
+                }
+                OperationalLog.record(this, "INFO", "RELAY_ACME_CERTIFICATE_REQUESTED", "Starting HTTP-01 certificate issuance or renewal.")
+                val issued = NativeRelay.issueCertificate(config)
+                if (issued.startsWith("ERROR:")) throw IllegalStateException(issued.removePrefix("ERROR:").trim())
+                val bundle = JSONObject(issued)
+                configObject.put("tls_certificate_pem", bundle.getString("tls_certificate_pem"))
+                configObject.put("tls_private_key_pem", bundle.getString("tls_private_key_pem"))
+                configObject.put("acme_account_credentials", bundle.getJSONObject("acme_account_credentials"))
+                check(RelayNodeConfigStore.save(this, configObject.toString())) {
+                    "Could not securely persist the TLS certificate and ACME account credentials."
+                }
+                config = configObject.toString()
+                OperationalLog.record(this, "INFO", "RELAY_ACME_CERTIFICATE_SAVED", "Certificate and account credentials stored in encrypted Relay configuration.")
+            }
             val identity = RelayNodeIdentityStore.getOrCreate()
             OperationalLog.record(this, "INFO", "NATIVE_RELAY_NODE_IDENTITY", identity.nodeId)
             if (NativeRelay.status() == "RUNNING") "OK" else NativeRelay.start(config, getDatabasePath("pockethost_relay_node.db").absolutePath)
@@ -139,6 +187,8 @@ class NativeRelayService : Service() {
     override fun onDestroy() {
         stopping = true
         ownerRequestedRunning = false
+        renewalTask?.cancel(true)
+        renewalScheduler.shutdownNow()
         runCatching { connectivity.unregisterNetworkCallback(networkCallback) }
         runCatching { NativeRelay.stop() }
         worker.shutdownNow()
