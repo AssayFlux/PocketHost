@@ -41,7 +41,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 9. Verify the custom domain from an independent network over HTTP and HTTPS through each configured provider; record DNS/TLS, response headers, content, provider status and management-route isolation.
 10. Record the source SHA, APK and Relay Node artifact digests, public network topology, device/Android version, logs and G0–G9 results.
 
-## v0.1.1 — Workbench & Runtime Development
+## v0.1.1 — Workbench, Runtime & Linux Relay Installation
 
 **User outcome:** develop and publish websites safely inside Pocket Host, and run optional server-side Python/Node projects.
 
@@ -56,6 +56,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 - Explicit owner-approved staged publishing, atomic activation and rollback.
 - Complete existing Python 3.11 and Node.js 24.22.1 companion integration, with install/IPC/lifecycle/health/recovery acceptance.
 - Optional runtime packaging and isolation hardening; static hosting must remain independent.
+- Linux-native Relay Node packaging, installation and service lifecycle tooling, with a documented supported-distribution/architecture matrix and install/upgrade/uninstall verification.
 - Large workspace, multi-site, backup, storage-pressure and crash-recovery tests.
 
 ### Explicit exclusions
