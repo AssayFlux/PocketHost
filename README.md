@@ -127,12 +127,12 @@ The first release has one primary promise: **a website imported into Pocket Host
 - The Relay Node does not require a paid VPS, but it must run on an owner-controlled device with public IPv4/port forwarding or globally routed IPv6. CGNAT without global IPv6 cannot accept inbound visitors.
 - External DNS/TLS/content verification and strict separation between visitor and management routes.
 - Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
-- Encrypted full-app backup/restore and useful hosting diagnostics (current backup limits are lower than the 500 MB import cap; see backup documentation).
+- Encrypted full-app backup/restore and useful hosting diagnostics (static website backups support the full 500,000,000-byte import allowance; optional Python/Node projects have separate limits).
 - APK build, installation and physical Android acceptance.
 
 The static website path does not require Python, Node.js or a companion runtime. A React/Vite website can be hosted from its already-built static output (normally the contents of <code>dist/</code>); the phone does not compile a raw React/TypeScript project in v0.1.0.
 
-The Rust engine has a separate **50 MiB per-file response safety cap**. That is not the overall import limit. The current full-app backup path separately limits the static site tree to 50 MiB and the full uncompressed backup to 200 MiB; a 500 MB imported site cannot currently be fully backed up through that path. Aligning those limits or formally accepting the smaller backup ceiling is an open v0.1.0 task.
+The Rust engine has a separate **50 MiB per-file response safety cap**. That is not the overall import limit. The current full-app backup implementation supports a **500,000,000-byte static-site tree**, a **650,000,000-byte total uncompressed archive**, and a **680,000,000-byte encrypted archive**. Optional Python and Node project roots remain separately capped at 50 MiB and 100 MiB. The static-site backup limit therefore matches the importer’s 500,000,000-byte expanded-content allowance; real-device storage-headroom and large-backup tests remain required.
 
 ## v0.1.1 — WORKBENCH & RUNTIME DEVELOPMENT
 
