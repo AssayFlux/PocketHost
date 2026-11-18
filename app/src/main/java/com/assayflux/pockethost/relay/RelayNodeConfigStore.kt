@@ -168,6 +168,20 @@ object RelayNodeConfigStore {
     }
 
     @Synchronized
+    fun updateAcmeSettings(context: Context, contactEmail: String, termsAccepted: Boolean): Boolean {
+        val email = contactEmail.trim()
+        require(email.length <= 254 && email.contains('@') && email.substringAfter('@').contains('.')) {
+            "Enter a valid ACME contact email."
+        }
+        val current = read(context)
+            ?: throw IllegalStateException("Import a Relay node configuration before setting up TLS.")
+        val config = JSONObject(current)
+        config.put("acme_contact_email", email)
+        config.put("acme_terms_accepted", termsAccepted)
+        return save(context, config.toString())
+    }
+
+    @Synchronized
     fun activeHostIds(context: Context): Set<String> =
         withDatabase(context, writable = false) { db ->
             db.query("relay_host_credentials", arrayOf("device_id"), null, null, null, null, null)
