@@ -7,7 +7,7 @@
 
 use axum::{
     body::{to_bytes, Body},
-    extract::{Path, State},
+    extract::{DefaultBodyLimit, Path, State},
     http::{header, HeaderMap, HeaderValue, Method, Request, Response, StatusCode},
     response::sse::{Event, KeepAlive, Sse},
     routing::{any, get, post},
@@ -47,7 +47,7 @@ struct RelayConfig {
     routes: Vec<RouteConfig>,
 }
 
-fn default_bind() -> String { "0.0.0.0".into() }
+fn default_bind() -> String { "127.0.0.1".into() }
 fn default_port() -> u16 { 8082 }
 
 #[derive(Debug, Deserialize)]
@@ -377,7 +377,8 @@ fn router(state: RelayState) -> Router {
         .route("/health", get(health))
         .route("/v1/device/relay/stream", get(host_stream))
         .route("/v1/device/relay/responses/:id", post(host_response))
-        .route("/{*path}", any(visitor))
+        .route("/*path", any(visitor))
+        .layer(DefaultBodyLimit::max(12 * 1024 * 1024))
         .with_state(state)
 }
 
@@ -400,6 +401,9 @@ fn start(config_json: &str) -> Result<(), String> {
         .map_err(|e| format!("Invalid Relay configuration: {e}"))?;
     let bind_ip: IpAddr = config.bind_address.parse()
         .map_err(|_| "Relay bind address must be a numeric IP address")?;
+    if !bind_ip.is_loopback() {
+        return Err("Plain HTTP Relay is restricted to loopback until the TLS listener is configured".into());
+    }
     let bind = SocketAddr::new(bind_ip, config.http_port);
     let state = RelayState::from_config(config)?;
     let mut slot = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?;
