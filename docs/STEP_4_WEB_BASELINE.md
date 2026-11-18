@@ -28,7 +28,7 @@ A user can import a static website into the Android app, start hosting, open it 
 
 ## 3. Static response safety
 
-The current Rust engine defines a 50 MiB per-file response cap. This is separate from the total website import quota. Do not infer that a single file up to 500 MB is serveable. If this cap changes, update Rust tests, resource budgets, security review, documentation and G0/G1/G3/G7/G8 evidence.
+The current Rust engine defines a 500,000,000-byte (500 MB decimal) per-file response cap. This is separate from the total website import quota. The 50 MiB limit applies to manual single-file import, not Rust serving. Text editing is capped at 256 KiB. If this cap changes, update Rust tests, resource budgets, security review, documentation and G0/G1/G3/G7/G8 evidence.
 
 ## 4. Technology boundaries
 
