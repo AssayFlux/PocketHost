@@ -2,7 +2,7 @@
 
 This document describes the temporary import format used by the native Android Relay service while the in-app pairing and hostname setup flows are being implemented. It is not the final owner onboarding experience.
 
-Import the JSON through **Settings → Network → Native AssayFlux Relay Node → Import node config**. Pocket Host encrypts the complete JSON using an Android Keystore AES-GCM key before storing it. The Rust engine keeps only host credential SHA-256 verifiers in memory.
+Import the initial node/route JSON through **Settings → Network → Native AssayFlux Relay Node → Import node config**. Pocket Host encrypts the complete configuration with Android Keystore AES-GCM and stores it in transactional SQLite. The Rust engine keeps only host credential SHA-256 verifiers in memory. After import, use the owner credential controls to issue or rotate a 256-bit host token for a configured host UUID; the raw token is shown once for transfer to the host phone. Revoking a host removes its routes and writes a durable revocation tombstone.
 
 ## Required shape
 
@@ -44,7 +44,7 @@ printf '%s\n' "$TOKEN"
 printf '%s' "$TOKEN" | sha256sum
 ```
 
-Put the raw `TOKEN` into the host phone's existing **Dedicated Relay host credential** field and configure its Relay HTTPS endpoint as `https://your-relay-hostname`. Put only the SHA-256 digest (64 hex characters, without spaces or filename) in the Relay Node's `credential_sha256` field. Do not paste the raw token into the node configuration.
+For an existing engineering config, the owner UI can generate/rotate the credential and updates the host's `credential_sha256` verifier automatically. Transfer the raw token to the host phone and save it in the **Dedicated Relay host credential** field with endpoint `https://your-relay-hostname`. Never put the raw token in the node configuration. The manual OpenSSL procedure remains available only for externally provisioned test credentials.
 
 ## DNS ownership proof
 
@@ -63,4 +63,4 @@ Never publish the JSON configuration. It contains the TLS private key and DNS ch
 
 ## Current limitations
 
-This import flow is an engineering bridge, not final pairing. The app does not yet issue credentials, generate node identity, automate ACME, persist route/revocation state in a database, rotate credentials, or renew certificates. DNS TXT proof is rechecked at node startup, not continuously. Do not claim v0.1.0 acceptance until those gaps and the physical/public-network tests are closed.
+This import flow is still an engineering provisioning bridge, not the final pairing ceremony. Node identity, owner-issued credential creation/rotation/revocation, encrypted SQLite configuration persistence and revocation tombstones are implemented. Short-lived single-use pairing invites, automatic ACME issuance/renewal, certificate expiry monitoring and continuous DNS TXT proof lifecycle remain incomplete. DNS TXT proof is rechecked at node startup, not continuously. Do not claim v0.1.0 acceptance until those gaps and the physical/public-network tests are closed.
