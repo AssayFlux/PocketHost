@@ -92,14 +92,14 @@ The nine SVGs under `Assets/` total approximately 115.6 MB. The root-level `Pock
 
 ### What “self-hosted Relay without a VPS” means
 
-A paid VPS is not a product requirement. The Relay gateway can be designed as a native Android service bundled in the main Pocket Host APK (as a native Android foreground service in the Pocket Host APK, with Linux-native packaging deferred to v0.1.1). However, the gateway still needs a network path that is publicly reachable by the owner's domain:
+A paid VPS is not a product requirement. The approved v0.1.0 Relay design is a native Android service bundled in the main Pocket Host APK, with Linux-native packaging deferred to v0.1.1. However, the gateway still needs a network path that is publicly reachable by the owner's domain:
 
 - A public IPv4 address with router port forwarding for TCP 80/443, or
 - A globally routed IPv6 address with the firewall permitting the required inbound ports, plus correct DNS A/AAAA records and TLS.
 
 If the only available network is behind carrier-grade NAT (CGNAT) and there is no globally reachable IPv6 or port-forwardable public address, DNS cannot make that phone an Internet-facing gateway. A publicly reachable owner-controlled node elsewhere is then required; Cloudflare Tunnel can remain an optional third-party fallback. This is a network constraint, not a Pocket Host limitation that software can bypass.
 
-The **target architecture** is a standalone, lightweight AssayFlux Relay Node that can be installed on an owner-controlled reachable device and does not require the full fleet control plane, a paid VPS, Docker or PostgreSQL. This target is **not implemented in the audited source snapshot**.
+The **target architecture** is a lightweight native Android AssayFlux Relay service bundled in the Pocket Host APK. It does not require the full fleet control plane, a paid VPS, Docker or PostgreSQL. This target is **not implemented in the audited source snapshot**.
 
 ### Runtimes and Workbench
 
