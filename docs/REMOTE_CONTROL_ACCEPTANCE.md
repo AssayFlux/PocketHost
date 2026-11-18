@@ -1,6 +1,6 @@
-# Pocket Host — Connected Device Acceptance (v0.1.2)
+# Pocket Host — Connected Device Acceptance (v0.2.0)
 
-**Release assignment:** v0.1.2 — Connected Device Fabric.  
+**Release assignment:** v0.2.0 — Connected Device Fabric.  
 **Status:** acceptance plan; not a statement that the fabric is production-ready.
 
 ## 1. Mobile modes
@@ -46,4 +46,4 @@ Test credential theft/revocation, replay, role escalation, device clone, cross-r
 
 ## 9. Release
 
-All v0.1.2 G0–G9 gates must pass. Required evidence includes artifact hashes, device/OS matrix, enrollment and job logs, revocation test, fault/recovery report, security review, provider tests and owner sign-off.
+All v0.2.0 G0–G9 gates must pass. Required evidence includes artifact hashes, device/OS matrix, enrollment and job logs, revocation test, fault/recovery report, security review, provider tests and owner sign-off.

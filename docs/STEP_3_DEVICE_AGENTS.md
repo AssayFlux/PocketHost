@@ -1,7 +1,7 @@
-# Device Agents and Workers — v0.1.2 Workstream
+# Device Agents and Workers — v0.2.0 Workstream
 
 **Status:** Linux preview foundation; production agent acceptance open.  
-**Release assignment:** v0.1.2 Connected Device Fabric.
+**Release assignment:** v0.2.0 Connected Device Fabric.
 
 ## Linux Node Agent preview
 
@@ -25,7 +25,7 @@ This is a preview, not a certified production agent.
 - Build/publish, traffic proxy, full restore/replication and signed updates remain open.
 - Physical hardware acceptance remains open.
 
-## v0.1.2 work
+## v0.2.0 work
 
 1. Complete mobile owner enrollment, grant distribution, signed jobs and results.
 2. Add authenticated discovery/pairing and supported BLE/USB paths.

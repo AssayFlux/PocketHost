@@ -1,7 +1,7 @@
 # Pocket Host — Host Agent and Role Contract
 
 **Contract:** pockethost.device/1.0  
-**Release assignment:** v0.1.2 — Connected Device Fabric
+**Release assignment:** v0.2.0 — Connected Device Fabric
 
 ## 1. Principals and identity
 

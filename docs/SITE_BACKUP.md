@@ -48,7 +48,7 @@ The UI disables export/restore while hosting or optional runtimes are active. St
 7. Keep restored runtimes stopped.
 8. Recover interrupted restore before hosting resumes.
 
-## v0.1.2 expansion
+## v0.2.0 expansion
 
 Remote encrypted namespaces, worker-assisted backup, off-device replication, device replacement and distributed restore orchestration are later features.
 
