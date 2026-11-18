@@ -1169,7 +1169,10 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                         if (hosting) RelayAgent.start(context)
                                         status = "Relay host paired successfully ($hostId). The credential is stored in this phone's Android Keystore."
                                     }.onFailure {
-                                        status = it.message ?: "Could not pair this host with the Relay Node."
+                                        relayConfigured = RelayCredentialStore.isConfigured(context)
+                                        relayTokenText = ""
+                                        status = (it.message ?: "Could not pair this host with the Relay Node.") +
+                                            if (relayConfigured) " The generated credential was retained on this phone so a committed pairing can still connect." else ""
                                     }
                                 }
                             },
