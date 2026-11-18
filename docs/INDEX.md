@@ -7,7 +7,7 @@ This documentation set follows the new three-version pathway. The former five-st
 2. [Master Plan](MASTER_PLAN.md) — product rules and version boundaries.
 3. [Three-Version Roadmap](ROADMAP.md) — v0.1.0, v0.1.1 and v0.1.2.
 4. [Mandatory Release Gates G0–G9](RELEASE_GATES.md)
-5. [Immutable Release Baseline Policy](RELEASE_BASELINE_POLICY.md) — common gate definitions and version acceptance matrix.
+5. [Immutable Release Baseline Policy](RELEASE_BASELINE_POLICY.md) — release tag, protected baseline and artifact-hash lock procedure.
 6. [Complete Repository File Inventory](REPOSITORY_BASELINE.md) — every tracked file/directory and detailed source status at the audit snapshot.
 7. [Project Baseline](PROJECT_BASELINE.md) — current module and release status.
 8. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
