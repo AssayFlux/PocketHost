@@ -66,6 +66,7 @@ import com.assayflux.pockethost.management.RelayCredentialStore
 import com.assayflux.pockethost.relay.NativeRelay
 import com.assayflux.pockethost.relay.NativeRelayService
 import com.assayflux.pockethost.relay.RelayNodeConfigStore
+import com.assayflux.pockethost.relay.RelayNodeIdentityStore
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -258,6 +259,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var relayStatus by remember { mutableStateOf(RelayAgent.status()) }
     var nativeRelayStatus by remember { mutableStateOf(runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")) }
     var nativeRelayConfigured by remember { mutableStateOf(RelayNodeConfigStore.isConfigured(context)) }
+    var nativeRelayIdentity by remember { mutableStateOf<RelayNodeIdentityStore.Identity?>(null) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
@@ -943,6 +945,21 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("NATIVE ASSAYFLUX RELAY NODE", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(onClick = {
+                                runCatching { RelayNodeIdentityStore.getOrCreate() }
+                                    .onSuccess {
+                                        nativeRelayIdentity = it
+                                        status = "Relay node identity created in Android Keystore."
+                                    }
+                                    .onFailure { status = it.message ?: "Could not create Relay node identity." }
+                            }) { Text(if (nativeRelayIdentity == null) "Create node identity" else "Refresh identity") }
+                            Text(
+                                nativeRelayIdentity?.nodeId ?: if (RelayNodeIdentityStore.exists()) "Identity exists on this device" else "No node identity yet",
+                                color = palette.onSurfaceVariant,
+                                fontSize = 12.sp
+                            )
+                        }
                         Text(
                             when (nativeRelayStatus) {
                                 "RUNNING" -> "Native visitor gateway is running. Public access still depends on valid DNS proof, TLS and your network edge."
