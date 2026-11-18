@@ -1038,6 +1038,10 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = {
+                                    nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                    status = "Relay host registry refreshed."
+                                }) { Text("Refresh hosts") }
                                 Button(onClick = {
                                     runCatching { NativeRelay.createPairingInvite(nativeRelayHostIdText) }
                                         .onSuccess { invite ->
