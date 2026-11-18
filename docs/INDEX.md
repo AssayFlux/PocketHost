@@ -11,10 +11,10 @@ This documentation set follows the new three-version pathway. The former five-st
 6. [Complete Repository File Inventory](REPOSITORY_BASELINE.md) — every tracked file/directory and detailed source status at the audit snapshot.
 7. [Project Baseline](PROJECT_BASELINE.md) — current module and release status.
 8. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
-8. [Remediation Audit Register](REMEDIATION_AUDIT.md) — severity-ranked findings, fixes, source-backed limits and verification state.
-9. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
-10. [Architecture Decisions](DECISIONS.md) — durable product decisions.
-11. [Product North Star](NORTH_STAR.md) — long-term direction.
+9. [Remediation Audit Register](REMEDIATION_AUDIT.md) — severity-ranked findings, fixes, source-backed limits and verification state.
+10. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
+11. [Architecture Decisions](DECISIONS.md) — durable product decisions.
+12. [Product North Star](NORTH_STAR.md) — long-term direction.
 
 ## v0.1.0 — First Hosting
 - [Static Hosting Baseline](STEP_4_WEB_BASELINE.md)
