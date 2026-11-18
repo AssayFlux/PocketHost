@@ -1,17 +1,17 @@
 # AssayFlux Relay — Owner-Operated Visitor Gateway
 
-**Release assignment:** v0.1.0 — First Hosting (Termux/Android node target); Linux-native installer and service integration deferred to v0.1.1  
+**Release assignment:** v0.1.0 — Native Android Relay service bundled in the Pocket Host APK; Linux-native packaging deferred to v0.1.1  
 **Source recheck:** Android now has an independent `RelayAgent`, a dedicated `RelayCredentialStore` encrypted with Android Keystore AES-GCM, and owner-facing Relay endpoint/credential controls in Network settings. The separate `relay-node/` directory still contains only `Cargo.toml`: there is no standalone executable, listener, independent node-side credential issuer, installer, service lifecycle or public acceptance.
 
 ## Purpose
 
 AssayFlux Relay is the first-party public visitor gateway for Pocket Host. It lets an Android website host remain behind carrier NAT while a separately operated Relay Node accepts browser traffic on the owner's public domain and forwards bounded HTTP requests over an authenticated outbound host connection.
 
-For v0.1.0, the Relay Node target is owner-controlled Termux/Android hardware. Linux-native installation, packaging and service integration are deferred to v0.1.1. A paid VPS is not required. A public network path is required.
+For v0.1.0, the Relay Node target is owner-controlled owner-controlled Android hardware running Pocket Host. Linux-native installation, packaging and service integration are deferred to v0.1.1. A paid VPS is not required. A public network path is required.
 
 ## No-VPS operating model
 
-The v0.1.0 owner may run the Relay Node on a spare Android device using Termux. Linux home servers, mini PCs and other Linux-native installations are deferred to v0.1.1.
+The v0.1.0 owner enables the Relay service in the Pocket Host Android app on an owner-controlled device. It is not installed or supervised by a separate terminal application. Linux home servers, mini PCs and other Linux-native installations are deferred to v0.1.1.
 
 The node must have at least one publicly reachable ingress path:
 
@@ -61,7 +61,7 @@ The current source Caddyfile redirects port 80 to HTTPS, and the current Relay v
 
 The current Android Relay client is independent of the fleet control plane: it reads the endpoint and token from `RelayCredentialStore`, which validates HTTPS for public endpoints and encrypts the token with an Android Keystore AES-GCM key. Network settings expose Save, Connect/Start, status and Disconnect controls. This completes the Android-side credential/configuration separation; it does not complete the Relay Node that must issue and validate the host credential.
 
-### Standalone Relay Node scaffold
+### Native Android Relay Node scaffold
 
 `relay-node/Cargo.toml` declares the `assayflux-relay-node` Rust package and dependencies. The directory currently contains no `src/main.rs`, library source, tests, config, installer or service integration. It is not a runnable binary and is not yet included in the Quality workflow. Do not treat the manifest or the general CI result as evidence of a working standalone gateway.
 
@@ -72,7 +72,7 @@ The current Android Relay client is independent of the fleet control plane: it r
 - PostgreSQL stores devices and verified hostname/site bindings.
 - The same Rust executable contains both fleet admin/device API and Relay visitor API. It requires PostgreSQL, `DATABASE_URL`, an admin token and a control-plane hostname.
 - It binds separate control and visitor listeners (defaults 8080 and 8081); Caddy publishes ports 80/443 and performs on-demand TLS for verified Relay hostnames.
-- `control-plane/compose.yaml` currently uses PostgreSQL, Docker Compose and Caddy. This is not a standalone Termux installation.
+- `control-plane/compose.yaml` currently uses PostgreSQL, Docker Compose and Caddy. This is not the native Android Relay service planned for the Pocket Host APK.
 - `RelayHub` is in memory. Active streams and pending requests are lost on gateway restart and must reconnect/recover.
 - `web-console/src/ui/RemoteControlPlane.tsx` contains a browser UI for hostname registration, DNS TXT proof, verification and deletion. Android Network settings now expose an independent Relay endpoint and credential setup flow; hostname registration/DNS proof remains a Relay Node/server-side requirement.
 
@@ -91,7 +91,7 @@ These are current source-level limits, not tested production throughput guarante
 
 1. Implement the standalone Relay Node binary in `relay-node/`, using the existing Android wire contract as the compatibility baseline: `GET /v1/device/relay/stream` (Bearer host credential, `text/event-stream`) and `POST /v1/device/relay/responses/{id}` (same credential, JSON response).
 2. Remove mandatory dependency on fleet device registration and fleet-control bearer credentials. Create dedicated host identity, pairing and revocable visitor-ingress credentials; never accept the fleet device token as a substitute.
-3. Provide a minimal owner setup flow for Termux/Android in v0.1.0: install, start/stop, status, domain registration, DNS TXT proof, TLS, route binding and revocation. Linux-native packaging, installer and service integration are v0.1.1 deliverables.
+3. Provide an owner setup flow inside the Pocket Host Android app: enable/disable, start/stop, status, host pairing, domain registration, DNS TXT proof, TLS, route binding and revocation. Linux-native packaging and service integration are v0.1.1 deliverables.
 4. Avoid mandatory Docker and PostgreSQL for the standalone profile. Use a small durable local store and bounded in-memory request state with safe restart recovery.
 5. Complete the standalone node-side host enrollment/credential issuance flow that pairs with the already-independent Android `RelayCredentialStore`; keep it independent of RemoteControlAgent and fleet control plane.
 6. Preserve strict visitor/admin separation and only forward to a registered site origin.
@@ -116,4 +116,4 @@ Linux-native Relay installation is not a v0.1.0 release blocker. The v0.1.1 impl
 
 ## Acceptance
 
-The v0.1.0 Termux/Android Relay target is not complete until a clean installation on an owner-controlled publicly reachable device can register and verify a real domain, obtain/serve valid HTTPS, redirect HTTP, receive visitors from mobile data, forward to a separate Pocket Host Android device behind NAT, survive gateway/host reconnects, revoke the hostname and prove that no management route is exposed. Linux-native installation and service acceptance are explicitly deferred to v0.1.1.
+The v0.1.0 native Android Relay target is not complete until the main APK can start the foreground Relay service on a named physical device, register and verify a real domain, obtain/serve valid HTTPS, redirect HTTP, receive visitors from an independent network, forward to a separate Pocket Host Android host behind NAT, survive service/process/network restarts, revoke credentials and hostnames, and prove that no management route is exposed. Linux-native installation and service acceptance are explicitly deferred to v0.1.1.
