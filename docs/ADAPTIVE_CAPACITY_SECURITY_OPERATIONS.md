@@ -24,7 +24,7 @@ Metrics and logs must be bounded, non-blocking and privacy-preserving. Never rec
 
 - Refuse imports/builds when storage headroom is insufficient.
 - Keep temporary staging and backup overhead in capacity estimates.
-- Current full-app backup limits are 50 MiB for the static site tree and 200 MiB total uncompressed (220 MiB encrypted archive). This is below the 500 MB import allowance and must be aligned or explicitly accepted before v0.1.0 release.
+- Current full-app backup limits are 500,000,000 bytes for the static site tree, 50 MiB for Python, 100 MiB for Node, 650,000,000 bytes total uncompressed and 680,000,000 bytes for the encrypted archive. The static-site ceiling matches the importer's 500,000,000-byte expanded-content allowance; optional runtime roots remain separately capped. Near-limit backup/restore, free-space and physical-device tests remain release gates.
 - Do not start optional runtimes when trust acknowledgement is absent.
 - Runtime failure must not interrupt static serving.
 - Explain battery saver, thermal throttling and OEM background restrictions.
