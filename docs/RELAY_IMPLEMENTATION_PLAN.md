@@ -30,7 +30,7 @@ This plan is the execution checklist for the approved native Android Relay archi
 - [x] Restrict the current HTTP-only listener to loopback.
 - [x] Add initial hostname, credential-digest and route-validation unit tests.
 - [x] Add Android Gradle NDK packaging task for the Relay library.
-- [ ] Commit the generated Relay Cargo lockfile after CI resolves it.
+- [x] Commit the generated Relay Cargo lockfile.
 - [ ] Pass Rust tests and all three Android ABI builds.
 
 ### R1 — Secure Android lifecycle and configuration
