@@ -45,7 +45,13 @@ object RelayCredentialIssuer {
                 break
             }
         }
-        require(found) { "Host identity is not registered in the Relay node configuration." }
+        if (!found) {
+            require(deviceId in RelayNodeConfigStore.activeHostIds(context)) {
+                "Host identity is not paired with this Relay node."
+            }
+            hosts.put(JSONObject().put("device_id", deviceId).put("credential_sha256", digest))
+        }
+        config.put("hosts", hosts)
         check(RelayNodeConfigStore.save(context, config.toString())) {
             "Could not persist the rotated Relay credential."
         }
@@ -86,9 +92,10 @@ object RelayCredentialIssuer {
 
     fun registeredHostIds(context: Context): List<String> {
         val config = RelayNodeConfigStore.read(context)?.let(::JSONObject) ?: return emptyList()
-        val hosts = config.optJSONArray("hosts") ?: return emptyList()
-        return (0 until hosts.length()).mapNotNull { index ->
+        val hosts = config.optJSONArray("hosts") ?: JSONArray()
+        val configured = (0 until hosts.length()).mapNotNull { index ->
             hosts.optJSONObject(index)?.optString("device_id")?.takeIf(String::isNotBlank)
         }
+        return (configured + RelayNodeConfigStore.activeHostIds(context)).distinct()
     }
 }
