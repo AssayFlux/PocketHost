@@ -17,6 +17,8 @@ use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures_util::StreamExt;
+use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_ASN1};
+use rusqlite::{params, Connection, OptionalExtension};
 use jni::{objects::{JClass, JString}, sys::jstring, JNIEnv};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -25,7 +27,7 @@ use std::{
     net::{IpAddr, SocketAddr, UdpSocket},
     sync::{Arc, Mutex, OnceLock, mpsc as std_mpsc},
     thread::JoinHandle,
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::{net::TcpListener, sync::{mpsc, oneshot}};
 use tokio_stream::wrappers::ReceiverStream;
@@ -130,11 +132,27 @@ struct Hub {
     pending: HashMap<Uuid, Pending>,
 }
 
-#[derive(Clone, Default)]
-struct RelayState(Arc<Mutex<Hub>>);
+#[derive(Clone)]
+struct RelayState(Arc<Mutex<Hub>>, Arc<Mutex<Connection>>);
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PairingRequest {
+    invite_code: String,
+    device_id: String,
+    credential_token: String,
+    public_key_base64: String,
+    signature_base64: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PairingResponse {
+    device_id: String,
+    status: &'static str,
+}
 
 impl RelayState {
-    async fn from_config(config: RelayConfig) -> Result<Self, String> {
+    async fn from_config(config: RelayConfig, database_path: &str) -> Result<Self, String> {
         if !(1024..=65535).contains(&config.http_port)
             || !(1024..=65535).contains(&config.https_port)
             || config.http_port == config.https_port {
@@ -143,28 +161,92 @@ impl RelayState {
         let bind_ip: IpAddr = config.bind_address.parse()
             .map_err(|_| "Relay bind address must be a numeric IP address")?;
         let _ = bind_ip;
-        if config.hosts.is_empty() || config.routes.is_empty() {
-            return Err("At least one paired host and one verified route are required".into());
+
+        let connection = Connection::open(database_path)
+            .map_err(|error| format!("Could not open durable Relay state database: {error}"))?;
+        connection.busy_timeout(Duration::from_secs(5))
+            .map_err(|error| format!("Could not configure Relay database timeout: {error}"))?;
+        connection.execute_batch(
+            "CREATE TABLE IF NOT EXISTS relay_revocations (
+                device_id TEXT PRIMARY KEY NOT NULL,
+                revoked_at INTEGER NOT NULL,
+                reason TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS relay_host_credentials (
+                device_id TEXT PRIMARY KEY NOT NULL,
+                credential_sha256 TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS relay_pairing_invites (
+                invite_hash TEXT PRIMARY KEY NOT NULL,
+                device_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );"
+        ).map_err(|error| format!("Could not initialize Relay state database: {error}"))?;
+
+        // Imported engineering config seeds missing credential rows. The durable
+        // revocation ledger always wins and prevents stale config from resurrecting a host.
+        {
+            let mut statement = connection.prepare(
+                "SELECT device_id, credential_sha256 FROM relay_host_credentials"
+            ).map_err(|error| format!("Could not read Relay host credentials: {error}"))?;
+            let rows = statement.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            }).map_err(|error| format!("Could not enumerate Relay host credentials: {error}"))?;
+            let mut existing = HashMap::new();
+            for row in rows {
+                let (device_id, digest) = row.map_err(|error| error.to_string())?;
+                existing.insert(device_id, digest);
+            }
+            drop(statement);
+            for host in config.hosts {
+                let id = host.device_id.to_string();
+                if host.credential_sha256.len() != 64
+                    || !host.credential_sha256.bytes().all(|b| b.is_ascii_hexdigit()) {
+                    return Err("Host credential digest must be a 64-character SHA-256 hex value".into());
+                }
+                let revoked: bool = connection.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM relay_revocations WHERE device_id = ?1)",
+                    params![id], |row| row.get(0)
+                ).map_err(|error| format!("Could not check Relay host revocation: {error}"))?;
+                if revoked {
+                    return Err("Relay configuration references a previously revoked host identity".into());
+                }
+                if !existing.contains_key(&id) {
+                    connection.execute(
+                        "INSERT INTO relay_host_credentials(device_id, credential_sha256, created_at) VALUES (?1, ?2, ?3)",
+                        params![id, host.credential_sha256.to_ascii_lowercase(), unix_now()]
+                    ).map_err(|error| format!("Could not seed Relay host credential: {error}"))?;
+                }
+            }
         }
+
+        let mut hub = Hub::default();
+        {
+            let mut statement = connection.prepare(
+                "SELECT h.device_id, h.credential_sha256
+                 FROM relay_host_credentials h
+                 LEFT JOIN relay_revocations r ON r.device_id = h.device_id
+                 WHERE r.device_id IS NULL"
+            ).map_err(|error| format!("Could not load active Relay hosts: {error}"))?;
+            let rows = statement.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            }).map_err(|error| format!("Could not enumerate active Relay hosts: {error}"))?;
+            for row in rows {
+                let (raw_id, digest) = row.map_err(|error| error.to_string())?;
+                let id = Uuid::parse_str(&raw_id)
+                    .map_err(|_| "Stored Relay host identity is malformed")?;
+                if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) {
+                    return Err("Stored Relay host credential verifier is malformed".into());
+                }
+                hub.hosts.insert(id, Host { credential_sha256: digest.to_ascii_lowercase() });
+            }
+        }
+
         let dns_resolver = config.dns_resolver.clone();
         let mut dns_proofs = Vec::new();
-        let mut hub = Hub::default();
-        for host in config.hosts {
-            if host.credential_sha256.len() != 64
-                || !host.credential_sha256.bytes().all(|b| b.is_ascii_hexdigit()) {
-                return Err("Host credential digest must be a 64-character SHA-256 hex value".into());
-            }
-            if hub.hosts.insert(host.device_id, Host {
-                credential_sha256: host.credential_sha256.to_ascii_lowercase(),
-            }).is_some() {
-                return Err("Duplicate Relay host identity".into());
-            }
-        }
         for route in config.routes {
             let hostname = normalize_hostname(&route.hostname)?;
-            if !hub.hosts.contains_key(&route.device_id) {
-                return Err("Route references an unpaired host".into());
-            }
             if !valid_site_id(&route.site_id) {
                 return Err("Invalid Relay site ID".into());
             }
@@ -186,7 +268,95 @@ impl RelayState {
                 return Err(format!("DNS TXT ownership proof is missing for {name}"));
             }
         }
-        Ok(Self(Arc::new(Mutex::new(hub))))
+        Ok(Self(Arc::new(Mutex::new(hub)), Arc::new(Mutex::new(connection))))
+    }
+
+    fn create_pairing_invite(&self, device_id: Uuid) -> Result<String, String> {
+        let hub = self.0.lock().map_err(|_| "Relay state lock poisoned")?;
+        if !hub.routes.values().any(|route| route.device_id == device_id) {
+            return Err("No configured hostname route references this host identity.".into());
+        }
+        if hub.hosts.contains_key(&device_id) {
+            return Err("This host is already paired; rotate its credential instead.".into());
+        }
+        drop(hub);
+
+        let invite_code = Uuid::new_v4().simple().to_string();
+        let invite_hash = hex_sha256(invite_code.as_bytes());
+        let expires_at = unix_now() + 120;
+        let connection = self.1.lock().map_err(|_| "Relay database lock poisoned")?;
+        connection.execute(
+            "DELETE FROM relay_pairing_invites WHERE expires_at <= ?1 OR device_id = ?2",
+            params![unix_now(), device_id.to_string()]
+        ).map_err(|error| format!("Could not clear stale pairing invites: {error}"))?;
+        connection.execute(
+            "INSERT INTO relay_pairing_invites(invite_hash, device_id, expires_at) VALUES (?1, ?2, ?3)",
+            params![invite_hash, device_id.to_string(), expires_at]
+        ).map_err(|error| format!("Could not persist pairing invite: {error}"))?;
+        Ok(invite_code)
+    }
+
+    fn complete_pairing(&self, request: PairingRequest) -> Result<PairingResponse, StatusCode> {
+        if request.invite_code.len() != 32
+            || !request.invite_code.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || request.credential_token.len() < 32
+            || request.credential_token.len() > 256
+            || request.credential_token.bytes().any(|byte| byte.is_ascii_whitespace()) {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        let device_id = Uuid::parse_str(&request.device_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+        let public_key = STANDARD.decode(&request.public_key_base64).map_err(|_| StatusCode::UNAUTHORIZED)?;
+        let signature = STANDARD.decode(&request.signature_base64).map_err(|_| StatusCode::UNAUTHORIZED)?;
+        if public_key.len() != 65 || public_key[0] != 0x04 || signature.len() > 128 {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        let proof_message = format!(
+            "AssayFlux Pocket Host Relay Pairing v1:{}:{}:{}",
+            request.invite_code, device_id, hex_sha256(&public_key)
+        );
+        UnparsedPublicKey::new(&ECDSA_P256_SHA256_ASN1, &public_key)
+            .verify(proof_message.as_bytes(), &signature)
+            .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+        let invite_hash = hex_sha256(request.invite_code.as_bytes());
+        let credential_sha256 = hex_sha256(request.credential_token.as_bytes());
+        let connection = self.1.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let transaction = connection.unchecked_transaction().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let invite: Option<i64> = transaction.query_row(
+            "SELECT expires_at FROM relay_pairing_invites WHERE invite_hash = ?1 AND device_id = ?2",
+            params![invite_hash, device_id.to_string()],
+            |row| row.get(0)
+        ).optional().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if invite.map(|expires| expires > unix_now()) != Some(true) {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        let route_exists = self.0.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .routes.values().any(|route| route.device_id == device_id);
+        if !route_exists { return Err(StatusCode::FORBIDDEN); }
+        let revoked: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM relay_revocations WHERE device_id = ?1)",
+            params![device_id.to_string()], |row| row.get(0)
+        ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if revoked { return Err(StatusCode::FORBIDDEN); }
+        let already_paired: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM relay_host_credentials WHERE device_id = ?1)",
+            params![device_id.to_string()], |row| row.get(0)
+        ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if already_paired { return Err(StatusCode::CONFLICT); }
+
+        transaction.execute(
+            "INSERT INTO relay_host_credentials(device_id, credential_sha256, created_at) VALUES (?1, ?2, ?3)",
+            params![device_id.to_string(), credential_sha256, unix_now()]
+        ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        transaction.execute(
+            "DELETE FROM relay_pairing_invites WHERE invite_hash = ?1",
+            params![invite_hash]
+        ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        transaction.commit().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        self.0.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .hosts.insert(device_id, Host { credential_sha256 });
+        Ok(PairingResponse { device_id: device_id.to_string(), status: "paired" })
     }
 
     fn authenticate(&self, token: &str) -> Option<Uuid> {
@@ -469,6 +639,10 @@ async fn dns_txt_records(name: String, resolver: String) -> Result<Vec<String>, 
         }
         Ok(parse_dns_txt_answers(&response[..length], &name))
     }).await.map_err(|e| format!("DNS TXT worker failed: {e}"))?
+}
+
+fn unix_now() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|duration| duration.as_secs() as i64).unwrap_or(0)
 }
 
 fn hex_sha256(bytes: &[u8]) -> String {
