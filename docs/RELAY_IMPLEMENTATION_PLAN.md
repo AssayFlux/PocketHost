@@ -39,7 +39,7 @@ This plan is the execution checklist for the approved native Android Relay archi
 - [x] Add a dedicated, non-exported Relay foreground service with explicit start/stop/status and persistent notification.
 - [x] Add initial owner controls to import the encrypted node config and start/stop/remove the service; this remains an engineering import flow, not final pairing.
 - [x] Validate non-overlapping listener ports (HTTP 8082, HTTPS 8444 by default).
-- [ ] Ensure service reboot/network recovery and failure isolation from local hosting and Cloudflare Tunnel.
+- [x] Add owner-enabled boot recovery for the native Relay service when encrypted Relay configuration exists.\n- [ ] Add network-change recovery and verify failure isolation from local hosting and Cloudflare Tunnel.
 - [ ] Add service/JNI instrumentation tests and notification/permission tests.
 
 ### R2 — TLS, hostname proof and route lifecycle
@@ -54,7 +54,7 @@ This plan is the execution checklist for the approved native Android Relay archi
 
 ### R3 — Independent identity, pairing and credentials
 
-- [ ] Generate a node identity protected by Android Keystore.
+- [x] Generate a stable P-256 node identity protected by Android Keystore; expose only its public identity and domain-separated challenge signatures.
 - [ ] Implement short-lived, single-use, owner-approved pairing.
 - [ ] Issue independent high-entropy host ingress credentials; store only verifiers on the Relay node.
 - [ ] Store host-side credentials encrypted by that host device's Android Keystore.
@@ -66,7 +66,7 @@ This plan is the execution checklist for the approved native Android Relay archi
 - [x] Implement the visitor-to-authenticated-outbound-SSE host-session request/response path using the existing host-side RelayAgent wire contract.
 - [x] Enforce initial request/response body, queue, concurrency and timeout limits.
 - [x] Strip untrusted request headers and allow-list response headers.
-- [ ] Verify visitor routes cannot reach owner management, pairing, device-control, Workbench or runtime APIs with automated negative tests.
+- [x] Add native visitor-path rejection tests for Relay control namespaces, traversal, encoded separators/dots, double-encoding, malformed escapes and repeated slashes.\n- [ ] Verify visitor routes cannot reach owner management, pairing, device-control, Workbench or runtime APIs with integrated automated negative tests.
 - [ ] Test disconnect/reconnect, stale request IDs, duplicate responses, host revocation and route removal.
 - [ ] Verify Relay can start/stop independently and cannot break local/LAN website hosting or Cloudflare Tunnel.
 
@@ -96,6 +96,6 @@ Android non-root applications cannot bind privileged ports 80/443 directly. The 
 
 ## Current engineering checkpoint
 
-The first Rust gateway and JNI lifecycle boundary are present in source, and Gradle now has a separate native build task. The current implementation is HTTP-only and deliberately loopback-restricted. It is not yet suitable for public use: TLS, DNS ownership, Android foreground-service lifecycle, owner pairing, durable route state, credential issuance/revocation, UI controls and physical/public-network acceptance remain open.
+The Rust gateway and JNI lifecycle boundary, Rustls HTTPS listener, DNS TXT startup verification, Android Keystore-backed encrypted configuration, P-256 node identity, foreground service, initial owner controls and owner-enabled boot recovery are present in source. Visitor path validation now rejects reserved control namespaces and common encoded/double-encoded traversal forms. These are engineering milestones, not release acceptance. Owner-approved pairing, credential issuance/rotation/revocation, ACME issuance/renewal, durable transactional route/revocation state, continuous DNS proof lifecycle, network-change recovery, integrated isolation/lifecycle tests, ABI/APK verification and physical/public-network acceptance remain open.
 
 **Release rule:** no G0–G9 gate is considered PASS based on this plan, a source file, compilation or emulator-only evidence. v0.1.0 remains open until every required gate is evidenced and the owner accepts the physical-device/public-network results.
