@@ -5,6 +5,7 @@ plugins {
 }
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val relayRustDir = rootProject.layout.projectDirectory.dir("relay-node")
+val relayJniOutput = layout.buildDirectory.dir("generated/relay/jniLibs")
 val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
 val requestedAbi = providers.gradleProperty("pockethostAbi").orNull
 val selectedAbis = if (requestedAbi == null) supportedAbis else {
@@ -30,11 +31,11 @@ val buildRustAndroid by tasks.registering(Exec::class) {
 val buildNativeRelayAndroid by tasks.registering(Exec::class) {
     workingDir = relayRustDir.asFile
     commandLine(listOf("cargo", "ndk") + selectedAbis.flatMap { listOf("-t", it) } + listOf(
-        "-o", layout.buildDirectory.dir("generated/rust/jniLibs").get().asFile.absolutePath,
+        "-o", relayJniOutput.get().asFile.absolutePath,
         "build", "--release", "--locked"
     ))
     inputs.dir(relayRustDir)
-    outputs.dir(layout.buildDirectory.dir("generated/rust/jniLibs"))
+    outputs.dir(relayJniOutput)
 }
 android {
     namespace = "com.assayflux.pockethost"
@@ -52,6 +53,7 @@ android {
         }
     }
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
+    sourceSets["main"].jniLibs.srcDir(relayJniOutput)
     signingConfigs {
         if (releaseSigningReady) {
             create("release") {
