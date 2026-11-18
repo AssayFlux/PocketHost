@@ -1055,6 +1055,52 @@ mod tests {
     }
 
     #[test]
+    fn expired_pairing_invite_is_rejected() {
+        use ring::rand::SystemRandom;
+        use ring::signature::{EcdsaKeyPair, KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING};
+
+        let database_path = std::env::temp_dir()
+            .join(format!("pockethost-pairing-expired-{}.db", Uuid::new_v4()));
+        let connection = Connection::open(&database_path).unwrap();
+        connection.execute_batch(
+            "CREATE TABLE relay_revocations (device_id TEXT PRIMARY KEY NOT NULL, revoked_at INTEGER NOT NULL, reason TEXT NOT NULL);
+             CREATE TABLE relay_host_credentials (device_id TEXT PRIMARY KEY NOT NULL, credential_sha256 TEXT NOT NULL, created_at INTEGER NOT NULL);
+             CREATE TABLE relay_pairing_invites (invite_hash TEXT PRIMARY KEY NOT NULL, device_id TEXT NOT NULL, expires_at INTEGER NOT NULL);"
+        ).unwrap();
+        let device_id = Uuid::new_v4();
+        let mut hub = Hub::default();
+        hub.routes.insert("expired.example.test".into(), Route {
+            device_id,
+            site_id: "site-a".into(),
+        });
+        let state = RelayState(Arc::new(Mutex::new(hub)), Arc::new(Mutex::new(connection)));
+        let invite = state.create_pairing_invite(device_id).unwrap();
+        state.1.lock().unwrap().execute(
+            "UPDATE relay_pairing_invites SET expires_at = ?1 WHERE invite_hash = ?2",
+            params![unix_now() - 1, hex_sha256(invite.as_bytes())]
+        ).unwrap();
+
+        let rng = SystemRandom::new();
+        let pkcs8 = EcdsaKeyPair::generate_pkcs8(&ECDSA_P256_SHA256_ASN1_SIGNING, &rng).unwrap();
+        let key_pair = EcdsaKeyPair::from_pkcs8(&ECDSA_P256_SHA256_ASN1_SIGNING, pkcs8.as_ref(), &rng).unwrap();
+        let public_key = key_pair.public_key().as_ref().to_vec();
+        let message = format!(
+            "AssayFlux Pocket Host Relay Pairing v1:{}:{}:{}",
+            invite, device_id, hex_sha256(&public_key)
+        );
+        let signature = key_pair.sign(&rng, message.as_bytes()).unwrap();
+        let request = PairingRequest {
+            invite_code: invite,
+            device_id: device_id.to_string(),
+            credential_token: "C".repeat(43),
+            public_key_base64: STANDARD.encode(&public_key),
+            signature_base64: STANDARD.encode(signature.as_ref()),
+        };
+        assert_eq!(state.complete_pairing(request).unwrap_err(), StatusCode::UNAUTHORIZED);
+        let _ = std::fs::remove_file(database_path);
+    }
+
+    #[test]
     fn hostname_validation_rejects_ip_and_malformed_labels() {
         assert_eq!(normalize_hostname("WWW.Example.com.").unwrap(), "www.example.com");
         assert!(normalize_hostname("127.0.0.1").is_err());
