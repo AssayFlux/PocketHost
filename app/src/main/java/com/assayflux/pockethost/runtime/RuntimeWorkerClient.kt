@@ -9,7 +9,6 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
-import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.io.File
 import java.nio.file.Files
@@ -78,11 +77,10 @@ object RuntimeWorkerClient {
                     cachedConnection?.let { previous -> runCatching { app.unbindService(previous) } }
                     cachedConnection = null
                     val intent = workerIntent()
-                    try {
-                        ContextCompat.startForegroundService(app, intent)
-                    } catch (error: Throwable) {
-                        throw IllegalStateException("Runtime companion is not installed. Install the matching companion APK first.", error)
-                    }
+                    // Bind directly. The main hosting service is already foreground while
+                    // runtime hosting is active; starting a second foreground service here
+                    // can be rejected by Android background-start policy before Binder binds.
+                    // BIND_AUTO_CREATE owns the companion lifetime while this connection is held.
                     val latch = CountDownLatch(1)
                     val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
                     val connection = object : ServiceConnection {
