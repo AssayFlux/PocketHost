@@ -465,6 +465,7 @@ fn start(config_json: &str) -> Result<(), String> {
                 Err(error) => { let _ = ready_tx.send(Err(format!("Relay HTTP listener failed: {error}"))); return; }
             };
             if let Some((cert_pem, key_pem)) = tls_material {
+                let _ = rustls::crypto::ring::default_provider().install_default();
                 let tls_config = match RustlsConfig::from_pem(cert_pem.into_bytes(), key_pem.into_bytes()).await {
                     Ok(config) => config,
                     Err(error) => { let _ = ready_tx.send(Err(format!("Relay TLS configuration failed: {error}"))); return; }
@@ -472,10 +473,11 @@ fn start(config_json: &str) -> Result<(), String> {
                 let _ = ready_tx.send(Ok(()));
                 set_status("RUNNING");
                 let handle = Handle::new();
+                let task_handle = handle.clone();
                 let https_state = state.clone();
-                let https_task = tokio::spawn(async move {
+                let mut https_task = tokio::spawn(async move {
                     axum_server::bind_rustls(https_bind, tls_config)
-                        .handle(handle.clone())
+                        .handle(task_handle)
                         .serve(router(https_state).into_make_service())
                         .await
                 });
@@ -486,7 +488,7 @@ fn start(config_json: &str) -> Result<(), String> {
                         handle.graceful_shutdown(Some(Duration::from_secs(5)));
                         let _ = https_task.await;
                     }
-                    _ = https_task => {}
+                    _ = &mut https_task => {}
                 }
             } else {
                 let _ = ready_tx.send(Ok(()));
