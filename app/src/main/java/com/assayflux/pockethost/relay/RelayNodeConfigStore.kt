@@ -57,6 +57,9 @@ object RelayNodeConfigStore {
         return String(cipher.doFinal(encrypted), StandardCharsets.UTF_8)
     }
 
+    fun isConfigured(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(CONFIG_KEY)
+
     @Synchronized
     fun clear(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(CONFIG_KEY).commit()
