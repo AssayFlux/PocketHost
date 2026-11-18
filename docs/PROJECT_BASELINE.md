@@ -20,7 +20,7 @@
 | Android main app | Kotlin/Compose screens, foreground hosting service, local API, pairing, diagnostics, themes, biometric gate, site/file screens | Implemented foundation; v0.1.0 device acceptance open |
 | Rust website engine | Tokio/Hyper JNI static HTTP server, hostname routes, visitor access modes, range/MIME/SPA handling, rate and connection limits | Source and tests present; 50 MiB per-file serving cap; device acceptance open |
 | Website importer | Folder/ZIP staging and validation | 500,000,000-byte ZIP and expanded-content caps; actual 500 MB boundary/low-storage/device tests open |
-| Full-app backup | `ApplicationBackupManager.kt` | 50 MiB static site, 50 MiB Python, 100 MiB Node, 200 MiB total uncompressed, 220 MiB encrypted archive; cannot back up a site near importer max |
+| Full-app backup | `ApplicationBackupManager.kt` | 500,000,000-byte static site, 50 MiB Python, 100 MiB Node, 650,000,000-byte total uncompressed, 680,000,000-byte encrypted archive; static-site limit matches importer expanded-content cap |
 | Workbench | Private draft workspace, nested explorer, basic editor, save, file/folder operations, change digests, local commit snapshots | Initial foundation exists; isolated preview, TypeScript build, owner-approved publish and rollback incomplete |
 | Cloudflare Tunnel | Android token store, cloudflared process, readiness probe, reconnect supervisor, Settings controls, build script | Connector source/build present; public hostname/DNS/TLS acceptance open |
 | AssayFlux Relay client | Android outbound SSE request/response agent | Coupled to RemoteControlAgent endpoint/device token; no independent Relay settings/credentials |
@@ -38,7 +38,7 @@
 
 - Import limit: 500,000,000 bytes for ZIP input and independently for expanded site contents; 5,000 files, 10,000 entries, depth 32.
 - Rust serving limit: 50 MiB per individual file; independent of total import size.
-- Backup limit: 50 MiB static site, 50 MiB Python, 100 MiB Node, 200 MiB total uncompressed, 220 MiB encrypted archive.
+- Backup limits: 500,000,000-byte static site, 50 MiB Python, 100 MiB Node, 650,000,000-byte total uncompressed, 680,000,000-byte encrypted archive. Near-limit physical-device and interruption tests remain open.
 - Relay current body limit: 8 MiB; gateway timeout 45 seconds; pending requests 32 global/8 per device; HTTP methods only, not arbitrary TCP/WebSocket.
 - Current Relay HTTP listener redirects port 80 to HTTPS; there is no configurable plain-HTTP content mode.
 - Main Android Network UI says “No built-in visitor password yet,” but the Rust engine already implements private/restricted Basic visitor authentication. The UI copy is stale.
