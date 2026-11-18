@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
@@ -56,6 +57,12 @@ object RelayNodeConfigStore {
         require(configJson.isNotBlank() && configJson.length <= 256 * 1024) {
             "Relay configuration is empty or exceeds 256 KiB."
         }
+        val parsedConfig = JSONObject(configJson)
+        val configuredHosts = parsedConfig.optJSONArray("hosts")
+            ?: throw IllegalArgumentException("Relay configuration must include a hosts array.")
+        val configuredHostIds = (0 until configuredHosts.length()).mapNotNull { index ->
+            configuredHosts.optJSONObject(index)?.optString("device_id")?.takeIf(String::isNotBlank)
+        }.toSet()
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         cipher.updateAAD(AAD)
@@ -70,6 +77,14 @@ object RelayNodeConfigStore {
         withDatabase(context, writable = true) { db ->
             db.beginTransaction()
             try {
+                val revoked = db.query(
+                    "relay_revocations", arrayOf("device_id"), null, null, null, null, null
+                ).use { cursor ->
+                    buildSet { while (cursor.moveToNext()) add(cursor.getString(0)) }
+                }
+                require(configuredHostIds.intersect(revoked).isEmpty()) {
+                    "A previously revoked Relay host identity cannot be re-imported."
+                }
                 check(db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
                     "Could not persist encrypted Relay configuration."
                 }
@@ -135,12 +150,12 @@ object RelayNodeConfigStore {
         }
 
     @Synchronized
-    fun clear(context: Context) {
+    fun clear(context: Context, clearRevocations: Boolean = false) {
         withDatabase(context, writable = true) { db ->
             db.beginTransaction()
             try {
                 db.delete(TABLE, "state_key = ?", arrayOf(ROW_CONFIG))
-                db.delete("relay_revocations", null, null)
+                if (clearRevocations) db.delete("relay_revocations", null, null)
                 db.setTransactionSuccessful()
             } finally {
                 db.endTransaction()
