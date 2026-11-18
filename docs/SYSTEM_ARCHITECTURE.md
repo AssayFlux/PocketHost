@@ -2,7 +2,7 @@
 
 ## 1. Product definition
 
-Pocket Host is a modular personal infrastructure platform. The first release proves Android static website hosting with local, LAN and public custom-domain access. Public ingress options are Cloudflare Tunnel (optional third party) and the planned owner-operated AssayFlux Relay Node. The v0.1.0 Relay Node runs on owner-controlled owner-controlled Android hardware running Pocket Host; Linux-native installation and service packaging are v0.1.1. It does not require a paid VPS, but it does require a publicly reachable IPv4/IPv6 network endpoint.
+Pocket Host is a modular personal infrastructure platform. The first release proves Android static website hosting with local, LAN and public custom-domain access. Public ingress options are Cloudflare Tunnel (optional third party) and the planned owner-operated AssayFlux Relay Node. The v0.1.0 Relay runs inside the Pocket Host Android APK as a Kotlin foreground service backed by a Rust/Tokio JNI engine; Linux-native packaging remains v0.1.1. It does not require a paid VPS, but it does require a publicly reachable IPv4/IPv6 network endpoint.
 
 The three release milestones are v0.1.0 First Hosting, v0.1.1 Workbench, Runtime & Linux Relay Installation and v0.1.2 Connected Device Fabric.
 
@@ -33,7 +33,7 @@ The owner configures the named tunnel, public hostname, DNS and edge HTTP/TLS po
 
 Browser → owner's public AssayFlux Relay Node → verified hostname/site/host route → authenticated outbound host stream → Android RelayAgent → local Rust HTTP origin.
 
-The Relay Node is separate from the Android website-host app and the full fleet control plane. v0.1.0 must provide the native Android Relay service inside the main APK, with both inbound visitor handling and outbound authenticated host sessions, independent host-ingress credentials, domain proof, TLS, durable route binding, revocation and visitor-only forwarding. The service is independent of the fleet control plane. Linux-native packaging remains v0.1.1. No paid VPS, Docker or PostgreSQL should be required for the standalone Relay profile.
+The Relay service is part of the Android app package but has an independent lifecycle and is separate from the full fleet control plane. v0.1.0 must provide the native Android Relay service inside the main APK, with both inbound visitor handling and outbound authenticated host sessions, independent host-ingress credentials, domain proof, TLS, durable route binding, revocation and visitor-only forwarding. The service is independent of the fleet control plane. Linux-native packaging remains v0.1.1. No paid VPS, terminal application, Node.js runtime, Docker or PostgreSQL should be required for the native Android Relay.
 
 **Public network constraint:** the Relay Node must have public IPv4 with router port forwarding or globally routed IPv6. A device behind CGNAT without global IPv6 cannot accept inbound visitor traffic. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled public endpoint is available, Cloudflare Tunnel remains an optional fallback; the project must not claim that DNS alone bypasses CGNAT.
 
@@ -58,7 +58,7 @@ Mobile command center ↔ authenticated control plane ↔ separately installed a
 | Site import/backup | Folder/ZIP staging, safe activation, encrypted backup | v0.1.0; source quota alignment is present; physical-device acceptance remains open |
 | Cloudflare Tunnel | Android token store, process runner, readiness, build helper | v0.1.0 public acceptance |
 | AssayFlux Relay client | Android outbound SSE request/response client, configured independently from remote control | Android-side separation implemented; node-side issuer remains open |
-| AssayFlux Relay gateway | Visitor handler, DNS TXT proof, Caddy TLS, PostgreSQL route registry in combined control-plane process | Standalone native Android Relay Node in v0.1.0; Linux-native installer and service integration in v0.1.1 |
+| AssayFlux Relay gateway | Partial visitor handler, DNS TXT proof and Caddy TLS remain coupled to the PostgreSQL fleet control plane | Native Kotlin foreground service + Rust/Tokio JNI engine in the main APK, with independent node credentials and durable local route state; Linux-native packaging in v0.1.1 |
 | Workbench | Draft workspace, explorer, basic editor, local commits | v0.1.1 completion |
 | TypeScript compiler | Not present as a verified main-app compiler | v0.1.1 |
 | Runtime companion | CPython 3.11 and Node.js 24.22.1 in one companion APK | v0.1.1 acceptance |
