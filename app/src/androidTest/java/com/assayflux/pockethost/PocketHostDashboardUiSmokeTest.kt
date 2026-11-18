@@ -65,22 +65,31 @@ class PocketHostDashboardUiSmokeTest {
                 device.wait(Until.hasObject(By.text("Network & access")), 5_000))
             assertTrue("Account dropdown About route is missing",
                 device.wait(Until.hasObject(By.text("About Pocket Host")), 5_000))
-            device.findObject(By.text("App settings")).click()
+            val appSettings = device.wait(Until.findObject(By.text("App settings")), 5_000)
+            assertTrue("App settings dropdown item is missing", appSettings != null)
+            val appSettingsBounds = appSettings!!.visibleBounds
+            device.click(appSettingsBounds.centerX(), appSettingsBounds.centerY())
             assertTrue("Appearance settings did not open",
                 device.wait(Until.hasObject(By.text("Make Pocket Host feel like yours")), 10_000))
             val darkMode = device.wait(Until.findObject(By.text("Dark")), 5_000)
             assertTrue("Dark appearance option is missing", darkMode != null)
-            darkMode!!.click()
+            val darkBounds = darkMode!!.visibleBounds
+            device.click(darkBounds.centerX(), darkBounds.centerY())
             val forestTheme = device.wait(Until.findObject(By.text("Forest")), 5_000)
             assertTrue("Forest classic palette option is missing", forestTheme != null)
-            forestTheme!!.click()
+            val forestBounds = forestTheme!!.visibleBounds
+            device.click(forestBounds.centerX(), forestBounds.centerY())
             instrumentation.waitForIdleSync()
             assertTrue("Dark appearance preference was not persisted",
                 context.getSharedPreferences("pockethost_state", 0).getString("appearance_mode", "") == "Dark")
             assertTrue("Classic palette preference was not persisted",
                 context.getSharedPreferences("pockethost_state", 0).getString("appearance_theme", "") == "Forest")
-            device.findObject(By.text("System")).click()
-            device.findObject(By.text("Classic")).click()
+            val systemMode = device.wait(Until.findObject(By.text("System")), 5_000)
+            assertTrue("System appearance option is missing", systemMode != null)
+            device.click(systemMode!!.visibleBounds.centerX(), systemMode.visibleBounds.centerY())
+            val classicTheme = device.wait(Until.findObject(By.text("Classic")), 5_000)
+            assertTrue("Classic palette option is missing", classicTheme != null)
+            device.click(classicTheme!!.visibleBounds.centerX(), classicTheme.visibleBounds.centerY())
             instrumentation.waitForIdleSync()
             device.pressBack()
 
