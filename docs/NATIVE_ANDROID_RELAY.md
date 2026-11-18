@@ -32,7 +32,7 @@ Browser
   | HTTPS :443 (public edge)
   v
 Owner-controlled router / edge forwarding
-  | forwards public 443 -> Android app :8443
+  | forwards public 443 -> Android app :8444
   v
 Pocket Host Android Relay service
   | hostname + route + visitor policy
@@ -67,7 +67,7 @@ The minimum supported Android version and ABI list remain those declared by the 
 
 ## 4. Listener ports and public network requirements
 
-Ordinary unrooted Android applications cannot bind privileged TCP ports below 1024. The native Relay must therefore use configurable unprivileged listener ports by default (initial proposal: HTTP 8080 and HTTPS 8443).
+Ordinary unrooted Android applications cannot bind privileged TCP ports below 1024. The native Relay must therefore use configurable unprivileged listener ports. The default pair is HTTP 8082 and HTTPS 8444: the existing local website engine already defaults to 8080, and the embedded Python runtime defaults to 8081, so assigning 8080 to a separate Relay listener would create a real bind conflict. Public TCP 80 must be forwarded to 8082 and public TCP 443 to 8444. The defaults remain configurable, but Relay and local hosting ports must be validated as non-overlapping before start.
 
 For conventional public URLs without an explicit port, the owner's network edge must forward public TCP 80 to the app's HTTP port and public TCP 443 to the app's HTTPS port. This can be router port forwarding, an edge firewall/NAT rule or an owner-controlled reverse proxy. For IPv6, the router/firewall must support the equivalent forwarding or proxy arrangement; a globally routed IPv6 address alone does not grant an unprivileged Android process access to port 443.
 
@@ -88,7 +88,7 @@ None of these states may be inferred from another.
 - Bind each verified hostname to an explicit site/host route.
 - Terminate visitor TLS at the Relay edge using a reviewed Rust TLS implementation and a documented certificate issuance/renewal path.
 - The initial v0.1.0 edge contract is valid HTTPS and HTTP-to-HTTPS redirect by default.
-- Certificate issuance must account for the public 80/443-to-8080/8443 forwarding requirement. The chosen ACME challenge method and renewal behavior must be tested on the supported network topology before claiming automatic TLS.
+- Certificate issuance must account for the public 80/443-to-8082/8444 forwarding requirement. The chosen ACME challenge method and renewal behavior must be tested on the supported network topology before claiming automatic TLS.
 - Do not trust arbitrary forwarded client-IP headers. Client address metadata is accepted only from explicitly configured, authenticated/trusted edge proxies; direct connections use the socket peer address.
 - Unknown, unverified, expired or revoked hostnames fail closed.
 
@@ -186,6 +186,6 @@ Excluded: multi-region routing, multi-node scheduling, active-active failover, f
 
 ## 12. Current implementation status
 
-The repository has an Android host-side `RelayAgent` and `RelayCredentialStore`, plus a partial visitor gateway coupled to the fleet control-plane executable. The `relay-node/` directory is currently only a Cargo manifest scaffold. The Kotlin foreground service for the gateway, Android JNI bridge, inbound native listener, independent node-side credential issuer, durable standalone state and public acceptance are not yet implemented.
+The repository has an Android host-side `RelayAgent` and `RelayCredentialStore`, plus a partial visitor gateway coupled to the fleet control-plane executable. The `relay-node/` directory is currently only a Cargo manifest scaffold. The existing website engine owns the default local-host port 8080 (with Python defaulting to 8081); a separate Relay listener must not reuse either port. The current Gradle `cargo-ndk` task builds only `rust-engine`, not `relay-node`. The Kotlin foreground service for the gateway, Android JNI bridge, inbound native listener, independent node-side credential issuer, durable standalone state and public acceptance are not yet implemented.
 
 This document is an approved implementation plan, not evidence that the Relay is complete. Do not close any release gate until source, automated tests, physical-device results and external-network evidence exist.
