@@ -22,7 +22,7 @@ A user can import a static website into the Android app, start hosting, open it 
 - Foreground hosting service, notification, start/stop/restart and recovery.
 - Basic encrypted website backup/restore.
 - Cloudflare Tunnel with encrypted token storage and external custom-domain HTTP/HTTPS verification.
-- Standalone AssayFlux Relay Node installable on owner-controlled owner-controlled Android hardware running Pocket Host; DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only route. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability remains required.
+- Native Android AssayFlux Relay service bundled in the main APK: Kotlin foreground service + Rust/Tokio JNI engine, inbound visitor HTTP(S), outbound authenticated host sessions, DNS TXT hostname proof, independent credentials and visitor-only routing. No terminal app, Node.js runtime, paid VPS, Docker or PostgreSQL prerequisite; public IPv4/IPv6 plus edge forwarding remains required.
 - Minimal owner-facing Relay hostname setup/verification surface plus native start/stop, status, pairing, health and restart/reconnect controls.
 - Clear error, diagnostics and Android permission/lifecycle behavior.
 
@@ -52,7 +52,7 @@ This is a source inventory, not proof that the first release passes on a physica
 
 ## 6. v0.1.0 exit
 
-All ten G0–G9 gates must pass. The critical acceptance journey is folder/ZIP import, 500 MB boundary checks, local page load, second-device LAN load, Cloudflare and Relay public-domain HTTP/HTTPS from an independent network, assets/navigation, visitor/admin route isolation, stop/restart, Android lifecycle, backup/restore and artifact installation on a named physical phone.
+All ten G0–G9 gates must pass. The critical acceptance journey is folder/ZIP import, 500 MB boundary checks, local page load, second-device LAN load, Cloudflare and native Android Relay public-domain HTTP/HTTPS from an independent network, assets/navigation, visitor/admin route isolation, stop/restart, Android lifecycle, backup/restore and artifact installation on a named physical phone.
 
 ## 7. Deferred work
 
