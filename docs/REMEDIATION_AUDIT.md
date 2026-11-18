@@ -14,7 +14,7 @@ This register separates confirmed defects from documentation drift, maintainabil
 | ID | Severity | Area | Finding and evidence | Correction | State |
 |---|---|---|---|---|---|
 | PH-001 | Critical | CI security | `.github/workflows/quality.yml` granted `contents: write` to a PR job, ran PR-controlled Cargo build scripts, then exposed `GITHUB_TOKEN` to a later push. A malicious same-repository PR could potentially plant a Git hook during build and execute it when the later push ran. This is a credible attack path, not evidence of exploitation. | Remove write permission and token-bearing push step; use `cargo check --locked`. | Implemented; CI pending |
-| PH-002 | High | Relay transport | Android allowed 8 MiB request bodies / 12 MiB JSON events but limited one SSE line to 64 KiB. The gateway emits one JSON `data:` line; Base64 expands 8 MiB to about 11.2 MiB before envelope overhead. Larger visitor requests could disconnect and time out. | Set line ceiling to 12 MiB plus the 5-character `data:` prefix; add max-boundary regression coverage. | Implemented; instrumentation pending |
+| PH-002 | High | Relay transport | Android allowed 8 MiB request bodies / 12 MiB JSON events but limited one SSE line to 64 KiB. The gateway emits one JSON `data:` line; Base64 expands 8 MiB to about 11.2 MiB before envelope overhead. Larger visitor requests could disconnect and time out. | Set line ceiling to 12 MiB plus the 6-character `data: ` prefix; add max-boundary regression coverage. | Implemented; instrumentation pending |
 | PH-003 | Medium | Android networking | Endpoint validators accepted cleartext `localhost` (Relay also `::1`) while network security XML permits only `127.0.0.1`. Accepted settings could fail at connection time. | Restrict development HTTP endpoints to `127.0.0.1`; test rejected aliases. Public endpoints remain HTTPS-only. | Implemented; instrumentation pending |
 | PH-004 | Medium | ZIP import | `SiteImporter` checked traversal but did not reject duplicate archive paths, case-only collisions or file/directory prefix conflicts. This is an archive integrity/ambiguity gap, not a demonstrated traversal exploit. | Track explicit paths, implicit directories, entry types and case-folded portable names; reject collisions before extraction. Add negative tests. | Implemented; instrumentation pending |
 | PH-005 | Medium | Capacity docs | Rust source sets `MAX_FILE_BYTES = 500_000_000`; several docs said 50 MiB. The separate limits are Rust serving 500,000,000 bytes, manual single-file import 50 MiB, and text editor 256 KiB. | Standardize all docs and keep these operations distinct. ZIP input and expanded site content are each 500,000,000 bytes. | Core docs updated; sweep pending |
@@ -38,7 +38,7 @@ This register separates confirmed defects from documentation drift, maintainabil
 | Backup Python / Node | 50 MiB / 100 MiB | Separate runtime quotas |
 | Backup total uncompressed | 650,000,000 bytes | Archive-wide expanded cap |
 | Backup encrypted output | 680,000,000 bytes | Output archive cap |
-| Relay body / event / SSE line | 8 MiB / 12 MiB / 12 MiB + 5 chars | Request body, JSON payload, `data:` framing |
+| Relay body / event / SSE line | 8 MiB / 12 MiB / 12 MiB + 6 chars | Request body, JSON payload, `data:` framing |
 
 MB is decimal; MiB is binary. Do not call 500,000,000 bytes 500 MiB.
 

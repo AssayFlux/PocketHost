@@ -30,8 +30,8 @@ class RelayAgentHttpFramingTest {
 
     @Test
     fun sseLineReaderAcceptsMaximumRelayEventAndRejectsOneCharacterOver() {
-        val maxLine = 12 * 1024 * 1024 + 5
-        val accepted = "data:" + "x".repeat(maxLine - 5)
+        val maxLine = 12 * 1024 * 1024 + 6
+        val accepted = "data: " + "x".repeat(maxLine - 6)
         assertEquals(maxLine, RelayAgent.readBoundedSseLine(
             java.io.PushbackReader(java.io.StringReader(accepted), 1), maxLine
         )?.length)
