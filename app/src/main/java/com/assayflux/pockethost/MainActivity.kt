@@ -1138,7 +1138,14 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             enabled = relayStatus !in setOf("CONNECTED", "CONNECTING"),
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Text("This host identity: ${RelayCredentialStore.hostDeviceId(context)}", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Host ID: ${RelayCredentialStore.hostDeviceId(context)}", color = palette.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                            OutlinedButton(onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Relay host ID", RelayCredentialStore.hostDeviceId(context)))
+                                Toast.makeText(context, "Host ID copied", Toast.LENGTH_SHORT).show()
+                            }) { Text("Copy ID") }
+                        }
                         OutlinedTextField(
                             value = relayPairingInviteText,
                             onValueChange = { relayPairingInviteText = it.trim() },
