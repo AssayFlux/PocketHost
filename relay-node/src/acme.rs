@@ -1,7 +1,7 @@
 use axum::{
-    extract::{Path, State},
+    extract::{DefaultBodyLimit, Path, State},
     routing::get,
-    Router, DefaultBodyLimit,
+    Router,
 };
 use instant_acme::{
     Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier,
