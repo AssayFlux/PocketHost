@@ -195,3 +195,53 @@ pub async fn issue(request: AcmeRequest) -> Result<AcmeCertificateBundle, String
         acme_account_credentials: account_credentials,
     })
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn http01_handler_serves_only_registered_challenge_values() {
+        let challenges = Arc::new(HashMap::from([
+            ("token-123".to_string(), "token-123.account-thumbprint".to_string())
+        ]));
+        let response = challenge_response(
+            State(challenges.clone()),
+            Path("token-123".to_string())
+        ).await.unwrap();
+        assert_eq!(response, "token-123.account-thumbprint");
+        assert_eq!(
+            challenge_response(State(challenges), Path("unknown".to_string())).await,
+            Err(axum::http::StatusCode::NOT_FOUND)
+        );
+    }
+
+    #[tokio::test]
+    async fn acme_http01_refuses_loopback_bind_before_network_requests() {
+        let result = issue(AcmeRequest {
+            bind_address: "127.0.0.1".into(),
+            http_port: 8082,
+            domains: vec!["example.test".into()],
+            contact_email: "owner@example.test".into(),
+            terms_accepted: true,
+            directory_url: None,
+            account_credentials: None,
+        }).await;
+        assert!(result.unwrap_err().contains("non-loopback"));
+    }
+
+    #[tokio::test]
+    async fn acme_requires_explicit_terms_acceptance() {
+        let result = issue(AcmeRequest {
+            bind_address: "0.0.0.0".into(),
+            http_port: 8082,
+            domains: vec!["example.test".into()],
+            contact_email: "owner@example.test".into(),
+            terms_accepted: false,
+            directory_url: None,
+            account_credentials: None,
+        }).await;
+        assert!(result.unwrap_err().contains("Terms of Service"));
+    }
+}
