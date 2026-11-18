@@ -70,7 +70,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-017 — Relay gateway is a visitor-only service
 
-**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. The v0.1.0 target is a native Android service bundled in the Pocket Host APK; Linux-native packaging and service installation are v0.1.1. The node must not require Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.1.2.
+**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a visitor-only Relay service independent of the fleet control-plane process, with dedicated host-ingress identity and credentials. Its deployment architecture is superseded by ADR-020: a Kotlin foreground service and Rust/Tokio JNI engine bundled in the Pocket Host Android APK. The node must not require Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.1.2.
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
@@ -83,7 +83,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-018 — AssayFlux Relay is owner-operated; no paid VPS prerequisite
 
-**Decision:** v0.1.0 must provide a standalone AssayFlux Relay Node installable on owner-controlled owner-controlled Android hardware running Pocket Host. Linux-native packaging and service installation are v0.1.1. It must not require a paid VPS, Cloudflare, Docker, PostgreSQL or the full fleet control plane. The Android website host connects outbound using independent, revocable Relay credentials. The Relay Node accepts public visitors and forwards only to the registered website route.
+**Original decision (superseded by ADR-020):** v0.1.0 must provide an owner-operated AssayFlux Relay Node independent of the full fleet control plane. The owner-operated node still requires a publicly reachable network path; it must not require a paid VPS, Docker or PostgreSQL. The Android website host connects outbound using independent, revocable Relay credentials, and the Relay accepts public visitors only for registered website routes.
 
 **Network constraint:** a self-hosted public gateway still needs public IPv4 with router port forwarding or globally routed IPv6, public DNS A/AAAA and an allowed inbound path for the visitor listener. A device behind CGNAT without global IPv6 or port forwarding cannot accept inbound public visitors. The website-host phone may remain behind CGNAT because its Relay connection is outbound. If no owner-controlled reachable node exists, Cloudflare Tunnel remains an optional fallback; the product must never imply that DNS or application code alone bypasses CGNAT.
 
@@ -95,3 +95,20 @@ This document records decisions that remain binding unless a later ADR explicitl
 **Decision:** the approved release sequence is exactly v0.1.0 First Hosting → v0.1.1 Workbench, Runtime & Linux Relay Installation → v0.1.2 Connected Device Fabric. The previous label v0.2.0 for the connected-device milestone is retired and renumbered to v0.1.2. No separate v0.2.0 milestone remains in the initial three-release pathway.
 
 **Baseline rule:** after v0.1.0 passes all G0–G9 gates and its release is approved, its source commit is preserved by an immutable release tag and protected baseline ref where repository permissions allow. The release artifact digests, source SHA, workflow evidence, support matrix and gate ledger are recorded. No later feature or fix is committed to that baseline; subsequent work branches from it into v0.1.1. Any exceptional security correction requires a separately reviewed successor patch release and must never rewrite the original baseline tag.
+
+
+## ADR-020 — Native Android Relay service replaces external terminal deployment
+
+**Status:** approved by the project owner on 2026-11-18. This ADR supersedes the deployment mechanism described by ADR-017/ADR-018 and all earlier v0.1.0 Relay installation notes.
+
+**Decision:** implement AssayFlux Relay natively inside the Pocket Host Android APK. The Android layer is a Kotlin foreground service responsible for owner controls, Android lifecycle, notifications, permissions, network state, recovery and Android Keystore integration. The data plane is a Rust/Tokio engine built for the declared Android ABIs, packaged as a native library and controlled through JNI. The Relay supports both inbound public visitor HTTP(S) and outbound authenticated host sessions. The existing host-side RelayAgent wire contract is the compatibility baseline unless deliberately versioned.
+
+**No external runtime dependency:** users must not need to install or operate a terminal application, a JavaScript runtime, npm, Docker, PostgreSQL or a separate Linux userspace to run the v0.1.0 Android Relay. The native engine is bundled in the main APK; it is not a separately terminal-managed installation or a separate APK.
+
+**Trust and isolation:** node identity and host-ingress credentials are independent of fleet admin, RemoteControlAgent and Cloudflare credentials. Host credentials are high-entropy, scoped, revocable and stored as verifiers on the node; host-side secrets are protected by Android Keystore. Public visitor routes may reach only verified website routes. Owner management is local-only in v0.1.0. The Relay must remain independent of the full fleet control plane and PostgreSQL.
+
+**Network constraint:** an ordinary unrooted Android app cannot bind TCP ports below 1024. The native listener therefore uses configurable unprivileged ports (initial proposal: 8080/8443). Conventional public HTTP(S) requires an owner-controlled router, firewall or reverse proxy to forward public 80/443 to those listener ports. A public IPv4 path with forwarding or a globally routed IPv6 path with equivalent edge forwarding is required. CGNAT without global IPv6 or inbound forwarding cannot accept public visitors. Cloudflare Tunnel remains a separate optional fallback.
+
+**Release placement:** the native Android Relay service, JNI libraries for all declared ABIs, host pairing, independent credentials, durable route state, TLS, lifecycle/recovery and external-network acceptance are v0.1.0 requirements. Linux-native packaging remains v0.1.1. Multi-node scheduling, regional scale and advanced failover remain v0.1.2.
+
+**Implementation status:** this is an approved architecture decision, not a claim of implementation. At decision time, `relay-node/` contains only a Cargo manifest; the native gateway engine, JNI bridge, Kotlin foreground service, node-side credential issuer, durable node state and physical/public acceptance remain to be implemented. See [Native Android Relay Architecture](NATIVE_ANDROID_RELAY.md).
