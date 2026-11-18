@@ -18,16 +18,18 @@ The Relay is bundled in the main Android APK. Kotlin owns Android service lifecy
 
 The Android host-side `RelayAgent` already implements an outbound HTTPS/SSE request/response client. Its dedicated `RelayCredentialStore` encrypts host credentials with Android Keystore AES-GCM. `HostingService` starts the host-side agent independently of remote-control configuration.
 
-The existing visitor gateway remains in `control-plane/`, shares the fleet control-plane executable and PostgreSQL, and uses an in-memory `RelayHub`. The `relay-node/` directory contains only a Cargo manifest. The following v0.1.0 work is not yet implemented:
+An initial standalone `relay-node/` Rust library now provides a JNI lifecycle boundary, bounded HTTP visitor routing, authenticated outbound SSE host sessions and correlated responses. A Kotlin JNI declaration and a separate Gradle NDK task have been added. The current HTTP-only listener is loopback-restricted; it is not exposed publicly and must not be treated as a deployable public gateway.
 
-- Rust Relay gateway library and Android JNI bridge.
-- Kotlin Relay foreground service and owner-facing lifecycle/status controls.
-- Native inbound visitor listener and TLS/certificate lifecycle.
-- Independent node identity and node-side host credential issuance, rotation and revocation.
-- Durable hostname/site/host bindings and restart recovery.
-- Public network and physical-device acceptance.
+The following v0.1.0 work remains open:
+- Commit the generated Relay Cargo lockfile and pass Rust tests plus all three Android ABI builds.
+- TLS listener, certificate issuance/renewal and HTTP-to-HTTPS behavior.
+- DNS TXT hostname ownership proof and durable hostname/site/host route state.
+- Android Keystore-backed node identity/configuration, owner-approved pairing and independent credential issuance/rotation/revocation.
+- Dedicated Kotlin Relay foreground service, lifecycle recovery and owner-facing setup/status controls.
+- Full visitor/host/owner route isolation, quotas, persistence and security-negative tests.
+- Physical-device, independent-network and public DNS/TLS acceptance.
 
-Do not describe the native Relay as implemented until these items and the release evidence are complete.
+The detailed execution checklist is [Native Android Relay Implementation Plan](RELAY_IMPLEMENTATION_PLAN.md). Do not describe the native Relay as implemented or close a release gate until these items and the required evidence are complete.
 
 ## Native component boundaries
 
