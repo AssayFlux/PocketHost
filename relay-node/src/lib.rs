@@ -938,7 +938,7 @@ pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_createPai
             .clone().ok_or("Native Relay is not running")?;
         state.create_pairing_invite(device_id)
     })();
-    to_jstring(&mut env, result.unwrap_or_else(|error| error))
+    to_jstring(&mut env, result.unwrap_or_else(|error| format!("ERROR: {error}")))
 }
 
 #[no_mangle]
@@ -964,7 +964,7 @@ mod tests {
     #[test]
     fn owner_pairing_invite_is_short_lived_single_use_and_proves_host_key_possession() {
         use ring::rand::SystemRandom;
-        use ring::signature::{EcdsaKeyPair, ECDSA_P256_SHA256_ASN1_SIGNING};
+        use ring::signature::{EcdsaKeyPair, KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING};
 
         let database_path = std::env::temp_dir()
             .join(format!("pockethost-pairing-test-{}.db", Uuid::new_v4()));
