@@ -22,11 +22,6 @@ class PocketHostNavigationAccessibilityTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val statePreferences = context.getSharedPreferences("pockethost_state", 0)
-        val owner = com.assayflux.pockethost.management.HostAccountStore.list(context).firstOrNull { it.role == "OWNER" }
-            ?: com.assayflux.pockethost.management.HostAccountStore.create(
-                context, "uiowner", "PocketHost-UI-Owner-Password-42".toCharArray(), "OWNER"
-            )
-        PocketHostOwnerSession.username = owner.username
         val previousOperatingMode = statePreferences.getString("operating_mode", "SERVER_ONLY") ?: "SERVER_ONLY"
         statePreferences.edit()
             .putBoolean("biometric_unlock_enabled", false)
