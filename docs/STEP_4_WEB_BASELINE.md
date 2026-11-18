@@ -2,7 +2,7 @@
 
 **Release assignment:** v0.1.0 — First Hosting  
 **Scope:** main Android Pocket Host app and bundled Rust static website engine.  
-**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and the standalone owner-operated AssayFlux Relay Node on Termux/Android are mandatory v0.1.0 public-ingress scope. Linux-native packaging and service installation are v0.1.1.
+**Not in scope:** Workbench completion, TypeScript compiler, Python/Node server runtime acceptance, fleet workers, multi-host Relay scaling or full fleet control-plane acceptance. Cloudflare Tunnel and the native Android AssayFlux Relay service bundled in the Pocket Host APK are mandatory v0.1.0 public-ingress scope. Linux-native packaging and service installation are v0.1.1.
 
 ## 1. Release promise
 
@@ -22,8 +22,8 @@ A user can import a static website into the Android app, start hosting, open it 
 - Foreground hosting service, notification, start/stop/restart and recovery.
 - Basic encrypted website backup/restore.
 - Cloudflare Tunnel with encrypted token storage and external custom-domain HTTP/HTTPS verification.
-- Standalone AssayFlux Relay Node installable on owner-controlled Termux/Android hardware; DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only route. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability remains required.
-- Minimal owner-facing Relay hostname setup/verification surface plus Termux/Android install, start/stop, status and restart/reconnect flow.
+- Standalone AssayFlux Relay Node installable on owner-controlled owner-controlled Android hardware running Pocket Host; DNS TXT hostname proof, independent host credentials, authenticated outbound host session and visitor-only route. No paid VPS/Docker/PostgreSQL prerequisite; public IPv4/IPv6 reachability remains required.
+- Minimal owner-facing Relay hostname setup/verification surface plus native start/stop, status, pairing, health and restart/reconnect controls.
 - Clear error, diagnostics and Android permission/lifecycle behavior.
 
 ## 3. Static response safety
