@@ -88,11 +88,11 @@ The nine SVGs under `Assets/` total approximately 115.6 MB. The root-level `Pock
 - The same executable also contains the full admin/device control API and requires `DATABASE_URL`, PostgreSQL migrations, a long administrator token and a control API hostname at startup. It starts separate control and visitor listeners (defaults 8080 and 8081).
 - `control-plane/compose.yaml` provides PostgreSQL, the Rust service, Caddy public TLS profile and an optional Cloudflare Tunnel profile. Caddy owns public ports 80/443; its current HTTP listener redirects to HTTPS. Relay visitor requests require a trusted HTTPS frontend. There is no configurable plain-HTTP content mode in the current Relay implementation.
 - `web-console/src/ui/RemoteControlPlane.tsx` includes Relay hostname registration, DNS TXT challenge display, verification and deletion UI. Android Network settings now expose independent Relay endpoint/credential configuration; standalone-node hostname/TXT/TLS provisioning remains open.
-- The current Alpha tree contains `relay-node/Cargo.toml`, but that directory has no `src/main.rs` or other implementation files, tests, installer or service unit. It is a Cargo manifest scaffold only, not a runnable standalone Termux Relay Node. The current gateway remains coupled to the fleet control-plane process/PostgreSQL and registered fleet device credentials; the Android host-side RelayCredentialStore is already independent.
+- The current Alpha tree contains `relay-node/Cargo.toml`, but that directory has no `src/main.rs` or other implementation files, tests, installer or service unit. It is a Cargo manifest scaffold only, not a runnable Relay engine or Android service. The current gateway remains coupled to the fleet control-plane process/PostgreSQL and registered fleet device credentials; the Android host-side RelayCredentialStore is already independent.
 
 ### What “self-hosted Relay without a VPS” means
 
-A paid VPS is not a product requirement. The Relay gateway can be designed as a separately installable owner-operated node (for example Termux on a spare Android device or a Linux machine on home broadband). However, the gateway still needs a network path that is publicly reachable by the owner's domain:
+A paid VPS is not a product requirement. The Relay gateway can be designed as a native Android service bundled in the main Pocket Host APK (as a native Android foreground service in the Pocket Host APK, with Linux-native packaging deferred to v0.1.1). However, the gateway still needs a network path that is publicly reachable by the owner's domain:
 
 - A public IPv4 address with router port forwarding for TCP 80/443, or
 - A globally routed IPv6 address with the firewall permitting the required inbound ports, plus correct DNS A/AAAA records and TLS.
@@ -116,7 +116,7 @@ The **target architecture** is a standalone, lightweight AssayFlux Relay Node th
 - Protocol 1.0 includes JSON schemas for device hello, enrollment challenge, job envelope and role grant, plus default-deny role/job policy manifests and Python validators/tests.
 - Android device-trust source includes owner identity, challenge/proof, role-grant and revocation foundations.
 - Linux agent source is a Python 3.11+ package with identity/trust verification, HTTPS polling, SQLite state/idempotency, typed allow-listed job execution and bounded storage snapshot tasks. It is a preview implementation, not production device acceptance.
-- No Windows/macOS/iOS agent package or separately packaged Termux Relay Node exists in this snapshot.
+- No Windows/macOS/iOS agent package or native Android Relay implementation exists in this snapshot.
 
 ### Backup and storage limits
 
@@ -136,7 +136,7 @@ The **target architecture** is a standalone, lightweight AssayFlux Relay Node th
 - Latest source-tree quality workflow on this snapshot: [PocketHost quality — success](https://github.com/AssayFlux/PocketHost/actions/runs/44082938152). Rust tests, control-plane/PostgreSQL tests and migrations, Caddy/Compose validation, Python/Linux-agent tests, Node metrics smoke test, web-console TypeScript/Vite build and Gradle wrapper validation passed.
 - Latest protocol contract workflow on this snapshot: [Protocol contract validation — success](https://github.com/AssayFlux/PocketHost/actions/runs/44082937765).
 - Android integration workflow [44079487947](https://github.com/AssayFlux/PocketHost/actions/runs/44079487947) passed on code commit `5d90c1d`: Android cloudflared binaries built for the three declared ABIs and Android Kotlin/instrumentation sources compiled. The APK packaging job and emulator instrumentation job were skipped.
-- No APK build artifact, signed release, physical-device test, public custom-domain test, live Cloudflare tunnel test, live Relay gateway deployment or Termux Relay test is evidenced by these runs.
+- No APK build artifact, signed release, physical-device test, public custom-domain test, live Cloudflare tunnel test, live Relay gateway deployment or native Android Relay test is evidenced by these runs.
 - The control-plane deployment workflow is manual and requires a configured SSH host, credentials, domain and deployment secrets. No production deployment evidence is recorded here.
 
 ## Complete directory list
@@ -568,11 +568,11 @@ web-console/vite.config.ts  [132 bytes]  [blob 1826ab6ad8e4]
 - Previous Alpha source head at snapshot: `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`.
 - Previous recursive Git tree: **259 tracked files, 72 directories**.
 - The current `relay-node/` directory contains exactly one tracked file: `Cargo.toml`.
-- That manifest defines the `assayflux-relay-node` Rust package and dependencies. There is no binary target, `src/main.rs`, library source, tests, config sample, installer, Termux service script, Linux service unit or operational documentation shipped inside the crate.
+- That manifest defines the `assayflux-relay-node` Rust package and dependencies. There is no binary target, `src/main.rs`, library source, tests, config sample, installer, Android foreground service script, Linux service unit or operational documentation shipped inside the crate.
 - Therefore the Relay Node remains **not implemented / not runnable**. Do not count the manifest or passing general CI as a completed gateway.
 - Quality CI passed for the current head: [run 44091819401](https://github.com/AssayFlux/PocketHost/actions/runs/44091819401).
 - Protocol contract CI passed for the current head: [run 44091819294](https://github.com/AssayFlux/PocketHost/actions/runs/44091819294).
-- No current evidence establishes a packaged Android APK, standalone Relay Node executable, installed Termux service, physical-device acceptance or public-domain end-to-end acceptance.
+- No current evidence establishes a packaged Android APK, standalone Relay Node executable, installed Android foreground service, physical-device acceptance or public-domain end-to-end acceptance.
 
 
 ## Remediation snapshot addendum (2026-11-18)
