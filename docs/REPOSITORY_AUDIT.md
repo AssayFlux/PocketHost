@@ -1,9 +1,8 @@
 # Pocket Host — Repository Deep Audit
 
 **Audited branch:** `Alpha`  
-**Original audit snapshot:** `0784b3294f2de9f435479c7a290f336e85b78df0` (superseded)  
-**Remediation snapshot:** `1d1592fd578d6111729df4905d804736ad7d1901` (259 tracked files, 72 directories)  
-**Audit date:** 2026-11-18  
+**Current source snapshot checked:** `0784b3294f2de9f435479c7a290f336e85b78df0` (257 tracked files, 72 directories)  
+**Audit date:** 2026-11-17  
 **Complete inventory:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md)
 
 ## 1. Executive finding
@@ -33,7 +32,7 @@ HostingService starts the foreground service, recovers interrupted site/backup o
 
 SiteImporter source/UI is set to 500,000,000 bytes for ZIP input and independently for expanded website contents. It also caps files at 5,000, total ZIP entries at 10,000 and depth at 32. Existing instrumentation coverage checks the configured constant and ZIP happy path; it does not prove a real 500 MB import. Boundary, low-storage, memory-pressure and physical-device tests remain open.
 
-The Rust engine has a separate 500,000,000-byte (500 MB decimal) per-file response cap. The distinct 50 MiB limit applies to manual single-file import, not serving. A site may import successfully while an individual file larger than 50 MiB cannot be served.
+The Rust engine has a separate 50 MiB per-file response cap. A site may import successfully while an individual file larger than 50 MiB cannot be served.
 
 ### Backup capacity — source recheck
 
@@ -123,8 +122,3 @@ The repository baseline records source presence and the exact CI runs. No item i
 The current recursive tree at `0784b3294f2de9f435479c7a290f336e85b78df0` contains 257 tracked files across 72 directories. Since the original `4185ea0` audit snapshot, a `relay-node/Cargo.toml` manifest has appeared. Inspection of the complete current `relay-node/` path list confirms that this is the only file in that directory. It declares dependencies and package metadata but does not provide an executable, tests, configuration, credentials, TLS, installer or service lifecycle. The previous audit conclusions about the absence of a working standalone Relay remain valid; only the wording “no package” is now outdated.
 
 The Quality and Protocol workflows both completed successfully for the current Alpha head. These CI results validate the configured workflows; they do not prove that the Relay Node runs, that an APK is packaged, or that public-domain traffic reaches an Android host.
-
-
-## 8. Remediation findings register
-
-The current severity-ranked register, evidence, corrective actions and verification status are maintained in [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md). It supersedes earlier point-in-time statements in this audit where explicitly marked. The first remediation pass fixes the CI token write path, Relay SSE framing ceiling, ZIP path collisions, Android cleartext endpoint mismatch and ABI build selection. Documentation corrections and baseline refresh are in progress on the isolated remediation branch. No public Relay Node, physical-device acceptance or production release is claimed.

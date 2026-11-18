@@ -1,6 +1,6 @@
 # Pocket Host — Project Baseline
 
-**Current source snapshot:** branch `Alpha`, commit `1d1592fd578d6111729df4905d804736ad7d1901`, checked 2026-11-18. Current recursive Git tree: 259 tracked files across 72 directories. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
+**Current source snapshot:** branch `Alpha`, commit `0784b3294f2de9f435479c7a290f336e85b78df0`, checked 2026-11-17. Current recursive Git tree: 257 tracked files across 72 directories. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
 **Complete file-level record:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md). That document lists every tracked file and directory, module boundaries, source status, exact limits and verification evidence.
 
 ## Product invariants
@@ -37,7 +37,7 @@
 ## Critical limits and discrepancies
 
 - Import limit: 500,000,000 bytes for ZIP input and independently for expanded site contents; 5,000 files, 10,000 entries, depth 32.
-- Rust serving limit: 500,000,000 bytes (500 MB decimal) per individual file; independent of total import size. Manual single-file import through SiteFileManager is capped at 50 MiB; text editing is capped at 256 KiB.
+- Rust serving limit: 50 MiB per individual file; independent of total import size.
 - Backup limits: 500,000,000-byte static site, 50 MiB Python, 100 MiB Node, 650,000,000-byte total uncompressed, 680,000,000-byte encrypted archive. Near-limit physical-device and interruption tests remain open.
 - Relay current body limit: 8 MiB; gateway timeout 45 seconds; pending requests 32 global/8 per device; HTTP methods only, not arbitrary TCP/WebSocket.
 - Current Relay HTTP listener redirects port 80 to HTTPS; there is no configurable plain-HTTP content mode.

@@ -54,7 +54,7 @@ A public network endpoint is still required: public IPv4 with router port forwar
 
 ## Current Android coupling to remove
 
-The Android `RelayAgent` now obtains its endpoint and host token from the dedicated `RelayCredentialStore`; `HostingService` starts Relay independently of remote-control configuration. The node-side credential issuer and standalone gateway remain unimplemented. v0.1.0 must give Relay its own configuration, host identity, credential rotation/revocation and lifecycle. Public website hosting must not require fleet enrollment or admin credentials.
+The current Android `RelayAgent` obtains its endpoint and token from `RemoteControlAgent`; it starts only when remote-control configuration exists. v0.1.0 must give Relay its own configuration, host identity, credential rotation/revocation and lifecycle. Public website hosting must not require fleet enrollment or admin credentials.
 
 ## v0.2.0 fleet control-plane scope
 

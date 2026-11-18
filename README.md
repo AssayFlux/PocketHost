@@ -132,7 +132,7 @@ The first release has one primary promise: **a website imported into Pocket Host
 
 The static website path does not require Python, Node.js or a companion runtime. A React/Vite website can be hosted from its already-built static output (normally the contents of <code>dist/</code>); the phone does not compile a raw React/TypeScript project in v0.1.0.
 
-The Rust engine has a separate **500,000,000-byte (500 MB decimal) per-file response cap**. This is independent of the 500,000,000-byte ZIP and expanded-site import caps. Manual single-file import into the live site is separately capped at 50 MiB, and the text editor is capped at 256 KiB. That is not the overall import limit. The current full-app backup implementation supports a **500,000,000-byte static-site tree**, a **650,000,000-byte total uncompressed archive**, and a **680,000,000-byte encrypted archive**. Optional Python and Node project roots remain separately capped at 50 MiB and 100 MiB. The static-site backup limit therefore matches the importer’s 500,000,000-byte expanded-content allowance; real-device storage-headroom and large-backup tests remain required.
+The Rust engine has a separate **50 MiB per-file response safety cap**. That is not the overall import limit. The current full-app backup implementation supports a **500,000,000-byte static-site tree**, a **650,000,000-byte total uncompressed archive**, and a **680,000,000-byte encrypted archive**. Optional Python and Node project roots remain separately capped at 50 MiB and 100 MiB. The static-site backup limit therefore matches the importer’s 500,000,000-byte expanded-content allowance; real-device storage-headroom and large-backup tests remain required.
 
 ## v0.1.1 — WORKBENCH, RUNTIME & LINUX RELAY INSTALLATION
 
@@ -212,9 +212,7 @@ The diagram includes future integration boundaries. It is not a claim that every
 
 ## REPOSITORY STATUS
 
-The current remediation baseline is recorded against Alpha source commit `1d1592fd578d6111729df4905d804736ad7d1901` (2026-11-18): 259 tracked files across 72 directories. See [Remediation Audit](docs/REMEDIATION_AUDIT.md) for the findings register and [Repository Baseline](docs/REPOSITORY_BASELINE.md) for the refreshed snapshot.
-
-The source tree at the remediation baseline contains 259 tracked files across 72 directories: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
+The source tree at the audited baseline contains 252 tracked files across 71 directories: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
 
 **Important:** there is no standalone Termux Relay Node package or installer yet. The Android Relay agent now uses independent encrypted host credentials; the gateway implementation remains coupled to the fleet control-plane process/PostgreSQL. Linux-native installation is deferred to v0.1.1. The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
 
