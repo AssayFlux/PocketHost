@@ -8,7 +8,7 @@
 |---|---|---|---|
 | Android phone/tablet | Pocket Host main APK | Kotlin/Compose app, Rust JNI hosting, site management, diagnostics and service foundations | v0.1.0 |
 | Android runtime provider | Separate runtime-worker APK | Existing CPython 3.11 and Node.js 24.22.1 implementations, shipped together | v0.1.1 |
-| Termux on Android | AssayFlux Relay Node | No standalone Termux package, installer or service exists in the audited source | v0.1.0 target |
+| Android phone/tablet | Pocket Host native Relay service | Planned Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK; implementation and device acceptance remain open | v0.1.0 |
 | Linux home server / mini PC | AssayFlux Relay Node | No standalone Relay Node package exists; Linux-native package, installer and service lifecycle are deferred to v0.1.1 | v0.1.1 target |
 | Browser | web-console | React/TypeScript/Vite operator console; Relay hostname panel source exists but is not a standalone gateway | v0.1.2 full console; minimal Relay setup in v0.1.0 |
 | Linux x86_64 | Linux Node Agent | Preview Python package with SQLite jobs and HTTPS polling | v0.1.2 |
@@ -53,7 +53,7 @@ The planned worker roles are storage, traffic, build/publish preparation, native
 
 ## Package and installer contract
 
-Each OS/architecture product has a distinct artifact, signature, version, permissions and update/rollback path. The Relay Node is a separate installable product from the Android website-host APK and the full fleet control plane. A Termux gateway is a supported public endpoint only when its network has public IPv4/port forwarding or globally routed IPv6. Do not combine the Android host app, browser console and Linux agent into a single universal package. The Android host/companion signature-level IPC requirement must be preserved while the companion remains separate.
+The v0.1.0 Android Relay is a service component bundled in the Pocket Host main APK, not a separate terminal-managed package or APK. Its Rust native library must be built and packaged for each declared Android ABI, while Kotlin owns service lifecycle and user controls. A public gateway is supported only when its network has public IPv4/port forwarding or globally routed IPv6 and the network edge can forward public 80/443 to the app's unprivileged listener ports. Do not combine the Android host app, browser console and Linux agent into a single universal package. The Android host/companion signature-level IPC requirement must be preserved while the companion remains separate.
 
 ## Release acceptance
 
