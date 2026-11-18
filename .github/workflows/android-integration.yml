@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
       - name: Generate Relay dependency lockfile
-        run: if [ ! -f relay-node/Cargo.lock ]; then cargo generate-lockfile --manifest-path relay-node/Cargo.toml; fi
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - name: Test native Relay engine on the CI host
         run: cargo test --manifest-path relay-node/Cargo.toml --locked
       - name: Commit initial Relay lockfile when it is first generated
@@ -79,6 +79,8 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Resolve Relay lockfile for Android target
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - name: Build native Relay for all declared Android ABIs
         working-directory: relay-node
         run: |
