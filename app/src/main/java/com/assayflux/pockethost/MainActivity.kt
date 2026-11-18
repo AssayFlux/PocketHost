@@ -260,7 +260,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var nativeRelayStatus by remember { mutableStateOf(runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")) }
     var nativeRelayConfigured by remember { mutableStateOf(RelayNodeConfigStore.isConfigured(context)) }
     var autoStartRelayOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("relay_auto_start_on_boot", false)) }
-    var nativeRelayIdentity by remember { mutableStateOf<RelayNodeIdentityStore.Identity?>(null) }
+    var nativeRelayIdentity by remember { mutableStateOf(runCatching { if (RelayNodeIdentityStore.exists()) RelayNodeIdentityStore.getOrCreate() else null }.getOrNull()) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
