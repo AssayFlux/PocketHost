@@ -20,7 +20,7 @@ class RelayCredentialIssuerInstrumentedTest {
     private val hostId = "00000000-0000-4000-8000-000000000001"
 
     private fun seed() {
-        RelayNodeConfigStore.clear(context)
+        RelayNodeConfigStore.clear(context, clearRevocations = true)
         RelayNodeConfigStore.save(context, """
             {
               "bind_address":"127.0.0.1",
