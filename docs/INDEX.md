@@ -25,6 +25,7 @@ This documentation set follows the new three-version pathway. The former five-st
 - [Security and Isolation](SECURITY_ISOLATION_DESIGN.md)
 - [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md)
 - [AssayFlux Relay](ASSAYFLUX_RELAY.md)
+- [Native Android Relay Architecture](NATIVE_ANDROID_RELAY.md) — approved Kotlin foreground-service + Rust/JNI implementation plan
 - [Cloudflare Tunnel](CLOUDFLARE_TUNNEL.md)
 - [Pocket Host Design Language V1](UI_DESIGN.md)
 
