@@ -81,7 +81,15 @@ class NativeRelayService : Service() {
                 worker.execute {
                     val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
                     if (result != "OK") OperationalLog.record(this, "WARN", "NATIVE_RELAY_STOP", result)
-                    main.post { stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(startId) }
+                    main.post {
+                        if (!ownerRequestedRunning) {
+                            stopForeground(STOP_FOREGROUND_REMOVE)
+                            stopSelf(startId)
+                        } else {
+                            getSystemService(NotificationManager::class.java)
+                                .notify(NOTIFICATION_ID, notification("Starting native Relay…"))
+                        }
+                    }
                 }
                 return START_NOT_STICKY
             }
