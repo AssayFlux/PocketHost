@@ -1017,7 +1017,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                         .onSuccess {
                                             nativeRelayConfigured = false
                                             nativeRelayStatus = "STOPPED"
-                                            status = "Native Relay Node configuration and Keystore key cleared."
+                                            status = "Native Relay configuration and encryption key cleared; host revocation history is retained."
                                         }
                                         .onFailure { status = it.message ?: "Could not clear native Relay configuration." }
                                 },
