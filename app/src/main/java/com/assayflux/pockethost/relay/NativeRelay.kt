@@ -13,6 +13,7 @@ object NativeRelay {
 
     @JvmStatic external fun start(configJson: String, databasePath: String): String
     @JvmStatic external fun createPairingInvite(deviceId: String): String
+    @JvmStatic external fun issueCertificate(configJson: String): String
     @JvmStatic external fun stop(): String
     @JvmStatic external fun status(): String
 }
