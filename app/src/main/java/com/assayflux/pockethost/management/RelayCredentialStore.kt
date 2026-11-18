@@ -6,6 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.net.URI
 import java.security.KeyStore
+import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -20,10 +21,24 @@ object RelayCredentialStore {
     private const val KEY_ALIAS = "assayflux.pockethost.relay-credential.v1"
     private const val ENDPOINT_KEY = "endpoint"
     private const val TOKEN_KEY = "token"
+    private const val HOST_ID_KEY = "host_device_id"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
 
     fun endpoint(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(ENDPOINT_KEY, "") ?: ""
+
+    @Synchronized
+    fun hostDeviceId(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.getString(HOST_ID_KEY, null)?.let { stored ->
+            runCatching { return UUID.fromString(stored).toString() }
+        }
+        val id = UUID.randomUUID().toString()
+        check(prefs.edit().putString(HOST_ID_KEY, id).commit()) {
+            "Could not persist this host's Relay identity."
+        }
+        return id
+    }
 
     fun isConfigured(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
