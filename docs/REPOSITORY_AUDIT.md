@@ -10,7 +10,7 @@
 
 Pocket Host is not a blank scaffold. The repository contains a Kotlin/Compose Android app, Rust static HTTP engine, website importer and backup manager, initial Workbench, Python/Node runtime companion, Android device-trust foundation, Linux agent preview, Rust/Axum fleet control plane, browser operator console, Cloudflare Tunnel integration and a partial first-party Relay visitor path.
 
-However, **the current Relay implementation is not yet the independent self-hosted Relay product the project needs**. The gateway remains coupled to the fleet control plane and PostgreSQL, and uses fleet device credentials. The Android host-side RelayAgent already has an independent RelayCredentialStore and lifecycle. There is no standalone Termux Relay Node executable or installer. The previous documentation described a VPS deployment as though it were the required product shape; that is corrected by this audit.
+However, **the current Relay implementation is not yet the independent self-hosted Relay product the project needs**. The gateway remains coupled to the fleet control plane and PostgreSQL, and uses fleet device credentials. The Android host-side RelayAgent already has an independent RelayCredentialStore and lifecycle. There is no native Android Relay JNI engine, foreground service or inbound listener. The previous documentation described a VPS deployment as though it were the required product shape; that is corrected by this audit.
 
 ## 2. Product and UI boundaries confirmed
 
@@ -64,13 +64,13 @@ Critical coupling/gaps:
 - The in-memory RelayHub loses active sessions and pending requests on process restart.
 - The current Caddy port-80 listener redirects to HTTPS; the Relay visitor handler requires a trusted HTTPS frontend. There is no plain-HTTP content opt-in.
 - Android Network settings expose independent Relay endpoint and credential setup, but not standalone-node hostname/TXT/TLS provisioning.
-- A `relay-node/Cargo.toml` package manifest has since been added, but there is still no `src/main.rs`, runnable gateway, installer, service unit, Termux lifecycle or public-network acceptance. It is a scaffold, not an implementation.
+- A `relay-node/Cargo.toml` package manifest has since been added, but there is still no `src/main.rs`, runnable gateway, installer, JNI bridge, Android foreground-service lifecycle or public-network acceptance. It is a scaffold, not an implementation.
 
 ### Correct no-VPS product boundary
 
-A paid VPS is not required. A separate owner-operated Relay Node can run on Termux/Android or Linux hardware the owner already owns. It still needs a publicly reachable network path (public IPv4 with router port forwarding, or global IPv6 with the firewall opened) and DNS A/AAAA records. If the only network is CGNAT with no global IPv6/port forwarding, the device cannot accept inbound visitors. Another owner-controlled reachable node or optional Cloudflare Tunnel is then required.
+A paid VPS is not required. The owner-operated v0.1.0 Relay will run natively inside the Pocket Host Android APK; Linux-native packaging is deferred to v0.1.1. It still needs a publicly reachable network path (public IPv4 with router port forwarding, or global IPv6 with the firewall opened) and DNS A/AAAA records. If the only network is CGNAT with no global IPv6/port forwarding, the device cannot accept inbound visitors. Another owner-controlled reachable node or optional Cloudflare Tunnel is then required.
 
-The current `relay-node/` directory contains only a Cargo manifest. The v0.1.0 implementation must add a runnable lightweight standalone Relay Node, independent host credentials, durable/recoverable host-session handling, Termux/Android lifecycle support for v0.1.0; Linux-native installation for v0.1.1, TLS termination or a rigorously defined trusted edge, and tests proving visitor/admin isolation. It must not depend on PostgreSQL, Docker or fleet credentials.
+The current `relay-node/` directory contains only a Cargo manifest. The v0.1.0 implementation must add a runnable lightweight standalone Relay Node, independent host credentials, durable/recoverable host-session handling, native Android lifecycle support for v0.1.0; Linux-native installation for v0.1.1, TLS termination or a rigorously defined trusted edge, and tests proving visitor/admin isolation. It must not depend on PostgreSQL, Docker or fleet credentials.
 
 ## 5. Workbench review
 
@@ -103,7 +103,7 @@ Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundatio
 
 ## 9. Priority correction list
 
-1. Implement standalone owner-operated AssayFlux Relay Node for Termux/Android in v0.1.0; add Linux-native installer/service in v0.1.1; no paid VPS, Docker or PostgreSQL prerequisite.
+1. Implement owner-operated AssayFlux Relay as a native Kotlin foreground service plus Rust/Tokio JNI engine bundled in the Android APK in v0.1.0; Linux-native packaging remains v0.1.1; no terminal app, Node.js runtime, paid VPS, Docker or PostgreSQL prerequisite.
 2. Implement standalone Relay Node host identity, credential issuance, hostname/TXT/TLS provisioning and revocation; the Android connector and its Network settings are already independent of fleet credentials.
 4. Define public IPv4/IPv6, router, DNS and CGNAT requirements honestly.
 5. Preserve HTTPS default and implement/test the optional plain-HTTP policy only if still required.
