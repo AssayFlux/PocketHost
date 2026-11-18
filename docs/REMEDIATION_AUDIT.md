@@ -71,7 +71,7 @@ MB is decimal; MiB is binary. Do not call 500,000,000 bytes 500 MiB.
 
 - `7e9430a59dd9cf7163792fad1a6fcb2f8c881608`: CI token write path removed; Relay SSE line limit aligned with event limit; ZIP collision checks added.
 - `5d7831d23d99acaf1510753db219ded1b3bf4993`: Relay framing and ZIP negative instrumentation tests added; cleartext validators restricted to 127.0.0.1; cargo-ndk uses selected ABIs.
-- Subsequent commits refresh documentation and baseline.
+- Baseline snapshot commit: `c00eac2735ca353b0ef965fd5a40ece9fbcc7085` (260 blobs, 72 directories; recursive tree not truncated). Later documentation-only updates preserve these counts.
 
 ## 6. Audit limitations
 

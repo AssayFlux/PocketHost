@@ -1,4 +1,7 @@
 name: PocketHost quality
+permissions:
+  contents: read
+
 concurrency:
   group: pockethost-quality-${{ github.ref }}
   cancel-in-progress: true

@@ -214,7 +214,7 @@ The diagram includes future integration boundaries. It is not a claim that every
 
 The remediation work is tracked on `audit/remediation-baseline-2026-11`, based on Alpha commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`. The baseline register and severity-ranked findings are in [Remediation Audit](docs/REMEDIATION_AUDIT.md); the refreshed snapshot is in [Repository Baseline](docs/REPOSITORY_BASELINE.md).
 
-The source tree at the remediation baseline contains 259 tracked files across 72 directories: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
+The Alpha source baseline contains 259 tracked files across 72 directories; the remediation branch snapshot contains 260 tracked files across 72 directories (including the new audit register): Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
 
 **Important:** there is no standalone Termux Relay Node package or installer yet. The Android Relay agent now uses independent encrypted host credentials; the gateway implementation remains coupled to the fleet control-plane process/PostgreSQL. Linux-native installation is deferred to v0.1.1. The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
 

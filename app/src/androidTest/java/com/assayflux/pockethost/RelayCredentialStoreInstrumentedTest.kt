@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.assayflux.pockethost.management.RelayCredentialStore
+import com.assayflux.pockethost.management.RemoteControlAgent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -51,6 +52,8 @@ class RelayCredentialStoreInstrumentedTest {
         assertTrue(RelayCredentialStore.isConfigured(context))
         assertTrue(runCatching { RelayCredentialStore.configure(context, "http://localhost:8080", token) }.isFailure)
         assertTrue(runCatching { RelayCredentialStore.configure(context, "http://[::1]:8080", token) }.isFailure)
+        assertTrue(runCatching { RemoteControlAgent.configure(context, "http://localhost:8080", token) }.isFailure)
+        assertTrue(runCatching { RemoteControlAgent.configure(context, "http://[::1]:8080", token) }.isFailure)
         RelayCredentialStore.clear(context)
     }
 }
