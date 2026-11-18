@@ -1014,7 +1014,7 @@ mod tests {
     #[test]
     fn pairing_rejects_invalid_proof_and_revoked_host_identity() {
         use ring::rand::SystemRandom;
-        use ring::signature::{EcdsaKeyPair, ECDSA_P256_SHA256_ASN1_SIGNING};
+        use ring::signature::{EcdsaKeyPair, KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING};
 
         let database_path = std::env::temp_dir()
             .join(format!("pockethost-pairing-negative-{}.db", Uuid::new_v4()));
