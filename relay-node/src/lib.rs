@@ -1221,7 +1221,10 @@ mod tests {
         let device = Uuid::new_v4();
         let config = RelayConfig {
             bind_address: "127.0.0.1".into(), http_port: 8082, https_port: 8444,
-            tls_certificate_pem: None, tls_private_key_pem: None, dns_resolver: "127.0.0.1:53".into(),
+            tls_certificate_pem: None, tls_private_key_pem: None,
+            acme_contact_email: None, acme_terms_accepted: false,
+            acme_directory_url: None, acme_account_credentials: None,
+            dns_resolver: "127.0.0.1:53".into(),
             hosts: vec![HostConfig { device_id: device, credential_sha256: hex_sha256(b"secret") }],
             routes: vec![
                 RouteConfig { hostname: "example.com".into(), site_id: "site".into(), device_id: device, dns_txt_name: "_pockethost-verify.example.com".into(), dns_txt_value: "pockethost-verification-token-000000000000".into() },
