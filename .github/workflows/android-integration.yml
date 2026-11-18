@@ -90,11 +90,20 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Generate Relay dependency lockfile
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
       - name: Verify Android role allow-list matches the shared protocol
         run: python3 scripts/validate-android-role-policy.py
+      - name: Preserve generated Relay lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-cargo-lock
+          path: relay-node/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7
       - name: Compile app and Android instrumentation sources without packaging APKs
         run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin -PpockethostAbi=x86_64
 
@@ -125,6 +134,8 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Generate Relay dependency lockfile
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -238,6 +249,8 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Generate Relay dependency lockfile
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
