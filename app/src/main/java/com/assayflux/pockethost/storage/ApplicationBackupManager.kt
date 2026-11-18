@@ -810,7 +810,7 @@ object ApplicationBackupManager {
                                 }
                             }
                             if (rootBytes > rootLimit) throw IOException("$prefix project exceeds its backup size limit.")
-                            if (counters.bytes > MAX_TOTAL_BYTES) throw IOException("The full app backup exceeds 200 MiB.")
+                            if (counters.bytes > MAX_TOTAL_BYTES) throw IOException("The full app backup exceeds 650 MB uncompressed.")
                             zip.write(buffer, 0, count)
                         }
                     }
