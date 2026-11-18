@@ -1,17 +1,17 @@
 # AssayFlux Relay — Owner-Operated Visitor Gateway
 
-**Release assignment:** v0.1.0 — First Hosting  
+**Release assignment:** v0.1.0 — First Hosting (Termux/Android node target); Linux-native installer and service integration deferred to v0.1.1  
 **Source recheck:** Android now has an independent `RelayAgent`, a dedicated `RelayCredentialStore` encrypted with Android Keystore AES-GCM, and owner-facing Relay endpoint/credential controls in Network settings. The separate `relay-node/` directory still contains only `Cargo.toml`: there is no standalone executable, listener, independent node-side credential issuer, installer, service lifecycle or public acceptance.
 
 ## Purpose
 
 AssayFlux Relay is the first-party public visitor gateway for Pocket Host. It lets an Android website host remain behind carrier NAT while a separately operated Relay Node accepts browser traffic on the owner's public domain and forwards bounded HTTP requests over an authenticated outbound host connection.
 
-The Relay Node is intended to run on owner-controlled hardware, including Termux/Android or Linux. A paid VPS is not required. A public network path is required.
+For v0.1.0, the Relay Node target is owner-controlled Termux/Android hardware. Linux-native installation, packaging and service integration are deferred to v0.1.1. A paid VPS is not required. A public network path is required.
 
 ## No-VPS operating model
 
-The owner may run the Relay Node on a spare Android device using Termux, a Linux home server, a mini PC or another supported always-on device.
+The v0.1.0 owner may run the Relay Node on a spare Android device using Termux. Linux home servers, mini PCs and other Linux-native installations are deferred to v0.1.1.
 
 The node must have at least one publicly reachable ingress path:
 
@@ -91,7 +91,7 @@ These are current source-level limits, not tested production throughput guarante
 
 1. Implement the standalone Relay Node binary in `relay-node/`, using the existing Android wire contract as the compatibility baseline: `GET /v1/device/relay/stream` (Bearer host credential, `text/event-stream`) and `POST /v1/device/relay/responses/{id}` (same credential, JSON response).
 2. Remove mandatory dependency on fleet device registration and fleet-control bearer credentials. Create dedicated host identity, pairing and revocable visitor-ingress credentials; never accept the fleet device token as a substitute.
-3. Provide a minimal owner setup flow for Termux/Linux: install, start/stop, status, domain registration, DNS TXT proof, TLS, route binding and revocation.
+3. Provide a minimal owner setup flow for Termux/Android in v0.1.0: install, start/stop, status, domain registration, DNS TXT proof, TLS, route binding and revocation. Linux-native packaging, installer and service integration are v0.1.1 deliverables.
 4. Avoid mandatory Docker and PostgreSQL for the standalone profile. Use a small durable local store and bounded in-memory request state with safe restart recovery.
 5. Complete the standalone node-side host enrollment/credential issuance flow that pairs with the already-independent Android `RelayCredentialStore`; keep it independent of RemoteControlAgent and fleet control plane.
 6. Preserve strict visitor/admin separation and only forward to a registered site origin.
@@ -112,4 +112,4 @@ These are current source-level limits, not tested production throughput guarante
 
 ## Acceptance
 
-AssayFlux Relay is not complete until a clean Termux/Linux installation on an owner-controlled publicly reachable device can register and verify a real domain, obtain/serve valid HTTPS, redirect HTTP, receive visitors from mobile data, forward to a separate Pocket Host Android device behind NAT, survive gateway/host reconnects, revoke the hostname and prove that no management route is exposed.
+The v0.1.0 Termux/Android Relay target is not complete until a clean installation on an owner-controlled publicly reachable device can register and verify a real domain, obtain/serve valid HTTPS, redirect HTTP, receive visitors from mobile data, forward to a separate Pocket Host Android device behind NAT, survive gateway/host reconnects, revoke the hostname and prove that no management route is exposed. Linux-native installation and service acceptance are explicitly deferred to v0.1.1.
