@@ -74,7 +74,9 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
-**Decision:** the 500 MB importer cap does not imply a 500 MB backup cap. The current ApplicationBackupManager allows 50 MiB for the static site root, 50 MiB for Python, 100 MiB for Node, 200 MiB total uncompressed and 220 MiB encrypted archive. This mismatch must be explicitly resolved or owner-approved as a documented limitation before v0.1.0 release.
+**Original decision:** the 500 MB importer cap did not imply a 500 MB backup cap. At the time, ApplicationBackupManager allowed 50 MiB for the static site root and 200 MiB total uncompressed.
+
+**Superseding implementation:** the current source now allows a 500,000,000-byte static-site root, 650,000,000 bytes total uncompressed and a 680,000,000-byte encrypted archive. Python and Node roots remain separately capped at 50 MiB and 100 MiB. The static-site backup cap now matches the importer expanded-content cap. Near-limit backup/restore and physical-device free-space/recovery tests remain mandatory.
 
 **Reason:** import, serving, full-app backup and runtime project storage have separate quotas and memory/disk costs. They must not be described as one shared limit.
 
