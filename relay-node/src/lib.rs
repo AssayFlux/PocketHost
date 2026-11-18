@@ -288,6 +288,32 @@ fn valid_site_id(value: &str) -> bool {
         && value.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
+/// Reject paths that could escape the website namespace or collide with Relay
+/// control surfaces. The visitor router is deliberately website-only.
+fn validate_visitor_path(path: &str) -> Result<(), StatusCode> {
+    if path.is_empty() || path.len() > 8192 || !path.starts_with('/')
+        || path.starts_with("//")
+        || path.bytes().any(|b| b == 0 || b < 0x20 || b == 0x7f)
+        || path.contains('\\\\')
+    {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let path_only = path.split('?').next().unwrap_or("/");
+    let lower = path_only.to_ascii_lowercase();
+    if lower.starts_with("/v1/")
+        || lower == "/health"
+        || lower.starts_with("/_pockethost/")
+        || lower.starts_with("/.well-known/pockethost/")
+        || lower.contains("%2e")
+        || lower.contains("%2f")
+        || lower.contains("%5c")
+        || path_only.split('/').any(|segment| segment == "." || segment == "..")
+    {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(())
+}
+
 fn normalize_dns_name(input: &str) -> Result<String, String> {
     let value = input.trim().trim_end_matches('.').to_ascii_lowercase();
     if value.is_empty() || value.len() > 253
@@ -502,9 +528,7 @@ async fn visitor(
     };
     let method = request.method().as_str().to_string();
     let path = request.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/").to_string();
-    if path.len() > 8192 || path.starts_with("//") || path.bytes().any(|b| b == 0 || b < 0x20) {
-        return Err(StatusCode::BAD_REQUEST);
-    }
+    validate_visitor_path(&path)?;
     let is_head = request.method() == Method::HEAD;
     let mut forwarded_headers = HashMap::new();
     for name in ["accept", "accept-encoding", "content-type", "cookie", "if-modified-since",
@@ -709,6 +733,18 @@ mod tests {
         assert!(normalize_hostname("127.0.0.1").is_err());
         assert!(normalize_hostname("-bad.example").is_err());
         assert!(normalize_hostname("bad..example").is_err());
+    }
+
+    #[test]
+    fn visitor_paths_cannot_reach_relay_control_surfaces_or_traverse() {
+        for path in ["/v1/device/relay/stream", "/v1/owner/pair", "/_pockethost/admin",
+            "/.well-known/pockethost/internal", "/%2e%2e/secrets", "/%2Fetc/passwd",
+            "/folder/../private", "/folder\\\\..\\\\private"] {
+            assert!(validate_visitor_path(path).is_err(), "path should be rejected: {path}");
+        }
+        for path in ["/", "/index.html", "/assets/app.css?version=2", "/products/item"] {
+            assert!(validate_visitor_path(path).is_ok(), "path should be accepted: {path}");
+        }
     }
 
     #[test]
