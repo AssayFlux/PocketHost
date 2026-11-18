@@ -67,6 +67,7 @@ import com.assayflux.pockethost.relay.NativeRelay
 import com.assayflux.pockethost.relay.NativeRelayService
 import com.assayflux.pockethost.relay.RelayNodeConfigStore
 import com.assayflux.pockethost.relay.RelayNodeIdentityStore
+import com.assayflux.pockethost.relay.RelayCredentialIssuer
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -261,6 +262,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var nativeRelayConfigured by remember { mutableStateOf(RelayNodeConfigStore.isConfigured(context)) }
     var autoStartRelayOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("relay_auto_start_on_boot", false)) }
     var nativeRelayIdentity by remember { mutableStateOf(runCatching { if (RelayNodeIdentityStore.exists()) RelayNodeIdentityStore.getOrCreate() else null }.getOrNull()) }
+    var nativeRelayHostIdText by remember { mutableStateOf("") }
+    var nativeRelayCredentialToken by remember { mutableStateOf<String?>(null) }
+    var nativeRelayHostIds by remember { mutableStateOf(runCatching { RelayCredentialIssuer.registeredHostIds(context) }.getOrDefault(emptyList())) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
     var tunnelStatus by remember { mutableStateOf(CloudflareTunnelRuntime.status()) }
@@ -1018,8 +1022,56 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                 enabled = nativeRelayConfigured
                             ) { Text("Remove config") }
                         }
+                        if (nativeRelayConfigured) {
+                            Text("OWNER-ISSUED HOST CREDENTIALS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Registered host IDs: ${nativeRelayHostIds.joinToString().ifBlank { "none" }}", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                            OutlinedTextField(
+                                value = nativeRelayHostIdText,
+                                onValueChange = { nativeRelayHostIdText = it },
+                                label = { Text("Registered host UUID") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    runCatching { RelayCredentialIssuer.issueOrRotate(context, nativeRelayHostIdText) }
+                                        .onSuccess { issued ->
+                                            nativeRelayCredentialToken = issued.token
+                                            nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                            if (nativeRelayStatus == "RUNNING") {
+                                                NativeRelayService.stop(context)
+                                                NativeRelayService.start(context)
+                                            }
+                                            status = "A new host credential was issued. Copy it to the host device now; the raw token is not stored on this node."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not issue Relay host credential." }
+                                }) { Text("Issue / rotate") }
+                                OutlinedButton(onClick = {
+                                    runCatching { RelayCredentialIssuer.revoke(context, nativeRelayHostIdText) }
+                                        .onSuccess { revoked ->
+                                            if (revoked) {
+                                                nativeRelayCredentialToken = null
+                                                nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                                NativeRelayService.stop(context)
+                                                if (nativeRelayHostIds.isNotEmpty()) NativeRelayService.start(context)
+                                                status = "Host credential revoked and its routes removed."
+                                            } else status = "That host is not registered."
+                                        }
+                                        .onFailure { status = it.message ?: "Could not revoke Relay host." }
+                                }) { Text("Revoke host") }
+                            }
+                            nativeRelayCredentialToken?.let { token ->
+                                Text("Copy this credential to the host device. It is shown only for this issuance:", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                                Text(token, color = palette.onSurface, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                                OutlinedButton(onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("AssayFlux Relay host credential", token))
+                                    Toast.makeText(context, "Relay credential copied", Toast.LENGTH_SHORT).show()
+                                }) { Text("Copy credential") }
+                            }
+                        }
                         Text(
-                            "This is the inbound gateway running on this phone. It is separate from the outbound host connection below. The JSON configuration includes DNS TXT proof, host credential verifiers and TLS PEM material; it is encrypted at rest with Android Keystore. Pairing and automatic certificate renewal are still being completed.",
+                            "This is the inbound gateway running on this phone. It is separate from the outbound host connection below. Node configuration and host verifiers are encrypted at rest; owner-issued credentials can be rotated or revoked. Automatic pairing and certificate renewal are still being completed.",
                             color = palette.onSurfaceVariant, fontSize = 13.sp
                         )
                     }
