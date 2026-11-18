@@ -28,7 +28,7 @@ The native gateway must authenticate each host session, correlate requests, reje
 
 “No VPS required” does **not** mean “no publicly reachable endpoint required.”
 
-An ordinary unrooted Android app cannot bind TCP ports below 1024. The native listener therefore uses configurable unprivileged ports (initial proposal: HTTP 8080 and HTTPS 8443). For conventional public URLs, the owner's router, firewall or reverse proxy must forward public TCP 80 to the app's HTTP listener and public TCP 443 to its HTTPS listener. IPv6 requires equivalent edge forwarding or proxying; a globally routed IPv6 address alone does not grant an Android app permission to bind port 443.
+An ordinary unrooted Android app cannot bind TCP ports below 1024. The native listener therefore uses configurable unprivileged ports with defaults HTTP 8082 and HTTPS 8444. This avoids the existing website-engine default of 8080 and embedded Python default of 8081. For conventional public URLs, the owner's router, firewall or reverse proxy must forward public TCP 80 to 8082 and public TCP 443 to 8444. Relay must validate that configured ports do not overlap active local-host listeners. IPv6 requires equivalent edge forwarding or proxying; a globally routed IPv6 address alone does not grant an Android app permission to bind port 443.
 
 The Android Relay device needs one of:
 - public IPv4 with router/edge port forwarding;
