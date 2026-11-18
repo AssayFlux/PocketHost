@@ -49,7 +49,7 @@ LAN mode exposes the website listener to the local network. Use trusted networks
 
 ## 6. Backup and restore
 
-The current full-app backup is passphrase-encrypted and includes the active site, optional runtime project data, hostname routes and an allow-list of non-secret settings. It excludes device-bound credentials, Cloudflare tokens, owner/device keys and sessions. Export/restore is disabled while hosting or optional runtimes are active. **Current limits:** 50 MiB for the static site root, 50 MiB for Python, 100 MiB for Node, 200 MiB total uncompressed and 220 MiB encrypted archive. Therefore, a site imported near the 500 MB import cap cannot currently be fully backed up. This mismatch is an open v0.1.0 engineering decision; do not assume import size equals backup size.
+The current full-app backup is passphrase-encrypted and includes the active site, optional runtime project data, hostname routes and an allow-list of non-secret settings. It excludes device-bound credentials, Cloudflare tokens, owner/device keys and sessions. Export/restore is disabled while hosting or optional runtimes are active. **Current limits:** 500,000,000 bytes for the static site root, 50 MiB for Python, 100 MiB for Node, 650,000,000 bytes total uncompressed and 680,000,000 bytes for the encrypted archive. The static-site backup cap matches the importer's 500,000,000-byte expanded-content allowance. Near-limit backup/restore and low-storage device tests remain required.
 
 ## 7. Optional runtimes
 
