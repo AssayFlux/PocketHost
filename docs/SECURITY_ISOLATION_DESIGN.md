@@ -8,7 +8,7 @@ Pocket Host must keep website visitors, owner controls, website files, optional 
 
 - v0.1.0: Android static serving, safe import/activation, LAN opt-in, Cloudflare Tunnel, AssayFlux Relay, custom-domain HTTP/HTTPS, visitor-route isolation, website backup/restore and Android permission/lifecycle handling.
 - v0.1.1: Workbench workspace isolation, preview, build boundaries, publishing approval and optional runtime hardening.
-- v0.2.0: device identity, enrollment, authenticated transport, least-privilege role grants, agents, control plane and multi-host Relay scaling/advanced failover.
+- v0.1.2: device identity, enrollment, authenticated transport, least-privilege role grants, agents, control plane and multi-host Relay scaling/advanced failover.
 - Later: further runtime packages, OS agents, SBC and MCU profiles.
 
 ## v0.1.0 website safety
@@ -43,7 +43,7 @@ Test foreground-service restrictions, notification permission, storage provider 
 - Python and Node currently share the runtime companion UID. This is not per-project OS isolation. Use trusted owner-controlled code until adversarial isolation and egress tests pass.
 - A runtime failure must not stop static hosting or unrelated components.
 
-## v0.2.0 device and fleet safety
+## v0.1.2 device and fleet safety
 
 - Distinct device identity, owner proof, single-use short-lived challenge and explicit role approval.
 - Default-deny capability policy; unknown roles/capabilities are rejected.

@@ -1,6 +1,6 @@
 # Pocket Host — Fleet Control Plane Deployment
 
-**Release assignment:** v0.2.0 — Connected Device Fabric  
+**Release assignment:** v0.1.2 — Connected Device Fabric  
 **Current source status:** Rust/Axum and PostgreSQL implementation exists; production enrollment and fleet acceptance remain open.
 
 ## Role
@@ -37,7 +37,7 @@ The first-party Relay Node must be a separate, owner-operated service:
 
 The detailed contract is in [AssayFlux Relay](ASSAYFLUX_RELAY.md) and [Public Ingress v0.1.0](PUBLIC_INGRESS_V0_1_0.md).
 
-## v0.2.0 fleet control-plane responsibilities
+## v0.1.2 fleet control-plane responsibilities
 
 - Owner sessions, passkey/recovery flows and role-based access.
 - Device registration, enrollment, approval, token rotation and revocation.
@@ -56,4 +56,4 @@ Do not claim that this stack has been deployed or is running in production unles
 
 ## Acceptance
 
-For v0.2.0, test owner session lifecycle, device enrollment/revocation, role-grant signatures, typed job lease/idempotency, database recovery, audit, credential rotation, rate limits and mobile/agent reconnect. Verify visitor ingress cannot reach the management API. The v0.1.0 standalone Relay Node has its own G0–G9 acceptance and must not be treated as completed by control-plane CI alone.
+For v0.1.2, test owner session lifecycle, device enrollment/revocation, role-grant signatures, typed job lease/idempotency, database recovery, audit, credential rotation, rate limits and mobile/agent reconnect. Verify visitor ingress cannot reach the management API. The v0.1.0 standalone Relay Node has its own G0–G9 acceptance and must not be treated as completed by control-plane CI alone.
