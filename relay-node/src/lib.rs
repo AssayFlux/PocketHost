@@ -719,7 +719,6 @@ mod tests {
         assert!(!constant_time_equal("abc", "abd"));
     }
 
-    #[test]
     #[tokio::test]
     async fn route_config_rejects_unpaired_hosts_and_duplicate_hostnames() {
         let device = Uuid::new_v4();
