@@ -39,7 +39,7 @@ The Relay service is part of the Android app package but has an independent life
 
 ### Current implementation versus target
 
-The Android RelayAgent reads a dedicated endpoint and host token from RelayCredentialStore; HostingService starts Relay independently from RemoteControlAgent. Current gateway lives inside the Rust/Axum fleet control-plane executable, requires PostgreSQL/admin configuration, and uses an in-memory RelayHub. There is no native Android Relay Node service integrated into the Pocket Host APK executable or node-side credential issuer in the audited source; the Android host-side credential store is already independent. The standalone path is planned work, not a current feature.
+The Android RelayAgent reads a dedicated endpoint and host token from RelayCredentialStore; HostingService starts Relay independently from RemoteControlAgent. Current gateway lives inside the Rust/Axum fleet control-plane executable, requires PostgreSQL/admin configuration, and uses an in-memory RelayHub. There is no native Android Relay Node service integrated into the Pocket Host APK executable or node-side credential issuer in the audited source; the Android host-side credential store is already independent. The native inbound gateway path is planned work, not a current feature.
 
 ## 4. v0.1.1 — Workbench, Runtime & Linux Relay Installation
 
