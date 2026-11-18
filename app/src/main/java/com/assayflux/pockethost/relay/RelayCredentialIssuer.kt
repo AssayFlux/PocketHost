@@ -65,7 +65,7 @@ object RelayCredentialIssuer {
         val config = JSONObject(configText)
         val hosts = config.optJSONArray("hosts") ?: return false
         val keptHosts = JSONArray()
-        var found = false
+        var found = deviceId in RelayNodeConfigStore.activeHostIds(context)
         for (index in 0 until hosts.length()) {
             val host = hosts.optJSONObject(index) ?: continue
             if (host.optString("device_id").equals(deviceId, ignoreCase = true)) {
