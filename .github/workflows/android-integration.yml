@@ -37,14 +37,25 @@ concurrency:
 jobs:
   relay-rust:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
       - name: Generate Relay dependency lockfile
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
+        run: if [ ! -f relay-node/Cargo.lock ]; then cargo generate-lockfile --manifest-path relay-node/Cargo.toml; fi
       - name: Test native Relay engine on the CI host
         run: cargo test --manifest-path relay-node/Cargo.toml --locked
+      - name: Commit initial Relay lockfile when it is first generated
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add relay-node/Cargo.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "build(relay): lock native gateway dependencies"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - name: Preserve generated Relay lockfile for review
         uses: actions/upload-artifact@v4
         with:
