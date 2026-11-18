@@ -25,7 +25,7 @@
 | Cloudflare Tunnel | Android token store, cloudflared process, readiness probe, reconnect supervisor, Settings controls, build script | Connector source/build present; public hostname/DNS/TLS acceptance open |
 | AssayFlux Relay client | Android outbound SSE request/response agent, dedicated Android Keystore-backed `RelayCredentialStore`, independent Network settings controls | Android-side configuration and credentials are independent of RemoteControlAgent; node-side credential issuance and live public acceptance remain open |
 | AssayFlux Relay gateway | Rust visitor handler, DNS TXT proof, hostname routes, separate visitor listener, Caddy TLS | Exists inside full control-plane process; PostgreSQL and fleet credentials required; not standalone |
-| Relay Node for Termux/Linux | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host credential issuer, installer, service unit or Termux lifecycle; not runnable and not release-ready |
+| Relay Node for Termux/Android | `relay-node/Cargo.toml` package manifest only | Scaffold only: no `src/main.rs`, gateway, host credential issuer, installer, service unit or Termux lifecycle; not runnable and not release-ready; v0.1.0 target is Termux/Android, Linux-native install is v0.1.1 |
 | Runtime companion | Separate APK with CPython 3.11/Chaquopy and Node.js mobile 24.22.1/JNI | Both in same companion APK, in progress; not hardened sandbox |
 | Runtime Library | 20 catalog JSON manifests | Python/Node in progress; remaining 18 planned metadata only |
 | Browser console | React 18.3.1, TypeScript 5.7.2, Vite 6.0.5; remote control and Relay hostname panel | Separate browser app; build passes; not an Android runtime |
@@ -47,7 +47,7 @@
 
 ## Public hosting direction without a VPS
 
-v0.1.0 must deliver a standalone AssayFlux Relay Node installable on Termux/Android and Linux, independent of the fleet control plane, PostgreSQL and Docker. The user can host it on their own spare phone or home machine **only if** the network provides public IPv4 with port forwarding or globally routed IPv6 and firewall access for the public listener. A device behind CGNAT without global IPv6 cannot be the public gateway. The Android website host itself can remain behind CGNAT because it connects outbound to the Relay Node.
+v0.1.0 must deliver a standalone AssayFlux Relay Node installable on Termux/Android; Linux-native installation is v0.1.1, independent of the fleet control plane, PostgreSQL and Docker. The user can host it on their own spare phone or home machine **only if** the network provides public IPv4 with port forwarding or globally routed IPv6 and firewall access for the public listener. A device behind CGNAT without global IPv6 cannot be the public gateway. The Android website host itself can remain behind CGNAT because it connects outbound to the Relay Node.
 
 Cloudflare Tunnel remains an optional fallback, not a dependency of the first-party Relay.
 

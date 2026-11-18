@@ -12,7 +12,7 @@
 | Linux home server / mini PC | AssayFlux Relay Node | No standalone Relay Node package exists; Linux-native package, installer and service lifecycle are deferred to v0.1.1 | v0.1.1 target |
 | Browser | web-console | React/TypeScript/Vite operator console; Relay hostname panel source exists but is not a standalone gateway | v0.1.2 full console; minimal Relay setup in v0.1.0 |
 | Linux x86_64 | Linux Node Agent | Preview Python package with SQLite jobs and HTTPS polling | v0.1.2 |
-| Windows | Windows agent | Not present as a production package in audited tree | Later later expansion after v0.1.2 expansion |
+| Windows | Windows agent | Not present as a production package in audited tree | Later expansion |
 | macOS | macOS agent | Not present as a production package in audited tree | Later later expansion after v0.1.2 expansion |
 | Raspberry Pi/SBC | Board-specific agent/gateway | No certified board profile | Later expansion |
 | iOS | Mobile client | No iOS source project in this repository | Later expansion |
