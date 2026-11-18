@@ -1,7 +1,7 @@
 # Pocket Host — Fleet Control Plane Source
 
 **Release placement:** v0.1.2 fleet control plane.  
-**Current source:** Rust/Axum fleet API and a partially integrated Relay visitor gateway share this executable. This repository directory is not yet the standalone Termux Relay Node product.
+**Current source:** Rust/Axum fleet API and a partially integrated Relay visitor gateway share this executable. This repository directory is not yet the native Android Relay Node service integrated into the Pocket Host APK product.
 
 ## What is present
 
@@ -42,7 +42,7 @@ The GitHub deployment workflow is manual and requires an SSH host, user, path, d
 
 The first-party Relay must be extracted into a separately installable owner-operated Relay Node:
 
-- Termux/Android in v0.1.0; Linux-native installation in v0.1.1.
+- Native Android service in the Pocket Host APK in v0.1.0; Linux-native packaging in v0.1.1.
 - No paid VPS, Docker or PostgreSQL prerequisite.
 - Independent Relay host identity and revocable ingress credentials.
 - Durable hostname/site/host binding.
@@ -50,7 +50,7 @@ The first-party Relay must be extracted into a separately installable owner-oper
 - Visitor-only forwarding to the registered website origin.
 - Minimal local owner setup, status, start/stop and recovery interface.
 
-A public network endpoint is still required: public IPv4 with router port forwarding or globally routed IPv6. A device behind CGNAT without global IPv6 cannot accept inbound visitors. The main website-host phone may remain behind CGNAT because its connection to the Relay Node is outbound.
+A public network endpoint is still required: public IPv4 with router port forwarding or globally routed IPv6, with the network edge forwarding public ports to the Android app's unprivileged listener ports. A device behind CGNAT without global IPv6 cannot accept inbound visitors. The main website-host phone may remain behind CGNAT because its connection to the Relay Node is outbound.
 
 ## Current Android coupling to remove
 
