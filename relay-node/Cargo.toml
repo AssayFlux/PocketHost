@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0"
-description = "Standalone owner-operated AssayFlux Relay visitor gateway"
+description = "Native Rust Relay gateway engine for AssayFlux Pocket Host Android"
 
 [dependencies]
 anyhow = "1"
