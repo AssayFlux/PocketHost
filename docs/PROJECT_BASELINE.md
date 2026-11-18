@@ -43,7 +43,7 @@
 - Current Relay HTTP listener redirects port 80 to HTTPS; there is no configurable plain-HTTP content mode.
 - Main Android Network UI says “No built-in visitor password yet,” but the Rust engine already implements private/restricted Basic visitor authentication. The UI copy is stale.
 - Main app has optional biometric app unlock and local pairing/approval; it does not currently have a conventional username/password mobile login page. Owner/passkey login is in the browser console.
-- The current tree has a Relay Node Cargo manifest scaffold only; no runnable standalone node or installer is present. No production deployment, signed release, APK artifact or physical-device/public-domain acceptance is evidenced.
+- The current tree has a Relay Node Cargo manifest scaffold only; no native gateway engine, JNI bridge, Android foreground service or node-side credential issuer is present. No production deployment, signed release, APK artifact or physical-device/public-domain acceptance is evidenced.
 
 ## Public hosting direction without a VPS
 
