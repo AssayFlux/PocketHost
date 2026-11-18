@@ -1,6 +1,6 @@
 # Pocket Host — Project Baseline
 
-**Current source snapshot:** branch `Alpha`, commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`, checked 2026-11-18. Current recursive Git tree: 259 tracked files across 72 directories. The remediation branch contains follow-up source changes and one additional audit document (260 blobs, 72 directories at the recorded snapshot); see `docs/REMEDIATION_AUDIT.md`. The detailed 252-file inventory below originated at `4185ea0`; see the snapshot-delta note in [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md).  
+**Current source snapshot:** branch `Alpha`, commit `9debd9b630d460c5feed92d07b3c20da319a9e4d`, checked 2026-11-18. The complete recursive Git tree contains 260 tracked files across 72 directories. The detailed 252-file path inventory below originated at `4185ea0` and is historical; see [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md) for the later snapshot deltas and exact commit identities. Audit findings remain in [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).  
 **Complete file-level record:** [REPOSITORY_BASELINE.md](REPOSITORY_BASELINE.md). That document lists every tracked file and directory, module boundaries, source status, exact limits and verification evidence.
 
 ## Product invariants

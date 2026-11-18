@@ -2,7 +2,7 @@
 
 ## 1. Product definition
 
-Pocket Host is a modular personal infrastructure platform. The first release proves Android static website hosting with local, LAN and public custom-domain access. Public ingress options are Cloudflare Tunnel (optional third party) and the planned owner-operated AssayFlux Relay Node. The Relay Node is a separate software product for owner-controlled Termux/Android or Linux hardware; it does not require a paid VPS, but it does require a publicly reachable IPv4/IPv6 network endpoint.
+Pocket Host is a modular personal infrastructure platform. The first release proves Android static website hosting with local, LAN and public custom-domain access. Public ingress options are Cloudflare Tunnel (optional third party) and the planned owner-operated AssayFlux Relay Node. The v0.1.0 Relay Node runs on owner-controlled Termux/Android hardware; Linux-native installation and service packaging are v0.1.1. It does not require a paid VPS, but it does require a publicly reachable IPv4/IPv6 network endpoint.
 
 The three release milestones are v0.1.0 First Hosting, v0.1.1 Workbench, Runtime & Linux Relay Installation and v0.1.2 Connected Device Fabric.
 

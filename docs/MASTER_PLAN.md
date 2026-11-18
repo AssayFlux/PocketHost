@@ -8,7 +8,7 @@
 
 ## 1. Product objective
 
-Pocket Host is a modular personal infrastructure platform. The first deliverable is a reliable Android website host: import a static website, serve it locally and over LAN, and make it reachable worldwide through either optional Cloudflare Tunnel or the owner's own AssayFlux Relay Node using the owner's domain over HTTP/HTTPS. The Relay Node is a separate Termux/Android or Linux product; a paid VPS is not required, but public IPv4/IPv6 reachability is. Later releases add safe in-app development and a connected device fabric.
+Pocket Host is a modular personal infrastructure platform. The first deliverable is a reliable Android website host: import a static website, serve it locally and over LAN, and make it reachable worldwide through either optional Cloudflare Tunnel or the owner's own AssayFlux Relay Node using the owner's domain over HTTP/HTTPS. The v0.1.0 Relay Node is a separate Termux/Android product; Linux-native installation is v0.1.1. A paid VPS is not required, but public IPv4/IPv6 reachability is. Later releases add safe in-app development and a connected device fabric.
 
 The old five-step delivery sequence is retired. The new three-version pathway is the only active release roadmap until the owner approves an expansion.
 

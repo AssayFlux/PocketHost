@@ -216,7 +216,7 @@ The diagram includes future integration boundaries. It is not a claim that every
 
 ## REPOSITORY STATUS
 
-The remediation work is tracked on `audit/remediation-baseline-2026-11`, based on Alpha commit `2087938a35dc88ed7588d97ffed8bd65fe8b40a9`. The baseline register and severity-ranked findings are in [Remediation Audit](docs/REMEDIATION_AUDIT.md); the refreshed snapshot is in [Repository Baseline](docs/REPOSITORY_BASELINE.md).
+The audit findings and remediation register are maintained in [Remediation Audit](docs/REMEDIATION_AUDIT.md). The latest Alpha source snapshot checked for this documentation update is commit `9debd9b630d460c5feed92d07b3c20da319a9e4d` (260 tracked files, 72 directories). Documentation alignment is being prepared on `docs/release-version-realignment-2026-11`; no code remediation is claimed by that documentation branch. See [Repository Baseline](docs/REPOSITORY_BASELINE.md) for the historical inventory and snapshot deltas.
 
 The Alpha source baseline contains 259 tracked files across 72 directories; the remediation branch snapshot contains 260 tracked files across 72 directories (including the new audit register): Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
 
