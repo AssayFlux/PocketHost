@@ -27,7 +27,7 @@ Pocket Host must keep website visitors, owner controls, website files, optional 
 - Require domain ownership proof before Relay hostname activation; revoke hostname bindings and host sessions promptly. The current DNS TXT/route foundation exists in the combined control-plane service; independent Termux Relay Node setup is not implemented.
 - Public HTTPS must use a valid edge certificate. HTTP redirects to HTTPS by default. An explicit plain-HTTP mode is a target only; current Relay Caddy configuration has no plain-HTTP content opt-in.
 - Relay visitor traffic is bounded by request/body/queue/time limits and rate/abuse controls; it forwards only to the selected website origin. The current visitor path is bounded HTTP request/response, not arbitrary TCP/WebSocket.
-- Encrypt full-app backups and require a strong passphrase. Keep the current 50 MiB static-site/200 MiB total backup limits distinct from the 500 MB import quota; fail safely and disclose the mismatch.
+- Encrypt full-app backups and require a strong passphrase. The current static-site backup cap is 500,000,000 bytes, matching the importer expanded-content cap; Python/Node roots remain separately capped at 50/100 MiB, with 650,000,000 bytes total uncompressed and 680,000,000 bytes encrypted. Enforce storage headroom and retain near-limit/recovery tests.
 
 ## Android platform safety
 
