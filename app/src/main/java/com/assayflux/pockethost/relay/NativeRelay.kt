@@ -11,7 +11,8 @@ object NativeRelay {
         System.loadLibrary("assayflux_relay_node")
     }
 
-    @JvmStatic external fun start(configJson: String): String
+    @JvmStatic external fun start(configJson: String, databasePath: String): String
+    @JvmStatic external fun createPairingInvite(deviceId: String): String
     @JvmStatic external fun stop(): String
     @JvmStatic external fun status(): String
 }
