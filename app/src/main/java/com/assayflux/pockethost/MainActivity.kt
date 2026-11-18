@@ -259,6 +259,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var relayStatus by remember { mutableStateOf(RelayAgent.status()) }
     var nativeRelayStatus by remember { mutableStateOf(runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")) }
     var nativeRelayConfigured by remember { mutableStateOf(RelayNodeConfigStore.isConfigured(context)) }
+    var autoStartRelayOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("relay_auto_start_on_boot", false)) }
     var nativeRelayIdentity by remember { mutableStateOf<RelayNodeIdentityStore.Identity?>(null) }
     var backupPassphrase by remember { mutableStateOf("") }
     var cloudflareTokenSaved by remember { mutableStateOf(CloudflareTokenStore.hasToken(context)) }
@@ -968,6 +969,21 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             },
                             color = palette.onSurfaceVariant, fontSize = 14.sp
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Start Relay after device reboot", color = palette.onSurface, fontSize = 14.sp)
+                                Text("Only starts when a node configuration is saved.", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                            }
+                            Switch(
+                                checked = autoStartRelayOnBoot,
+                                onCheckedChange = { enabled ->
+                                    autoStartRelayOnBoot = enabled
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
+                                        .edit().putBoolean("relay_auto_start_on_boot", enabled).commit()
+                                    status = if (enabled) "Native Relay boot recovery enabled." else "Native Relay boot recovery disabled."
+                                }
+                            )
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { nativeRelayConfigPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }
