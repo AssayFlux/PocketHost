@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import org.json.JSONObject
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -263,6 +264,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var relayStatus by remember { mutableStateOf(RelayAgent.status()) }
     var nativeRelayStatus by remember { mutableStateOf(runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")) }
     var nativeRelayConfigured by remember { mutableStateOf(RelayNodeConfigStore.isConfigured(context)) }
+    var relayAcmeEmail by remember { mutableStateOf(runCatching { JSONObject(RelayNodeConfigStore.read(context) ?: "{}").optString("acme_contact_email") }.getOrDefault("")) }
+    var relayAcmeTermsAccepted by remember { mutableStateOf(runCatching { JSONObject(RelayNodeConfigStore.read(context) ?: "{}").optBoolean("acme_terms_accepted", false) }.getOrDefault(false)) }
     var autoStartRelayOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("relay_auto_start_on_boot", false)) }
     var nativeRelayIdentity by remember { mutableStateOf(runCatching { if (RelayNodeIdentityStore.exists()) RelayNodeIdentityStore.getOrCreate() else null }.getOrNull()) }
     var nativeRelayHostIdText by remember { mutableStateOf("") }
@@ -346,6 +349,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     nativeRelayConfigured = true
                     nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
                     nativeRelayCredentialToken = null
+                    val importedConfig = JSONObject(RelayNodeConfigStore.read(context) ?: "{}")
+                    relayAcmeEmail = importedConfig.optString("acme_contact_email")
+                    relayAcmeTermsAccepted = importedConfig.optBoolean("acme_terms_accepted", false)
                     status = "Native Relay configuration encrypted with Android Keystore and stored transactionally. Start the Relay Node when ready."
                 }.onFailure {
                     status = it.message ?: "Could not import native Relay configuration."
@@ -1029,6 +1035,34 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             ) { Text("Remove config") }
                         }
                         if (nativeRelayConfigured) {
+                            Text("AUTOMATIC HTTPS CERTIFICATES", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            OutlinedTextField(
+                                value = relayAcmeEmail,
+                                onValueChange = { relayAcmeEmail = it },
+                                label = { Text("ACME contact email") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = relayAcmeTermsAccepted,
+                                    onCheckedChange = { relayAcmeTermsAccepted = it }
+                                )
+                                Text("I agree to the Let's Encrypt Terms of Service", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                            }
+                            OutlinedButton(onClick = {
+                                runCatching {
+                                    RelayNodeConfigStore.updateAcmeSettings(context, relayAcmeEmail, relayAcmeTermsAccepted)
+                                }.onSuccess {
+                                    status = "ACME contact and Terms acceptance saved in encrypted Relay configuration."
+                                }.onFailure {
+                                    status = it.message ?: "Could not save ACME settings."
+                                }
+                            }) { Text("Save automatic TLS settings") }
+                            Text(
+                                "HTTP-01 issuance requires public DNS A/AAAA records and router forwarding: TCP 80 to this phone's Relay HTTP port (default 8082), and TCP 443 to its HTTPS port (default 8444). The foreground service checks certificate expiry every 12 hours and renews within 30 days.",
+                                color = palette.onSurfaceVariant, fontSize = 12.sp
+                            )
                             Text("OWNER-ISSUED HOST CREDENTIALS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                             Text("Registered host IDs: ${nativeRelayHostIds.joinToString().ifBlank { "none" }}", color = palette.onSurfaceVariant, fontSize = 12.sp)
                             OutlinedTextField(
