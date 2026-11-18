@@ -933,9 +933,9 @@ pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_createPai
 ) -> jstring {
     let result = (|| {
         let device_id: String = env.get_string(&device_id).map_err(|error| error.to_string())?.into();
-        let device_id = Uuid::parse_str(&device_id).map_err(|_| "Host ID must be a UUID")?;
-        let state = live_state().lock().map_err(|_| "Relay state lock poisoned")?
-            .clone().ok_or("Native Relay is not running")?;
+        let device_id = Uuid::parse_str(&device_id).map_err(|_| "Host ID must be a UUID".to_string())?;
+        let state = live_state().lock().map_err(|_| "Relay state lock poisoned".to_string())?
+            .clone().ok_or_else(|| "Native Relay is not running".to_string())?;
         state.create_pairing_invite(device_id)
     })();
     to_jstring(&mut env, result.unwrap_or_else(|error| format!("ERROR: {error}")))
