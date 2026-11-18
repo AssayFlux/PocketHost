@@ -61,26 +61,28 @@ object RelayNodeConfigStore {
             put("value", Base64.encodeToString(packed, Base64.NO_WRAP))
             put("updated_at", System.currentTimeMillis())
         }
-        val db = StateDb(context).writableDatabase
-        db.beginTransaction()
-        try {
-            check(db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
-                "Could not persist encrypted Relay configuration."
+        withDatabase(context, writable = true) { db ->
+            db.beginTransaction()
+            try {
+                check(db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE) != -1L) {
+                    "Could not persist encrypted Relay configuration."
+                }
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return true
     }
 
     @Synchronized
     fun read(context: Context): String? {
-        val db = StateDb(context).readableDatabase
-        val encoded = db.query(
-            TABLE, arrayOf("value"), "state_key = ?", arrayOf(ROW_CONFIG),
-            null, null, null, "1"
-        ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+        val encoded = withDatabase(context, writable = false) { db ->
+            db.query(
+                TABLE, arrayOf("value"), "state_key = ?", arrayOf(ROW_CONFIG),
+                null, null, null, "1"
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+        }
         if (encoded != null) return decrypt(encoded, authenticated = true)
 
         // One-time migration from the earlier encrypted SharedPreferences record.
@@ -95,29 +97,44 @@ object RelayNodeConfigStore {
 
     @Synchronized
     fun isConfigured(context: Context): Boolean {
-        val db = StateDb(context).readableDatabase
-        val present = db.query(
-            TABLE, arrayOf("state_key"), "state_key = ?", arrayOf(ROW_CONFIG),
-            null, null, null, "1"
-        ).use { it.moveToFirst() }
+        val present = withDatabase(context, writable = false) { db ->
+            db.query(
+                TABLE, arrayOf("state_key"), "state_key = ?", arrayOf(ROW_CONFIG),
+                null, null, null, "1"
+            ).use { it.moveToFirst() }
+        }
         return present || context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .contains(LEGACY_CONFIG_KEY)
     }
 
     @Synchronized
     fun clear(context: Context) {
-        val db = StateDb(context).writableDatabase
-        db.beginTransaction()
-        try {
-            db.delete(TABLE, "state_key = ?", arrayOf(ROW_CONFIG))
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
+        withDatabase(context, writable = true) { db ->
+            db.beginTransaction()
+            try {
+                db.delete(TABLE, "state_key = ?", arrayOf(ROW_CONFIG))
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+            }
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(LEGACY_CONFIG_KEY).commit()
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) keyStore.deleteEntry(KEY_ALIAS)
+    }
+
+    private inline fun <T> withDatabase(
+        context: Context,
+        writable: Boolean,
+        block: (SQLiteDatabase) -> T
+    ): T {
+        val helper = StateDb(context)
+        try {
+            return block(if (writable) helper.writableDatabase else helper.readableDatabase)
+        } finally {
+            helper.close()
+        }
     }
 
     private fun decrypt(encoded: String, authenticated: Boolean): String {
