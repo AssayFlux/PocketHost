@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 object RelayAgent {
     private const val MAX_BODY_BYTES = 8 * 1024 * 1024
     private const val MAX_EVENT_CHARS = 12 * 1024 * 1024
-    private const val MAX_SSE_LINE_CHARS = 64 * 1024
+    private const val MAX_SSE_LINE_CHARS = MAX_EVENT_CHARS + 5
     @Volatile private var running = false
     @Volatile private var currentState = "STOPPED"
     @Volatile private var generation = 0L
