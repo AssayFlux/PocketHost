@@ -42,6 +42,9 @@ object SiteImporter {
         if (!stagingBase.mkdirs()) throw IOException("Could not create a staging directory.")
         val counter = Counter()
         try {
+            val archivePaths = HashMap<String, Boolean>()
+            val portableNames = HashMap<String, String>()
+            val explicitEntries = HashSet<String>()
             ZipInputStream(CappedInputStream(input, MAX_IMPORT_BYTES).buffered()).use { zip ->
                     while (true) {
                         val entry = zip.nextEntry ?: break
@@ -56,11 +59,35 @@ object SiteImporter {
                         val parts = normalized.split('/').filter { it.isNotEmpty() }
                         if (parts.isEmpty() || parts.size > MAX_DEPTH + 1) throw IOException("ZIP folder nesting is too deep.")
                         parts.forEach(::validateName)
+                        val isDirectory = entry.isDirectory || normalized.endsWith('/')
+                        val archivePath = parts.joinToString("/")
+                        var parent = ""
+                        for (segment in parts.dropLast(1)) {
+                            parent = if (parent.isEmpty()) segment else "$parent/$segment"
+                            val knownParent = archivePaths[parent]
+                            if (knownParent == false) throw IOException("ZIP archive uses a file as a directory.")
+                            val portableParent = parent.lowercase(java.util.Locale.ROOT)
+                            val previousPortableParent = portableNames.putIfAbsent(portableParent, parent)
+                            if (previousPortableParent != null && previousPortableParent != parent) {
+                                throw IOException("ZIP contains paths that differ only by letter case.")
+                            }
+                            archivePaths.putIfAbsent(parent, true)
+                        }
+                        if (!explicitEntries.add(archivePath)) throw IOException("ZIP contains duplicate paths.")
+                        val previousType = archivePaths.putIfAbsent(archivePath, isDirectory)
+                        if (previousType != null && !(previousType && isDirectory)) {
+                            throw IOException("ZIP contains conflicting file and directory paths.")
+                        }
+                        val portablePath = archivePath.lowercase(java.util.Locale.ROOT)
+                        val previousPortablePath = portableNames.putIfAbsent(portablePath, archivePath)
+                        if (previousPortablePath != null && previousPortablePath != archivePath) {
+                            throw IOException("ZIP contains paths that differ only by letter case.")
+                        }
                         val target = File(stagingBase, parts.joinToString(File.separator))
                         if (!target.canonicalFile.toPath().startsWith(stagingBase.canonicalFile.toPath())) {
                             throw IOException("ZIP path escapes the import directory.")
                         }
-                        if (entry.isDirectory || normalized.endsWith("/")) {
+                        if (isDirectory) {
                             if (!target.exists() && !target.mkdirs()) throw IOException("Could not create ZIP folder.")
                         } else {
                             target.parentFile?.let { if (!it.exists() && !it.mkdirs()) throw IOException("Could not create ZIP folder.") }
