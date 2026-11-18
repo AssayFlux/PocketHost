@@ -176,10 +176,30 @@ jobs:
             sha256sum "$apk"
           done
           test "$count" -eq 3
+      # Publish each APK as a separate, small artifact. The combined ZIP
+      # exceeds the connector's reliable download size and can arrive truncated.
       - uses: actions/upload-artifact@v4
         with:
-          name: pockethost-debug-apks
-          path: app/build/outputs/apk/debug/*.apk
+          name: pockethost-app-arm64-v8a-debug
+          path: app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-armeabi-v7a-debug
+          path: app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-x86_64-debug
+          path: app/build/outputs/apk/debug/app-x86_64-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-runtime-worker-debug
+          path: app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk
           if-no-files-found: error
           retention-days: 14
 
