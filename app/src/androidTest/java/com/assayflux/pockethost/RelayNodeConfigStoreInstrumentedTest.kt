@@ -17,7 +17,7 @@ class RelayNodeConfigStoreInstrumentedTest {
 
     @Test
     fun encryptedConfigurationSurvivesStoreReopenAndReplacement() {
-        RelayNodeConfigStore.clear(context)
+        RelayNodeConfigStore.clear(context, clearRevocations = true)
         val first = """{"schema":1,"marker":"first","tls_private_key_pem":"not-a-real-key"}"""
         val second = """{"schema":1,"marker":"second","hosts":[],"routes":[]}"""
 
@@ -31,13 +31,13 @@ class RelayNodeConfigStoreInstrumentedTest {
 
     @Test
     fun clearRemovesDurableConfigurationAndIsIdempotent() {
-        RelayNodeConfigStore.clear(context)
+        RelayNodeConfigStore.clear(context, clearRevocations = true)
         assertNull(RelayNodeConfigStore.read(context))
         assertFalse(RelayNodeConfigStore.isConfigured(context))
 
         RelayNodeConfigStore.save(context, """{"schema":1,"marker":"clear-me"}""")
-        RelayNodeConfigStore.clear(context)
-        RelayNodeConfigStore.clear(context)
+        RelayNodeConfigStore.clear(context, clearRevocations = true)
+        RelayNodeConfigStore.clear(context, clearRevocations = true)
 
         assertNull(RelayNodeConfigStore.read(context))
         assertFalse(RelayNodeConfigStore.isConfigured(context))
