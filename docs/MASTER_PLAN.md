@@ -29,7 +29,7 @@ The old five-step delivery sequence is retired. The new three-version pathway is
 13. Local website hosting never depends on public ingress, the remote control plane or another device. Public ingress is optional and must fail independently without stopping local/LAN hosting.
 14. Source presence, UI presence, compilation and simulation are not product acceptance. Support claims require named target hardware/OS tests.
 15. Every release must define and pass G0, G1, G2, G3, G4, G5, G6, G7, G8 and G9. This rule is permanent.
-16. The current full-app backup implementation has a 50 MiB static-site root cap, 200 MiB total uncompressed cap and 220 MiB encrypted archive cap. It does not back up every site allowed by the new 500 MB importer. v0.1.0 must either safely align backup capacity or explicitly approve and expose the lower backup ceiling before release.
+16. The current full-app backup implementation supports a 500,000,000-byte static-site root, 650,000,000-byte total uncompressed archive and 680,000,000-byte encrypted archive. The static-site backup cap matches the importer's expanded-content allowance; Python and Node roots remain separately limited to 50 MiB and 100 MiB. Near-limit backup/restore and physical-device free-space tests remain mandatory.
 17. Public visitor ingress must terminate at the selected website only. Management API, owner sessions, device enrollment, runtime brokers, Workbench drafts and MCU controls must never be reachable through visitor hostnames.
 
 ## 3. Release pathway
