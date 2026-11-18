@@ -64,8 +64,7 @@ class PocketHostDashboardUiSmokeTest {
                 device.wait(Until.hasObject(By.text("About Pocket Host")), 5_000))
             val appSettings = device.wait(Until.findObject(By.text("App settings")), 5_000)
             assertTrue("App settings dropdown item is missing", appSettings != null)
-            val appSettingsBounds = appSettings!!.visibleBounds
-            device.click(appSettingsBounds.centerX(), appSettingsBounds.centerY())
+            appSettings!!.click()
             assertTrue("Appearance settings did not open",
                 device.wait(Until.hasObject(By.text("Make Pocket Host feel like yours")), 10_000))
             val darkMode = device.wait(Until.findObject(By.text("Dark")), 5_000)
