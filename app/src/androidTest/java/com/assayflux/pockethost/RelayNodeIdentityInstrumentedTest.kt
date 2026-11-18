@@ -30,10 +30,11 @@ class RelayNodeIdentityInstrumentedTest {
         )
         val valid = Signature.getInstance("SHA256withECDSA").run {
             initVerify(publicKey)
+            update("AssayFlux Pocket Host Relay Pairing v1:".toByteArray(Charsets.UTF_8))
             update(challenge)
             verify(signatureBytes)
         }
-        assertTrue("Keystore identity must sign the supplied challenge", valid)
+        assertTrue("Keystore identity must sign the domain-separated challenge", valid)
         assertTrue(RelayNodeIdentityStore.exists())
     }
 
