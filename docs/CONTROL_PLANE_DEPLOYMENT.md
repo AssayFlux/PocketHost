@@ -21,13 +21,13 @@ The control plane is the optional fleet coordination service. It handles owner s
 - The visitor listener has no admin/device routes, but shares the process and database with the fleet API.
 - The Relay active session/pending request hub is in memory; PostgreSQL stores device and hostname route records.
 
-The current deployment therefore assumes a publicly reachable Docker-capable host and PostgreSQL. It is not a no-VPS Termux Relay package.
+The current deployment therefore assumes a publicly reachable Docker-capable host and PostgreSQL. It is not the native Android Relay service and must not be treated as its runtime dependency.
 
 ## Intended v0.1.0 Relay boundary
 
 The first-party Relay Node must be a separate, owner-operated service:
 
-- v0.1.0 install target is Termux/Android; Linux-native packaging and service installation are v0.1.1.
+- v0.1.0 target is a Kotlin foreground service with a Rust/Tokio JNI engine inside the Pocket Host APK; Linux-native packaging and service installation are v0.1.1.
 - No paid VPS, Docker or PostgreSQL requirement.
 - Independent host-ingress identity and revocation, not fleet admin or device-control credentials.
 - Durable hostname/site/host route records and bounded visitor request handling.
