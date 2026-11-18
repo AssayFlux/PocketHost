@@ -63,6 +63,7 @@ import com.assayflux.pockethost.management.ManagementApiServer
 import com.assayflux.pockethost.management.RemoteControlAgent
 import com.assayflux.pockethost.management.RelayAgent
 import com.assayflux.pockethost.management.RelayCredentialStore
+import com.assayflux.pockethost.management.RelayPairingClient
 import com.assayflux.pockethost.relay.NativeRelay
 import com.assayflux.pockethost.relay.NativeRelayService
 import com.assayflux.pockethost.relay.RelayNodeConfigStore
@@ -256,6 +257,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var cloudflareTokenText by remember { mutableStateOf("") }
     var relayEndpointText by remember { mutableStateOf(RelayCredentialStore.endpoint(context)) }
     var relayTokenText by remember { mutableStateOf("") }
+    var relayPairingInviteText by remember { mutableStateOf("") }
     var relayConfigured by remember { mutableStateOf(RelayCredentialStore.isConfigured(context)) }
     var relayStatus by remember { mutableStateOf(RelayAgent.status()) }
     var nativeRelayStatus by remember { mutableStateOf(runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")) }
@@ -1136,6 +1138,37 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             enabled = relayStatus !in setOf("CONNECTED", "CONNECTING"),
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Text("This host identity: ${RelayCredentialStore.hostDeviceId(context)}", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                        OutlinedTextField(
+                            value = relayPairingInviteText,
+                            onValueChange = { relayPairingInviteText = it.trim() },
+                            label = { Text("Owner-issued 2-minute pairing invite") },
+                            singleLine = true,
+                            enabled = relayStatus !in setOf("CONNECTED", "CONNECTING"),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    val paired = runCatching {
+                                        withContext(Dispatchers.IO) {
+                                            RelayPairingClient.pair(context, relayEndpointText, relayPairingInviteText)
+                                        }
+                                    }
+                                    paired.onSuccess { hostId ->
+                                        relayPairingInviteText = ""
+                                        relayConfigured = true
+                                        relayStatus = "STOPPED"
+                                        if (hosting) RelayAgent.start(context)
+                                        status = "Relay host paired successfully ($hostId). The credential is stored in this phone's Android Keystore."
+                                    }.onFailure {
+                                        status = it.message ?: "Could not pair this host with the Relay Node."
+                                    }
+                                }
+                            },
+                            enabled = relayEndpointText.isNotBlank() && relayPairingInviteText.length == 32 &&
+                                relayStatus !in setOf("CONNECTED", "CONNECTING")
+                        ) { Text("Pair with owner Relay") }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = {
