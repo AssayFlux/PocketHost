@@ -51,6 +51,7 @@ class RelayCredentialIssuerInstrumentedTest {
     @Test
     fun revocationRemovesHostAndRoutesAndPersistsTombstone() {
         seed()
+        val preRevocationConfig = RelayNodeConfigStore.read(context)!!
         assertTrue(RelayCredentialIssuer.revoke(context, hostId))
         val config = JSONObject(RelayNodeConfigStore.read(context)!!)
         assertEquals(0, config.getJSONArray("hosts").length())
@@ -59,6 +60,9 @@ class RelayCredentialIssuerInstrumentedTest {
         assertFalse(RelayCredentialIssuer.revoke(context, hostId))
         assertTrue(runCatching {
             RelayCredentialIssuer.issueOrRotate(context, hostId)
+        }.isFailure)
+        assertTrue("A revoked host must not be resurrected by importing an old config", runCatching {
+            RelayNodeConfigStore.save(context, preRevocationConfig)
         }.isFailure)
     }
 }
