@@ -70,7 +70,7 @@ Critical coupling/gaps:
 
 A paid VPS is not required. The owner-operated v0.1.0 Relay will run natively inside the Pocket Host Android APK; Linux-native packaging is deferred to v0.1.1. It still needs a publicly reachable network path (public IPv4 with router port forwarding, or global IPv6 with the firewall opened) and DNS A/AAAA records. If the only network is CGNAT with no global IPv6/port forwarding, the device cannot accept inbound visitors. Another owner-controlled reachable node or optional Cloudflare Tunnel is then required.
 
-The current `relay-node/` directory contains only a Cargo manifest. The v0.1.0 implementation must add a runnable lightweight standalone Relay Node, independent host credentials, durable/recoverable host-session handling, native Android lifecycle support for v0.1.0; Linux-native installation for v0.1.1, TLS termination or a rigorously defined trusted edge, and tests proving visitor/admin isolation. It must not depend on PostgreSQL, Docker or fleet credentials.
+The current `relay-node/` directory contains only a Cargo manifest. The v0.1.0 implementation must add an Android-compatible Rust Relay engine, JNI bridge, Kotlin foreground service in the main APK, independent node/host credentials, durable/recoverable host-session handling, TLS termination and tests proving visitor/host/owner isolation. It must not depend on PostgreSQL, Docker or fleet credentials. Linux-native packaging remains v0.1.1.
 
 ## 5. Workbench review
 
@@ -104,7 +104,7 @@ Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundatio
 ## 9. Priority correction list
 
 1. Implement owner-operated AssayFlux Relay as a native Kotlin foreground service plus Rust/Tokio JNI engine bundled in the Android APK in v0.1.0; Linux-native packaging remains v0.1.1; no terminal app, Node.js runtime, paid VPS, Docker or PostgreSQL prerequisite.
-2. Implement standalone Relay Node host identity, credential issuance, hostname/TXT/TLS provisioning and revocation; the Android connector and its Network settings are already independent of fleet credentials.
+2. Implement native Relay node identity, host pairing and credential issuance, hostname/TXT/TLS provisioning and revocation; the existing Android host connector and its Network settings are already independent of fleet credentials.
 4. Define public IPv4/IPv6, router, DNS and CGNAT requirements honestly.
 5. Preserve HTTPS default and implement/test the optional plain-HTTP policy only if still required.
 6. Resolve/document the 500 MB importer versus lower backup capacity.
