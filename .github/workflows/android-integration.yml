@@ -35,6 +35,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  relay-rust:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Generate Relay dependency lockfile
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
+      - name: Test native Relay engine on the CI host
+        run: cargo test --manifest-path relay-node/Cargo.toml --locked
+      - name: Preserve generated Relay lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-cargo-lock-hosttest
+          path: relay-node/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7
+
   cloudflared-android:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
@@ -97,13 +115,6 @@ jobs:
           gradle-version: '8.9'
       - name: Verify Android role allow-list matches the shared protocol
         run: python3 scripts/validate-android-role-policy.py
-      - name: Preserve generated Relay lockfile for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: pockethost-relay-cargo-lock
-          path: relay-node/Cargo.lock
-          if-no-files-found: error
-          retention-days: 7
       - name: Compile app and Android instrumentation sources without packaging APKs
         run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin -PpockethostAbi=x86_64
 
