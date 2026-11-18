@@ -294,7 +294,7 @@ fn validate_visitor_path(path: &str) -> Result<(), StatusCode> {
     if path.is_empty() || path.len() > 8192 || !path.starts_with('/')
         || path.starts_with("//")
         || path.bytes().any(|b| b == 0 || b < 0x20 || b == 0x7f)
-        || path.contains('\\\\')
+        || path.contains('\\')
     {
         return Err(StatusCode::BAD_REQUEST);
     }
