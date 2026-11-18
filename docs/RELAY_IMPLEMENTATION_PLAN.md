@@ -35,22 +35,22 @@ This plan is the execution checklist for the approved native Android Relay archi
 
 ### R1 — Secure Android lifecycle and configuration
 
-- [ ] Implement an Android Keystore-backed encrypted Relay configuration store.
-- [ ] Add a dedicated, non-exported Relay foreground service with explicit start/stop/status and persistent notification.
-- [ ] Add owner-facing Relay setup and health controls; do not reuse the external host-side RelayAgent settings as node configuration.
-- [ ] Validate non-overlapping listener ports (HTTP 8082, HTTPS 8444 by default).
-- [ ] Ensure service restart and failure isolation from local hosting and Cloudflare Tunnel.
+- [x] Implement an Android Keystore-backed AES-GCM encrypted Relay configuration store.
+- [x] Add a dedicated, non-exported Relay foreground service with explicit start/stop/status and persistent notification.
+- [x] Add initial owner controls to import the encrypted node config and start/stop/remove the service; this remains an engineering import flow, not final pairing.
+- [x] Validate non-overlapping listener ports (HTTP 8082, HTTPS 8444 by default).
+- [ ] Ensure service reboot/network recovery and failure isolation from local hosting and Cloudflare Tunnel.
 - [ ] Add service/JNI instrumentation tests and notification/permission tests.
 
 ### R2 — TLS, hostname proof and route lifecycle
 
-- [ ] Select and pin an Android-compatible Rust TLS stack; document crypto provider and license.
-- [ ] Implement certificate/key generation and protected-at-rest storage, ACME issuance and renewal.
-- [ ] Require DNS TXT ownership challenge before activating a hostname.
-- [ ] Persist hostname/site/host binding and verification/revocation state.
-- [ ] Keep unknown, unverified, expired and revoked hostnames fail-closed.
-- [ ] Redirect HTTP to HTTPS only after the HTTPS listener is ready.
-- [ ] Keep plaintext host-session authentication disabled; public host sessions use authenticated TLS only.
+- [x] Select Rustls with the ring crypto provider and add a native HTTPS listener; Android ABI verification remains pending.
+- [ ] Implement certificate/key generation, automatic ACME issuance/renewal and expiry monitoring. The current engineering import accepts an owner-supplied PEM certificate/key.
+- [x] Require a DNS TXT ownership challenge at startup before activating configured host routes.
+- [ ] Persist hostname/site/host binding and verification/revocation state in durable standalone storage; the current encrypted configuration is a temporary persistence layer.
+- [ ] Keep unknown, unverified, expired and revoked hostnames fail-closed; DNS TXT is currently rechecked at startup, while certificate expiry/revocation lifecycle remains open.
+- [x] Redirect HTTP to HTTPS when TLS is configured.
+- [x] Keep plaintext host-session authentication disabled on public interfaces; public binding requires TLS material and verified DNS TXT routes.
 
 ### R3 — Independent identity, pairing and credentials
 
@@ -63,10 +63,10 @@ This plan is the execution checklist for the approved native Android Relay archi
 
 ### R4 — End-to-end integration and hardening
 
-- [ ] Connect inbound visitor requests to authenticated outbound host sessions and the existing local website origin.
-- [ ] Enforce request/response size, queue, concurrency, per-host quota and timeout limits.
-- [ ] Strip hop-by-hop and untrusted forwarding headers; preserve only explicitly allowed visitor headers.
-- [ ] Verify visitor routes cannot reach owner management, pairing, device-control, Workbench or runtime APIs.
+- [x] Implement the visitor-to-authenticated-outbound-SSE host-session request/response path using the existing host-side RelayAgent wire contract.
+- [x] Enforce initial request/response body, queue, concurrency and timeout limits.
+- [x] Strip untrusted request headers and allow-list response headers.
+- [ ] Verify visitor routes cannot reach owner management, pairing, device-control, Workbench or runtime APIs with automated negative tests.
 - [ ] Test disconnect/reconnect, stale request IDs, duplicate responses, host revocation and route removal.
 - [ ] Verify Relay can start/stop independently and cannot break local/LAN website hosting or Cloudflare Tunnel.
 
