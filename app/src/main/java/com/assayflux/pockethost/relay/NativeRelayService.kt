@@ -50,6 +50,8 @@ class NativeRelayService : Service() {
                     val result = runCatching {
                         val config = RelayNodeConfigStore.read(this)
                             ?: throw IllegalStateException("Relay node is not configured. Complete Relay setup first.")
+                        val identity = RelayNodeIdentityStore.getOrCreate()
+                        OperationalLog.record(this, "INFO", "NATIVE_RELAY_NODE_IDENTITY", identity.nodeId)
                         if (NativeRelay.status() == "RUNNING") "OK" else NativeRelay.start(config)
                     }.getOrElse { "ERROR: ${it.message ?: "Relay startup failed"}" }
                     main.post {
