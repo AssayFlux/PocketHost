@@ -777,9 +777,17 @@ async fn visitor(
     output.body(Body::from(bytes)).map_err(|_| StatusCode::BAD_GATEWAY)
 }
 
+async fn pair_complete(
+    State(state): State<RelayState>,
+    Json(request): Json<PairingRequest>,
+) -> Result<Json<PairingResponse>, StatusCode> {
+    state.complete_pairing(request).map(Json)
+}
+
 fn router(state: RelayState) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/v1/pair/complete", post(pair_complete))
         .route("/v1/device/relay/stream", get(host_stream))
         .route("/v1/device/relay/responses/:id", post(host_response))
         .route("/*path", any(visitor))
@@ -799,15 +807,17 @@ struct Running {
 }
 static ENGINE: OnceLock<Mutex<Option<Running>>> = OnceLock::new();
 static LAST_STATUS: OnceLock<Mutex<String>> = OnceLock::new();
+static LIVE_STATE: OnceLock<Mutex<Option<RelayState>>> = OnceLock::new();
 
 fn engine() -> &'static Mutex<Option<Running>> { ENGINE.get_or_init(|| Mutex::new(None)) }
+fn live_state() -> &'static Mutex<Option<RelayState>> { LIVE_STATE.get_or_init(|| Mutex::new(None)) }
 fn set_status(value: &str) {
     if let Ok(mut status) = LAST_STATUS.get_or_init(|| Mutex::new("STOPPED".into())).lock() {
         *status = value.into();
     }
 }
 
-fn start(config_json: &str) -> Result<(), String> {
+fn start(config_json: &str, database_path: &str) -> Result<(), String> {
     let mut config: RelayConfig = serde_json::from_str(config_json)
         .map_err(|e| format!("Invalid Relay configuration: {e}"))?;
     let bind_ip: IpAddr = config.bind_address.parse()
@@ -820,6 +830,7 @@ fn start(config_json: &str) -> Result<(), String> {
     if tls_material.is_none() && !bind_ip.is_loopback() {
         return Err("Plain HTTP Relay is restricted to loopback; configure a TLS certificate and key for public binding".into());
     }
+    let database_path = database_path.to_string();
     let http_bind = SocketAddr::new(bind_ip, config.http_port);
     let https_bind = SocketAddr::new(bind_ip, config.https_port);
     let mut slot = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?;
@@ -832,7 +843,7 @@ fn start(config_json: &str) -> Result<(), String> {
             Err(error) => { let _ = ready_tx.send(Err(format!("Relay runtime failed: {error}"))); return; }
         };
         runtime.block_on(async move {
-            let state = match RelayState::from_config(config).await {
+            let state = match RelayState::from_config(config, &database_path).await {
                 Ok(state) => state,
                 Err(error) => { let _ = ready_tx.send(Err(error)); return; }
             };
@@ -846,6 +857,7 @@ fn start(config_json: &str) -> Result<(), String> {
                     Ok(config) => config,
                     Err(error) => { let _ = ready_tx.send(Err(format!("Relay TLS configuration failed: {error}"))); return; }
                 };
+                if let Ok(mut live) = live_state().lock() { *live = Some(state.clone()); }
                 let _ = ready_tx.send(Ok(()));
                 set_status("RUNNING");
                 let handle = Handle::new();
@@ -867,11 +879,13 @@ fn start(config_json: &str) -> Result<(), String> {
                     _ = &mut https_task => {}
                 }
             } else {
+                if let Ok(mut live) = live_state().lock() { *live = Some(state.clone()); }
                 let _ = ready_tx.send(Ok(()));
                 set_status("RUNNING");
                 let server = axum::serve(http_listener, router(state));
                 let _ = server.with_graceful_shutdown(async { let _ = stop_rx.await; }).await;
             }
+            if let Ok(mut live) = live_state().lock() { *live = None; }
             set_status("STOPPED");
         });
     }).map_err(|e| format!("Unable to create Relay thread: {e}"))?;
@@ -887,6 +901,7 @@ fn start(config_json: &str) -> Result<(), String> {
 
 fn stop() -> Result<(), String> {
     let running = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?.take();
+    if let Ok(mut live) = live_state().lock() { *live = None; }
     if let Some(running) = running {
         let _ = running.stop.send(());
         running.thread.join().map_err(|_| "Relay thread terminated unexpectedly")?;
@@ -901,14 +916,29 @@ fn to_jstring(env: &mut JNIEnv, value: String) -> jstring {
 
 #[no_mangle]
 pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_start(
-    mut env: JNIEnv, _class: JClass, config: JString,
+    mut env: JNIEnv, _class: JClass, config: JString, database_path: JString,
 ) -> jstring {
     let result = (|| {
         let config: String = env.get_string(&config).map_err(|e| e.to_string())?.into();
-        start(&config)?;
+        let database_path: String = env.get_string(&database_path).map_err(|e| e.to_string())?.into();
+        start(&config, &database_path)?;
         Ok::<_, String>("OK".into())
     })();
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_createPairingInvite(
+    mut env: JNIEnv, _class: JClass, device_id: JString,
+) -> jstring {
+    let result = (|| {
+        let device_id: String = env.get_string(&device_id).map_err(|error| error.to_string())?.into();
+        let device_id = Uuid::parse_str(&device_id).map_err(|_| "Host ID must be a UUID")?;
+        let state = live_state().lock().map_err(|_| "Relay state lock poisoned")?
+            .clone().ok_or("Native Relay is not running")?;
+        state.create_pairing_invite(device_id)
+    })();
+    to_jstring(&mut env, result.unwrap_or_else(|error| error))
 }
 
 #[no_mangle]
