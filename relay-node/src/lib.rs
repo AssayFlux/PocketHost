@@ -13,6 +13,8 @@ use axum::{
     routing::{any, get, post},
     Json, Router,
 };
+use axum_server::tls_rustls::RustlsConfig;
+use axum_server::Handle;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures_util::StreamExt;
 use jni::{objects::{JClass, JString}, sys::jstring, JNIEnv};
@@ -43,12 +45,19 @@ struct RelayConfig {
     bind_address: String,
     #[serde(default = "default_port")]
     http_port: u16,
+    #[serde(default = "default_https_port")]
+    https_port: u16,
+    #[serde(default)]
+    tls_certificate_pem: Option<String>,
+    #[serde(default)]
+    tls_private_key_pem: Option<String>,
     hosts: Vec<HostConfig>,
     routes: Vec<RouteConfig>,
 }
 
 fn default_bind() -> String { "127.0.0.1".into() }
 fn default_port() -> u16 { 8082 }
+fn default_https_port() -> u16 { 8444 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -121,8 +130,10 @@ struct RelayState(Arc<Mutex<Hub>>);
 
 impl RelayState {
     fn from_config(config: RelayConfig) -> Result<Self, String> {
-        if !(1024..=65535).contains(&config.http_port) {
-            return Err("Relay HTTP port must be between 1024 and 65535".into());
+        if !(1024..=65535).contains(&config.http_port)
+            || !(1024..=65535).contains(&config.https_port)
+            || config.http_port == config.https_port {
+            return Err("Relay HTTP and HTTPS ports must be distinct and between 1024 and 65535".into());
         }
         let bind_ip: IpAddr = config.bind_address.parse()
             .map_err(|_| "Relay bind address must be a numeric IP address")?;
@@ -277,6 +288,27 @@ fn bearer(headers: &HeaderMap) -> Option<&str> {
 
 async fn health() -> &'static str { "ok" }
 
+async fn http_redirect(
+    State(state): State<RelayState>,
+    request: Request<Body>,
+) -> Result<Response<Body>, StatusCode> {
+    let authority = request.headers().get(header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<axum::http::uri::Authority>().ok())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let hostname = normalize_hostname(authority.host())
+        .map_err(|_| StatusCode::MISDIRECTED_REQUEST)?;
+    let configured = state.0.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .routes.contains_key(&hostname);
+    if !configured { return Err(StatusCode::NOT_FOUND); }
+    let path = request.uri().path_and_query().map(|v| v.as_str()).unwrap_or("/");
+    let location = format!("https://{hostname}{path}");
+    Response::builder().status(StatusCode::PERMANENT_REDIRECT)
+        .header(header::LOCATION, location)
+        .body(Body::empty())
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
 async fn host_stream(
     State(state): State<RelayState>,
     headers: HeaderMap,
@@ -382,6 +414,12 @@ fn router(state: RelayState) -> Router {
         .with_state(state)
 }
 
+fn redirect_router(state: RelayState) -> Router {
+    Router::new()
+        .route("/*path", any(http_redirect))
+        .with_state(state)
+}
+
 struct Running {
     stop: oneshot::Sender<()>,
     thread: JoinHandle<()>,
@@ -397,14 +435,20 @@ fn set_status(value: &str) {
 }
 
 fn start(config_json: &str) -> Result<(), String> {
-    let config: RelayConfig = serde_json::from_str(config_json)
+    let mut config: RelayConfig = serde_json::from_str(config_json)
         .map_err(|e| format!("Invalid Relay configuration: {e}"))?;
     let bind_ip: IpAddr = config.bind_address.parse()
         .map_err(|_| "Relay bind address must be a numeric IP address")?;
-    if !bind_ip.is_loopback() {
-        return Err("Plain HTTP Relay is restricted to loopback until the TLS listener is configured".into());
+    let tls_material = match (config.tls_certificate_pem.take(), config.tls_private_key_pem.take()) {
+        (Some(cert), Some(key)) if !cert.trim().is_empty() && !key.trim().is_empty() => Some((cert, key)),
+        (None, None) => None,
+        _ => return Err("Both TLS certificate and private key PEM values are required".into()),
+    };
+    if tls_material.is_none() && !bind_ip.is_loopback() {
+        return Err("Plain HTTP Relay is restricted to loopback; configure a TLS certificate and key for public binding".into());
     }
-    let bind = SocketAddr::new(bind_ip, config.http_port);
+    let http_bind = SocketAddr::new(bind_ip, config.http_port);
+    let https_bind = SocketAddr::new(bind_ip, config.https_port);
     let state = RelayState::from_config(config)?;
     let mut slot = engine().lock().map_err(|_| "Relay lifecycle lock poisoned")?;
     if slot.is_some() { return Err("Relay is already running".into()); }
@@ -416,14 +460,40 @@ fn start(config_json: &str) -> Result<(), String> {
             Err(error) => { let _ = ready_tx.send(Err(format!("Relay runtime failed: {error}"))); return; }
         };
         runtime.block_on(async move {
-            let listener = match TcpListener::bind(&bind).await {
+            let http_listener = match TcpListener::bind(http_bind).await {
                 Ok(listener) => listener,
-                Err(error) => { let _ = ready_tx.send(Err(format!("Relay listener failed: {error}"))); return; }
+                Err(error) => { let _ = ready_tx.send(Err(format!("Relay HTTP listener failed: {error}"))); return; }
             };
-            let _ = ready_tx.send(Ok(()));
-            set_status("RUNNING");
-            let server = axum::serve(listener, router(state));
-            let _ = server.with_graceful_shutdown(async { let _ = stop_rx.await; }).await;
+            if let Some((cert_pem, key_pem)) = tls_material {
+                let tls_config = match RustlsConfig::from_pem(cert_pem.into_bytes(), key_pem.into_bytes()).await {
+                    Ok(config) => config,
+                    Err(error) => { let _ = ready_tx.send(Err(format!("Relay TLS configuration failed: {error}"))); return; }
+                };
+                let _ = ready_tx.send(Ok(()));
+                set_status("RUNNING");
+                let handle = Handle::new();
+                let https_state = state.clone();
+                let https_task = tokio::spawn(async move {
+                    axum_server::bind_rustls(https_bind, tls_config)
+                        .handle(handle.clone())
+                        .serve(router(https_state).into_make_service())
+                        .await
+                });
+                let http_server = axum::serve(http_listener, redirect_router(state))
+                    .with_graceful_shutdown(async { let _ = stop_rx.await; });
+                tokio::select! {
+                    _ = http_server => {
+                        handle.graceful_shutdown(Some(Duration::from_secs(5)));
+                        let _ = https_task.await;
+                    }
+                    _ = https_task => {}
+                }
+            } else {
+                let _ = ready_tx.send(Ok(()));
+                set_status("RUNNING");
+                let server = axum::serve(http_listener, router(state));
+                let _ = server.with_graceful_shutdown(async { let _ = stop_rx.await; }).await;
+            }
             set_status("STOPPED");
         });
     }).map_err(|e| format!("Unable to create Relay thread: {e}"))?;
@@ -433,7 +503,7 @@ fn start(config_json: &str) -> Result<(), String> {
             Ok(())
         }
         Ok(Err(error)) => { let _ = thread.join(); Err(error) }
-        Err(_) => { let _ = thread.join(); Err("Timed out starting Relay listener".into()) }
+        Err(_) => { let _ = stop_tx.send(()); let _ = thread.join(); Err("Timed out starting Relay listener".into()) }
     }
 }
 
@@ -503,7 +573,8 @@ mod tests {
     fn route_config_rejects_unpaired_hosts_and_duplicate_hostnames() {
         let device = Uuid::new_v4();
         let config = RelayConfig {
-            bind_address: "127.0.0.1".into(), http_port: 8082,
+            bind_address: "127.0.0.1".into(), http_port: 8082, https_port: 8444,
+            tls_certificate_pem: None, tls_private_key_pem: None,
             hosts: vec![HostConfig { device_id: device, credential_sha256: hex_sha256(b"secret") }],
             routes: vec![
                 RouteConfig { hostname: "example.com".into(), site_id: "site".into(), device_id: device },
