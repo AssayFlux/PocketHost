@@ -39,7 +39,7 @@
 
 ## ABOUT POCKET HOST
 
-**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an owner-operated AssayFlux Relay Node. The v0.1.0 Relay target is owner-controlled Termux/Android hardware; Linux-native installation and service packaging are deferred to v0.1.1. A paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
+**AssayFlux Pocket Host** is a mobile-first personal infrastructure platform. The first release targets Android static website hosting locally, over LAN and worldwide through the owner's domain using optional Cloudflare Tunnel or an owner-operated AssayFlux Relay Node. The v0.1.0 Relay target is owner-controlled owner-controlled Android hardware running Pocket Host; Linux-native installation and service packaging are deferred to v0.1.1. A paid VPS is not required, but the gateway must have public IPv4/IPv6 reachability. Later releases add an in-app development workbench, optional server runtimes and a verified device fabric.
 
 A desktop, laptop, server, NAS or supported single-board computer may eventually contribute a bounded role such as storage, backup, traffic handling, build/publish or native jobs. Device products remain separate for their platforms and interoperate through shared contracts. Network discovery never establishes trust.
 
@@ -91,7 +91,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, Cloudflare Tunnel and the planned standalone AssayFlux Relay Node are separate ingress paths; public HTTP/HTTPS acceptance is a v0.1.0 target. The Android client has independent host credentials, but the standalone Relay Node is not yet implemented. Termux/Android is the v0.1.0 install target; Linux-native installation moves to v0.1.1.
+      Local Network, Cloudflare Tunnel and the planned standalone AssayFlux Relay Node are separate ingress paths; public HTTP/HTTPS acceptance is a v0.1.0 target. The Android client has independent host credentials, but the standalone Relay Node is not yet implemented. native Android is the v0.1.0 install target; Linux-native installation moves to v0.1.1.
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -177,7 +177,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
 | Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
 | Cloudflare Tunnel | <code>app/.../tunnel/</code> + native connector | Outbound public ingress for custom domains | v0.1.0 |
-| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Standalone owner-operated Termux/Android Relay Node is the v0.1.0 target; Linux-native installation is deferred to v0.1.1; the node executable is not yet implemented | v0.1.0 |
+| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Standalone owner-operated native Android Relay Node is the v0.1.0 target; Linux-native installation is deferred to v0.1.1; the node executable is not yet implemented | v0.1.0 |
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
@@ -220,7 +220,7 @@ The audit findings and remediation register are maintained in [Remediation Audit
 
 The current Alpha source tree contains 260 tracked files across 72 directories after the dependency-lock commit. The previous audit snapshot at `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contained 259 tracked files; the historical remediation snapshot contained 260 blobs including its audit register: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
 
-**Important:** there is no standalone Termux Relay Node package or installer yet. The Android Relay agent now uses independent encrypted host credentials; the gateway implementation remains coupled to the fleet control-plane process/PostgreSQL. Linux-native installation is deferred to v0.1.1. The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
+**Important:** there is no native Android Relay Node service integrated into the Pocket Host APK package or installer yet. The Android Relay agent now uses independent encrypted host credentials; the gateway implementation remains coupled to the fleet control-plane process/PostgreSQL. Linux-native installation is deferred to v0.1.1. The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
 
 ## ANDROID APPLICATION
 
@@ -242,7 +242,7 @@ The Android module declares min SDK 26, target SDK 35 and native ABI targets arm
 |---|---|---|
 | Android phone/tablet | Pocket Host main app | Hosting foundation present; physical acceptance open |
 | Android runtime provider | Separate companion APK | Python + Node integrations in progress |
-| Termux / owner-owned Android device | AssayFlux Relay Node | Planned v0.1.0 product; standalone package/installer not yet present; public IP/IPv6 reachability required
+| native Android / owner-owned Android device | AssayFlux Relay Node | Planned v0.1.0 product; standalone package/installer not yet present; public IP/IPv6 reachability required
 | Owner-owned Linux device | Relay Node package and service | v0.1.1; Linux-native installer, service integration and support matrix deferred |
 | Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
 | Windows / macOS | Native worker agent | Planned |
