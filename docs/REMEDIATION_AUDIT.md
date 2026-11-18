@@ -44,7 +44,7 @@ MB is decimal; MiB is binary. Do not call 500,000,000 bytes 500 MiB.
 
 ## 3. Important gaps, not misclassified defects
 
-1. **Standalone Relay Node is not implemented.** `relay-node/` contains a Cargo manifest scaffold only. The visitor gateway remains inside the combined Rust/Axum control-plane process, with PostgreSQL and in-memory RelayHub dependencies. Android host credentials are independent; node-side credential issuer, durable standalone store, executable, installer and Android foreground-service lifecycle remain missing.
+1. **Native Android Relay service is not implemented.** `relay-node/` contains a Cargo manifest scaffold only. The partial visitor gateway remains inside the combined Rust/Axum control-plane process, with PostgreSQL and an in-memory RelayHub. Android host credentials are independent; the Android JNI engine, inbound listener, Kotlin foreground service, node-side credential issuer and durable node store remain missing.
 2. **Public ingress acceptance is open.** No independently recorded real-domain DNS/TLS/content test from an external network is established by source inspection.
 3. **Physical Android acceptance is open.** CI compile/package and API 26/33/35 emulator coverage do not prove OEM battery behavior, physical lifecycle, thermal/storage pressure or public connectivity.
 4. **Debug APKs are not production release evidence.** They are not a signed production release or provenance attestation.
