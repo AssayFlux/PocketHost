@@ -121,13 +121,13 @@ The visitor listener is a website data plane, not an administrative API.
 
 ## 8. Persistence and recovery
 
-Use a small embedded durable store suitable for an owner-operated Android service (SQLite is the initial design preference). PostgreSQL and the fleet control plane are not runtime dependencies.
+Use an embedded SQLite store suitable for an owner-operated Android service. The current Android store writes the complete node configuration as AES-GCM authenticated ciphertext inside a SQLite transaction and records individual host revocations in a separate transactional table. PostgreSQL and the fleet control plane are not runtime dependencies.
 
 Persist:
 - node identity reference and configuration version,
 - hostname ownership challenges and verification state,
 - host/site/hostname bindings,
-- credential verifiers, rotation and revocation state,
+- credential verifiers, rotation and revocation state (current config verifier set plus durable revocation tombstones),
 - certificate metadata and renewal state,
 - audit/operational events needed for recovery.
 
@@ -147,7 +147,7 @@ Database migration must be transactional and recoverable. Corrupt or incompatibl
 - Run as a correctly declared foreground service with a persistent notification while public listeners are active.
 - Stop listeners and close sessions cleanly when the owner stops the service.
 - Reconnect outbound host sessions with bounded exponential backoff and jitter.
-- Recover after process death, device restart (only when owner-enabled and Android policy permits), Wi-Fi/mobile transition, temporary DNS failure and network loss.
+- Recover after process death, device restart (only when owner-enabled and Android policy permits), Wi-Fi/mobile transition, temporary DNS failure and network loss. The foreground service now registers a default-network callback and stops/reinitializes the native listener across network loss/availability; hardware validation remains pending.
 - Handle Doze, battery restrictions, OEM process management, thermal pressure and low-memory termination honestly. The app cannot promise uninterrupted uptime on every consumer phone.
 - Keep local website hosting operational if Relay startup, TLS, DNS, remote host session or public network fails.
 
@@ -186,8 +186,8 @@ Excluded: multi-region routing, multi-node scheduling, active-active failover, f
 
 ## 12. Current implementation status
 
-The repository now contains a standalone `relay-node/` Rust library with JNI start/stop/status entry points, a bounded HTTP visitor router, authenticated outbound SSE host sessions, correlated responses, hostname/site route validation, DNS TXT ownership checks at startup, Rustls HTTPS termination and HTTP-to-HTTPS redirects. The listener is loopback-only without TLS; public binding requires both a certificate/key pair and successful DNS TXT verification for every configured route. The Kotlin app now has a Keystore AES-GCM encrypted node configuration store, a dedicated non-exported foreground service and initial import/start/stop/remove controls. Gradle builds a separate Relay native library for the declared Android ABIs, and the APK workflow checks its presence.
+The repository contains a standalone `relay-node/` Rust library with JNI start/stop/status entry points, a bounded HTTP visitor router, authenticated outbound SSE host sessions, correlated responses, hostname/site route validation, DNS TXT ownership checks at startup, Rustls HTTPS termination and HTTP-to-HTTPS redirects. The listener is loopback-only without TLS; public binding requires both a certificate/key pair and successful DNS TXT verification for every configured route. Android stores the complete node configuration (including route bindings and host credential verifiers) as AES-GCM authenticated ciphertext in transactional SQLite and stores host revocation tombstones transactionally. The owner UI can issue/rotate 256-bit host credentials, display a newly issued token once for transfer to the host device, and revoke a host while removing its routes. The foreground service has owner-enabled boot recovery and a default-network callback for listener recovery. Gradle builds a separate Relay native library for the declared Android ABIs, and the APK workflow checks its presence.
 
-Still incomplete: Android ABI/APK verification of the new library; automatic ACME issuance/renewal and certificate expiry monitoring; in-app node identity and owner-approved pairing; credential issuance/rotation/revocation; durable transactional route and revocation storage; continuous DNS proof lifecycle; complete visitor/owner route isolation tests; service reboot/network recovery tests; physical-device and independent public-network acceptance. The current JSON import format is an engineering bridge, not the final owner setup flow. The existing website engine owns port 8080 (Python defaults to 8081); Relay defaults remain HTTP 8082 and HTTPS 8444.
+Still incomplete: short-lived single-use pairing invites with host proof/owner approval; automatic ACME issuance/renewal and certificate expiry monitoring; continuous DNS proof lifecycle; integrated visitor/owner route-isolation and live-revocation tests; Android ABI/APK verification; and physical-device and independent public-network acceptance. The JSON import remains the current initial node/route provisioning bridge. The existing website engine owns port 8080 (Python defaults to 8081); Relay defaults remain HTTP 8082 and HTTPS 8444.
 
 The execution checklist is maintained in [RELAY_IMPLEMENTATION_PLAN.md](RELAY_IMPLEMENTATION_PLAN.md). This document remains an approved architecture, not evidence that Relay or v0.1.0 is complete. Do not close any release gate until source, automated tests, physical-device results and external-network evidence exist.
