@@ -64,5 +64,11 @@ class RelayCredentialIssuerInstrumentedTest {
         assertTrue("A revoked host must not be resurrected by importing an old config", runCatching {
             RelayNodeConfigStore.save(context, preRevocationConfig)
         }.isFailure)
+        RelayNodeConfigStore.clear(context)
+        assertTrue("Removing node config must not erase revocation history",
+            hostId in RelayNodeConfigStore.revokedDeviceIds(context))
+        assertTrue("Old configuration must remain blocked after config removal", runCatching {
+            RelayNodeConfigStore.save(context, preRevocationConfig)
+        }.isFailure)
     }
 }
