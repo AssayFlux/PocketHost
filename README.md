@@ -79,7 +79,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center" width="33%">
       <img src="https://api.iconify.design/lucide/fingerprint.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>DEVICE TRUST</strong><br>
-      v0.1.2: explicit enrollment, signed grants, revocation and bounded worker roles.
+      v0.2.0: explicit enrollment, signed grants, revocation and bounded worker roles.
     </td>
   </tr>
   <tr>
@@ -107,7 +107,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
 |---|---|---|
 | **v0.1.0** | First Hosting | Import and host a real static website from Android, locally, over LAN and publicly through the owner's domain |
 | **v0.1.1** | Workbench, Runtime & Linux Relay Installation | Edit, preview, version and safely publish websites; complete optional Python/Node integration and add Linux-native Relay installation |
-| **v0.1.2** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and scale multi-host Relay/failover |
+| **v0.2.0** | Connected Device Fabric | Enroll separate devices, assign bounded roles, coordinate workers and scale multi-host Relay/failover |
 
 This is the initial roadmap, not the final product boundary. It will be expanded after these three milestones. The old five-step delivery sequence is retired as the release roadmap.
 
@@ -151,7 +151,7 @@ Workbench is an initial first-class destination in the Android app. The existing
 
 The complete development workflow is assigned to **v0.1.1**: editor tabs and unsaved-state protection, isolated preview, per-file diffs, bundled TypeScript compilation, immutable release staging, owner-approved publishing and rollback. Draft saves and commits must never modify the live website. See [Workbench specification](docs/WORKBENCH.md).
 
-## v0.1.2 — CONNECTED DEVICE FABRIC
+## v0.2.0 — CONNECTED DEVICE FABRIC
 
 - Complete owner-approved device identity, enrollment, role grants and revocation.
 - Connect the mobile command center to separate platform-specific worker software.
@@ -160,13 +160,9 @@ The complete development workflow is assigned to **v0.1.1**: editor tabs and uns
 - Scale the first-party Relay to multiple hosts/gateways, with advanced health-based failover and traffic distribution beyond the v0.1.0 single-host ingress paths.
 - Prove isolation between visitor traffic, device administration, runtimes and edge controls.
 
-## IMMUTABLE RELEASE BASELINE
-
-After v0.1.0 passes all G0–G9 gates and receives owner approval, its exact source commit and release artifacts will be preserved with a release tag, protected baseline ref where repository permissions allow, and recorded SHA-256 digests. v0.1.1 work will branch from that baseline; the v0.1.0 baseline will not receive later feature or fix commits. See [Release Baseline Policy](docs/RELEASE_BASELINE_POLICY.md).
-
 ## MANDATORY RELEASE RULE: G0–G9
 
-**Every version must document and pass all ten release gates, G0 through G9.** This rule applies to v0.1.0, v0.1.1, v0.1.2 and every later version. A gate is PASS only with implementation and recorded verification evidence. A document, source file, successful compile or simulator-only run is not sufficient. No release may ship with any gate open.
+**Every version must document and pass all ten release gates, G0 through G9.** This rule applies to v0.1.0, v0.1.1, v0.2.0 and every later version. A gate is PASS only with implementation and recorded verification evidence. A document, source file, successful compile or simulator-only run is not sufficient. No release may ship with any gate open.
 
 See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, per-version acceptance matrix and required evidence ledger.
 
@@ -181,11 +177,11 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
-| React + TypeScript + Vite | <code>web-console/</code> | Existing Relay hostname panel is fleet-control-plane-coupled; extract a minimal independent setup flow for v0.1.0; full operator console in v0.1.2 | v0.1.0 / v0.1.2 |
+| React + TypeScript + Vite | <code>web-console/</code> | Existing Relay hostname panel is fleet-control-plane-coupled; extract a minimal independent setup flow for v0.1.0; full operator console in v0.2.0 | v0.1.0 / v0.2.0 |
 | Python 3.11 | <code>runtime-worker/</code> companion APK | Optional WSGI server runtime | v0.1.1 |
 | Node.js 24.22.1 | <code>runtime-worker/</code> companion APK | Optional server-side JavaScript runtime | v0.1.1 |
-| Device agents and control plane | <code>agents/</code>, <code>control-plane/</code>, <code>protocol/</code> | Connected device fabric | v0.1.2 |
-| Relay scale/failover | <code>control-plane/</code> | Multi-host scheduling and advanced failover | v0.1.2 |
+| Device agents and control plane | <code>agents/</code>, <code>control-plane/</code>, <code>protocol/</code> | Connected device fabric | v0.2.0 |
+| Relay scale/failover | <code>control-plane/</code> | Multi-host scheduling and advanced failover | v0.2.0 |
 
 Python and Node.js already have repository implementations in a separate companion APK. They are in progress, currently delivered together and not production-isolated. The future 20-language Runtime Library is a later expansion; catalog manifests are not downloadable runtime binaries.
 
@@ -208,7 +204,7 @@ flowchart TB
     COMPANION --> PY["PYTHON 3.11"]
     COMPANION --> NODE["NODE.JS 24.22.1"]
     SERVER --> INGRESS["LOCAL NETWORK / RELAY / CLOUDFLARE"]
-    COMMAND --> CONTROL["OPTIONAL CONTROL PLANE · v0.1.2"]
+    COMMAND --> CONTROL["OPTIONAL CONTROL PLANE · v0.2.0"]
     CONSOLE["BROWSER OPERATOR CONSOLE"] --> CONTROL
 ~~~
 

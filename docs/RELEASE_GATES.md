@@ -1,6 +1,6 @@
 # Pocket Host — Mandatory Release Gates G0–G9
 
-**Permanent rule:** Every Pocket Host version, without exception, must define, verify and close exactly ten release gates: G0, G1, G2, G3, G4, G5, G6, G7, G8 and G9. This applies to v0.1.0, v0.1.1, v0.1.2 and all future versions.
+**Permanent rule:** Every Pocket Host version, without exception, must define, verify and close exactly ten release gates: G0, G1, G2, G3, G4, G5, G6, G7, G8 and G9. This applies to v0.1.0, v0.1.1, v0.2.0 and all future versions.
 
 ## Gate states and proof standard
 
@@ -27,7 +27,7 @@ A change that invalidates evidence reopens the affected gate and any dependent g
 
 ## Version-specific acceptance matrix
 
-| Gate | v0.1.0 — First Hosting | v0.1.1 — Workbench & Runtime Development | v0.1.2 — Connected Device Fabric |
+| Gate | v0.1.0 — First Hosting | v0.1.1 — Workbench & Runtime Development | v0.2.0 — Connected Device Fabric |
 |---|---|---|---|
 | **G0** | Freeze Android static-host scope, 500 MB ZIP/extracted caps, quotas, backup coverage/limits, Android/ABI matrix, local/LAN journeys, custom-domain HTTP/HTTPS behavior, Cloudflare Tunnel, Termux/Android Relay target; Linux-native installation deferred to v0.1.1 and public IPv4/IPv6/CGNAT topology | Freeze Workbench, TypeScript, publishing, Python/Node scope and supported project/runtime matrix | Freeze roles, enrollment, first agent platform, multi-host Relay scaling and hardware matrix |
 | **G1** | Review Android service lifecycle, archive/path limits, LAN/public exposure, backup encryption and documented capacity limits, DNS ownership, TLS termination, independent Relay credentials, Termux service security, NAT/CGNAT limits, relay abuse controls and visitor/management isolation | Review workspace/production isolation, preview origins, build sandbox, runtime UID, secrets and rollback | Review identity, key custody, authenticated transport, least privilege, control-plane and multi-host route isolation |
@@ -38,7 +38,7 @@ A change that invalidates evidence reopens the affected gate and any dependent g
 | **G6** | Import 500 MB-class sites, open locally and from LAN, then reach the expected site from mobile data/independent networks over HTTP and valid HTTPS through Cloudflare Tunnel and the self-hosted Relay Node; verify assets/navigation and management-route denial | Edit, preview privately, diff, commit, publish with approval, rollback and run supported Python/Node fixtures | Enroll a real second device, assign a role, run/verify/revoke a job, then verify multi-host Relay routing and advanced failover |
 | **G7** | Test backgrounding, screen-off, Wi-Fi/mobile transitions, process/device restart, low storage, interrupted import/restore, backup behavior at its declared limit, tunnel/Relay Node restart, host reconnect and provider outage without loss of local hosting | Test large workspaces, concurrent edits, preview/build timeout, process death during publish, rollback, runtime crash and quotas | Test phone/control-plane/worker/network/storage/provider outages, lease expiry, replay, queue recovery and backpressure |
 | **G8** | Verify archive traversal/symlink defenses, sensitive-file exclusions, domain ownership, token secrecy, TLS, HTTP redirect policy, visitor-only routes, request quotas/abuse controls, no unintended management exposure, Android settings and unchanged design | Verify cross-site isolation, preview secrecy, build egress/resource limits, runtime isolation claims, secret handling and publish authorization | Verify cryptographic trust, role escalation resistance, device isolation, public-route separation, audit and revocation |
-| **G9** | Publish v0.1.0 RC, user guide, supported-device/provider matrix, Termux/Android Relay installation; Linux-native installation is deferred to v0.1.1, public IPv4/IPv6/router/CGNAT DNS/TLS setup, Cloudflare fallback, 500 MB import limits, separate backup limits, known issues, evidence and owner approval | Publish v0.1.1 RC, Workbench/runtime docs, migration/rollback guide, package hashes and owner approval | Publish v0.1.2 RC, agent/fleet matrix, Relay scaling/failover runbooks, security/recovery runbooks, provenance/SBOM and owner approval |
+| **G9** | Publish v0.1.0 RC, user guide, supported-device/provider matrix, Termux/Android Relay installation; Linux-native installation is deferred to v0.1.1, public IPv4/IPv6/router/CGNAT DNS/TLS setup, Cloudflare fallback, 500 MB import limits, separate backup limits, known issues, evidence and owner approval | Publish v0.1.1 RC, Workbench/runtime docs, migration/rollback guide, package hashes and owner approval | Publish v0.2.0 RC, agent/fleet matrix, Relay scaling/failover runbooks, security/recovery runbooks, provenance/SBOM and owner approval |
 
 ### v0.1.1 Linux-native Relay installation acceptance
 

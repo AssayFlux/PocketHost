@@ -5,16 +5,15 @@ This documentation set follows the new three-version pathway. The former five-st
 ## Start here
 1. [README](../README.md) — product summary, release pathway and build entry points.
 2. [Master Plan](MASTER_PLAN.md) — product rules and version boundaries.
-3. [Three-Version Roadmap](ROADMAP.md) — v0.1.0, v0.1.1 and v0.1.2.
-4. [Mandatory Release Gates G0–G9](RELEASE_GATES.md)
-5. [Immutable Release Baseline Policy](RELEASE_BASELINE_POLICY.md) — common gate definitions and version acceptance matrix.
-6. [Complete Repository File Inventory](REPOSITORY_BASELINE.md) — every tracked file/directory and detailed source status at the audit snapshot.
-7. [Project Baseline](PROJECT_BASELINE.md) — current module and release status.
-8. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
+3. [Three-Version Roadmap](ROADMAP.md) — v0.1.0, v0.1.1 and v0.2.0.
+4. [Mandatory Release Gates G0–G9](RELEASE_GATES.md) — common gate definitions and version acceptance matrix.
+5. [Complete Repository File Inventory](REPOSITORY_BASELINE.md) — every tracked file/directory and detailed source status at the audit snapshot.
+6. [Project Baseline](PROJECT_BASELINE.md) — current module and release status.
+7. [Repository Deep Audit](REPOSITORY_AUDIT.md) — risks, gaps and workflow evidence.
 8. [Remediation Audit Register](REMEDIATION_AUDIT.md) — severity-ranked findings, fixes, source-backed limits and verification state.
-9. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
-10. [Architecture Decisions](DECISIONS.md) — durable product decisions.
-11. [Product North Star](NORTH_STAR.md) — long-term direction.
+8. [Development Context](DEVELOPMENT_CONTEXT.md) — contributor rules and active priorities.
+9. [Architecture Decisions](DECISIONS.md) — durable product decisions.
+10. [Product North Star](NORTH_STAR.md) — long-term direction.
 
 ## v0.1.0 — First Hosting
 - [Static Hosting Baseline](STEP_4_WEB_BASELINE.md)
@@ -37,7 +36,7 @@ This documentation set follows the new three-version pathway. The former five-st
 - [Runtime Project Storage](RUNTIME_PROJECT_STORAGE.md)
 - [Future Runtime Library](FUTURE_RUNTIME_LIBRARY.md)
 
-## v0.1.2 — Connected Device Fabric
+## v0.2.0 — Connected Device Fabric
 - [System Architecture](SYSTEM_ARCHITECTURE.md)
 - [Device Software Matrix](DEVICE_SOFTWARE_MATRIX.md)
 - [Host Agent Contract](HOST_AGENT_CONTRACT.md)

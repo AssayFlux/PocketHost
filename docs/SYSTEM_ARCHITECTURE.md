@@ -4,14 +4,14 @@
 
 Pocket Host is a modular personal infrastructure platform. The first release proves Android static website hosting with local, LAN and public custom-domain access. Public ingress options are Cloudflare Tunnel (optional third party) and the planned owner-operated AssayFlux Relay Node. The Relay Node is a separate software product for owner-controlled Termux/Android or Linux hardware; it does not require a paid VPS, but it does require a publicly reachable IPv4/IPv6 network endpoint.
 
-The three release milestones are v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.2.0 Connected Device Fabric.
+The three release milestones are v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.1.2 Connected Device Fabric.
 
 ## 2. Mobile operating modes
 
 | Mode | Website serving | Fleet administration |
 |---|---|---|
 | Server only | On | Off |
-| Command Center + Server | On | On when v0.2.0 fleet features are accepted |
+| Command Center + Server | On | On when v0.1.2 fleet features are accepted |
 
 No standalone Command Center-only mode exists. Website serving remains enabled in both modes.
 
@@ -45,7 +45,7 @@ The Android RelayAgent reads a dedicated endpoint and host token from RelayCrede
 
 Workbench owns a per-site private draft workspace. Editor and build tools operate on drafts. Preview must be isolated. A validated immutable artifact is staged and owner-approved before atomic activation. Python and Node remain optional separate companion runtimes and do not become dependencies of static serving.
 
-## 5. v0.2.0 — Connected Device Fabric
+## 5. v0.1.2 — Connected Device Fabric
 
 Mobile command center ↔ authenticated control plane ↔ separately installed agents. Shared protocol defines identity, enrollment, role grants, typed jobs, leases and audit. Agents execute only approved bounded roles. Later work scales Relay across multiple hosts/gateways and adds advanced health-based failover.
 
@@ -62,9 +62,9 @@ Mobile command center ↔ authenticated control plane ↔ separately installed a
 | Workbench | Draft workspace, explorer, basic editor, local commits | v0.1.1 completion |
 | TypeScript compiler | Not present as a verified main-app compiler | v0.1.1 |
 | Runtime companion | CPython 3.11 and Node.js 24.22.1 in one companion APK | v0.1.1 acceptance |
-| Device trust/protocol | Protocol 1.0 schemas, P-256 trust foundations | v0.2.0 acceptance |
-| Linux agent | Python preview agent with SQLite and HTTPS polling | v0.2.0 acceptance |
-| Fleet control plane | Rust/Axum, PostgreSQL, admin/device API and current Relay code | v0.2.0 fleet acceptance |
+| Device trust/protocol | Protocol 1.0 schemas, P-256 trust foundations | v0.1.2 acceptance |
+| Linux agent | Python preview agent with SQLite and HTTPS polling | v0.1.2 acceptance |
+| Fleet control plane | Rust/Axum, PostgreSQL, admin/device API and current Relay code | v0.1.2 fleet acceptance |
 
 ## 7. Website serving and resource limits
 

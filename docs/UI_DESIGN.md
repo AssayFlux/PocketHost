@@ -1,7 +1,7 @@
 # Pocket Host — Mobile Design System V1
 
 **Design status:** existing approved visual language; preserve it.  
-**Roadmap effect:** no redesign is authorized by v0.1.0, v0.1.1 or v0.2.0.
+**Roadmap effect:** no redesign is authorized by v0.1.0, v0.1.1 or v0.1.2.
 
 ## 1. Brand and visual language
 
@@ -25,7 +25,7 @@ There is no standalone Command Center-only mode. Both modes retain website servi
 
 The established hamburger structure remains the navigation source. v0.1.0 prioritizes Overview, Websites & Files, hosting settings, diagnostics, account and settings. Future destinations may remain visible only when clearly labelled as unavailable/planned; no control may imply an unimplemented capability.
 
-Workbench remains a planned first-class destination and completes in v0.1.1. Device administration becomes fully functional in v0.2.0.
+Workbench remains a planned first-class destination and completes in v0.1.1. Device administration becomes fully functional in v0.1.2.
 
 ## 4. v0.1.0 hosting UX
 
@@ -42,7 +42,7 @@ Workbench remains a planned first-class destination and completes in v0.1.1. Dev
 
 Workbench has Explorer, Editor, Preview, Changes, Commits and Deployments. On phones prioritize a single-pane editor with a collapsible file drawer and compact tab strip. On tablets, use a resizable two-pane layout where supported. Dirty state and unsaved-change protection are mandatory. Preview and deployment states must be distinguishable.
 
-## 6. v0.2.0 device UX
+## 6. v0.1.2 device UX
 
 Device cards show identity, platform, software version, roles, trust state, connection, health, resource pressure and last-seen time. Enrollment shows fingerprint, requested permissions, resource budget and explicit owner approval. Revocation and role changes show impact before confirmation.
 

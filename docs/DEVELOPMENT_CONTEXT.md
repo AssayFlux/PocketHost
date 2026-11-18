@@ -4,7 +4,7 @@ This file is the contributor handover for the new release pathway.
 
 ## Active release
 
-Work on **v0.1.0 — First Hosting** until the owner approves the next release. The former five-step sequence is retired. The three planned releases are v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.1.2 Connected Device Fabric.
+Work on **v0.1.0 — First Hosting** until the owner approves the next release. The former five-step sequence is retired. The three planned releases are v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development and v0.2.0 Connected Device Fabric.
 
 ## Product rules
 
@@ -17,7 +17,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 - React/Vite is the separate web-console app. Raw React/TypeScript source is not built by v0.1.0; import its built static output.
 - Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
 - Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
-- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.1.2 work. Cloudflare Tunnel and a standalone owner-operated AssayFlux Relay Node (Termux/Android + Linux target) are mandatory v0.1.0 work. No paid VPS is required, but public IPv4/IPv6 reachability is.
+- Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.2.0 work. Cloudflare Tunnel and a standalone owner-operated AssayFlux Relay Node (Termux/Android + Linux target) are mandatory v0.1.0 work. No paid VPS is required, but public IPv4/IPv6 reachability is.
 - Every version must pass G0–G9. See RELEASE_GATES.md.
 
 ## Repository boundaries

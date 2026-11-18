@@ -90,7 +90,7 @@ Still incomplete: full editor/operation set, isolated preview, per-file diffs, T
 
 ## 7. Device fabric and protocol review
 
-Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundations and a Linux Python agent preview exist. Linux agent has durable SQLite state, HTTPS polling and typed allow-listed job execution. Full end-to-end enrollment, credential delivery, revocation propagation, worker acceptance and additional OS packages remain incomplete. The full fleet control plane belongs to v0.2.0 and must not be required for local hosting or standalone Relay.
+Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundations and a Linux Python agent preview exist. Linux agent has durable SQLite state, HTTPS polling and typed allow-listed job execution. Full end-to-end enrollment, credential delivery, revocation propagation, worker acceptance and additional OS packages remain incomplete. The full fleet control plane belongs to v0.1.2 and must not be required for local hosting or standalone Relay.
 
 ## 8. Build and workflow review
 
@@ -111,7 +111,7 @@ Protocol 1.0 schemas, role/job policy, validators, Android P-256 trust foundatio
 7. Test actual 500 MB boundaries, low storage and device memory behavior.
 8. Correct stale visitor-authentication UI copy.
 9. Build APKs and complete emulator/physical-device tests; then test the owner's real domain from mobile data.
-10. Keep the full fleet control plane optional for v0.1.0 and in v0.2.0 scope.
+10. Keep the full fleet control plane optional for v0.1.0 and in v0.1.2 scope.
 
 ## 10. Evidence policy
 

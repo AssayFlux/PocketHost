@@ -8,7 +8,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-002 — Three-version release pathway
 
-**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development, v0.1.2 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
+**Decision:** the initial delivery sequence is v0.1.0 First Hosting, v0.1.1 Workbench & Runtime Development, v0.2.0 Connected Device Fabric. The old five-step delivery sequence is retired as the release roadmap.
 
 **Reason:** first prove a useful vertical slice before expanding into runtimes and distributed infrastructure.
 
@@ -48,7 +48,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-011 — Device trust is explicit
 
-**Decision:** discovery is untrusted. Devices require unique identity, proof of possession, owner approval and exact bounded role grants. Revocation and job authorization are versioned and auditable. Production device-fabric acceptance belongs to v0.1.2.
+**Decision:** discovery is untrusted. Devices require unique identity, proof of possession, owner approval and exact bounded role grants. Revocation and job authorization are versioned and auditable. Production device-fabric acceptance belongs to v0.2.0.
 
 ## ADR-012 — Separate software per device class
 
@@ -56,7 +56,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-013 — Control plane is optional for local hosting
 
-**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.1.2.
+**Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.2.0.
 
 ## ADR-014 — Evidence defines release status
 
@@ -70,7 +70,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 ## ADR-017 — Relay gateway is a visitor-only service
 
-**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. It must install on declared Termux/Android and Linux targets without mandatory Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.1.2.
+**Decision:** the current Relay source is only a foundation and must not be treated as the finished v0.1.0 product. v0.1.0 requires a standalone owner-operated Relay Node, separate from the fleet control-plane process, with dedicated host-ingress identity and visitor-only routing. It must install on declared Termux/Android and Linux targets without mandatory Docker or PostgreSQL. Public visitor routes must never reach admin/device/runtime/MCU endpoints. Multi-host scheduling, regional scale and automated failover are v0.2.0.
 
 ## ADR-015 — Backup capacity is separate from import capacity
 
