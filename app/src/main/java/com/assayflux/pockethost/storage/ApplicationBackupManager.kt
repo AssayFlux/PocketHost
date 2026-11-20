@@ -910,12 +910,8 @@ object ApplicationBackupManager {
                     }
                 }
                 parts.drop(1).forEach(::validateName)
-                if (parts[0] == "site" || parts[0] == "custom-static") {
-                    val relativeSitePath = parts.drop(1).joinToString("/")
-                    if (relativeSitePath.isNotEmpty() && SensitivePathPolicy.isSensitivePath(relativeSitePath)) {
-                        throw IOException("The backup contains a sensitive website credential path.")
-                    }
-                }
+                val relativeProjectPath = parts.drop(1).joinToString("/")
+                if (relativeProjectPath.isNotEmpty()) SensitivePathPolicy.requireSafePath(relativeProjectPath)
                 if (parts.size > MAX_DEPTH + 1) throw IOException("The backup contains excessive folder nesting.")
                 val archivePath = parts.joinToString("/")
                 val isDirectory = entry.isDirectory || normalized.endsWith("/")
@@ -1069,6 +1065,7 @@ object ApplicationBackupManager {
             isExcludedName(name)) {
             throw IOException("The backup contains an unsafe or sensitive filename: $name")
         }
+        SensitivePathPolicy.requireSafePath(name)
     }
 
     private fun isExcludedName(name: String): Boolean {

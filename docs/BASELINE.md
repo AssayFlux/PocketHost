@@ -73,7 +73,7 @@ Historical evidence before the reset:
 - An integration workflow compiled Android instrumentation sources, but its API 26/33/35 emulator execution was skipped because the opt-in emulator input was not enabled.
 
 Important current limitation:
-- The previous `.github/workflows/` files were removed during the requested reset. There is currently no checked-in CI workflow in this fresh baseline.
+- At the initial fresh baseline, the previous `.github/workflows/` files had been removed during the requested reset. Step 1 restored the engineering workflows; see the verification update below.
 - Historical workflow results are evidence about the old commit and old workflow definitions only; they do not prove the new baseline or future changes pass.
 - No physical-device acceptance or full public visitor journey is established by this baseline record.
 - A successful build is not the same as a completed or secure release.

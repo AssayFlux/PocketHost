@@ -11,6 +11,8 @@ The first complete system is an Android phone that can independently host websit
 
 ## Step 1 — Establish the engineering baseline and trustworthy build pipeline
 
+<badge>PASS — automated CI</badge>
+
 **Purpose:** know exactly what is being built and make every subsequent change reproducible.
 
 Work:
@@ -30,6 +32,8 @@ Exit gate:
 **Deliverable:** reproducible engineering baseline and restored CI. No feature expansion in this step.
 
 ## Step 2 — Complete and harden independent local website hosting
+
+<badge>IN PROGRESS</badge>
 
 **Purpose:** make the phone useful as a host even when relay, cloud services and optional runtimes are unavailable.
 

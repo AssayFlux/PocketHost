@@ -19,7 +19,7 @@
 | HTTP header list | 16 KiB |
 | Concurrent server connections | 16 global; per-site admission is bounded |
 
-ZIP input is capped at 500,000,000 compressed bytes and 500,000,000 expanded bytes. Backups use authenticated AES-GCM encryption and share the website file, entry, depth and expanded-byte budgets. Temporary restore data is authenticated before activation. Actual free storage can be lower than the configured budget; write failures must abort staging and preserve the active deployment.
+ZIP input is capped at 500,000,000 compressed bytes and 500,000,000 expanded bytes per static site. Backups use authenticated AES-GCM encryption and share the website file, entry, depth and expanded-byte budgets. The full-app backup has a separate aggregate allowance for its optional Python/Node payloads. Temporary restore data is authenticated before activation. Actual free storage can be lower than the configured budget; write failures must abort staging and preserve the active deployment.
 
 ## Path and content rules
 
