@@ -1,43 +1,49 @@
-# Pocket Host — Website Hosting Limits and Security Contract
+# Website Hosting — Alpha v0.1.0 Engineering Notes
 
-**Applies to:** v0.1.0 Alpha local static website hosting  
-**Status:** implementation contract; verification is recorded separately.
+**Branch:** `Alpha`  
+**Implementation verification commit:** `fe2af2277bf85eba16e2d3b67ec95d86acf56637`  
+**Status:** implementation and automated CI gate passed; physical-device acceptance remains open for Step 5.
 
-## Shared limits
+## Security and isolation
 
-| Resource | Alpha limit |
+- Static sites use dedicated managed site roots; a route cannot point at Pocket Host's general private files directory.
+- Site roots must be canonical, app-managed, non-symlinked and non-overlapping. Persisted route tables are revalidated on read and fail closed if malformed or unsafe.
+- Site roots for different sites cannot nest or overlap. Hostnames and route counts are bounded and duplicate hostnames are rejected.
+- Folder, ZIP and prepared-directory imports reject traversal, symbolic links, sensitive credential/private-key paths, unsupported filesystem entries and invalid/case-colliding archive paths.
+- Static serving checks sensitive paths after resolving symlinks; regression tests cover in-root symlink aliases to protected files.
+- Static hosting remains part of the Android app/native engine and does not require the runtime-worker or cloud control plane.
+
+## Shared website budgets
+
+The central `WebsiteLimits` policy currently sets:
+
+| Limit | Alpha value |
 |---|---:|
+| Files per website | 5,000 |
+| Files + directory entries | 10,000 |
+| Website aggregate bytes | 500,000,000 bytes |
+| Single imported file ceiling | 500,000,000 bytes, also subject to aggregate quota |
+| Directory depth | 32 |
+| Editable text file | 256 KiB |
 | Registered sites | 100 |
-| Hostname routes | 1,000 total; 100 per site |
-| Website files | 5,000 |
-| Files plus directories | 10,000 entries |
-| Relative path segments per file or directory | 32 |
-| Total expanded website content | 500,000,000 bytes |
-| Individual file import | 500,000,000 bytes, subject to total site budget |
-| Text editor read/write | 256 KiB |
-| HTTP response file | 500,000,000 bytes |
-| HTTP header list | 16 KiB |
-| Concurrent server connections | 16 global; per-site admission is bounded |
+| Hostnames per site | 100 |
+| Total hostname routes | 1,000 |
 
-ZIP input is capped at 500,000,000 compressed bytes and 500,000,000 expanded bytes per static site. Backups use authenticated AES-GCM encryption and share the website file, entry, depth and expanded-byte budgets. The full-app backup has a separate aggregate allowance for its optional Python/Node payloads. Temporary restore data is authenticated before activation. Actual free storage can be lower than the configured budget; write failures must abort staging and preserve the active deployment.
+ZIP ingestion additionally caps compressed input at 500,000,000 bytes and validates the extracted tree against the shared file, entry, depth, byte and sensitive-path rules. Full application backups have a larger envelope because they can contain multiple websites and optional runtime projects; their own aggregate archive and per-runtime limits remain separately enforced.
 
-## Path and content rules
+## Import and deployment behavior
 
-- Paths are relative, normalized and contained within the active site's canonical root.
-- Symbolic links are unsupported in deployed website trees. Import, file management, backup and serving must not follow them.
-- Sensitive-path checks apply at import/management boundaries and again to canonical resolved targets at serving time, preventing harmless-looking aliases from exposing credential files.
-- ZIP entries reject traversal, absolute paths, duplicate/conflicting entries, case-colliding portable names, unsafe names, excessive depth and sensitive paths.
-- MIME types are selected by the hosting engine; responses use `X-Content-Type-Options: nosniff`. Unknown extensions are served as binary content.
-- Extensionless SPA routes may fall back to root `index.html`; missing paths with file extensions remain 404.
+- Folder and ZIP imports are staged before activation.
+- ZIP paths are normalized and checked for traversal, duplicates, case collisions, file/directory conflicts and archive entry exhaustion.
+- A valid root `index.html` is required. A single enclosing folder containing `index.html` is accepted.
+- Activation preserves the previous deployment as a release; failed activation attempts restore the previous active directory.
+- Interrupted activation recovery only promotes a validated last-known-good release and preserves invalid active data for diagnosis.
+- Manual file uploads are staged and synced before the final rename; aggregate quota and file/entry/depth limits are checked.
+- Backup restore has a journal and recovery path; export is staged before copying the completed encrypted artifact to the selected destination.
 
-## Deployment and recovery
+## Automated evidence and open acceptance
 
-Imports are staged under app-private storage. The active deployment is moved into release history before activation; failed activation attempts restore the previous deployment. Startup recovery validates release candidates without following links and enforces the same entry/depth/byte/file budgets. Invalid active data is quarantined rather than silently deleted. Up to five safe prior releases are retained.
-
-## Independence and scope
-
-Static hosting is provided by the Android app and native Rust engine. It must not require runtime-worker, control plane, Linux agent or web console. Runtime-backed routes are optional and are not part of the static-hosting availability guarantee. Multi-site hostnames are routed through the native engine; each route must resolve only to its registered site root.
-
-## Verification boundary
-
-Host-side Rust tests and Android source/instrumentation compilation are not equivalent to LAN acceptance on a physical phone. Loopback/LAN visitor checks, actual storage exhaustion, large backup round-trips and physical-device/network behavior remain integrated acceptance items unless a named automated test explicitly covers them.
+- Rust hosting engine tests cover traversal, invalid paths, MIME handling, SPA fallback, host-to-root isolation and sensitive-file symlink aliases.
+- Android source and instrumentation Kotlin compilation passed; compilation does not mean the instrumentation tests were executed.
+- Quality CI and Android native/source validation passed on the implementation commit above.
+- Still required on a physical device: clean-install folder/ZIP import, loopback and LAN requests, multiple hostnames/sites, large-file behavior, quota exhaustion, backup/restore and interrupted-operation recovery. These are tracked in Step 5, not represented as already device verified.

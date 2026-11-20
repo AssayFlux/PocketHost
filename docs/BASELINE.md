@@ -95,7 +95,14 @@ Important current limitation:
 - **Not performed:** APK packaging is intentionally deferred to Step 5. Emulator execution and physical-device acceptance are not claimed.
 - **Open engineering issue:** web-console dependency installation reported one high and one moderate npm advisory; resolve or explicitly disposition before final acceptance.
 
-## 8. Baseline rule
+## 8. Step 2 verification update
+
+- **Automated verified:** website path, symlink, sensitive-file, site-root and persisted-route regression coverage is included in the Alpha source.
+- **Automated verified:** Rust hosting/relay tests, Android app/instrumentation/runtime-worker source compilation and three-ABI native builds passed on `fe2af2277bf85eba16e2d3b67ec95d86acf56637` (quality run `44726189328`; Android run `44726189341`).
+- **Not yet device verified:** representative folder/ZIP import, loopback/LAN serving, multi-site isolation, interrupted restore and backup integrity on a physical phone. These remain Step 5 acceptance checks.
+- **No APK packaging:** deliberately deferred until Step 5.
+
+## 9. Baseline rule
 
 When implementation begins, update this file only when repository facts change or a verification result is obtained. Mark every claim as one of:
 - **Present:** source/configuration exists.

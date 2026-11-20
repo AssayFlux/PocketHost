@@ -2,7 +2,7 @@
 
 **Target:** Pocket Host v0.1.0 Alpha  
 **Working branch:** `Alpha` only  
-**Plan status:** Step 1 exit gate passed; Step 2 implementation in progress  
+**Plan status:** Step 1 passed; Step 2 automated implementation/CI gate passed; Step 3 in progress  
 **Rule:** finish and verify each step before treating the next as complete. Preserve the existing codebase; refactor only where evidence shows it is necessary.
 
 ## Delivery boundary
@@ -33,7 +33,7 @@ Exit gate:
 
 ## Step 2 — Complete and harden independent local website hosting
 
-<badge>IN PROGRESS</badge>
+<badge>PASS — implementation and automated CI</badge>
 
 **Purpose:** make the phone useful as a host even when relay, cloud services and optional runtimes are unavailable.
 
@@ -53,6 +53,8 @@ Exit gate:
 - Automated tests cover the security and failure cases, not just the happy path.
 
 **Deliverable:** dependable local static hosting with documented limits.
+
+**Verification update (2026-11-20):** path/symlink and sensitive-file protections, dedicated managed roots, non-overlapping site isolation, persisted-route fail-closed validation, ZIP tree validation, quota accounting, deployment rollback/recovery and backup staging hardening are committed. Quality CI and Android source/native validation passed on `fe2af2277bf85eba16e2d3b67ec95d86acf56637` (runs `44726189328` and `44726189341`). Physical-device import, loopback/LAN and backup acceptance remains explicitly reserved for Step 5.
 
 ## Step 3 — Make Android hosting lifecycle and native public access dependable
 
