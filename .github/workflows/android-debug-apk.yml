@@ -10,6 +10,8 @@ on:
     paths:
       - ".github/workflows/android-debug-apk.yml"
       - "app/**"
+      - "buildSrc/**"
+      - "Assets/Pocket Host 7.svg"
       - "runtime-worker/**"
       - "gradle/**"
       - "gradlew"
