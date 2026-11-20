@@ -66,7 +66,7 @@ public abstract class GeneratePocketHostLauncherIcons extends DefaultTask {
                 writeScaled(master, (int) Math.round(72 * factor), new File(folder, "ic_launcher_artwork.png"));
             }
         } catch (Exception error) {
-            throw new GradleException("Could not rasterize Assets/Pocket Host 7.svg into Android launcher icons.", error);
+            throw new GradleException("Could not rasterize Assets/Pocket Host 7.svg into Android launcher icons: " + error.getClass().getSimpleName() + ": " + error.getMessage(), error);
         }
     }
 
@@ -81,6 +81,8 @@ public abstract class GeneratePocketHostLauncherIcons extends DefaultTask {
         } finally {
             graphics.dispose();
         }
-        ImageIO.write(target, "png", destination);
+        if (!ImageIO.write(target, "png", destination)) {
+            throw new IOException("No PNG ImageIO writer is available for " + destination);
+        }
     }
 }
