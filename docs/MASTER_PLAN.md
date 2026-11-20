@@ -4,7 +4,7 @@
 **Working branch:** Alpha  
 **Current delivery target:** v0.1.0 — First Hosting  
 **Roadmap:** v0.1.0 → v0.1.1 → v0.1.2  
-**Planning rule:** Every version passes G0–G9 before release
+**Planning rule:** Keep each version focused on working features and repeatable engineering tests
 
 ## 1. Product objective
 
