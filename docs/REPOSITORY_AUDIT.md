@@ -133,3 +133,24 @@ See [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md) for the severity-ranked finding
 ## Current source pointer after dependency-lock update
 
 The current Alpha head checked for the release-document realignment is `9debd9b630d460c5feed92d07b3c20da319a9e4d` (260 tracked files, 72 directories). It is the previous audit source snapshot `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` plus the resolved application dependency-lock commit. The findings in this audit remain the outstanding code-review baseline; no code fixes are implied by the documentation-only branch `docs/release-version-realignment-2026-11`.
+
+
+## Current-Alpha re-audit addendum — 2026-11-20
+
+This addendum supersedes the historical source snapshot at the top of this document. The current default branch is `Alpha`, exact HEAD `cb5a925b98cf66510b9d38af37fe1c5cca846b84`; the recursive tree contains **290 blobs and 75 directories** (GitHub reported `truncated=false`). The earlier 259/260-file inventories are historical snapshots, not the current repository inventory.
+
+### Current workflow inventory and verification boundary
+
+The current tree contains exactly one workflow: `.github/workflows/quality.yml`. The prior Android integration workflow and separate protocol-validation workflow are not present in the current Alpha tree. The latest exact-HEAD run [#44699649949](https://github.com/AssayFlux/PocketHost/actions/runs/44699649949) passed six jobs: Rust website engine, Control Plane/Postgres/Caddy/proxy/Compose, Python/Linux agent, React console, Node smoke test and Gradle wrapper validation. It did not run Android Gradle/Kotlin compilation, instrumentation compilation, native Android ABI builds, API 26/33/35 emulators, APK packaging or signing. Consequently, the current green badge must not be read as Android release verification.
+
+### Current implementation inventory corrections
+
+- Android source now has dedicated Compose modules for Home, Dashboard, Sites, Workbench, Devices, Activity, Learn and Settings, plus a separate preview activity and biometric unlock flow.
+- Android source includes hosting schedule logic, native Relay foreground service, JNI bridge, Rust Relay gateway/ACME implementation, encrypted Keystore-backed Relay configuration, durable SQLite credential/revocation state, Cloudflare integration, encrypted backup/restore, and local diagnostics. These are source facts; they do not close physical-device or public-network acceptance.
+- UI audit documents explicit unavailable/partial areas: Workbench production deployment, in-app Cloudflare Access policy management, automatic DNS record management/continuous DNS TXT revalidation, and some live command-result display.
+- PR #118 (responsive UI architecture) and PR #119 (AssayFlux author/About signature) are merged to Alpha. The About section contains the product/version/brand attribution, signature component and author name.
+- Current repository listing has no published GitHub release and no release tag. The repository is still pre-release.
+
+### Release-readiness conclusion
+
+Current Alpha has substantial implementation and a successful non-Android quality run. It is **not verified production-ready**: restore Android CI; run exact-SHA Android compile/instrumentation/emulator checks; build and inspect production-signed artifacts; perform physical-device and independent-network acceptance; record hashes/provenance/SBOM; and close G0–G9 with owner approval. See [V0.1.0_GATE_STATUS.md](V0.1.0_GATE_STATUS.md) and [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).
