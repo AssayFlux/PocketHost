@@ -19,6 +19,21 @@ on:
       - "settings.gradle.kts"
       - "scripts/build-cloudflared-android.sh"
       - "docs/UI_DESIGN.md"
+  pull_request:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-integration.yml"
+      - "app/**"
+      - "protocol/ROLE_CAPABILITY_POLICY.json"
+      - "scripts/validate-android-role-policy.py"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
+      - "docs/UI_DESIGN.md"
   workflow_dispatch:
     inputs:
       run_emulators:
@@ -36,7 +51,7 @@ concurrency:
 
 jobs:
   relay-rust:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     runs-on: ubuntu-24.04
@@ -274,7 +289,7 @@ jobs:
           retention-days: 14
 
   android-emulator-smoke:
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_emulators)
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_emulators)
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
