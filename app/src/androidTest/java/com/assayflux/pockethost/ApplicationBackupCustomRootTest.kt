@@ -262,7 +262,7 @@ class ApplicationBackupCustomRootTest {
             output.write(newNonce)
             output.write(encrypted)
         }
-        passphrase.fill('\\u0000')
+        passphrase.fill('\u0000')
     }
 
     private fun rewriteWithDuplicateHostnameRoute(
