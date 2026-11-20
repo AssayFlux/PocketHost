@@ -54,6 +54,13 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, displayName)
         require(!target.exists()) { "A file or folder already exists at this path." }
+        val before = usage(root)
+        require(before.files < WebsiteLimits.MAX_FILES && before.entries < WebsiteLimits.MAX_ENTRIES) {
+            "The website has reached its file or entry limit."
+        }
+        require(root.toPath().relativize(target.toPath()).nameCount <= WebsiteLimits.MAX_DEPTH) {
+            "Website folder nesting is limited to 32 levels."
+        }
         val parent = target.parentFile ?: error("Invalid destination path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the destination folder." }
         SensitivePathPolicy.requireSafeResolvedPath(root, target)
@@ -69,7 +76,9 @@ object SiteFileManager {
                         val count = source.read(buffer)
                         if (count < 0) break
                         total += count
-                        require(total <= WebsiteLimits.MAX_SINGLE_FILE_BYTES) { "Individual website files are limited to 500 MB." }
+                        require(total <= WebsiteLimits.MAX_SINGLE_FILE_BYTES && before.bytes <= WebsiteLimits.MAX_TOTAL_BYTES - total) {
+                            "The website exceeds its 500 MB total storage limit."
+                        }
                         output.write(buffer, 0, count)
                     }
                     output.fd.sync()
@@ -101,6 +110,7 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, relativePath)
         require(!target.exists()) { "A file or folder already exists at this path." }
+        ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val parent = target.parentFile ?: error("Invalid file path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the parent folder." }
         val safeTarget = resolve(root, relativePath)
@@ -116,6 +126,7 @@ object SiteFileManager {
         val target = resolve(root, relativePath)
         require(target.isFile) { "The selected file no longer exists." }
         require(extension(relativePath) in textExtensions) { "This file type is not supported by the text editor." }
+        ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val parent = target.parentFile ?: error("Invalid file path.")
         val temporary = File(parent, "." + target.name + ".pockethost-tmp")
         val backup = File(parent, "." + target.name + ".pockethost-bak")
@@ -141,6 +152,11 @@ object SiteFileManager {
         require(!destination.exists()) { "A file or folder already exists at the new path." }
         val parent = destination.parentFile ?: error("Invalid destination path.")
         require(parent.isDirectory) { "The destination folder must already exist." }
+        val destinationDepth = root.toPath().relativize(destination.toPath()).nameCount
+        val subtreeDepth = if (source.isDirectory) source.walkTopDown().maxOfOrNull {
+            if (it == source) 0 else source.toPath().relativize(it.toPath()).nameCount
+        } ?: 0 else 0
+        require(destinationDepth + subtreeDepth <= WebsiteLimits.MAX_DEPTH) { "The renamed website entry would exceed the 32-level nesting limit." }
         java.nio.file.Files.move(source.toPath(), destination.toPath())
     }
 
@@ -156,6 +172,7 @@ object SiteFileManager {
         require(source.isFile) { "Select an HTML file." }
         require(extension(relativePath) in setOf("html", "htm")) { "Only HTML files can become the entry page." }
         val target = File(root, "index.html")
+        ensureFileBudget(root, target, source.length())
         val temporary = File(root, ".index.html.pockethost-tmp")
         val backup = File(root, ".index.html.pockethost-bak")
         temporary.delete()
@@ -172,8 +189,13 @@ object SiteFileManager {
 
     private fun root(context: Context): File {
         val directory = File(context.applicationContext.filesDir, "site")
+        require(!java.nio.file.Files.isSymbolicLink(directory.toPath())) { "Website root cannot be a symbolic link." }
         require(directory.mkdirs() || directory.isDirectory) { "Website directory is unavailable." }
-        return directory.canonicalFile
+        val canonical = directory.canonicalFile
+        require(canonical.parentFile == context.applicationContext.filesDir.canonicalFile) {
+            "Website root must remain directly inside PocketHost private storage."
+        }
+        return canonical
     }
 
     private fun resolve(root: File, relativePath: String): File {
@@ -186,6 +208,55 @@ object SiteFileManager {
         val target = File(root, value)
         SensitivePathPolicy.requireSafeResolvedPath(root, target)
         return target
+    }
+
+    private data class Usage(val files: Int, val entries: Int, val bytes: Long)
+
+    private fun usage(root: File): Usage {
+        var files = 0
+        var entries = 0
+        var bytes = 0L
+        root.walkTopDown().onEnter { directory ->
+            if (directory != root && java.nio.file.Files.isSymbolicLink(directory.toPath())) {
+                throw IllegalArgumentException("Symbolic links are not supported inside website roots.")
+            }
+            val relative = if (directory == root) "" else root.toPath().relativize(directory.toPath()).toString().replace(File.separatorChar, '/')
+            if (relative.isNotEmpty()) {
+                SensitivePathPolicy.requireSafePath(relative)
+                require(relative.split('/').size <= WebsiteLimits.MAX_DEPTH) { "Website folder nesting is limited to 32 levels." }
+            }
+            true
+        }.forEach { file ->
+            if (file == root) return@forEach
+            require(!java.nio.file.Files.isSymbolicLink(file.toPath())) { "Symbolic links are not supported inside website roots." }
+            entries++
+            require(entries <= WebsiteLimits.MAX_ENTRIES) { "The website has too many files and folders." }
+            if (file.isDirectory) Unit else if (file.isFile) {
+                files++
+                require(files <= WebsiteLimits.MAX_FILES) { "The website has too many files." }
+                val size = file.length()
+                require(size <= WebsiteLimits.MAX_TOTAL_BYTES - bytes) { "The website exceeds its 500 MB total storage limit." }
+                bytes += size
+            } else {
+                throw IllegalArgumentException("Unsupported filesystem entry in website.")
+            }
+        }
+        return Usage(files, entries, bytes)
+    }
+
+    private fun ensureFileBudget(root: File, target: File, newSize: Long) {
+        require(newSize in 0..WebsiteLimits.MAX_SINGLE_FILE_BYTES) { "Individual website files are limited to 500 MB." }
+        val current = usage(root)
+        val existing = target.takeIf { it.isFile }?.length() ?: 0L
+        val addedFile = if (target.isFile) 0 else 1
+        require(current.files + addedFile <= WebsiteLimits.MAX_FILES &&
+            current.entries + addedFile <= WebsiteLimits.MAX_ENTRIES) { "The website has reached its file or entry limit." }
+        require(newSize <= WebsiteLimits.MAX_TOTAL_BYTES - (current.bytes - existing)) {
+            "The website exceeds its 500 MB total storage limit."
+        }
+        require(root.toPath().relativize(target.toPath()).nameCount <= WebsiteLimits.MAX_DEPTH) {
+            "Website folder nesting is limited to 32 levels."
+        }
     }
 
     private fun extension(path: String): String = path.substringAfterLast('.', "").lowercase()
