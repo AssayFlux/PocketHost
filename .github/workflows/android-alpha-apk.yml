@@ -1,11 +1,15 @@
 name: PocketHost v0.1.0 Alpha APK and ABI packaging
-run-name: Pocket Host Alpha APK build (${{ inputs.abi }})
+run-name: Pocket Host Alpha APK build (${{ inputs.abi || 'all' }})
 permissions:
   contents: read
 concurrency:
-  group: pockethost-alpha-apk-builder-${{ github.ref }}-${{ inputs.abi }}
+  group: pockethost-alpha-apk-builder-${{ github.ref }}-${{ inputs.abi || 'all' }}
   cancel-in-progress: false
 on:
+  push:
+    branches: [Alpha]
+    paths:
+      - '.github/workflows/android-alpha-apk.yml'
   workflow_dispatch:
     inputs:
       abi:
@@ -65,7 +69,7 @@ jobs:
       - name: Build selected app ABI APKs
         shell: bash
         env:
-          ABI_SELECTION: ${{ inputs.abi }}
+          ABI_SELECTION: ${{ inputs.abi || 'all' }}
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-apks"
@@ -116,7 +120,7 @@ jobs:
       - name: Upload APKs and build evidence
         uses: actions/upload-artifact@v4
         with:
-          name: pockethost-v0.1.0-alpha-apks-${{ inputs.abi }}
+          name: pockethost-v0.1.0-alpha-apks-${{ inputs.abi || 'all' }}
           path: ${{ runner.temp }}/pockethost-apks/*
           if-no-files-found: error
           retention-days: 30
