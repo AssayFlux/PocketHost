@@ -187,10 +187,8 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                             else Text("${entry.size} bytes", color = palette.onSurfaceVariant, fontSize = 10.sp)
                         }
                         if (entry.directory) Text("Open  ›", color = palette.primary, fontSize = 11.sp)
-                        else {
-                            TextButton(onClick = { renameSource = entry.path; renameDestination = entry.path }) { Text("Rename") }
-                            TextButton(onClick = { deleteTarget = entry.path }) { Text("Delete") }
-                        }
+                        TextButton(onClick = { renameSource = entry.path; renameDestination = entry.path }) { Text("Rename") }
+                        TextButton(onClick = { deleteTarget = entry.path }) { Text("Delete") }
                     }
                 }
             }
