@@ -126,7 +126,6 @@ object SiteFileManager {
         val target = resolve(root, relativePath)
         require(target.isFile) { "The selected file no longer exists." }
         require(extension(relativePath) in textExtensions) { "This file type is not supported by the text editor." }
-        ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val parent = target.parentFile ?: error("Invalid file path.")
         val temporary = File(parent, "." + target.name + ".pockethost-tmp")
         val backup = File(parent, "." + target.name + ".pockethost-bak")

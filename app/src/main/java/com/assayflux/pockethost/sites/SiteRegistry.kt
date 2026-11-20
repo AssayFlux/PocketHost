@@ -7,6 +7,7 @@ import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
 import android.util.Base64
+import com.assayflux.pockethost.storage.WebsiteLimits
 
 /** Persistent hostname-to-project mapping used by the Rust static server. */
 object SiteRegistry {
@@ -58,9 +59,9 @@ object SiteRegistry {
         require(normalizedHosts.all { hostnamePattern.matches(it) }) { "One or more hostnames are invalid." }
         val existingAll = list(context)
         val existing = existingAll.filterNot { it.id == site.id }
-        require(existing.size < 100) { "PocketHost supports up to 100 registered sites." }
-        require(normalizedHosts.size <= 100) { "A site can have at most 100 hostnames." }
-        require(existing.sumOf { it.hostnames.size } + normalizedHosts.size <= 1_000) {
+        require(existing.size < WebsiteLimits.MAX_REGISTERED_SITES) { "PocketHost supports up to 100 registered sites." }
+        require(normalizedHosts.size <= WebsiteLimits.MAX_HOSTNAMES_PER_SITE) { "A site can have at most 100 hostnames." }
+        require(existing.sumOf { it.hostnames.size } + normalizedHosts.size <= WebsiteLimits.MAX_HOSTNAME_ROUTES) {
             "PocketHost supports up to 1,000 hostname routes."
         }
         val used = existing.flatMap { it.hostnames }.toSet()
@@ -95,7 +96,7 @@ object SiteRegistry {
      * Paths must resolve inside app-private storage and hostnames must remain globally unique.
      */
     @Synchronized fun replaceAll(context: Context, sites: List<Site>) {
-        require(sites.size <= 100) { "PocketHost supports up to 100 registered sites." }
+        require(sites.size <= WebsiteLimits.MAX_REGISTERED_SITES) { "PocketHost supports up to 100 registered sites." }
         val privateRoot = context.filesDir.canonicalFile.toPath()
         val normalized = sites.map { site ->
             require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
@@ -107,7 +108,7 @@ object SiteRegistry {
                 "Restored site root must be an existing directory inside Pocket Host private storage."
             }
             val hosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
-            require(hosts.size <= 100 && hosts.all { hostnamePattern.matches(it) }) {
+            require(hosts.size <= WebsiteLimits.MAX_HOSTNAMES_PER_SITE && hosts.all { hostnamePattern.matches(it) }) {
                 "Restored site contains an invalid hostname."
             }
             require(hosts.distinct().size == hosts.size) { "Restored site contains duplicate hostnames." }
@@ -117,7 +118,7 @@ object SiteRegistry {
             "Restored routes contain duplicate site IDs."
         }
         val allHosts = normalized.flatMap { it.hostnames }
-        require(allHosts.size <= 1_000 && allHosts.distinct().size == allHosts.size) {
+        require(allHosts.size <= WebsiteLimits.MAX_HOSTNAME_ROUTES && allHosts.distinct().size == allHosts.size) {
             "Restored routes contain duplicate hostnames or exceed the route limit."
         }
         val nodeRoots = normalized.filter { it.runtime == "node" }.map { it.root }.distinct()
