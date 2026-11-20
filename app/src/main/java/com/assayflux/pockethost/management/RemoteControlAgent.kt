@@ -49,6 +49,8 @@ object RemoteControlAgent {
             !prefs.getString("token", null).isNullOrBlank()
     }
 
+    internal fun isRunningForTest(): Boolean = running
+
     @Synchronized
     fun configure(context: Context, endpoint: String, token: String) {
         val restartAgent = running
