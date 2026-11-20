@@ -54,7 +54,7 @@ object SiteRegistry {
         require(!java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) { "Site roots cannot be symbolic links." }
         val root = requestedRoot.canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
-        require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
+        require(root != privateRoot.toFile() && root.isDirectory && root.toPath().startsWith(privateRoot)) {
             "Site root must be an existing directory inside PocketHost private storage."
         }
         val normalizedHosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
@@ -73,6 +73,15 @@ object SiteRegistry {
         if (site.runtime == "node") {
             require(existing.filter { it.runtime == "node" }.all { File(it.root).canonicalPath == root.path }) {
                 "Only one Node.js project can be active in the embedded Node process; map additional hostnames to the same project."
+            }
+        }
+        existing.forEach { other ->
+            val otherRoot = canonicalSiteRoot(context, other).toPath()
+            val candidate = root.toPath()
+            val sameRoot = candidate == otherRoot
+            require((sameRoot && site.runtime == other.runtime) ||
+                (!candidate.startsWith(otherRoot) && !otherRoot.startsWith(candidate))) {
+                "Different sites and runtime projects must not have overlapping root directories."
             }
         }
         val previous = existingAll.firstOrNull { it.id == site.id }
@@ -108,7 +117,7 @@ object SiteRegistry {
             val requestedRoot = File(site.root)
             require(!java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) { "Restored site roots cannot be symbolic links." }
             val root = requestedRoot.canonicalFile
-            require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
+            require(root != privateRoot.toFile() && root.isDirectory && root.toPath().startsWith(privateRoot)) {
                 "Restored site root must be an existing directory inside Pocket Host private storage."
             }
             val hosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
@@ -120,6 +129,17 @@ object SiteRegistry {
         }
         require(normalized.map { it.id }.distinct().size == normalized.size) {
             "Restored routes contain duplicate site IDs."
+        }
+        for (i in normalized.indices) {
+            for (j in i + 1 until normalized.size) {
+                val left = File(normalized[i].root).canonicalFile.toPath()
+                val right = File(normalized[j].root).canonicalFile.toPath()
+                val sameRoot = left == right
+                require((sameRoot && normalized[i].runtime == normalized[j].runtime) ||
+                    (!left.startsWith(right) && !right.startsWith(left))) {
+                    "Restored sites and runtime projects must not have overlapping root directories."
+                }
+            }
         }
         val allHosts = normalized.flatMap { it.hostnames }
         require(allHosts.size <= WebsiteLimits.MAX_HOSTNAME_ROUTES && allHosts.distinct().size == allHosts.size) {
@@ -187,8 +207,8 @@ object SiteRegistry {
 
     fun staticHostnameMap(context: Context): JSONObject {
         val map = JSONObject()
-        list(context).filter { it.enabled && it.runtime == "static" }.forEach { site ->
-            site.hostnames.forEach { host -> map.put(host, File(site.root).canonicalPath) }
+        list(context).filter { it.enabled && it.runtime == "static" && runCatching { canonicalSiteRoot(context, it) }.isSuccess }.forEach { site ->
+            site.hostnames.forEach { host -> map.put(host, canonicalSiteRoot(context, site).path) }
         }
         return map
     }
@@ -199,8 +219,8 @@ object SiteRegistry {
         val runtimeAllowed = prefs.getBoolean("trusted_runtime_code_ack", false) &&
             prefs.getBoolean("python_enabled", false)
         if (!runtimeAllowed) return roots
-        list(context).filter { it.enabled && it.runtime == "python-wsgi" }.forEach { site ->
-            site.hostnames.forEach { hostname -> roots.put(hostname, File(site.root).canonicalPath) }
+        list(context).filter { it.enabled && it.runtime == "python-wsgi" && runCatching { canonicalSiteRoot(context, it) }.isSuccess }.forEach { site ->
+            site.hostnames.forEach { hostname -> roots.put(hostname, canonicalSiteRoot(context, site).path) }
         }
         return roots
     }
@@ -212,7 +232,7 @@ object SiteRegistry {
         val pythonEnabled = trustedCodeAcknowledged && prefs.getBoolean("python_enabled", false)
         val nodeEnabled = trustedCodeAcknowledged && prefs.getBoolean("node_enabled", false)
         list(context).filter { site ->
-            site.enabled && when (site.runtime) {
+            site.enabled && runCatching { canonicalSiteRoot(context, site) }.isSuccess && when (site.runtime) {
                 "static" -> true
                 "python-wsgi" -> pythonEnabled
                 "node" -> nodeEnabled
@@ -233,6 +253,17 @@ object SiteRegistry {
             }
         }
         return routes
+    }
+
+    private fun canonicalSiteRoot(context: Context, site: Site): File {
+        val requested = File(site.root)
+        require(!java.nio.file.Files.isSymbolicLink(requested.toPath())) { "Site roots cannot be symbolic links." }
+        val root = requested.canonicalFile
+        val privateRoot = context.filesDir.canonicalFile.toPath()
+        require(root != context.filesDir.canonicalFile && root.isDirectory && root.toPath().startsWith(privateRoot)) {
+            "Site root must be a dedicated directory inside PocketHost private storage."
+        }
+        return root
     }
 
     private fun save(context: Context, sites: List<Site>) {
