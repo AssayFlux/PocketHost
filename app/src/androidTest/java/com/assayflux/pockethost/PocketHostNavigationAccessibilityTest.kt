@@ -44,8 +44,9 @@ class PocketHostNavigationAccessibilityTest {
         val expectedContent = linkedMapOf(
             "Home" to Triple("Home", "Your services", "Home"),
             "Hosting" to Triple("Hosting", "HOSTING STATUS", "Dashboard"),
-            "Websites & files" to Triple("Websites & files", "WEBSITE", "Sites"),
+            "Websites & files" to Triple("Websites & files", "WEBSITE OVERVIEW", "Sites"),
             "Workbench" to Triple("Workbench", "POCKETHOST WORKBENCH", "Workbench"),
+            "Deployments" to Triple("Deployments", "SERVICE COMING SOON", "Deployments"),
             "Devices" to Triple("Devices", "COMMAND CENTER IDENTITY", "Devices"),
             "Activity & logs" to Triple("Activity & logs", "RECENT OPERATIONS", "Activity"),
             "Learn" to Triple("Learn", "Learn Pocket Host", "Learn"),
@@ -94,8 +95,22 @@ class PocketHostNavigationAccessibilityTest {
                         device.wait(Until.hasObject(By.text("Choose website folder")), 10_000))
                     assertTrue("ZIP publishing action is missing",
                         device.wait(Until.hasObject(By.text("Import website ZIP")), 10_000))
+                    val backupTab = device.wait(Until.findObject(By.text("Backup")), 10_000)
+                    assertTrue("Dedicated backup page is missing", backupTab != null)
+                    backupTab!!.click()
                     assertTrue("Encrypted backup export action is missing",
                         device.wait(Until.hasObject(By.text("Export encrypted full app backup")), 10_000))
+                    val releasesTab = device.wait(Until.findObject(By.text("Releases")), 10_000)
+                    assertTrue("Dedicated releases page is missing", releasesTab != null)
+                    releasesTab!!.click()
+                    assertTrue("Release history page did not render",
+                        device.wait(Until.hasObject(By.textContains("previous deployment")), 10_000) ||
+                            device.wait(Until.hasObject(By.textContains("previous deployments")), 5_000))
+                    val filesTab = device.wait(Until.findObject(By.text("Files")), 10_000)
+                    assertTrue("Dedicated file manager page is missing", filesTab != null)
+                    filesTab!!.click()
+                    assertTrue("File manager page did not render",
+                        device.wait(Until.hasObject(By.text("SITE FILES")), 10_000))
                 }
                 assertTrue("Could not capture $destinationName screenshot",
                     device.takeScreenshot(File(screenshotDir, "navigation-${screenshotName.lowercase()}.png")))
@@ -103,11 +118,23 @@ class PocketHostNavigationAccessibilityTest {
             }
             openDrawerDestination("Settings")
             listOf(
-                Triple("Network", "CLOUDFLARE TUNNEL", "Network & tunnels"),
-                Triple("Runtimes", "TRUSTED APPLICATION CODE ONLY", "Runtimes"),
+                Triple("Network", "NETWORK & PUBLIC ACCESS", "Network & tunnels"),
+                Triple("Server", "SERVER CONFIGURATION", "Server settings"),
+                Triple("Remote", "REMOTE CONTROL PLANE", "Remote control"),
+                Triple("Local access", "Device & access", "Local access"),
+                Triple("Relay node", "NATIVE ASSAYFLUX RELAY NODE", "Native Relay Node"),
+                Triple("Relay host", "ASSAYFLUX RELAY", "Relay host connection"),
+                Triple("Cloudflare", "CLOUDFLARE TUNNEL", "Cloudflare Tunnel"),
+                Triple("Cloudflare Access", "SERVICE COMING SOON", "Cloudflare Access"),
+                Triple("DNS management", "Automatic DNS record management", "DNS management"),
+                Triple("Hostnames & access", "CUSTOM HOSTNAME ROUTING", "Hostnames & visitor access"),
+                Triple("Runtimes", "OPTIONAL APPLICATION RUNTIMES", "Runtimes"),
+                Triple("Python", "PYTHON BACKEND · CPYTHON 3.11", "Python runtime"),
+                Triple("Node.js", "NODE.JS 24 LTS · EMBEDDED RUNTIME", "Node.js runtime"),
                 Triple("About", "AssayFlux Pocket Host", "About"),
                 Triple("General", "Make Pocket Host feel like yours", "Settings")
             ).forEach { (section, expectedText, expectedHeader) ->
+                UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView(section)
                 val sectionTab = device.wait(Until.findObject(By.text(section)), 10_000)
                 assertTrue("Settings section $section is not reachable", sectionTab != null)
                 sectionTab!!.click()
@@ -115,11 +142,12 @@ class PocketHostNavigationAccessibilityTest {
                     device.wait(Until.hasObject(By.text(expectedText)), 10_000))
                 assertTrue("Settings header changed while selecting $section",
                     device.wait(Until.hasObject(By.text(expectedHeader)), 5_000))
-                if (section == "Network") {
+                if (section == "Hostnames & access") {
                     assertTrue("Visitor access policy controls are missing",
                         device.wait(Until.hasObject(By.textContains("Visitor access")), 10_000))
                     assertTrue("Hostname route publishing control is missing",
                         device.wait(Until.hasObject(By.text("Save hostname route")), 10_000))
+                    UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("Private")
                     device.wait(Until.findObject(By.text("Private")), 10_000)!!.click()
                     assertTrue("Private visitor credential action is missing",
                         device.wait(Until.hasObject(By.text("Create / rotate shared credential")), 10_000))
@@ -128,13 +156,14 @@ class PocketHostNavigationAccessibilityTest {
                         SiteRegistry.visitorNames(context, visitorSiteId).contains("visitor"))
                     assertTrue("One-time credential copy action is missing",
                         device.wait(Until.hasObject(By.text("Copy credential")), 10_000))
+                    UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("Revoke")
                     device.wait(Until.findObject(By.text("Revoke")), 10_000)!!.click()
                     assertFalse("Revoked visitor credential remains active",
                         SiteRegistry.visitorNames(context, visitorSiteId).contains("visitor"))
                 }
                 assertTrue("Could not capture Settings/$section screenshot",
-                    device.takeScreenshot(File(screenshotDir, "settings-${section.lowercase()}.png")))
-                device.dumpWindowHierarchy(File(screenshotDir, "settings-${section.lowercase()}-hierarchy.xml"))
+                    device.takeScreenshot(File(screenshotDir, "settings-${section.lowercase().replace(' ', '-')}.png")))
+                device.dumpWindowHierarchy(File(screenshotDir, "settings-${section.lowercase().replace(' ', '-')}-hierarchy.xml"))
             }
             }
         } finally {
