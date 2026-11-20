@@ -2,8 +2,9 @@
 //!
 //! The gateway is deliberately separate from the fleet control plane. It accepts
 //! bounded visitor HTTP requests and forwards them over authenticated outbound
-//! SSE host sessions. TLS termination, durable pairing/route storage and DNS
-//! ownership are separate release-critical milestones and are not claimed here.
+//! SSE host sessions. It includes TLS termination, transactional pairing and
+//! revocation state, and DNS TXT ownership checks; public operation still requires
+//! real-device and external-network acceptance.
 
 use axum::{
     body::{to_bytes, Body},
@@ -901,6 +902,21 @@ fn start(config_json: &str, database_path: &str) -> Result<(), String> {
                     Ok(config) => config,
                     Err(error) => { let _ = ready_tx.send(Err(format!("Relay TLS configuration failed: {error}"))); return; }
                 };
+                // Bind HTTPS synchronously before reporting READY. bind_rustls(addr)
+                // defers the socket bind until the server future is polled, which
+                // could otherwise report a false-positive start on an occupied port.
+                let https_listener = match std::net::TcpListener::bind(https_bind) {
+                    Ok(listener) => listener,
+                    Err(error) => { let _ = ready_tx.send(Err(format!("Relay HTTPS listener failed at {https_bind}: {error}"))); return; }
+                };
+                if let Err(error) = https_listener.set_nonblocking(true) {
+                    let _ = ready_tx.send(Err(format!("Could not configure Relay HTTPS listener: {error}")));
+                    return;
+                }
+                let https_server = match axum_server::tls_rustls::from_tcp_rustls(https_listener, tls_config) {
+                    Ok(server) => server,
+                    Err(error) => { let _ = ready_tx.send(Err(format!("Could not prepare Relay HTTPS listener: {error}"))); return; }
+                };
                 if let Ok(mut live) = live_state().lock() { *live = Some(state.clone()); }
                 let _ = ready_tx.send(Ok(()));
                 set_status("RUNNING");
@@ -908,7 +924,7 @@ fn start(config_json: &str, database_path: &str) -> Result<(), String> {
                 let task_handle = handle.clone();
                 let https_state = state.clone();
                 let mut https_task = tokio::spawn(async move {
-                    axum_server::bind_rustls(https_bind, tls_config)
+                    https_server
                         .handle(task_handle)
                         .serve(router(https_state).into_make_service())
                         .await
