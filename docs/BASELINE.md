@@ -173,3 +173,18 @@ The current implementation uses `Assets/Pocket Host 7.svg` as the single source 
 | 3 — Final integration | Canonical brand source, Android launcher resources, in-app mark, Workbench file-operation wiring and implementation documentation are integrated on `Alpha`. | Wait for a successful quality run and for Android integration run `44745388758` (including its dependent Android source-compile job) to finish. No APK, emulator, physical-device or external-network acceptance is claimed. |
 
 **Overall status:** Steps 1–3 implementation changes are present on `Alpha`; current-head automated verification is pending. This is still v0.1.0 Alpha, not a verified release. Do not build/package APKs until the owner explicitly moves to the APK phase. No APK build was run during this implementation pass.
+
+## 12. Android build-pipeline repair pass — 2026-11-20
+
+After the Step 1–3 integrated recheck, the latest Android acceptance logs identified two build-pipeline blockers:
+
+- `buildSrc` could not resolve `org.apache.xmlgraphics:batik-transcoder:1.18` from Maven Central. The buildSrc dependency is now pinned to Batik 1.19, which is published in Maven Central.
+- Launcher icon rasterization failed with a generic task message. The task now includes the underlying exception class/message and explicitly fails if the JDK has no PNG ImageIO writer, so the next CI run can identify the actual SVG/transcoder cause instead of hiding it.
+- The APK acceptance workflow now watches `buildSrc/**` and the canonical SVG asset, ensuring changes to launcher generation trigger the acceptance validation job.
+
+Commits on `Alpha`:
+- `2a8746929a699bd4251e4a06a32848318ce5fb23` — Batik dependency resolution.
+- `d35725cc0dd0304b8438d42b29f0f83683a407ea` — actionable rasterizer diagnostics and PNG writer validation.
+- `40137c61add97edca2f0d010bb9ec6f52f9a599a` — acceptance workflow path coverage for buildSrc and canonical SVG.
+
+**Verification boundary:** These are committed build-pipeline repairs, not yet successful build evidence. Wait for the new Alpha CI runs. APK packaging remains explicitly gated and was not triggered by these pushes.
