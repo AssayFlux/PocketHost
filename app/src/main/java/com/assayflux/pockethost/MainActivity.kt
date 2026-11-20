@@ -980,6 +980,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         context = context,
                         state = PocketHostSitesState(
                             importedSummary = importedSummary,
+                            status = status,
                             siteFiles = remember(importedSummary, siteFileRefresh) { SiteFileManager.list(context) },
                             hosting = hosting,
                             importing = importing,

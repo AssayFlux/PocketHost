@@ -35,6 +35,7 @@ import com.assayflux.pockethost.storage.SiteImporter
 
 internal data class PocketHostSitesState(
     val importedSummary: String,
+    val status: String,
     val siteFiles: List<SiteFileManager.Entry>,
     val hosting: Boolean,
     val importing: Boolean,
@@ -114,6 +115,25 @@ internal fun PocketHostSitesScreen(
                 }
             }
             if (selectedPage == "Overview") {
+                if (state.status.contains("import", ignoreCase = true) ||
+                    state.status.contains("ZIP", ignoreCase = true) ||
+                    state.status.contains("website", ignoreCase = true)) {
+                    val failed = listOf("failed", "could not", "cannot", "unsafe", "unsupported", "no index")
+                        .any { state.status.contains(it, ignoreCase = true) }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (failed) palette.errorContainer else palette.secondaryContainer
+                        )
+                    ) {
+                        Text(
+                            state.status,
+                            modifier = Modifier.padding(12.dp),
+                            color = if (failed) palette.onErrorContainer else palette.onSecondaryContainer,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
                 Text("WEBSITE OVERVIEW", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
                 Text(state.importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                 if (state.siteFiles.isEmpty()) {
