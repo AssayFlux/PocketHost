@@ -82,56 +82,58 @@ internal fun PocketHostHomeScreen(
             val scope = rememberCoroutineScope()
             val stepPx = with(LocalDensity.current) { (cardWidth + 12.dp).roundToPx() }.coerceAtLeast(1)
             val activePage = (scrollState.value / stepPx).coerceIn(0, services.lastIndex)
-            Row(Modifier.fillMaxWidth().horizontalScroll(scrollState), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
-                services.forEachIndexed { index, service ->
-                    val cardScale by animateFloatAsState(
-                        targetValue = if (index == activePage) 1.04f else 0.94f,
-                        label = "service-card-scale"
-                    )
-                    Card(onClick = { onOpen(service.destination) },
-                        modifier = Modifier.width(cardWidth).heightIn(min = 224.dp)
-                            .graphicsLayer { scaleX = cardScale; scaleY = cardScale },
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (index == 0) palette.surface else palette.surfaceVariant),
-                        elevation = CardDefaults.cardElevation(defaultElevation = if (index == 0) 3.dp else 1.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Surface(color = palette.primaryContainer, shape = RoundedCornerShape(14.dp)) {
-                                    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                                        Icon(service.icon, contentDescription = null, tint = palette.onPrimaryContainer)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(scrollState), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
+                    services.forEachIndexed { index, service ->
+                        val cardScale by animateFloatAsState(
+                            targetValue = if (index == activePage) 1.02f else 0.97f,
+                            label = "service-card-scale"
+                        )
+                        Card(onClick = { onOpen(service.destination) },
+                            modifier = Modifier.width(cardWidth).heightIn(min = 224.dp)
+                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale },
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = if (index == activePage) palette.surface else palette.surfaceVariant),
+                            elevation = CardDefaults.cardElevation(defaultElevation = if (index == activePage) 3.dp else 1.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Surface(color = palette.primaryContainer, shape = RoundedCornerShape(14.dp)) {
+                                        Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                                            Icon(service.icon, contentDescription = null, tint = palette.onPrimaryContainer)
+                                        }
                                     }
+                                    Text(service.title, color = palette.onSurface, style = MaterialTheme.typography.titleLarge)
+                                    Text(service.subtitle, color = palette.onSurfaceVariant, fontSize = 12.sp)
                                 }
-                                Text(service.title, color = palette.onSurface, style = MaterialTheme.typography.titleLarge)
-                                Text(service.subtitle, color = palette.onSurfaceVariant, fontSize = 12.sp)
-                            }
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(service.metric, color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Box(Modifier.size(7.dp).clip(CircleShape).background(if (index == 0 && hosting) palette.primary else palette.outline))
-                                    Text(service.state, color = palette.onSurfaceVariant, fontSize = 11.sp)
-                                    Spacer(Modifier.weight(1f))
-                                    Text("Open  →", color = palette.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(service.metric, color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Box(Modifier.size(7.dp).clip(CircleShape).background(if (index == 0 && hosting) palette.primary else palette.outline))
+                                        Text(service.state, color = palette.onSurfaceVariant, fontSize = 11.sp)
+                                        Spacer(Modifier.weight(1f))
+                                        Text("Open  →", color = palette.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
                     }
+                    Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
                 }
-                Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                services.indices.forEach { index ->
-                    Box(
-                        modifier = Modifier.size(48.dp)
-                            .semantics { contentDescription = "Show service page ${index + 1}" }
-                            .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } },
-                        contentAlignment = Alignment.Center
-                    ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    services.indices.forEach { index ->
                         Box(
-                            Modifier.size(if (index == activePage) 9.dp else 7.dp)
-                                .clip(CircleShape)
-                                .background(if (index == activePage) palette.primary else palette.outlineVariant)
-                        )
+                            modifier = Modifier.size(40.dp)
+                                .semantics { contentDescription = "Show service page ${index + 1}" }
+                                .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                Modifier.size(if (index == activePage) 9.dp else 7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (index == activePage) palette.primary else palette.outlineVariant)
+                            )
+                        }
                     }
                 }
             }
