@@ -223,12 +223,18 @@ impl RelayState {
                 if revoked {
                     return Err("Relay configuration references a previously revoked host identity".into());
                 }
-                if !existing.contains_key(&id) {
-                    connection.execute(
-                        "INSERT INTO relay_host_credentials(device_id, credential_sha256, created_at) VALUES (?1, ?2, ?3)",
-                        params![id, host.credential_sha256.to_ascii_lowercase(), unix_now()]
-                    ).map_err(|error| format!("Could not seed Relay host credential: {error}"))?;
-                }
+                // An explicitly configured host is the owner-controlled source of
+                // truth for its credential verifier. Upsert it on every config load so
+                // owner rotation survives a process restart. Paired hosts which are not
+                // present in config.hosts remain database-managed and are left untouched.
+                connection.execute(
+                    "INSERT INTO relay_host_credentials(device_id, credential_sha256, created_at)
+                     VALUES (?1, ?2, ?3)
+                     ON CONFLICT(device_id) DO UPDATE SET
+                        credential_sha256 = excluded.credential_sha256,
+                        created_at = excluded.created_at",
+                    params![id, host.credential_sha256.to_ascii_lowercase(), unix_now()]
+                ).map_err(|error| format!("Could not persist configured Relay host credential: {error}"))?;
             }
         }
 
@@ -1264,6 +1270,47 @@ mod tests {
         let database_path = std::env::temp_dir()
             .join(format!("pockethost-relay-test-{}.db", Uuid::new_v4()));
         assert!(RelayState::from_config(config, database_path.to_str().unwrap()).await.is_err());
+        let _ = std::fs::remove_file(database_path);
+    }
+
+    #[tokio::test]
+    async fn configured_host_credential_rotation_survives_restart_and_rejects_old_token() {
+        let device_id = Uuid::new_v4();
+        let old_token = "old-relay-credential-for-rotation";
+        let new_token = "new-relay-credential-after-rotation";
+        let database_path = std::env::temp_dir()
+            .join(format!("pockethost-relay-rotation-{}.db", Uuid::new_v4()));
+        let make_config = |token: &str| RelayConfig {
+            bind_address: "127.0.0.1".into(),
+            http_port: 8082,
+            https_port: 8444,
+            tls_certificate_pem: None,
+            tls_private_key_pem: None,
+            acme_contact_email: None,
+            acme_terms_accepted: false,
+            acme_directory_url: None,
+            acme_account_credentials: None,
+            dns_resolver: "127.0.0.1:53".into(),
+            hosts: vec![HostConfig {
+                device_id,
+                credential_sha256: hex_sha256(token.as_bytes()),
+            }],
+            routes: Vec::new(),
+        };
+
+        let first = RelayState::from_config(make_config(old_token), database_path.to_str().unwrap())
+            .await.unwrap();
+        assert_eq!(first.authenticate(old_token), Some(device_id));
+        drop(first);
+
+        // The owner has rotated the verifier in the encrypted node configuration.
+        // Loading that configuration after restart must replace the previous verifier.
+        let restarted = RelayState::from_config(make_config(new_token), database_path.to_str().unwrap())
+            .await.unwrap();
+        assert_eq!(restarted.authenticate(old_token), None);
+        assert_eq!(restarted.authenticate(new_token), Some(device_id));
+
+        drop(restarted);
         let _ = std::fs::remove_file(database_path);
     }
 
