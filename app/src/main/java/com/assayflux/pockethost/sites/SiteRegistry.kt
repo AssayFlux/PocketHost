@@ -50,7 +50,9 @@ object SiteRegistry {
         require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
         require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
         validateAccessPolicy(site)
-        val root = File(site.root).canonicalFile
+        val requestedRoot = File(site.root)
+        require(!java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) { "Site roots cannot be symbolic links." }
+        val root = requestedRoot.canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
         require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
             "Site root must be an existing directory inside PocketHost private storage."
@@ -103,7 +105,9 @@ object SiteRegistry {
             require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
             require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
             validateAccessPolicy(site)
-            val root = File(site.root).canonicalFile
+            val requestedRoot = File(site.root)
+            require(!java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) { "Restored site roots cannot be symbolic links." }
+            val root = requestedRoot.canonicalFile
             require(root.isDirectory && root.toPath().startsWith(privateRoot)) {
                 "Restored site root must be an existing directory inside Pocket Host private storage."
             }
