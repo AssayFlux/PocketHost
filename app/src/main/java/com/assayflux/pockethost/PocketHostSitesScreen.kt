@@ -99,14 +99,16 @@ internal fun PocketHostSitesScreen(
                     colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Overview", "Files", "Backup", "Releases").forEach { page ->
-                                FilterChip(
-                                    selected = selectedPage == page,
-                                    onClick = { selectedPage = page },
-                                    label = { Text(page, fontSize = 11.sp) },
-                                    modifier = Modifier.weight(1f)
-                                )
+                        listOf("Overview", "Files", "Backup", "Releases").chunked(2).forEach { rowPages ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rowPages.forEach { page ->
+                                    FilterChip(
+                                        selected = selectedPage == page,
+                                        onClick = { selectedPage = page },
+                                        label = { Text(page, fontSize = 11.sp) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
                         }
                         if (selectedPage == "Overview") {
