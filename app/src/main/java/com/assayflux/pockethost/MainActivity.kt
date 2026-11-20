@@ -698,6 +698,16 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 if (selectedTab == "Workbench") {
                     PocketHostWorkbenchScreen(context = context)
                 }
+                if (selectedTab == "Deployments") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
+                            Text("Production deployment and rollback", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Workbench currently supports private draft editing and immutable local snapshots. Publishing a reviewed draft to the live site and selecting a historical release for rollback are not available from this page yet.", color = palette.onSurfaceVariant)
+                            TextButton(onClick = { selectedTab = "Workbench" }) { Text("Open Workbench drafts") }
+                        }
+                    }
+                }
                 if (selectedTab == "Learn") {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
                 }
