@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.widget.Toast
 import org.json.JSONObject
@@ -102,6 +103,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Draw edge-to-edge and apply Compose system-bar insets to the app chrome/content.
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        val systemDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !systemDark
+            isAppearanceLightNavigationBars = !systemDark
+        }
         val backupRecovery = runCatching { ApplicationBackupManager.recoverInterruptedRestore(this) }
         backupRecovery.onFailure { error ->
             OperationalLog.record(this, "ERROR", "BACKUP_RESTORE_RECOVERY_FAILED",
