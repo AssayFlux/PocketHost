@@ -125,6 +125,7 @@ class RuntimeWorkerService : Service() {
         }
         check(staging.mkdirs() || staging.isDirectory) { "Could not create project staging directory." }
         var entries = 0
+        var treeEntries = 0
         var totalBytes = 0L
         // Track explicit and implicit directories as well as files. ZIP archives can
         // contain duplicate names or file/directory collisions that otherwise overwrite
@@ -162,12 +163,23 @@ class RuntimeWorkerService : Service() {
                         require(previousPortableParent == null || previousPortableParent == parent) {
                             "Project archive contains directory paths that differ only by letter case."
                         }
-                        archivePaths.putIfAbsent(parent, true)
+                        if (archivePaths.putIfAbsent(parent, true) == null) {
+                            treeEntries++
+                            require(treeEntries <= MAX_ARCHIVE_ENTRIES) {
+                                "Project archive expands to too many files and directories."
+                            }
+                        }
                     }
                     require(explicitEntries.add(name)) { "Project archive contains duplicate paths." }
                     val previousType = archivePaths.putIfAbsent(name, isDirectory)
                     require(previousType == null || (previousType == true && isDirectory)) {
                         "Project archive contains conflicting file and directory paths."
+                    }
+                    if (previousType == null) {
+                        treeEntries++
+                        require(treeEntries <= MAX_ARCHIVE_ENTRIES) {
+                            "Project archive expands to too many files and directories."
+                        }
                     }
                     val portableName = name.lowercase(java.util.Locale.ROOT)
                     val previousPortableName = portableNames.putIfAbsent(portableName, name)
