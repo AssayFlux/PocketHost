@@ -22,7 +22,7 @@ object SiteFileManager {
 
     fun list(context: Context): List<Entry> {
         val root = root(context)
-        return root.walkTopDown().maxDepth(8).filter { it != root }.take(150).map { file ->
+        return root.walkTopDown().filter { it != root }.map { file ->
             val directory = file.isDirectory
             val ext = file.extension.lowercase()
             Entry(

@@ -19,6 +19,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -78,6 +80,16 @@ internal fun PocketHostSitesScreen(
     actions: PocketHostSitesActions
 ) {
     val palette = MaterialTheme.colorScheme
+    val fileSearch = remember { mutableStateOf("") }
+    val filePage = remember(fileSearch.value) { mutableStateOf(0) }
+    val matchingSiteFiles = remember(state.siteFiles, fileSearch.value) {
+        state.siteFiles.filter { it.relativePath.contains(fileSearch.value.trim(), ignoreCase = true) }
+            .sortedBy { it.relativePath.lowercase() }
+    }
+    val pageSize = 100
+    val pageCount = maxOf(1, (matchingSiteFiles.size + pageSize - 1) / pageSize)
+    val currentPage = filePage.value.coerceIn(0, pageCount - 1)
+    val visibleSiteFiles = matchingSiteFiles.drop(currentPage * pageSize).take(pageSize)
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -97,7 +109,39 @@ internal fun PocketHostSitesScreen(
                             Text("1. Choose a website folder or import a ZIP below.\n2. Keep index.html at the top level of that folder.\n3. Open Dashboard and start hosting; then return here and choose Preview site to verify it.", color = palette.onSurfaceVariant)
                             Text("No website imported yet. Your current site stays in place until a new import has been validated.", color = palette.onSurfaceVariant)
                         } else {
-                            state.siteFiles.forEach { entry ->
+                            OutlinedTextField(
+                                value = fileSearch.value,
+                                onValueChange = { fileSearch.value = it },
+                                label = { Text("Search website files") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            val firstVisible = if (matchingSiteFiles.isEmpty()) 0 else currentPage * pageSize + 1
+                            val lastVisible = minOf((currentPage + 1) * pageSize, matchingSiteFiles.size)
+                            Text(
+                                "Showing $firstVisible–$lastVisible of ${matchingSiteFiles.size} matches (${state.siteFiles.size} discovered entries)",
+                                color = palette.onSurfaceVariant,
+                                fontSize = 12.sp
+                            )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { filePage.value = currentPage - 1 },
+                                    enabled = currentPage > 0
+                                ) { Text("Previous") }
+                                Text("Page ${currentPage + 1} of $pageCount", color = palette.onSurfaceVariant)
+                                OutlinedButton(
+                                    onClick = { filePage.value = currentPage + 1 },
+                                    enabled = currentPage + 1 < pageCount
+                                ) { Text("Next") }
+                            }
+                            if (visibleSiteFiles.isEmpty()) {
+                                Text("No website files match this search.", color = palette.onSurfaceVariant)
+                            }
+                            visibleSiteFiles.forEach { entry ->
                                 Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
