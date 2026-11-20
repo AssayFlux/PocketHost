@@ -74,7 +74,7 @@ jobs:
           else
             abis=("$ABI_SELECTION")
           fi
-          printf '%s\\n' "${abis[@]}" > "$out/APP-ABIS.txt"
+          printf '%s\n' "${abis[@]}" > "$out/APP-ABIS.txt"
           for abi in "${abis[@]}"; do
             ./gradlew :app:assembleDebug -PpockethostAbi="$abi"
             cp app/build/outputs/apk/debug/app-debug.apk "$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
