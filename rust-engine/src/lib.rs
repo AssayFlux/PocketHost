@@ -1134,7 +1134,7 @@ mod tests {
     #[test]
     fn static_server_never_exposes_credential_paths() {
         for path in [
-            ".aws/credentials", ".npmrc", ".git-credentials", ".docker/config.json",
+            ".aws/credentials", r".aws\credentials", ".npmrc", ".git-credentials", ".docker/config.json",
             ".kube/config", "secrets/service-account-prod.json", "tls/server.key",
             ".env.production",
             "credentials.json",
