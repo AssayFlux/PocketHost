@@ -12,6 +12,8 @@ import org.json.JSONObject
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.biometric.BiometricManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -233,6 +235,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
     val lanAddress = remember(allowLan, hosting) { if (allowLan) localLanAddress() else null }
     var status by remember { mutableStateOf("Ready to configure your first website.") }
+    var serviceStatus by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getString("service_status", "Waiting for hosting service status.") ?: "Waiting for hosting service status.") }
     var requests by remember { mutableLongStateOf(0L) }
     var bytesServed by remember { mutableLongStateOf(0L) }
     var todayRequests by remember { mutableLongStateOf(0L) }
@@ -360,10 +363,26 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         }
     }
 
-    LaunchedEffect(Unit) {
+    val dashboardLifecycle = (context as? ComponentActivity)?.lifecycle
+    val dashboardStarted = remember { mutableStateOf(dashboardLifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) == true) }
+    DisposableEffect(dashboardLifecycle) {
+        if (dashboardLifecycle == null) return@DisposableEffect onDispose { }
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> dashboardStarted.value = true
+                Lifecycle.Event.ON_STOP -> dashboardStarted.value = false
+                else -> Unit
+            }
+        }
+        dashboardLifecycle.addObserver(observer)
+        onDispose { dashboardLifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(dashboardStarted.value) {
+        if (!dashboardStarted.value) return@LaunchedEffect
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         var lastIdleTelemetryAt = 0L
-        while (true) {
+        while (dashboardStarted.value) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
             val hostingStartedAt = preferences.getLong("hosting_started_elapsed_ms", 0L)
             uptimeText = if (hosting && hostingStartedAt > 0L) {
@@ -381,7 +400,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             relayStatus = RelayAgent.status()
             nativeRelayStatus = runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")
             pendingPairingCode = ManagementApiServer.pendingApprovalCode()
-            preferences.getString("service_status", null)?.let { status = it }
+            preferences.getString("service_status", null)?.let { serviceStatus = it }
             recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
             capacityInfo = withContext(Dispatchers.IO) { CapacityController.tick(context)
                 .put("activeConnections", NativeEngine.activeConnections())
@@ -850,6 +869,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             hosting = hosting,
                             importing = importing,
                             status = status,
+                            serviceStatus = serviceStatus,
                             importedSummary = importedSummary,
                             allowLan = allowLan,
                             lanAddress = lanAddress,
