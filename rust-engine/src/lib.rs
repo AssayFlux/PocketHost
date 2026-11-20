@@ -175,7 +175,7 @@ fn is_sensitive_request_path(relative: &Path) -> bool {
         "authorized_keys", "known_hosts", "kubeconfig", "service-account.json",
         "serviceaccount.json", "secrets.json",
     ];
-    let portable_path = relative.to_string_lossy().replace('\\\\', "/").to_ascii_lowercase();
+    let portable_path = relative.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
     if portable_path == ".config/gcloud" || portable_path.starts_with(".config/gcloud/") { return true; }
     relative.components().any(|component| {
         let Component::Normal(value) = component else { return true };
