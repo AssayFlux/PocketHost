@@ -917,10 +917,7 @@ fn start(config_json: &str, database_path: &str) -> Result<(), String> {
                     Ok(listener) => listener,
                     Err(error) => { let _ = ready_tx.send(Err(error)); return; }
                 };
-                let https_server = match axum_server::tls_rustls::from_tcp_rustls(https_listener, tls_config) {
-                    Ok(server) => server,
-                    Err(error) => { let _ = ready_tx.send(Err(format!("Could not prepare Relay HTTPS listener: {error}"))); return; }
-                };
+                let https_server = axum_server::tls_rustls::from_tcp_rustls(https_listener, tls_config);
                 if let Ok(mut live) = live_state().lock() { *live = Some(state.clone()); }
                 let _ = ready_tx.send(Ok(()));
                 set_status("RUNNING");
