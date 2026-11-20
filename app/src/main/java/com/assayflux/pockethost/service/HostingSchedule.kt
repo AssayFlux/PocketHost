@@ -107,16 +107,25 @@ object HostingSchedule {
     }
 
     internal fun handleAlarm(context: Context, action: String?) {
-        when (action) {
-            ACTION_START -> {
-                OperationalLog.record(context, "INFO", "HOSTING_SCHEDULE_ON", "Daily schedule switched local hosting ON.")
-                startHosting(context)
-            }
-            ACTION_STOP -> {
-                OperationalLog.record(context, "INFO", "HOSTING_SCHEDULE_OFF", "Daily schedule switched local hosting OFF.")
-                stopHosting(context)
-            }
+        if (action != ACTION_START && action != ACTION_STOP) return
+        val config = settings(context)
+        if (!config.enabled) return
+
+        val start = parse(config.start) ?: return
+        val stop = parse(config.stop) ?: return
+        val now = LocalTime.now()
+        val shouldRun = if (start < stop) now >= start && now < stop else now >= start || now < stop
+        val requestedRunState = action == ACTION_START
+        if (requestedRunState != shouldRun) {
+            OperationalLog.record(context, "WARN", "HOSTING_SCHEDULE_ALARM_DELAYED",
+                "Android delivered a hosting boundary alarm outside its intended window; the current schedule window was applied instead.")
+        } else {
+            OperationalLog.record(context, "INFO",
+                if (shouldRun) "HOSTING_SCHEDULE_ON" else "HOSTING_SCHEDULE_OFF",
+                if (shouldRun) "Daily schedule switched local hosting ON." else "Daily schedule switched local hosting OFF.")
         }
+        // Reconcile against wall-clock state so a delayed idle alarm can never apply a stale ON/OFF command.
+        applyCurrentWindow(context, config)
         scheduleNext(context)
     }
 
