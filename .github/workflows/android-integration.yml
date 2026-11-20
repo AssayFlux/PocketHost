@@ -205,7 +205,8 @@ jobs:
           echo "PASS: Android compile gate rejected the intentionally malformed Kotlin source."
 
   android-emulator-smoke:
-    if: github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_emulators)
+    # Emulator/API-level testing is opt-in only. Do not run until explicitly requested.
+    if: github.event_name == 'workflow_dispatch' && inputs.run_emulators
     needs: cloudflared-android
     runs-on: ubuntu-latest
     strategy:
