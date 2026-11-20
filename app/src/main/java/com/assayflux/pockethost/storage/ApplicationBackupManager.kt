@@ -775,6 +775,7 @@ object ApplicationBackupManager {
                     throw IOException("A project file escapes its app-private directory.")
                 }
                 val childRelative = if (relative.isEmpty()) child.name else "$relative/${child.name}"
+                SensitivePathPolicy.requireSafePath(childRelative)
                 val maximumRelativeDepth = if (prefix.startsWith("custom-static/")) MAX_DEPTH - 1 else MAX_DEPTH
                 if (childRelative.split('/').size > maximumRelativeDepth) {
                     throw IOException("Project folder nesting exceeds the backup limit.")

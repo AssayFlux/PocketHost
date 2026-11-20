@@ -184,6 +184,10 @@ fn is_sensitive_request_path(relative: &Path) -> bool {
         let extension = name.rsplit_once('.').map(|(_, ext)| ext).unwrap_or("");
         blocked_directories.contains(&name) ||
             blocked_names.contains(&name) ||
+            name.starts_with(".pockethost-") ||
+            name.ends_with(".pockethost-tmp") ||
+            name.ends_with(".pockethost-bak") ||
+            name.ends_with(".upload") ||
             name == ".env" || name.starts_with(".env.") ||
             matches!(extension, "pem" | "key" | "p12" | "pfx" | "jks" | "keystore" | "mobileprovision") ||
             ((name.starts_with("service-account-") || name.starts_with("serviceaccount-") || name.starts_with("firebase-adminsdk")) && extension == "json") ||
@@ -1158,7 +1162,7 @@ mod tests {
         for path in [
             ".aws/credentials", r".aws\credentials", ".npmrc", ".git-credentials", ".docker/config.json",
             ".kube/config", "secrets/service-account-prod.json", "tls/server.key",
-            ".env.production",
+            ".env.production", ".index.html.pockethost-tmp", ".index.html.pockethost-bak", ".pending.upload",
             ".index.html.pockethost-tmp",
             ".index.html.pockethost-bak",
             ".pending.upload",

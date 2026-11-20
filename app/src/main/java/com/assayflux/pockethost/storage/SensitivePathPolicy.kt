@@ -39,6 +39,10 @@ object SensitivePathPolicy {
             val extension = name.substringAfterLast('.', "")
             name in blockedDirectories ||
                 name in blockedNames ||
+                name.startsWith(".pockethost-") ||
+                name.endsWith(".pockethost-tmp") ||
+                name.endsWith(".pockethost-bak") ||
+                name.endsWith(".upload") ||
                 name == ".env" || name.startsWith(".env.") ||
                 extension in blockedExtensions ||
                 (name.startsWith("service-account-") && extension == "json") ||
