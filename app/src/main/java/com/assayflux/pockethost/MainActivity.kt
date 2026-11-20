@@ -1,7 +1,9 @@
 package com.assayflux.pockethost
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
@@ -195,6 +197,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun Context.findActivity(): Activity? {
+    var current: Context = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return current as? Activity
+}
+
 @Composable
 private fun PocketHostDashboard(onSignOut: () -> Unit) {
     val context = LocalContext.current
@@ -223,7 +234,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         else -> isSystemInDarkTheme()
     }
     SideEffect {
-        (context as? MainActivity)?.let { activity ->
+        context.findActivity()?.let { activity ->
             val insetsController = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
             insetsController.isAppearanceLightStatusBars = !darkTheme
             insetsController.isAppearanceLightNavigationBars = !darkTheme
