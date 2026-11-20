@@ -147,6 +147,28 @@ class WorkbenchWorkspaceManagerTest {
     }
 
     @Test
+    fun folderDeletionRemovesOnlyTheDraftTreeAndLeavesLiveFilesUntouched() {
+        val id = projectId()
+        val live = File(context.cacheDir, "$id-live")
+        val storage = File(context.filesDir, "workbench/$id")
+        try {
+            assertTrue(live.mkdirs())
+            File(live, "index.html").writeText("<h1>live</h1>")
+            val workspace = WorkbenchWorkspaceManager.open(context, id, live)
+            WorkbenchWorkspaceManager.createFolder(context, id, "assets")
+            WorkbenchWorkspaceManager.createFolder(context, id, "assets/images")
+            WorkbenchWorkspaceManager.createText(context, id, "assets/images/readme.txt", "draft")
+            WorkbenchWorkspaceManager.deleteEntry(context, id, "assets")
+            assertFalse(File(workspace, "assets").exists())
+            assertTrue(File(live, "index.html").readText().contains("live"))
+            assertTrue(WorkbenchWorkspaceManager.changes(context, id, live).isEmpty())
+        } finally {
+            live.deleteRecursively()
+            storage.deleteRecursively()
+        }
+    }
+
+    @Test
     fun projectIdsCannotEscapeWorkbenchStorage() {
         val error = runCatching {
             WorkbenchWorkspaceManager.open(context, "../outside", context.filesDir)
