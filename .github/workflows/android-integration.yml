@@ -28,6 +28,7 @@ on:
       - "scripts/validate-android-role-policy.py"
       - "runtime-worker/**"
       - "rust-engine/**"
+      - "relay-node/**"
       - "gradle/**"
       - "gradlew"
       - "build.gradle.kts"
