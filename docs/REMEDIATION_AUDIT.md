@@ -121,3 +121,32 @@ The following issues were identified in the subsequent code/UI/build review. The
 3. Complete v0.1.1 Workbench and optional runtime corrections: PH-023–PH-026 and PH-028.
 4. Complete v0.1.2 fleet/control-plane and Linux-agent hardening: PH-020–PH-022, PH-027 and PH-029.
 5. After v0.1.0 gates all pass and the owner approves the release, lock the exact commit/artifacts under the policy in [RELEASE_BASELINE_POLICY.md](RELEASE_BASELINE_POLICY.md). No later feature or ordinary fix is committed to that baseline.
+
+
+## 5. Current-Alpha re-audit addendum — 2026-11-20 (supersedes stale CI snapshot above)
+
+**Exact audited source:** `Alpha` at `cb5a925b98cf66510b9d38af37fe1c5cca846b84`. Recursive Git tree: 290 blobs / 75 directories, not truncated. This addendum supersedes historical statements above that Android CI is configured or merely pending on the current Alpha source.
+
+### Fresh findings
+
+| ID | Severity | Finding | Current evidence / disposition |
+|---|---|---|---|
+| PH-011 | Critical release-process gap | The current Alpha tree contains only `.github/workflows/quality.yml`. The former `.github/workflows/android-integration.yml` and separate protocol workflow are absent. | Current quality run #44699649949 passed six non-Android jobs only. It does not compile the Android app, build Relay/Cloudflared Android ABIs, compile instrumentation tests or run API 26/33/35 emulators. Restore Android CI before G3 can close. |
+| PH-012 | High release-evidence gap | No release tag or published GitHub release is present in the checked listings. | No production APK/AAB, signing evidence, digest, provenance or SBOM is evidenced for current Alpha. G4/G9 remain open. |
+| PH-013 | Medium documentation drift | Multiple docs still describe old workflow runs/checkpoint SHAs as current, and README contains contradictory Relay implementation claims. | Update the gate ledger, deep audit, UI audit and README to pin the current source and distinguish source presence from verification. |
+| PH-014 | Medium repository footprint | Current tree contains 290 blobs / 75 directories. | Earlier inventory counts (259/260 blobs) are historical and must not be presented as current. The large SVG asset footprint remains a separate optimization candidate; do not delete assets without reference/ownership review. |
+
+### Current source and CI facts
+
+- Latest Alpha commit is merge commit `cb5a925b98cf66510b9d38af37fe1c5cca846b84`, merging PR #119 “Add the AssayFlux author signature to PocketHost About”.
+- PR #118 “PocketHost v0.1.0 UI architecture and responsive acceptance pass” is merged. UI source modules and dedicated-page instrumentation test definitions are in the tree.
+- The latest exact-Alpha workflow run [#44699649949](https://github.com/AssayFlux/PocketHost/actions/runs/44699649949) completed successfully. Its six green jobs are `rust`, `control-plane`, `python-runtime`, `console`, `node-runtime` and `gradle-wrapper`. It is not an Android build/test workflow.
+- The quality workflow runs Rust website-engine tests, Control Plane/Postgres tests, Caddy validation, trusted-proxy spoof tests, Compose profile validation, Python/Linux-agent tests, web-console build, Node smoke test and Gradle wrapper validation.
+- Android source contains a native Relay foreground service, JNI bridge, Rust gateway/ACME implementation, Keystore-encrypted config store and credential/revocation persistence. This is implementation evidence, not proof of a live public Relay deployment or physical-device acceptance.
+- The README's older statements that the Relay foreground service/TLS/identity/persistence are merely planned or absent conflict with the current source. The Relay docs and source comments should be reconciled carefully; do not infer operational acceptance from code presence.
+- The UI contains dedicated Home, Hosting, Sites, Workbench, Devices, Activity, Learn and Settings surfaces. Deployments, in-app Cloudflare Access policy management and automated DNS record/continuous TXT management are explicitly marked coming soon/partial in the UI audit.
+- About/Author branding is merged: AssayFlux Pocket Host, v0.1.0, AssayFlux attribution, signature component and Md Safarujjaman.
+
+### Updated disposition
+
+The prior source-level remediation findings PH-001 through PH-010 remain historical findings with their recorded code changes, but their old CI status rows must not be treated as current-source evidence. Current CI demonstrates broad non-Android quality checks only. Android compilation/instrumentation, APK integrity, physical acceptance, public ingress acceptance and release publication remain open. See the current [v0.1.0 gate ledger](V0.1.0_GATE_STATUS.md) for the gate-by-gate decision.
