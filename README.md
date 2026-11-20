@@ -308,7 +308,7 @@ python -m unittest discover -s tests -p 'test_protocol_contracts.py' -v
 
 ### CI and APK evidence
 
-The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs automated repository checks. The Android integration workflow has a compile-only path and a manually dispatched APK/emulator path. A compile-only job is not an APK build or device acceptance. Release claims require the exact workflow run, artifact digest and device test evidence.
+The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs automated repository checks. **Current Alpha CI limitation (2026-11-20):** the only workflow in the current tree is `quality.yml`. The former Android integration workflow is absent, so the latest green run does not compile Android/Kotlin, build native Android ABIs, run instrumentation/emulators or package an APK. Restore Android CI before claiming Android verification. No production release artifact or tag is currently recorded.
 
 ## DOCUMENTATION
 
@@ -346,3 +346,8 @@ The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows
 </p>
 
 Pocket Host is licensed under the [Apache License 2.0](LICENSE).
+
+
+## CURRENT RELEASE AUDIT — 2026-11-20
+
+The audited Alpha HEAD is `cb5a925b98cf66510b9d38af37fe1c5cca846b84` (290 tracked blobs, 75 directories). The latest exact-HEAD quality run [#44699649949](https://github.com/AssayFlux/PocketHost/actions/runs/44699649949) passed six non-Android jobs; it is not an Android release check. The Android workflow is absent from the current tree. No published GitHub release or release tag was found in the checked listings. Pocket Host remains pre-release until G0–G9 are evidenced and owner-approved. See [current gate ledger](docs/V0.1.0_GATE_STATUS.md), [remediation audit](docs/REMEDIATION_AUDIT.md) and [repository deep audit](docs/REPOSITORY_AUDIT.md).
