@@ -49,6 +49,7 @@ services:
     depends_on: [control-plane]
     environment:
       CONTROL_PLANE_DOMAIN: ${CONTROL_PLANE_DOMAIN:?Set CONTROL_PLANE_DOMAIN}
+      POCKETHOST_CLOUDFLARED_IP: ${POCKETHOST_CLOUDFLARED_IP:-172.31.240.11}
     ports:
       - "80:80"
       - "443:443"

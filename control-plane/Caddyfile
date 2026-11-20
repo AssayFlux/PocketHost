@@ -2,6 +2,13 @@
     on_demand_tls {
         ask http://control-plane:8080/v1/relay/tls-check
     }
+    servers {
+        # Only the exact colocated Cloudflared peer may supply client-IP metadata.
+        # Never trust every private/container address on the bridge network.
+        trusted_proxies static {$POCKETHOST_CLOUDFLARED_IP:172.31.240.11}/32
+        trusted_proxies_strict
+        client_ip_headers CF-Connecting-IP X-Forwarded-For
+    }
     servers :443 {
         strict_sni_host on
     }
