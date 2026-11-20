@@ -56,7 +56,9 @@ object SiteImporter {
                         parts.forEach(::validateName)
                         val isDirectory = entry.isDirectory || normalized.endsWith('/')
                         val archivePath = parts.joinToString("/")
-                        validateName(archivePath)
+                        if (SensitivePathPolicy.isSensitivePath(archivePath)) {
+                            throw IOException("ZIP contains a sensitive credential or private-key path.")
+                        }
                         var parent = ""
                         for (segment in parts.dropLast(1)) {
                             parent = if (parent.isEmpty()) segment else "$parent/$segment"
@@ -154,7 +156,7 @@ object SiteImporter {
             if (depth > MAX_DEPTH) throw IOException("Website folder nesting is too deep.")
             val children = directory.listFiles() ?: throw IOException("Could not inspect prepared website files.")
             for (child in children) {
-                validateName(root.toPath().relativize(child.toPath()).toString().replace(File.separatorChar, '/'))
+                validateName(child.name)
                 if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
                     throw IOException("Prepared website contains an unsupported symbolic link.")
                 }
@@ -367,7 +369,7 @@ object SiteImporter {
             counter.entries++
             if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many files and folders (limit: $MAX_ENTRIES).")
             val name = entry.name ?: throw IOException("A selected item has no usable filename.")
-            validateName(destination.toPath().relativize(stagingRoot.toPath()).toString().replace(File.separatorChar, '/') + "/" + name)
+            validateName(name)
             val target = File(destination, name)
             if (!target.canonicalFile.toPath().startsWith(stagingRoot.toPath())) throw IOException("An unsafe file path was detected.")
             when {
