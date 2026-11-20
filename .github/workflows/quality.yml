@@ -1,0 +1,113 @@
+name: PocketHost quality
+permissions:
+  contents: read
+
+concurrency:
+  group: pockethost-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [Alpha]
+  pull_request:
+    branches: [Alpha]
+  workflow_dispatch:
+
+jobs:
+  rust:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Test static hosting engine
+        run: cargo test --manifest-path rust-engine/Cargo.toml --locked
+      - name: Test native relay engine
+        run: cargo test --manifest-path relay-node/Cargo.toml --locked
+
+  control-plane:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pockethost
+          POSTGRES_PASSWORD: pockethost-ci
+          POSTGRES_DB: pockethost
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pockethost -d pockethost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://pockethost:pockethost-ci@localhost:5432/pockethost
+      POCKETHOST_CONTROL_ADMIN_TOKEN: ci-only-test-admin-token-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Check locked control-plane dependencies
+        run: cargo check --manifest-path control-plane/Cargo.toml --locked
+      - name: Test control plane and database migrations
+        run: cargo test --manifest-path control-plane/Cargo.toml --locked
+
+  python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: agents/linux/pyproject.toml
+      - name: Install Python validation dependencies
+        run: python -m pip install "jsonschema==4.23.0" -e agents/linux
+      - name: Compile Python sources
+        run: python -m compileall -q agents/linux/src runtime-worker/src/main/python examples/python-wsgi tests/python
+      - name: Validate protocol schemas and policy
+        run: python scripts/validate-protocol.py
+      - name: Validate Android role policy parity
+        run: python scripts/validate-android-role-policy.py
+      - name: Run Python tests
+        env:
+          PYTHONPATH: agents/linux/src
+        run: python -m unittest discover -s tests/python -v
+
+  web-console:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web-console/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  node-runtime:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Test Node runtime metrics preload
+        run: node tests/node/metrics-smoke.cjs
+
+  scripts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell script syntax
+        run: |
+          bash -n scripts/build-cloudflared-android.sh
+          bash -n scripts/check-public-hostname.sh
+          bash -n tests/proxy/test_trusted_proxy.sh
+      - name: Validate GitHub Actions wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      - name: Validate trusted proxy behavior
+        run: bash tests/proxy/test_trusted_proxy.sh
