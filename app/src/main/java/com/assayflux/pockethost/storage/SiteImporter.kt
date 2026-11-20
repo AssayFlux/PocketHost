@@ -40,11 +40,12 @@ object SiteImporter {
             val archivePaths = HashMap<String, Boolean>()
             val portableNames = HashMap<String, String>()
             val explicitEntries = HashSet<String>()
+            var archiveEntryCount = 0
             ZipInputStream(CappedInputStream(input, MAX_IMPORT_BYTES).buffered()).use { zip ->
                     while (true) {
                         val entry = zip.nextEntry ?: break
-                        counter.entries++
-                        if (counter.entries > MAX_ENTRIES) throw IOException("ZIP contains too many entries (limit: $MAX_ENTRIES).")
+                        archiveEntryCount++
+                        if (archiveEntryCount > MAX_ENTRIES) throw IOException("ZIP contains too many archive entries (limit: $MAX_ENTRIES).")
                         val normalized = entry.name.replace('\\', '/')
                         val pathParts = normalized.split('/')
                         if (normalized.startsWith('/') || normalized.contains('\u0000') ||
@@ -64,15 +65,23 @@ object SiteImporter {
                             parent = if (parent.isEmpty()) segment else "$parent/$segment"
                             val knownParent = archivePaths[parent]
                             if (knownParent == false) throw IOException("ZIP archive uses a file as a directory.")
+                            if (knownParent == null) {
+                                archivePaths[parent] = true
+                                counter.entries++
+                                if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many extracted files and folders.")
+                            }
                             val portableParent = parent.lowercase(java.util.Locale.ROOT)
                             val previousPortableParent = portableNames.putIfAbsent(portableParent, parent)
                             if (previousPortableParent != null && previousPortableParent != parent) {
                                 throw IOException("ZIP contains paths that differ only by letter case.")
                             }
-                            archivePaths.putIfAbsent(parent, true)
                         }
                         if (!explicitEntries.add(archivePath)) throw IOException("ZIP contains duplicate paths.")
                         val previousType = archivePaths.putIfAbsent(archivePath, isDirectory)
+                        if (previousType == null) {
+                            counter.entries++
+                            if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many extracted files and folders.")
+                        }
                         if (previousType != null && !(previousType && isDirectory)) {
                             throw IOException("ZIP contains conflicting file and directory paths.")
                         }
