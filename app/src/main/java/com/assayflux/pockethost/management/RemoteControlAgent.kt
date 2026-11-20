@@ -58,10 +58,13 @@ object RemoteControlAgent {
         require(uri.scheme == "https" || (uri.scheme == "http" && uri.host == "127.0.0.1")) {
             "Use HTTPS for remote control. HTTP is allowed only for localhost development."
         }
-        require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null) {
-            "Invalid control-plane URL."
+        require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null &&
+            (uri.rawPath.isNullOrEmpty() || uri.rawPath == "/") && endpoint.length <= 2_048) {
+            "Enter a control-plane origin without credentials, path, query or fragment."
         }
-        require(token.length >= 32) { "Device token must contain at least 32 characters." }
+        require(token.length in 32..4_096 && !token.any(Char::isWhitespace)) {
+            "Device token must contain 32–4,096 non-whitespace characters."
+        }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val encrypted = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
