@@ -173,7 +173,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                             } else {
                                 scope.launch {
                                     runCatching { withContext(Dispatchers.IO) { WorkbenchWorkspaceManager.readText(context, selectedSite.id, entry.path) } }
-                                        .onSuccess { selectedFile = entry.path; editorText = it; editorDirty = false }
+                                        .onSuccess { selectedFile = entry.path; editorText = it; editorDirty = false; selectedPage = "Editor" }
                                         .onFailure { status = it.message ?: "Could not open file." }
                                 }
                             }
