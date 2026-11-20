@@ -870,6 +870,9 @@ object ApplicationBackupManager {
         val rootFiles = mutableMapOf("site" to 0, "python" to 0, "node" to 0, "custom-static" to 0)
         val rootEntries = mutableMapOf("site" to 0, "python" to 0, "node" to 0, "custom-static" to 0)
         val allowedRoots = setOf("site", "python", "node", "custom-static", "settings.json", "routes.json")
+        val archivePaths = HashMap<String, Boolean>()
+        val portableNames = HashMap<String, String>()
+        val explicitEntries = HashSet<String>()
         ZipInputStream(FileInputStream(archive).buffered()).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
@@ -896,7 +899,36 @@ object ApplicationBackupManager {
                     }
                 }
                 parts.drop(1).forEach(::validateName)
+                if (parts[0] == "site" || parts[0] == "custom-static") {
+                    val relativeSitePath = parts.drop(1).joinToString("/")
+                    if (relativeSitePath.isNotEmpty() && SensitivePathPolicy.isSensitivePath(relativeSitePath)) {
+                        throw IOException("The backup contains a sensitive website credential path.")
+                    }
+                }
                 if (parts.size > MAX_DEPTH + 1) throw IOException("The backup contains excessive folder nesting.")
+                val archivePath = parts.joinToString("/")
+                val isDirectory = entry.isDirectory || normalized.endsWith("/")
+                var parent = ""
+                for (segment in parts.dropLast(1)) {
+                    parent = if (parent.isEmpty()) segment else "$parent/$segment"
+                    if (archivePaths[parent] == false) throw IOException("The backup uses a file as a directory.")
+                    val portableParent = parent.lowercase(java.util.Locale.ROOT)
+                    val previousParent = portableNames.putIfAbsent(portableParent, parent)
+                    if (previousParent != null && previousParent != parent) {
+                        throw IOException("The backup contains paths that differ only by letter case.")
+                    }
+                    archivePaths.putIfAbsent(parent, true)
+                }
+                if (!explicitEntries.add(archivePath)) throw IOException("The backup contains duplicate archive paths.")
+                val previousType = archivePaths.putIfAbsent(archivePath, isDirectory)
+                if (previousType != null && !(previousType && isDirectory)) {
+                    throw IOException("The backup contains conflicting file and directory paths.")
+                }
+                val portablePath = archivePath.lowercase(java.util.Locale.ROOT)
+                val previousPortablePath = portableNames.putIfAbsent(portablePath, archivePath)
+                if (previousPortablePath != null && previousPortablePath != archivePath) {
+                    throw IOException("The backup contains paths that differ only by letter case.")
+                }
                 val target = File(stage, parts.joinToString(File.separator)).canonicalFile
                 if (!target.toPath().startsWith(stage.canonicalFile.toPath())) {
                     throw IOException("The backup path escapes its restore staging directory.")
