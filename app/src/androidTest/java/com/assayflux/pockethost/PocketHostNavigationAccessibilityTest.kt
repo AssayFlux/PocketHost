@@ -88,6 +88,7 @@ class PocketHostNavigationAccessibilityTest {
             assertTrue("Hosting schedule page is missing",
                 device.wait(Until.hasObject(By.text("AUTOMATIC HOSTING HOURS")), 10_000))
             device.wait(Until.findObject(By.text("Traffic & capacity")), 10_000)!!.click()
+            UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("Capacity")
             assertTrue("Traffic and capacity page is missing",
                 device.wait(Until.hasObject(By.text("Capacity")), 10_000))
             device.wait(Until.findObject(By.text("Overview")), 10_000)!!.click()
@@ -97,9 +98,11 @@ class PocketHostNavigationAccessibilityTest {
             assertTrue("Workbench Editor page is missing",
                 device.wait(Until.hasObject(By.text("No file selected")), 10_000))
             device.wait(Until.findObject(By.text("Changes")), 10_000)!!.click()
+            UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("CHANGES")
             assertTrue("Workbench Changes page is missing",
                 device.wait(Until.hasObject(By.text("CHANGES")), 10_000))
             device.wait(Until.findObject(By.text("History")), 10_000)!!.click()
+            UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("COMMIT HISTORY")
             assertTrue("Workbench History page is missing",
                 device.wait(Until.hasObject(By.text("COMMIT HISTORY")), 10_000))
             device.wait(Until.findObject(By.text("Explorer")), 10_000)!!.click()
@@ -128,6 +131,7 @@ class PocketHostNavigationAccessibilityTest {
                     val backupTab = device.wait(Until.findObject(By.text("Backup")), 10_000)
                     assertTrue("Dedicated backup page is missing", backupTab != null)
                     backupTab!!.click()
+                    UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("Export encrypted full app backup")
                     assertTrue("Encrypted backup export action is missing",
                         device.wait(Until.hasObject(By.text("Export encrypted full app backup")), 10_000))
                     val releasesTab = device.wait(Until.findObject(By.text("Releases")), 10_000)
