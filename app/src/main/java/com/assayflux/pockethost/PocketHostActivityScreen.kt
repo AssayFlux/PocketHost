@@ -20,6 +20,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.assayflux.pockethost.diagnostics.OperationalLog
@@ -76,11 +77,13 @@ internal fun PocketHostActivityScreen(
                         } else {
                             filteredEvents.forEach { event ->
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else palette.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                        Text(event.event.replace('_', ' '), color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                        Spacer(Modifier.weight(1f))
-                                        Text(event.timestamp.take(19).replace('T', ' '), color = palette.onSurfaceVariant, fontSize = 14.sp)
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                            Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else palette.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                            Text(event.event.replace('_', ' '), color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                                modifier = androidx.compose.ui.Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        Text(event.timestamp.take(19).replace('T', ' '), color = palette.onSurfaceVariant, fontSize = 11.sp)
                                     }
                                     if (event.message.isNotBlank()) Text(event.message, color = palette.onSurfaceVariant, fontSize = 14.sp)
                                 }
