@@ -136,6 +136,7 @@ private val pocketHostNavItems = listOf(
     PocketHostNavItem("Hosting", "Start, stop and monitor the web server", Icons.Outlined.Language, "Dashboard"),
     PocketHostNavItem("Websites & files", "Import, edit, publish and recover sites", Icons.Outlined.FolderOpen, "Sites"),
     PocketHostNavItem("Workbench", "Edit site files and preview changes", Icons.Outlined.Code, "Workbench"),
+    PocketHostNavItem("Deployments", "Production publish and rollback", Icons.Outlined.Code, "Deployments"),
     PocketHostNavItem("Devices", "Trusted devices and fleet administration", Icons.Outlined.Memory, "Devices"),
     PocketHostNavItem("Network & tunnels", "LAN access, Relay and Cloudflare", Icons.Outlined.NetworkCheck, "Settings:Network"),
     PocketHostNavItem("Runtimes", "Optional Python and Node.js services", Icons.Outlined.Code, "Settings:Runtimes"),
