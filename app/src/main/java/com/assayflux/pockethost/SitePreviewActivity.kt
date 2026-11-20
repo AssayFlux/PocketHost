@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
@@ -31,7 +32,7 @@ class SitePreviewActivity : ComponentActivity() {
                     Text("Site preview", modifier = Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge)
                     AndroidView(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         factory = { context ->
                             WebView(context).apply {
                                 settings.javaScriptEnabled = true
