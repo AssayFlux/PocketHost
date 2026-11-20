@@ -153,22 +153,28 @@ internal fun PocketHostSitesScreen(
                                     if (!entry.isDirectory) {
                                         Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(entry.lastModified)),
                                             color = palette.onSurfaceVariant)
-                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            OutlinedButton(onClick = {
-                                                actions.onRenamingSiteFilePathChange(entry.relativePath)
-                                                actions.onRenamedSiteFilePathChange(entry.relativePath)
-                                            }, enabled = !state.hosting) { Text("Rename") }
-                                            OutlinedButton(onClick = {
-                                                runCatching { SiteFileManager.readText(context, entry.relativePath) }
-                                                    .onSuccess { actions.onEditingSiteFilePathChange(entry.relativePath); actions.onEditingSiteFileContentChange(it) }
-                                                    .onFailure { actions.onStatusChange(it.message ?: "This file cannot be edited as text.") }
-                                            }, enabled = !state.hosting && entry.isEditable) { Text("Edit") }
-                                            if (entry.relativePath.endsWith(".html", true) || entry.relativePath.endsWith(".htm", true)) {
-                                                OutlinedButton(onClick = { actions.onPendingIndexSiteFileChange(entry.relativePath) },
-                                                    enabled = !state.hosting) { Text("Set as index") }
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                OutlinedButton(onClick = {
+                                                    actions.onRenamingSiteFilePathChange(entry.relativePath)
+                                                    actions.onRenamedSiteFilePathChange(entry.relativePath)
+                                                }, enabled = !state.hosting, modifier = Modifier.weight(1f)) { Text("Rename") }
+                                                OutlinedButton(onClick = {
+                                                    runCatching { SiteFileManager.readText(context, entry.relativePath) }
+                                                        .onSuccess { actions.onEditingSiteFilePathChange(entry.relativePath); actions.onEditingSiteFileContentChange(it) }
+                                                        .onFailure { actions.onStatusChange(it.message ?: "This file cannot be edited as text.") }
+                                                }, enabled = !state.hosting && entry.isEditable, modifier = Modifier.weight(1f)) { Text("Edit") }
                                             }
-                                            OutlinedButton(onClick = { actions.onPendingDeleteSiteFileChange(entry.relativePath) },
-                                                enabled = !state.hosting) { Text("Delete") }
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                if (entry.relativePath.endsWith(".html", true) || entry.relativePath.endsWith(".htm", true)) {
+                                                    OutlinedButton(onClick = { actions.onPendingIndexSiteFileChange(entry.relativePath) },
+                                                        enabled = !state.hosting, modifier = Modifier.weight(1f)) { Text("Set as index", maxLines = 1) }
+                                                } else {
+                                                    Spacer(Modifier.weight(1f))
+                                                }
+                                                OutlinedButton(onClick = { actions.onPendingDeleteSiteFileChange(entry.relativePath) },
+                                                    enabled = !state.hosting, modifier = Modifier.weight(1f)) { Text("Delete") }
+                                            }
                                         }
                                     } else {
                                         OutlinedButton(onClick = {
