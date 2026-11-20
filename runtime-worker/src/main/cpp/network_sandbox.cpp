@@ -396,3 +396,28 @@ Java_com_assayflux_pockethost_worker_NetworkSandbox_probeConnectErrno(
     }
     return errno == 0 ? EIO : errno;
 }
+
+
+/**
+ * Attempt bind() with a valid abstract AF_UNIX address while seccomp is active.
+ * Use the syscall directly so API-level differences in android.system.Os do not
+ * weaken or disable the denial check on Android 8.x (API 26–28).
+ */
+extern "C" JNIEXPORT jint JNICALL
+Java_com_assayflux_pockethost_worker_NetworkSandbox_probeBindErrno(
+    JNIEnv*, jclass, jint listener_fd) {
+#ifdef __NR_bind
+    struct sockaddr_un address {};
+    address.sun_family = AF_UNIX;
+    const char name[] = "pockethost-seccomp-bind-denied";
+    address.sun_path[0] = '\0';
+    memcpy(address.sun_path + 1, name, sizeof(name) - 1);
+    const socklen_t address_length = static_cast<socklen_t>(
+        offsetof(struct sockaddr_un, sun_path) + 1 + sizeof(name) - 1);
+    errno = 0;
+    if (syscall(__NR_bind, listener_fd, &address, address_length) == 0) return 0;
+    return errno == 0 ? EIO : errno;
+#else
+    return ENOSYS;
+#endif
+}

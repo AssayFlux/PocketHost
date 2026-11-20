@@ -8,7 +8,6 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.system.Os
 import android.system.OsConstants
-import java.net.InetSocketAddress
 import java.io.ByteArrayOutputStream
 
 /**
@@ -83,11 +82,8 @@ open class RuntimeCellProbeService : Service() {
                 // does not accept LocalSocketAddress. The native probe returns errno
                 // directly so only seccomp's EPERM counts as a successful denial.
                 val connectDenied = NetworkSandbox.probeConnectErrno(listener.fd) == OsConstants.EPERM
-                val bindDenied = runCatching {
-                    Os.bind(listener.fileDescriptor, InetSocketAddress("127.0.0.1", 0))
-                }.exceptionOrNull()?.let {
-                    it is android.system.ErrnoException && it.errno == OsConstants.EPERM
-                } ?: false
+                // Use a native syscall probe so bind-denial verification also works on API 26–28.
+                val bindDenied = NetworkSandbox.probeBindErrno(listener.fd) == OsConstants.EPERM
                 val deniedNetworkIoMask = NetworkSandbox.probeDeniedNetworkIo(listener.fd)
 
                 val resourceLimits = NetworkSandbox.getResourceLimits()

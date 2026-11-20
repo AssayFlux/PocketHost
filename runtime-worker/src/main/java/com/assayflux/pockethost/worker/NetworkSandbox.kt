@@ -23,6 +23,9 @@ object NetworkSandbox {
     /** Returns errno from a valid AF_UNIX connect attempt; seccomp must return EPERM. */
     @JvmStatic external fun probeConnectErrno(listenerFd: Int): Int
 
+    /** Returns errno from a valid AF_UNIX bind attempt; seccomp must return EPERM. */
+    @JvmStatic external fun probeBindErrno(listenerFd: Int): Int
+
     /** Bitmask proving send/receive/shutdown socket syscalls are denied with EPERM. */
     @JvmStatic external fun probeDeniedNetworkIo(listenerFd: Int): Int
 }
