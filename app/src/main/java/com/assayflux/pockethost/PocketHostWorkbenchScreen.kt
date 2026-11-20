@@ -240,6 +240,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
             }
         }
 
+        }
         if (selectedPage == "Changes") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -277,12 +278,6 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
         }
         }
 
-        Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("PREVIEW & DEPLOYMENTS", color = palette.onSurface, fontWeight = FontWeight.Bold)
-                Text("Isolated preview, TypeScript builds, owner-approved atomic publishing and rollback are the next Workbench implementation gates. The live website is not modified by this screen.", color = palette.onSurfaceVariant, fontSize = 12.sp)
-            }
-        }
     }
 
     if (showDiscardChanges) AlertDialog(
