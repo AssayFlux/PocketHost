@@ -1010,7 +1010,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             onBackupPassphraseChange = { backupPassphrase = it },
                             onUploadIndividualFile = { singleFilePicker.launch(arrayOf("*/*")) },
                             onImportFolder = { folderPicker.launch(null) },
-                            onImportZip = { zipPicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+                            // Document providers report ZIP files with inconsistent MIME types. Offer all files
+                            // and let the bounded, security-checked ZIP reader validate the selected content.
+                            onImportZip = { zipPicker.launch(arrayOf("*/*")) },
                             onExportBackup = { backupExportPicker.launch("pockethost-app.afbackup") },
                             onRestoreBackup = { backupRestorePicker.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
                             onPreviewSite = { context.startActivity(Intent(context, SitePreviewActivity::class.java)) },

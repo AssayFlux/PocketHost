@@ -113,6 +113,9 @@ object SiteImporter {
                         }
                         zip.closeEntry()
                     }
+                    if (archiveEntryCount == 0) {
+                        throw IOException("The selected file is not a readable ZIP archive, or the archive is empty.")
+                    }
                 }
             val siteRoot = resolveZipRoot(stagingBase)
             validateExtractedWebsite(siteRoot)
@@ -154,18 +157,50 @@ object SiteImporter {
                 }
             }
         }
-        if (files == 0 || !File(root, "index.html").isFile) {
-            throw IOException("ZIP must contain index.html at its root (or inside one top-level folder).")
+        if (files == 0) {
+            throw IOException("The ZIP archive does not contain any website files.")
+        }
+        if (!File(root, "index.html").isFile) {
+            throw IOException("No website entry page was found in the selected archive folder.")
         }
     }
 
+    /**
+     * Finds a deployable static-site root without requiring the archive to contain
+     * exactly one top-level directory. This accepts common exports such as
+     * project/dist/index.html and project/build/index.html while refusing to guess
+     * when two equally shallow entry pages make the intended site ambiguous.
+     */
     private fun resolveZipRoot(staging: File): File {
         if (File(staging, "index.html").isFile) return staging
-        val children = staging.listFiles()?.filter { it.name != "__MACOSX" } ?: emptyList()
-        if (children.size == 1 && children[0].isDirectory && File(children[0], "index.html").isFile) {
-            return children[0]
+
+        val candidates = ArrayList<File>()
+        java.nio.file.Files.walk(staging.toPath(), MAX_DEPTH.toLong() + 2).use { paths ->
+            paths.forEach { path ->
+                if (path == staging.toPath()) return@forEach
+                val relative = staging.toPath().relativize(path)
+                val segments = relative.map { it.toString() }
+                if (segments.any { it == "__MACOSX" || it.startsWith("._") }) return@forEach
+                if (segments.size > MAX_DEPTH + 1) return@forEach
+                if (java.nio.file.Files.isSymbolicLink(path)) {
+                    throw IOException("ZIP contains an unsupported symbolic link.")
+                }
+                if (java.nio.file.Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS) &&
+                    path.fileName.toString().equals("index.html", ignoreCase = true)) {
+                    candidates += path.parent.toFile()
+                }
+            }
         }
-        return staging
+        if (candidates.isEmpty()) {
+            throw IOException("No index.html was found. Export the built website (for example, its dist or build folder), not only the source project.")
+        }
+        val shallowest = candidates.minOf { it.toPath().nameCount - staging.toPath().nameCount }
+        val best = candidates.filter { it.toPath().nameCount - staging.toPath().nameCount == shallowest }
+            .distinctBy { it.canonicalPath }
+        if (best.size != 1) {
+            throw IOException("The ZIP contains multiple possible website entry folders. Re-export only the intended built website folder.")
+        }
+        return best.single()
     }
 
     private fun deploy(context: Context, copy: (File, Counter) -> Unit): ImportReport {

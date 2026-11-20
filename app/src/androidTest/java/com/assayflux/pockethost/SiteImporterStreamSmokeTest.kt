@@ -116,6 +116,51 @@ class SiteImporterStreamSmokeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test
+    fun importsBuiltWebsiteWhenArchiveHasProjectMetadataAndDistFolder() {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(base.cacheDir, "site-dist-root-${System.nanoTime()}")
+        assertTrue(root.mkdirs())
+        val context = object : ContextWrapper(base) {
+            override fun getFilesDir(): File = root
+            override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
+        }
+        try {
+            val archive = zipOf(
+                "project/README.md" to "source project",
+                "project/dist/index.html" to "<html>built site</html>",
+                "project/dist/assets/app.js" to "console.log('ok')"
+            )
+            val report = SiteImporter.importZipStream(context, ByteArrayInputStream(archive))
+            assertEquals(2, report.fileCount)
+            assertTrue(File(root, "site/index.html").isFile)
+            assertTrue(File(root, "site/assets/app.js").isFile)
+            assertTrue(!File(root, "site/README.md").exists())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun rejectsAmbiguousBuiltWebsiteRootsInsteadOfChoosingOne() {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(base.cacheDir, "site-ambiguous-root-${System.nanoTime()}")
+        assertTrue(root.mkdirs())
+        val context = object : ContextWrapper(base) {
+            override fun getFilesDir(): File = root
+            override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
+        }
+        try {
+            val archive = zipOf(
+                "project/dist/index.html" to "dist",
+                "project/build/index.html" to "build"
+            )
+            val failure = runCatching {
+                SiteImporter.importZipStream(context, ByteArrayInputStream(archive))
+            }.exceptionOrNull()
+            assertTrue(failure?.message?.contains("multiple possible website entry folders") == true)
+            assertTrue(!File(root, "site").exists())
+        } finally { root.deleteRecursively() }
+    }
+
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
         val archive = ByteArrayOutputStream()
         ZipOutputStream(archive).use { zip ->
