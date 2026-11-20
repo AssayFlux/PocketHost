@@ -2,7 +2,7 @@
 
 **Target:** Pocket Host v0.1.0 Alpha  
 **Working branch:** `Alpha` only  
-**Plan status:** Step 1 passed; Step 2 automated implementation/CI gate passed; Step 3 in progress  
+**Plan status:** Steps 1–2 automated gates passed; Step 3 implementation in progress; Step 4 runtime/management hardening in progress  
 **Rule:** finish and verify each step before treating the next as complete. Preserve the existing codebase; refactor only where evidence shows it is necessary.
 
 ## Delivery boundary
@@ -83,6 +83,8 @@ Exit gate:
 ## Step 4 — Integrate essential runtimes and minimum remote operations without widening the release
 
 **Purpose:** make the existing supporting components coherent while keeping the Android host independently useful.
+
+**Implementation update (2026-11-20):** Python and Node scope has been defined from the actual embedded runtime implementations. Runtime project transfer now applies matching 64 MiB per-file, 256 MiB aggregate, 10,000-entry, 32-level and 1,024-character path limits on the host transfer side; the companion rejects deep paths and oversized individual files. Case-colliding paths are rejected before transfer. Remote command handling now validates command UUIDs and fails closed if idempotency state is corrupt or cannot be durably committed. The Android instrumentation regression source covers transfer path and file-size boundaries. Automated and device acceptance are still pending.
 
 Work:
 - Define which Python/Node use cases are actually supported in this Alpha and verify install, start, stop, logs, resource ceilings and recovery.
