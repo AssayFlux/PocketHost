@@ -42,11 +42,6 @@ on:
         required: true
         type: boolean
         default: false
-      build_apks:
-        description: Build debug APK artifacts only after the v0.1.0 release owner authorizes packaging
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: read
