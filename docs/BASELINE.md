@@ -2,7 +2,7 @@
 
 **Baseline date:** 2026-11-20  
 **Active branch:** `Alpha`  
-**Current head at this checkpoint:** `3b127e785224165c9f2415df9ce013e60b2160a7`  
+**Current head at this checkpoint:** `8c95a42afe12ebceffeaede2807e702a02b71ce8`  
 **Original planning baseline:** `8879ead946fe985d056970d1614068d1baea562b`  
 **Original pre-reset snapshot:** `7d829e09162882dbbd467cc6e6a4a9cdfadcf028`  
 **Archive branch:** `archive/pre-replan-2026-11-20`
@@ -118,3 +118,20 @@ Never promote a feature to verified from source inspection or UI presence alone.
 ## 8. Credential-rotation persistence correction (2026-11-20)
 
 A focused source review found that configured relay-host credential verifiers were only inserted when absent. Updating the owner-managed encrypted relay configuration therefore did not replace an existing SQLite verifier, so a rotated token could fail after relay restart. Commit [f2f6ec5](https://github.com/AssayFlux/PocketHost/commit/f2f6ec518062b0f6b5ed169cd046b8f1c9b50193) changes configured-host loading to an SQLite upsert and adds a regression test that rotates the configured token, restarts the relay state and asserts the old token is rejected while the new token authenticates. Paired hosts not represented in the explicit config remain database-managed. The fix is committed; its CI run is pending/in progress and is not yet marked verified.
+
+
+## 8. Step 1 implementation checkpoint — 2026-11-20
+
+**Implementation commit:** `8c95a42afe12ebceffeaede2807e702a02b71ce8`
+
+- ZIP document selection now offers all MIME types because Android document providers inconsistently label ZIP archives. The importer remains responsible for content validation; selecting an arbitrary file does not bypass archive checks.
+- ZIP website-root discovery now supports a built website nested under project metadata folders, including common `dist/` and `build/` layouts. A root-level `index.html` remains preferred. Equally shallow competing entry folders are rejected with an actionable ambiguity message instead of guessing.
+- Empty or unreadable ZIP archives receive a specific validation error.
+- ZIP import summaries report the files and bytes in the activated website root, not unrelated archive metadata files.
+- The Sites overview now displays import-related progress and result/error status.
+- Instrumentation coverage was extended for a project archive containing README plus `dist/index.html`, and for ambiguous build roots.
+- Existing path traversal, sensitive-path, case-collision, file/directory collision, entry-count, file-count and 500 MB bounds remain in place.
+
+**Not yet verified:** No Android compilation, unit/instrumentation execution, provider-level picker test, APK assembly, emulator run or physical-device test has been run for this checkpoint. The added instrumentation tests are source changes only.
+
+**Branding gate:** The designated source asset `Assets/Pocket Host 7.svg` is present (14,475,269 bytes), but launcher/in-app integration is not yet complete. The Android app currently has no launcher mipmap/drawable icon resources. The SVG requires faithful raster/adaptive-icon asset generation; no substitute logo has been introduced.

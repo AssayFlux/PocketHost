@@ -3,9 +3,9 @@
 **Branch:** Alpha  
 **Version:** 0.1.0  
 **Channel:** Alpha  
-**Current head:** `3b127e785224165c9f2415df9ce013e60b2160a7`  
+**Current head:** `8c95a42afe12ebceffeaede2807e702a02b71ce8`  
 **Signing:** Debug signing is intended only for owner testing. No production signing material is established by the repository workflow.  
-**Status:** latest quality CI passed; post-fix Android/Chaquopy acceptance workflow is pending; emulator, physical-device and external-network acceptance remain open. APK packaging remains owner-gated and was not run.
+**Status:** repository Step 1 source changes are committed; their Android compilation and tests have not yet been run. Existing historical CI evidence remains historical only; emulator, physical-device and external-network acceptance remain open. APK packaging remains owner-gated and was not run.
 
 ## Latest workflow evidence
 
@@ -75,3 +75,10 @@ Historical automated evidence:
 ## Additional Step 3 code-review correction
 
 Commit [f2f6ec5](https://github.com/AssayFlux/PocketHost/commit/f2f6ec518062b0f6b5ed169cd046b8f1c9b50193) fixes configured relay credential rotation persistence across process restart by synchronizing explicit owner-configured host verifiers into SQLite on load. A regression test verifies old-token rejection and new-token acceptance after restart. The corresponding quality and Android native/source workflows are pending/in progress; this is not yet a passing test result.
+
+
+## Step 1 source changes — 2026-11-20
+
+Commit `8c95a42afe12ebceffeaede2807e702a02b71ce8` updates ZIP picker MIME handling, nested built-site root detection, ambiguous-root rejection, activated-site import summary counts, and visible import status in the Sites overview. New instrumentation test cases cover project metadata plus a nested `dist/` output and ambiguous `dist/`/`build/` roots.
+
+These are committed source changes, not verified runtime behavior. Android compilation and test execution are still required. The designated Pocket Host 7 SVG has not yet been converted into launcher and in-app assets; no alternative mark has been substituted. No APK was built.
