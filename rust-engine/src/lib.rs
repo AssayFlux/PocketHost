@@ -167,14 +167,14 @@ fn effective_client_ip(peer_ip: IpAddr, _forwarded_ip: Option<&str>) -> IpAddr {
 }
 
 fn is_sensitive_request_path(relative: &Path) -> bool {
-    let blocked_directories = [".git", ".ssh", ".aws", ".docker", ".kube", ".pockethost", ".gnupg"];
+    let blocked_directories = [".git", ".ssh", ".aws", ".docker", ".kube", ".pockethost", ".gnupg", ".azure", ".terraform", ".pulumi"];
     let blocked_names = [
         ".env", ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".gitconfig",
-        "credentials", "id_rsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk",
+        "credentials", "credentials.json", "application_default_credentials.json", "service_account.json",\n        "id_rsa", "id_dsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk", "identity",
         "authorized_keys", "known_hosts", "kubeconfig", "service-account.json",
         "serviceaccount.json", "secrets.json",
     ];
-    relative.components().any(|component| {
+    let portable_path = relative.to_string_lossy().replace(\\\\, "/").to_ascii_lowercase();\n    if portable_path == ".config/gcloud" || portable_path.starts_with(".config/gcloud/") { return true; }\n    relative.components().any(|component| {
         let Component::Normal(value) = component else { return true };
         let Some(name) = value.to_str() else { return true };
         let name = name.to_ascii_lowercase();
@@ -183,7 +183,7 @@ fn is_sensitive_request_path(relative: &Path) -> bool {
             blocked_names.contains(&name.as_str()) ||
             name == ".env" || name.starts_with(".env.") ||
             matches!(extension, "pem" | "key" | "p12" | "pfx" | "jks" | "keystore") ||
-            ((name.starts_with("service-account-") || name.starts_with("serviceaccount-")) && extension == "json") ||
+            ((name.starts_with("service-account-") || name.starts_with("serviceaccount-") || name.starts_with("firebase-adminsdk")) && extension == "json") ||
             name.ends_with("-service-account.json") || name.ends_with("-serviceaccount.json")
     })
 }
