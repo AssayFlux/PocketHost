@@ -59,7 +59,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
       - name: Test native Relay engine on the CI host
         run: cargo test --manifest-path relay-node/Cargo.toml --locked
-      - name: Preserve generated Relay lockfile for review
+      - name: Preserve checked-in Relay lockfile for review
         uses: actions/upload-artifact@v4
         with:
           name: pockethost-relay-cargo-lock-hosttest
@@ -75,7 +75,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
-      - name: Test native Relay engine without write credentials
+      - name: Test native Relay engine with read-only permissions
         run: cargo test --manifest-path relay-node/Cargo.toml --locked
       - uses: actions/upload-artifact@v4
         with:
