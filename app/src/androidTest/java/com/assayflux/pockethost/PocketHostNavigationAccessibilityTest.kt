@@ -134,8 +134,7 @@ class PocketHostNavigationAccessibilityTest {
                     assertTrue("Dedicated releases page is missing", releasesTab != null)
                     releasesTab!!.click()
                     assertTrue("Release history page did not render",
-                        device.wait(Until.hasObject(By.textContains("previous deployment")), 10_000) ||
-                            device.wait(Until.hasObject(By.textContains("previous deployments")), 5_000))
+                        device.wait(Until.hasObject(By.text("RELEASE HISTORY")), 10_000))
                     val filesTab = device.wait(Until.findObject(By.text("Files")), 10_000)
                     assertTrue("Dedicated file manager page is missing", filesTab != null)
                     filesTab!!.click()
