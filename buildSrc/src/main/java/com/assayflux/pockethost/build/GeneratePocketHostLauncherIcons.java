@@ -50,20 +50,20 @@ public abstract class GeneratePocketHostLauncherIcons extends DefaultTask {
                 throw new GradleException("Pocket Host SVG rasterizer returned an unexpected image size.");
             }
 
-            Map<String, Integer> densities = new LinkedHashMap<>();
-            densities.put("mdpi", 1);
-            densities.put("hdpi", 1);
-            densities.put("xhdpi", 2);
-            densities.put("xxhdpi", 3);
-            densities.put("xxxhdpi", 4);
+            Map<String, Double> densities = new LinkedHashMap<>();
+            densities.put("mdpi", 1.0);
+            densities.put("hdpi", 1.5);
+            densities.put("xhdpi", 2.0);
+            densities.put("xxhdpi", 3.0);
+            densities.put("xxxhdpi", 4.0);
 
             File root = getOutputDirectory().get().getAsFile();
-            for (Map.Entry<String, Integer> density : densities.entrySet()) {
+            for (Map.Entry<String, Double> density : densities.entrySet()) {
                 File folder = new File(root, "mipmap-" + density.getKey());
                 Files.createDirectories(folder.toPath());
-                int factor = density.getValue();
-                writeScaled(master, 48 * factor, new File(folder, "ic_launcher.png"));
-                writeScaled(master, 72 * factor, new File(folder, "ic_launcher_artwork.png"));
+                double factor = density.getValue();
+                writeScaled(master, (int) Math.round(48 * factor), new File(folder, "ic_launcher.png"));
+                writeScaled(master, (int) Math.round(72 * factor), new File(folder, "ic_launcher_artwork.png"));
             }
         } catch (Exception error) {
             throw new GradleException("Could not rasterize Assets/Pocket Host 7.svg into Android launcher icons.", error);
