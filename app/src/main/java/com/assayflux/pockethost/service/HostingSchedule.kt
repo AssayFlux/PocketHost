@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import java.io.File
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -130,6 +131,11 @@ object HostingSchedule {
     }
 
     private fun startHosting(context: Context) {
+        if (!File(context.filesDir, "site").isDirectory) {
+            OperationalLog.record(context, "WARN", "HOSTING_SCHEDULE_START_SKIPPED",
+                "The daily schedule reached its ON time, but no website directory exists. Import a website before enabling scheduled hosting.")
+            return
+        }
         val service = Intent(context, HostingService::class.java)
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
