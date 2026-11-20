@@ -50,7 +50,10 @@ jobs:
         run: |
           docker run --rm -e CONTROL_PLANE_DOMAIN=relay.example.test \
             -v "$PWD/control-plane/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -v "$PWD/control-plane/trusted-proxy.caddy:/etc/caddy/trusted-proxy.caddy:ro" \
             caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Test trusted Cloudflared peer and reject spoofed client IP headers
+        run: bash tests/proxy/test_trusted_proxy.sh
       - name: Validate public and Cloudflare Tunnel Compose profiles
         env:
           POSTGRES_PASSWORD: ci-only-postgres-password
