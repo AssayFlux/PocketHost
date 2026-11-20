@@ -118,16 +118,16 @@ object SiteImporter {
                     }
                 }
             val siteRoot = resolveZipRoot(stagingBase)
-            validateExtractedWebsite(siteRoot)
+            val siteStats = validateExtractedWebsite(siteRoot)
             activate(context, stagingBase, siteRoot)
-            return ImportReport(counter.files, counter.bytes, "ZIP")
+            return ImportReport(siteStats.first, siteStats.second, "ZIP")
         } catch (error: Throwable) {
             stagingBase.deleteRecursively()
             throw error
         }
     }
 
-    private fun validateExtractedWebsite(root: File) {
+    private fun validateExtractedWebsite(root: File): Pair<Int, Long> {
         val rootPath = root.canonicalFile.toPath()
         var files = 0
         var entries = 0
@@ -163,6 +163,7 @@ object SiteImporter {
         if (!File(root, "index.html").isFile) {
             throw IOException("No website entry page was found in the selected archive folder.")
         }
+        return files to bytes
     }
 
     /**
@@ -175,7 +176,7 @@ object SiteImporter {
         if (File(staging, "index.html").isFile) return staging
 
         val candidates = ArrayList<File>()
-        java.nio.file.Files.walk(staging.toPath(), MAX_DEPTH.toLong() + 2).use { paths ->
+        java.nio.file.Files.walk(staging.toPath(), MAX_DEPTH + 2).use { paths ->
             paths.forEach { path ->
                 if (path == staging.toPath()) return@forEach
                 val relative = staging.toPath().relativize(path)
@@ -186,7 +187,7 @@ object SiteImporter {
                     throw IOException("ZIP contains an unsupported symbolic link.")
                 }
                 if (java.nio.file.Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS) &&
-                    path.fileName.toString().equals("index.html", ignoreCase = true)) {
+                    path.fileName.toString() == "index.html") {
                     candidates += path.parent.toFile()
                 }
             }
