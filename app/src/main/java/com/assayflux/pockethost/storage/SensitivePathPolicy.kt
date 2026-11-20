@@ -19,7 +19,7 @@ object SensitivePathPolicy {
     private val blockedExtensions = setOf("pem", "key", "p12", "pfx", "jks", "keystore")
 
     fun isSensitivePath(path: String): Boolean {
-        val normalized = path.replace('\\\\', '/')
+        val normalized = path.replace('\\', '/')
         val parts = normalized.split('/').filter { it.isNotEmpty() }
         if (parts.isEmpty()) return false
         val portablePath = normalized.trim('/').lowercase(java.util.Locale.ROOT)
