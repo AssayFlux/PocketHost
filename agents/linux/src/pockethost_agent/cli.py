@@ -27,7 +27,7 @@ def _load_active_grant(store: AgentStore, device_id: str) -> tuple[dict, str]:
     return grant_data, owner_key
 
 
-def main() -> None
+def main() -> None:
     parser = argparse.ArgumentParser(prog="pockethost-agent")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("identity", help="Create or display this Linux agent's public identity")
