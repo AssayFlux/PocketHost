@@ -189,9 +189,21 @@ object SiteImporter {
      * The source must be an app-private staging directory on the same filesystem.
      */
     fun activatePreparedDirectory(context: Context, preparedRoot: File): ImportReport {
-        val root = preparedRoot.canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
-        if (!root.isDirectory || !root.toPath().startsWith(privateRoot) ||
+        val requested = preparedRoot.absoluteFile.toPath().normalize()
+        if (!requested.startsWith(privateRoot)) {
+            throw IOException("Prepared website directory is not a safe app-private staging folder.")
+        }
+        var cursor = privateRoot
+        for (part in privateRoot.relativize(requested)) {
+            cursor = cursor.resolve(part)
+            if (java.nio.file.Files.isSymbolicLink(cursor)) {
+                throw IOException("Prepared website staging paths cannot contain symbolic links.")
+            }
+        }
+        val root = preparedRoot.canonicalFile
+        if (!root.isDirectory || root == privateRoot.toFile() ||
+            !root.toPath().startsWith(privateRoot) ||
             root == File(context.filesDir, "site").canonicalFile) {
             throw IOException("Prepared website directory is not a safe app-private staging folder.")
         }
