@@ -1,0 +1,391 @@
+name: PocketHost Android integration
+
+on:
+  # Android source, UI and security changes must be compiled and exercised on
+  # the supported API matrix before their gates can be considered complete.
+  push:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-integration.yml"
+      - "app/**"
+      - "protocol/ROLE_CAPABILITY_POLICY.json"
+      - "scripts/validate-android-role-policy.py"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "relay-node/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
+      - "docs/UI_DESIGN.md"
+  pull_request:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-integration.yml"
+      - "app/**"
+      - "protocol/ROLE_CAPABILITY_POLICY.json"
+      - "scripts/validate-android-role-policy.py"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "relay-node/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
+      - "docs/UI_DESIGN.md"
+  workflow_dispatch:
+    inputs:
+      run_emulators:
+        description: Run API 26, 33 and 35 emulator instrumentation
+        required: true
+        type: boolean
+        default: false
+      build_apks:
+        description: Build debug APK artifacts only after the v0.1.0 release owner authorizes packaging
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pockethost-android-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  relay-rust:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Test native Relay engine on the CI host
+        run: cargo test --manifest-path relay-node/Cargo.toml --locked
+      - name: Preserve checked-in Relay lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-cargo-lock-hosttest
+          path: relay-node/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7
+
+  relay-rust-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Test native Relay engine with read-only permissions
+        run: cargo test --manifest-path relay-node/Cargo.toml --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-pr-lockfile
+          path: relay-node/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7
+
+  relay-android-abi:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools ndk;27.2.12479018"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build native Relay for all declared Android ABIs
+        working-directory: relay-node
+        run: |
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o "$RUNNER_TEMP/relay-jni" build --release --locked
+      - name: Verify Relay ELF architectures
+        run: |
+          set -euo pipefail
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            file "$RUNNER_TEMP/relay-jni/$abi/libassayflux_relay_node.so"
+            "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h "$RUNNER_TEMP/relay-jni/$abi/libassayflux_relay_node.so"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-android-jni
+          path: ${{ runner.temp }}/relay-jni/**
+          if-no-files-found: error
+          retention-days: 7
+
+  cloudflared-android:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools ndk;27.2.12479018"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Build pinned cloudflared for Android ABIs
+        run: bash scripts/build-cloudflared-android.sh
+      - name: Verify Android ELF architectures
+        run: |
+          file app/src/main/jniLibs/*/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/arm64-v8a/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/armeabi-v7a/libcloudflared.so
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h app/src/main/jniLibs/x86_64/libcloudflared.so
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: |
+            app/src/main/jniLibs/*/libcloudflared.so
+            app/src/main/assets/licenses/cloudflared/**
+          if-no-files-found: error
+          retention-days: 7
+
+  android-compile:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: cloudflared-android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1'
+      - name: Configure NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Verify Android role allow-list matches the shared protocol
+        run: python3 scripts/validate-android-role-policy.py
+      - name: Compile app and Android instrumentation sources without packaging APKs
+        run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin -PpockethostAbi=x86_64
+      - name: Prove the Android compile gate rejects broken Kotlin
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="app/src/main/java/com/assayflux/pockethost/CompileGateProbe.kt"
+          log="$RUNNER_TEMP/android-negative-compile.log"
+          trap 'rm -f "$probe"' EXIT
+          cat > "$probe" <<'KOTLIN'
+          package com.assayflux.pockethost
+          internal class CompileGateProbe {
+              val deliberatelyInvalid: String =
+          }
+          KOTLIN
+          if ./gradlew :app:compileDebugKotlin -PpockethostAbi=x86_64 >"$log" 2>&1; then
+            cat "$log"
+            echo "Android Kotlin compilation unexpectedly accepted malformed source." >&2
+            exit 1
+          fi
+          if ! grep -Fq "CompileGateProbe.kt" "$log"; then
+            cat "$log"
+            echo "Compilation failed, but not because the injected Kotlin source was rejected." >&2
+            exit 1
+          fi
+          echo "PASS: Android compile gate rejected the intentionally malformed Kotlin source."
+
+  # Packaging is deliberately opt-in. Pushes and pull requests run source,
+  # native ABI, Kotlin and emulator verification without producing APK artifacts.
+  android-apk:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_apks
+    needs: cloudflared-android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
+      - name: Configure NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build separate ABI debug APKs
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pockethost-debug-apks"
+          ./gradlew :runtime-worker:assembleDebug
+          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$RUNNER_TEMP/pockethost-debug-apks/pockethost-runtime-worker-debug.apk"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            ./gradlew clean :app:assembleDebug -PpockethostAbi="$abi"
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/pockethost-debug-apks/app-$abi-debug.apk"
+          done
+          mkdir -p app/build/outputs/apk/debug
+          rm -f app/build/outputs/apk/debug/app-debug.apk
+          cp "$RUNNER_TEMP"/pockethost-debug-apks/*.apk app/build/outputs/apk/debug/
+      - name: Verify ABI-specific APK contents
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          count=0
+          worker="app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk"
+          worker_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$worker" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+          test -n "$worker_cert"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$worker" > "$RUNNER_TEMP/worker-badging.txt"
+          grep -Fq "package: name='com.assayflux.pockethost.worker'" "$RUNNER_TEMP/worker-badging.txt"
+          grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/worker-badging.txt"
+          unzip -Z1 "$worker" > "$RUNNER_TEMP/worker-contents.txt"
+          sha256sum "$worker"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            grep -Fxq "lib/$abi/libnode.so" "$RUNNER_TEMP/worker-contents.txt"
+            grep -Fxq "lib/$abi/libnodebridge.so" "$RUNNER_TEMP/worker-contents.txt"
+          done
+          for apk in app/build/outputs/apk/debug/app-*-debug.apk; do
+            count=$((count + 1))
+            case "$apk" in
+              *arm64-v8a*) abi=arm64-v8a ;;
+              *armeabi-v7a*) abi=armeabi-v7a ;;
+              *x86_64*) abi=x86_64 ;;
+              *) echo "Unexpected APK: $apk"; exit 1 ;;
+            esac
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/app-badging.txt"
+            grep -Fq "package: name='com.assayflux.pockethost'" "$RUNNER_TEMP/app-badging.txt"
+            grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/app-badging.txt"
+            unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libpockethost.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libassayflux_relay_node.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libcloudflared.so" "$RUNNER_TEMP/apk-contents.txt"
+            cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+            test "$cert" = "$worker_cert" || { echo "App and companion debug certificates differ."; exit 1; }
+            sha256sum "$apk"
+          done
+          test "$count" -eq 3
+      # Publish each APK as a separate, small artifact. The combined ZIP
+      # exceeds the connector's reliable download size and can arrive truncated.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-arm64-v8a-debug
+          path: app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-armeabi-v7a-debug
+          path: app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-x86_64-debug
+          path: app/build/outputs/apk/debug/app-x86_64-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-runtime-worker-debug
+          path: app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  android-emulator-smoke:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_emulators)
+    needs: cloudflared-android
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Emulator instrumentation is memory-heavy; serialize the three virtual
+      # devices to avoid starving the Android test process on hosted runners.
+      max-parallel: 1
+      matrix:
+        api-level: [26, 33, 35]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android-jni
+          path: app/src/main
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 emulator ndk;27.2.12479018 cmake;3.22.1 system-images;android-26;default;x86_64 system-images;android-33;default;x86_64 system-images;android-35;default;x86_64"
+      - name: Configure NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      # Test-only companion package required to exercise the isolated runtime on
+      # emulators. The main PocketHost app APK remains behind the explicit
+      # build_apks release-packaging input above.
+      - name: Build signature-matched runtime test companion
+        run: ./gradlew :runtime-worker:assembleDebug
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -memory 2048 -cores 2
+          emulator-boot-timeout: 1200
+          script: adb install runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk && ./gradlew clean :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
+      - name: Collect rendered owner home and navigation from UI instrumentation
+        if: always()
+        run: |
+          set +e
+          mkdir -p "$RUNNER_TEMP/pockethost-ui"
+          timeout 30s adb wait-for-device || { echo "Emulator unavailable; screenshot skipped."; exit 0; }
+          adb logcat -d -v threadtime > "$RUNNER_TEMP/pockethost-ui/full-logcat-api-${{ matrix.api-level }}.txt"
+          adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots/home.png "$RUNNER_TEMP/pockethost-ui/home-api-${{ matrix.api-level }}.png"
+          adb pull /sdcard/Android/data/com.assayflux.pockethost/files/screenshots "$RUNNER_TEMP/pockethost-ui/navigation-api-${{ matrix.api-level }}"
+          file "$RUNNER_TEMP/pockethost-ui/home-api-${{ matrix.api-level }}.png"
+      - name: Upload Android instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-test-results-api-${{ matrix.api-level }}
+          path: |
+            app/build/reports/androidTests/connected/debug/**
+            app/build/outputs/androidTest-results/connected/**
+            ${{ runner.temp }}/pockethost-ui/**
+          if-no-files-found: ignore
+          retention-days: 7
