@@ -207,7 +207,8 @@ object SiteImporter {
                 if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
                     throw IOException("Prepared website contains an unsupported symbolic link.")
                 }
-                SensitivePathPolicy.requireSafePath(child.name)
+                val relativeChild = root.toPath().relativize(child.toPath()).toString().replace(File.separatorChar, '/')
+                SensitivePathPolicy.requireSafePath(relativeChild)
                 if (!child.canonicalFile.toPath().startsWith(root.toPath())) {
                     throw IOException("Prepared website contains a path outside its staging directory.")
                 }
@@ -423,6 +424,8 @@ object SiteImporter {
             }
             SensitivePathPolicy.requireSafePath(name)
             val target = File(destination, name)
+            val relativeTarget = stagingRoot.toPath().relativize(target.toPath()).toString().replace(File.separatorChar, '/')
+            SensitivePathPolicy.requireSafePath(relativeTarget)
             if (java.nio.file.Files.isSymbolicLink(target.toPath()) || !target.canonicalFile.toPath().startsWith(stagingRoot.toPath())) throw IOException("An unsafe file path was detected.")
             when {
                 entry.isDirectory -> {
