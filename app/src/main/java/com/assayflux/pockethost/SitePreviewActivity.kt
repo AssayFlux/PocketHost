@@ -1,6 +1,7 @@
 package com.assayflux.pockethost
 
 import android.os.Bundle
+import android.content.res.Configuration
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -23,6 +24,11 @@ class SitePreviewActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        val systemDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !systemDark
+            isAppearanceLightNavigationBars = !systemDark
+        }
         val port = getSharedPreferences("pockethost_state", MODE_PRIVATE).getInt("port", 8080)
         val localUrl = "http://127.0.0.1:$port/"
         setContent {
