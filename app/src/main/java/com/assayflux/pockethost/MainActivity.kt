@@ -129,7 +129,7 @@ class MainActivity : ComponentActivity() {
                 if (!unlocked.value) {
                     BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
                 } else if (ownerAuthenticated.value) {
-                    PocketHostDashboard(onSignOut = {
+                    PocketHostDashboard(lifecycle = this@MainActivity.lifecycle, onSignOut = {
                         PocketHostOwnerSession.username = null
                         ownerAuthenticated.value = false
                     })
@@ -187,7 +187,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PocketHostDashboard(onSignOut: () -> Unit) {
+private fun PocketHostDashboard(lifecycle: Lifecycle, onSignOut: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Home") }
@@ -363,10 +363,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         }
     }
 
-    val dashboardLifecycle = (context as? ComponentActivity)?.lifecycle
-    val dashboardStarted = remember { mutableStateOf(dashboardLifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) == true) }
-    DisposableEffect(dashboardLifecycle) {
-        if (dashboardLifecycle == null) return@DisposableEffect onDispose { }
+    val dashboardStarted = remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+    DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> dashboardStarted.value = true
@@ -374,8 +372,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 else -> Unit
             }
         }
-        dashboardLifecycle.addObserver(observer)
-        onDispose { dashboardLifecycle.removeObserver(observer) }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(dashboardStarted.value) {
