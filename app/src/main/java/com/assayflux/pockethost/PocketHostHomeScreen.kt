@@ -121,7 +121,7 @@ internal fun PocketHostHomeScreen(
                     }
                     Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     services.indices.forEach { index ->
                         Box(
                             modifier = Modifier.size(48.dp)
