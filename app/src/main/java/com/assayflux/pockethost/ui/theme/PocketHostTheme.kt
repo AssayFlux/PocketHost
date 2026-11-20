@@ -13,11 +13,52 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.pow
 
 /**
  * Pocket Host's classic editorial theme system, adapted from the palette approach
  * used in AssayFlux Director-X. Theme names are stable preference values.
  */
+private fun relativeLuminance(color: Color): Double {
+    fun linear(channel: Float): Double {
+        val value = channel.toDouble()
+        return if (value <= 0.04045) value / 12.92 else ((value + 0.055) / 1.055).pow(2.4)
+    }
+    return 0.2126 * linear(color.red) + 0.7152 * linear(color.green) + 0.0722 * linear(color.blue)
+}
+
+private fun contrastRatio(foreground: Color, background: Color): Double {
+    val values = listOf(relativeLuminance(foreground), relativeLuminance(background)).sortedDescending()
+    return (values[0] + 0.05) / (values[1] + 0.05)
+}
+
+/** Keep secondary text readable on every surface where the design system uses it. */
+private fun accessibleTextColor(foreground: Color, backgrounds: List<Color>): Color {
+    fun minimumContrast(color: Color) = backgrounds.minOf { contrastRatio(color, it) }
+    if (minimumContrast(foreground) >= 4.5) return foreground
+
+    val black = Color.Black
+    val white = Color.White
+    val target = if (minimumContrast(black) >= minimumContrast(white)) black else white
+    var candidate = foreground
+    repeat(24) {
+        candidate = Color(
+            red = (candidate.red + target.red) / 2f,
+            green = (candidate.green + target.green) / 2f,
+            blue = (candidate.blue + target.blue) / 2f
+        )
+        if (minimumContrast(candidate) >= 4.5) return candidate
+    }
+    return target
+}
+
+private fun accessibleContentColor(background: Color): Color =
+    if (contrastRatio(Color.Black, background) >= contrastRatio(Color.White, background)) {
+        Color.Black
+    } else {
+        Color.White
+    }
+
 object PocketHostPalettes {
     val names = listOf(
         "Classic", "Midnight", "Forest", "Burgundy", "Ocean",
@@ -45,26 +86,26 @@ object PocketHostPalettes {
     fun colorScheme(name: String, dark: Boolean) : androidx.compose.material3.ColorScheme {
         val p = palette(name)
         return if (dark) darkColorScheme(
-            primary=p.darkAccent, onPrimary=Color(0xFF17191C),
+            primary=p.darkAccent, onPrimary=accessibleContentColor(p.darkAccent),
             primaryContainer=p.darkRaised, onPrimaryContainer=p.darkText,
-            secondary=p.secondary, onSecondary=Color.White,
+            secondary=p.secondary, onSecondary=accessibleContentColor(p.secondary),
             secondaryContainer=p.darkRaised, onSecondaryContainer=p.darkText,
-            tertiary=p.darkAccent, onTertiary=Color(0xFF17191C),
+            tertiary=p.darkAccent, onTertiary=accessibleContentColor(p.darkAccent),
             background=p.darkBg, onBackground=p.darkText,
             surface=p.darkSurface, onSurface=p.darkText,
-            surfaceVariant=p.darkRaised, onSurfaceVariant=p.darkMuted,
+            surfaceVariant=p.darkRaised, onSurfaceVariant=accessibleTextColor(p.darkMuted, listOf(p.darkBg, p.darkSurface, p.darkRaised)),
             outline=p.darkMuted, outlineVariant=p.darkRaised,
             error=Color(0xFFFFB4AB), onError=Color(0xFF690005),
             errorContainer=Color(0xFF7F2925), onErrorContainer=Color(0xFFFFDAD6)
         ) else lightColorScheme(
-            primary=p.accent, onPrimary=Color.White,
+            primary=p.accent, onPrimary=accessibleContentColor(p.accent),
             primaryContainer=p.lightRaised, onPrimaryContainer=p.lightText,
-            secondary=p.secondary, onSecondary=Color.White,
+            secondary=p.secondary, onSecondary=accessibleContentColor(p.secondary),
             secondaryContainer=p.lightRaised, onSecondaryContainer=p.lightText,
-            tertiary=p.secondary, onTertiary=Color.White,
+            tertiary=p.secondary, onTertiary=accessibleContentColor(p.secondary),
             background=p.lightBg, onBackground=p.lightText,
             surface=p.lightSurface, onSurface=p.lightText,
-            surfaceVariant=p.lightRaised, onSurfaceVariant=p.lightMuted,
+            surfaceVariant=p.lightRaised, onSurfaceVariant=accessibleTextColor(p.lightMuted, listOf(p.lightBg, p.lightSurface, p.lightRaised)),
             outline=p.lightMuted, outlineVariant=p.lightRaised,
             error=Color(0xFFB3261E), onError=Color.White,
             errorContainer=Color(0xFFF9DEDC), onErrorContainer=Color(0xFF410E0B)
