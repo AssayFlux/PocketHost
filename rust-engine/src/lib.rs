@@ -1137,6 +1137,12 @@ mod tests {
             ".aws/credentials", ".npmrc", ".git-credentials", ".docker/config.json",
             ".kube/config", "secrets/service-account-prod.json", "tls/server.key",
             ".env.production",
+            "credentials.json",
+            ".config/gcloud/application_default_credentials.json",
+            "service_account.json",
+            "firebase-adminsdk-prod.json",
+            ".azure/accessTokens.json",
+            ".terraform/terraform.tfstate",
         ] {
             assert!(is_sensitive_request_path(Path::new(path)), "must block {path}");
         }
