@@ -111,3 +111,13 @@ When implementation begins, update this file only when repository facts change o
 - **Operational verified:** tested through the intended real network/public visitor path.
 
 Never promote a feature from “present” to “verified” based only on code inspection or UI presence.
+
+
+## 10. Step 3–5 implementation and acceptance checkpoint (2026-11-20)
+
+- **Step 3 implementation present:** boot recovery reads the transactional relay configuration; relay startup/TLS certificate reuse checks and network-change reconnection were hardened. Quality CI passed on commit `78eccfc921d55a3dd44862bbe09228db7f66a360` (run `44730596020`). No physical-device, live DNS/ACME, real-hostname TLS renewal, external visitor or end-to-end revocation evidence is claimed.
+- **Step 4 implementation present:** Python/Node workload boundaries, companion IPC identity/signature checks, bounded project transfer and remote command durable-idempotency rules are documented in [Runtime and Remote Operations](RUNTIMES_AND_REMOTE_OPERATIONS.md). Quality CI and Android native/source validation passed on the prior implementation commit (runs `44730596020` and `44730595964`).
+- **Step 5 pre-package checks:** latest quality workflow passed on `e4fc23129c1bf2758d73bf2b00358dba6e2d0804` (run `44735504573`); Android native ABI and source validation passed on that commit (run `44735504452`). The Android source workflow compiles app and instrumentation Kotlin and runtime-worker/native bridge sources; this is not an instrumentation execution.
+- **Build issue found:** the acceptance workflow reached the runtime-worker packaging task and could not resolve `com.chaquo.python.runtime:bootstrap:17.2.0` from the configured repositories. The source fix adds Chaquopy's Maven repository to dependency resolution. The same workflow also exposed API-26 lint issues which were corrected in commit `e4fc23129c1bf2758d73bf2b00358dba6e2d0804`.
+- **APK packaging is currently held by owner instruction.** The acceptance workflow is now manual-only; APK build, emulator instrumentation and APK verification steps require the explicit `confirm_build=true` input. No verified v0.1.0 APK artifact is available from the failed attempt.
+- **Still owner/device dependent:** physical-device lifecycle and runtime workload tests, live public visitor/TLS/revocation acceptance, and final install/upgrade/backup checks. These cannot be truthfully marked complete from hosted CI.

@@ -1,7 +1,7 @@
 # Runtime and Remote Operations — Alpha v0.1.0
 
 **Branch:** Alpha  
-**Status:** implementation hardening and automated source/quality CI passed; emulator and physical-device acceptance are separate release gates.  
+**Status:** implementation hardening and automated source/quality CI passed on recorded commits; Chaquopy runtime repository resolution was corrected in the latest build configuration. Emulator and physical-device acceptance are separate release gates. APK packaging is owner-gated and currently on hold.  
 **Important:** source presence and source compilation do not prove physical-device workload acceptance.
 
 ## Supported runtime contract

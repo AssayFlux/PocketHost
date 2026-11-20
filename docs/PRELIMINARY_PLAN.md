@@ -2,7 +2,7 @@
 
 **Target:** Pocket Host v0.1.0 Alpha  
 **Working branch:** Alpha only  
-**Plan status:** Steps 1–4 implementation and automated CI gates passed; Step 5 integrated acceptance and APK packaging in progress. Physical-device/public-network acceptance remains owner-dependent.  
+**Plan status:** Steps 1–4 implementation and core automated CI gates passed; Step 5 pre-package engineering checks are in progress. APK packaging is intentionally held for the owner’s next instruction. Emulator instrumentation, physical-device and public-network acceptance remain open.  
 **Rule:** finish and verify each step before treating the next as complete. Preserve the existing codebase; refactor only where evidence shows it is necessary.
 
 ## Delivery boundary
@@ -31,7 +31,7 @@ Exit gate:
 
 **Deliverable:** reproducible engineering baseline and restored CI. No feature expansion in this step.
 
-**Evidence:** quality CI run 44721249398 passed Rust, PostgreSQL control-plane, Python, protocol, Node, web-console and script jobs. Android native/source validation passed in run 44730595964. The APK workflow was deliberately held until Step 5.
+**Evidence:** quality CI run 44721249398 passed Rust, PostgreSQL control-plane, Python, protocol, Node, web-console and script jobs. Android native/source validation passed in runs 44730595964 and 44735504452. Android source compilation includes app/instrumentation Kotlin and runtime-worker/native bridge; no emulator execution is implied. APK packaging was initially attempted by the acceptance workflow and failed at Chaquopy runtime dependency resolution; this was corrected by adding the official Chaquopy Maven repository. Packaging is now manual-only and explicitly gated.
 
 ## Step 2 — Complete and harden independent local website hosting
 
@@ -112,16 +112,16 @@ Exit gate:
 
 ## Step 5 — Integrated acceptance, Alpha APK and owner handoff
 
-**Purpose:** prove the whole v0.1.0 system rather than collecting disconnected passing builds.
+**Purpose:** prove the whole v0.1.0 system rather than collecting disconnected passing builds. Per the owner’s latest instruction, complete all non-packaging engineering and preflight checks now; do not produce any APK until the owner has addressed their next issue and explicitly asks for packaging.
 
 Work:
 - Run all Rust, Kotlin, protocol, control-plane, web and script checks relevant to the retained scope.
-- Run Android instrumentation on API 35 x86_64 emulator; report every skipped test explicitly. Physical device remains a separate owner acceptance requirement.
+- Run Android instrumentation on API 35 x86_64 emulator when APK packaging is authorized; report every skipped test explicitly. Physical device remains a separate owner acceptance requirement.
 - Test on at least one physical Android device, recording model, Android version, ABI, app/worker versions and test results.
 - Run a real-network public visitor journey, credential revocation, TLS renewal/failure recovery and network-change recovery.
 - Check data migration, clean install, upgrade install, uninstall/data-retention expectations, backup/restore and crash recovery.
 - Review permissions, exported components, secrets, logs/redaction, dependency/licence inventory and release configuration.
-- Build and verify v0.1.0 Alpha APKs for arm64-v8a, armeabi-v7a and x86_64 plus the runtime-worker APK; record SHA-256, package metadata and matching signer certificate.
+- After owner authorization only, build and verify v0.1.0 Alpha APKs for arm64-v8a, armeabi-v7a and x86_64 plus the runtime-worker APK; record SHA-256, package metadata and matching signer certificate.
 - Publish a concise release report with known limitations and exact device-testing instructions.
 
 Exit gate:
@@ -131,7 +131,7 @@ Exit gate:
 - Known limitations are visible and no incomplete feature is represented as complete.
 - Hand the APK and evidence to the owner. Do not begin a later-version upgrade until the owner has tested and decided the next direction.
 
-**Deliverable:** v0.1.0 Alpha candidate APKs, verification report, known-limitations list and owner handoff.
+**Deliverable:** pre-package verification report and known-limitations list now; candidate APKs and final owner handoff only after the owner’s next issue is resolved and APK packaging is explicitly authorized.
 
 ## Scope summary
 
@@ -164,3 +164,12 @@ For each gate, record:
 - open defects and owner decision.
 
 A source implementation is present, not complete, until its exit gate is evidenced. A successful APK build is not proof of physical-device, external-network or complete Alpha acceptance.
+
+
+### Step 5 current hold point (2026-11-20)
+
+- Quality workflow passed on `e4fc23129c1bf2758d73bf2b00358dba6e2d0804` (run `44735504573`).
+- Android native three-ABI build, ELF verification and Android source compilation passed on that commit (run `44735504452`).
+- The acceptance workflow exposed a missing Chaquopy runtime repository. The repository configuration now includes `https://chaquo.com/maven`, ahead of Google/Maven Central, consistent with Chaquopy's own repository guidance.
+- The acceptance workflow is now manual-only. Lint/JVM tests can run without packaging; runtime-worker/app APK tasks, emulator instrumentation and APK verification are conditional on `confirm_build=true`.
+- **Not yet complete:** re-run lint/JVM checks after the repository fix; execute emulator instrumentation; physical-device and real-network acceptance; final dependency/license/secrets/signing review; APK build/verification. APK and emulator packaging tasks are deliberately held until the owner authorizes them.

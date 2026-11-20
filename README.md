@@ -14,6 +14,7 @@ Pocket Host is an Android-first, self-hosted platform for managing and serving w
 - [Repository baseline](docs/BASELINE.md): what exists now and what remains unverified.
 - [North Star](docs/NORTH_STAR.md): long-term product direction and boundaries.
 - [Preliminary five-step plan](docs/PRELIMINARY_PLAN.md): the scoped sequence for completing the first useful release.
+- [Runtime and remote operations](docs/RUNTIMES_AND_REMOTE_OPERATIONS.md): supported runtime contracts, limits and trust boundaries.
 
 ## Development rule
 
