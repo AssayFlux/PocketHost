@@ -1,7 +1,7 @@
 # Pocket Host — Public Ingress v0.1.0
 
 **Release:** v0.1.0 — First Hosting  
-**Status:** mandatory target; source implementation and public acceptance remain incomplete.  
+**Status:** native Android Relay and Cloudflare Tunnel integrations are implemented in source; real public-network acceptance remains incomplete.  
 **Native Relay design:** [NATIVE_ANDROID_RELAY.md](NATIVE_ANDROID_RELAY.md)
 
 ## 1. User outcome and providers
@@ -62,22 +62,27 @@ A local listener or “connected” status is not proof of public DNS, TLS or vi
 - Enforce body/response limits, concurrency, pending-queue limits, per-host quotas and timeouts.
 - v0.1.0 provides bounded HTTP forwarding, not arbitrary TCP tunnelling, a generic proxy/VPN or implicit WebSocket support.
 
-## 6. Existing source versus target
+## 6. Current implementation and remaining acceptance
 
-Current source contains:
-- Android `RelayAgent` outbound HTTPS/SSE request/response client.
-- Android Keystore-backed `RelayCredentialStore`.
-- Rust/Axum visitor gateway and DNS TXT hostname proof inside the fleet control-plane executable.
-- Separate visitor/control listeners and Caddy TLS configuration.
+Current Alpha source contains:
+- Kotlin `NativeRelayService` and JNI bridge to the Rust/Tokio `relay-node` engine, bundled in the main APK.
+- Android Keystore-backed node identity and host credential protection; encrypted transactional SQLite configuration, pairing-invite hashes, host credential verifiers and revocation records.
+- Short-lived single-use host pairing invitations with proof-of-possession and owner approval; owner credential issuance/rotation/revocation.
+- Bounded inbound visitor HTTP(S), authenticated outbound HTTPS/SSE host sessions, correlated request/response forwarding and visitor-path/control-surface rejection.
+- DNS TXT ownership verification before route activation, Rustls HTTPS, HTTP-to-HTTPS redirects, ACME HTTP-01 issuance and scheduled certificate-expiry/renewal checks.
+- Gradle/GitHub Actions native Relay builds for the declared Android ABIs.
+- An independent Cloudflare Tunnel option. Caddy trusts only the configured Cloudflared peer for visitor-IP metadata; a Docker spoofing test passes in quality run #44687694785.
 
-Current gaps:
-- The gateway is coupled to PostgreSQL and the fleet control-plane process.
-- The current `RelayHub` keeps active sessions and pending requests in memory.
-- `relay-node/` contains only a Cargo manifest scaffold.
-- There is no native Android gateway JNI engine, inbound listener, Kotlin Relay foreground service, node-side credential issuer or durable standalone node store.
-- There is no physical-device or independent public-domain acceptance evidence for the native Relay.
+Remaining v0.1.0 acceptance:
+- Recheck DNS ownership continuously and prove revocation/route removal behavior with real DNS.
+- Exercise ACME issuance and renewal against an owner-controlled public domain and supported edge forwarding.
+- Verify visitor/owner/management route isolation, host revocation and reconnect using integrated live traffic.
+- Verify Android foreground service, boot recovery, battery/Doze and network changes on named physical devices.
+- Verify Android process/device restart with live host and visitor traffic; live sessions/pending requests are ephemeral and must fail closed.
+- Build and inspect the final release APK, all declared ABI libraries, signature, SHA-256 and provenance.
+- Verify DNS, TLS, HTTP redirect and real visitor content from independent networks. No physical-device or independent public-domain acceptance is yet recorded.
 
-The target implementation is the Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK. The current Compose/Caddy deployment is not the Android Relay runtime and must not be treated as a required dependency.
+The native Android Relay is the v0.1.0 product gateway and does not require the Compose/Caddy fleet control plane, PostgreSQL, Docker or a terminal-managed environment. The Cloudflare Tunnel is an independent optional provider. A source implementation, local listener or “connected” status is not proof of public visitor reachability.
 
 ## 7. Release gates
 
