@@ -53,7 +53,7 @@ object SiteImporter {
                             throw IOException("ZIP contains an unsafe path.")
                         }
                         val parts = normalized.split('/').filter { it.isNotEmpty() }
-                        if (parts.isEmpty() || parts.size > MAX_DEPTH) throw IOException("ZIP folder nesting is too deep.")
+                        if (parts.isEmpty() || parts.size > MAX_DEPTH + 1) throw IOException("ZIP folder nesting is too deep.")
                         parts.forEach(::validateName)
                         val isDirectory = entry.isDirectory || normalized.endsWith('/')
                         val archivePath = parts.joinToString("/")
@@ -115,12 +115,47 @@ object SiteImporter {
                     }
                 }
             val siteRoot = resolveZipRoot(stagingBase)
-            if (!File(siteRoot, "index.html").isFile) throw IOException("ZIP must contain index.html at its root (or inside one top-level folder).")
+            validateExtractedWebsite(siteRoot)
             activate(context, stagingBase, siteRoot)
             return ImportReport(counter.files, counter.bytes, "ZIP")
         } catch (error: Throwable) {
             stagingBase.deleteRecursively()
             throw error
+        }
+    }
+
+    private fun validateExtractedWebsite(root: File) {
+        val rootPath = root.canonicalFile.toPath()
+        var files = 0
+        var entries = 0
+        var bytes = 0L
+        java.nio.file.Files.walk(rootPath).use { paths ->
+            paths.forEach { path ->
+                if (path == rootPath) return@forEach
+                if (rootPath.relativize(path).nameCount > MAX_DEPTH ||
+                    java.nio.file.Files.isSymbolicLink(path)) {
+                    throw IOException("Website contains an unsafe path or unsupported symbolic link.")
+                }
+                val relative = rootPath.relativize(path).toString().replace(File.separatorChar, '/')
+                SensitivePathPolicy.requireSafePath(relative)
+                entries++
+                if (entries > MAX_ENTRIES) throw IOException("Website contains too many extracted files and folders.")
+                if (java.nio.file.Files.isDirectory(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                    Unit
+                } else if (java.nio.file.Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                    files++
+                    val size = java.nio.file.Files.size(path)
+                    if (files > MAX_FILES || size > MAX_IMPORT_BYTES - bytes) {
+                        throw IOException("Website exceeds its file-count or 500 MB import limit.")
+                    }
+                    bytes += size
+                } else {
+                    throw IOException("Website contains an unsupported filesystem entry.")
+                }
+            }
+        }
+        if (files == 0 || !File(root, "index.html").isFile) {
+            throw IOException("ZIP must contain index.html at its root (or inside one top-level folder).")
         }
     }
 
