@@ -58,9 +58,9 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.1.2.
 
-## ADR-014 — Evidence defines release status
+## ADR-014 — Report test evidence accurately
 
-**Decision:** code presence, documentation, UI presence, compilation or a simulated environment cannot close a gate that requires an installable artifact, physical device or external network. Every release stores exact commit, build, artifact digest, target, test result and reviewer.
+**Decision:** source presence, compilation, emulator tests and physical-device behavior are different evidence. Report exactly what ran and passed; do not claim physical-device behavior from emulator results.
 
 ## ADR-016 — Public visitor ingress ships in v0.1.0
 
