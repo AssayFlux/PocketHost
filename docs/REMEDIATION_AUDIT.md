@@ -150,3 +150,6 @@ The following issues were identified in the subsequent code/UI/build review. The
 ### Updated disposition
 
 The prior source-level remediation findings PH-001 through PH-010 remain historical findings with their recorded code changes, but their old CI status rows must not be treated as current-source evidence. Current CI demonstrates broad non-Android quality checks only. Android compilation/instrumentation, APK integrity, physical acceptance, public ingress acceptance and release publication remain open. See the current [v0.1.0 gate ledger](V0.1.0_GATE_STATUS.md) for the gate-by-gate decision.
+
+
+| PH-015 | High | Release branch governance | GitHub branch metadata reports `Alpha` as `protected: false`; the accessible repository rulesets endpoint returned an empty list. The branch-protection detail endpoint was not accessible to this audit integration, so required checks/review enforcement could not be verified. | Configure a repository ruleset or branch protection requiring PR review and successful Android + quality CI checks before merge; verify enforcement using repository settings. | Open |
