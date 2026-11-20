@@ -7,5 +7,5 @@ repositories {
 }
 
 dependencies {
-    implementation("org.apache.xmlgraphics:batik-transcoder:1.18")
+    implementation("org.apache.xmlgraphics:batik-transcoder:1.19")
 }
