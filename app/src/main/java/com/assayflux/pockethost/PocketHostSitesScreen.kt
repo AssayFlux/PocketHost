@@ -248,6 +248,7 @@ internal fun PocketHostSitesScreen(
                         Text("Includes website files, optional Python/Node projects, hostname routes and safe port settings. Device credentials and common secret files are excluded. Review source for embedded secrets before sharing. Restored runtimes stay stopped until you approve trusted code.", color = palette.onSurfaceVariant, fontSize = 13.sp)
                         }
                         if (selectedPage == "Releases") {
+                            Text("RELEASE HISTORY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                             if (state.previousReleases.isNotEmpty()) {
                                 OutlinedButton(
                                     onClick = {
