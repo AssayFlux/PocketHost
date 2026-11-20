@@ -1,6 +1,6 @@
 # Pocket Host — Native Android Relay Architecture (v0.1.0)
 
-**Status:** approved architecture; implementation and acceptance are not yet complete.  
+**Status:** core native implementation is present in Alpha; physical-device and public-network acceptance remain incomplete.  
 **Release:** v0.1.0 — First Hosting  
 **Product boundary:** native service bundled in the Pocket Host Android APK.  
 **Decision authority:** supersedes earlier Relay deployment notes that described an external terminal-managed Android installation.
@@ -184,10 +184,17 @@ Included: one owner-operated Android Relay node, inbound HTTP(S) visitor handlin
 
 Excluded: multi-region routing, multi-node scheduling, active-active failover, fleet-wide orchestration, arbitrary TCP forwarding, generic proxy/VPN behavior, WebSocket support unless separately specified and tested, mandatory cloud services, and a separate terminal-managed installation.
 
-## 12. Current implementation status
+## 12. Current implementation status (rechecked 2026-11-20)
 
-The repository contains a standalone `relay-node/` Rust library with JNI start/stop/status entry points, a bounded HTTP visitor router, authenticated outbound SSE host sessions, correlated responses, hostname/site route validation, DNS TXT ownership checks at startup, Rustls HTTPS termination and HTTP-to-HTTPS redirects. The listener is loopback-only without TLS; public binding requires both a certificate/key pair and successful DNS TXT verification for every configured route. Android stores the complete node configuration (including route bindings and host credential verifiers) as AES-GCM authenticated ciphertext in transactional SQLite and stores host revocation tombstones transactionally. The owner UI can issue/rotate 256-bit host credentials, display a newly issued token once for transfer to the host device, and revoke a host while removing its routes. The foreground service has owner-enabled boot recovery and a default-network callback for listener recovery. Gradle builds a separate Relay native library for the declared Android ABIs, and the APK workflow checks its presence.
+Alpha contains a native Android Relay implementation bundled in the main Pocket Host APK:
 
-Still incomplete: short-lived single-use pairing invites with host proof/owner approval; automatic ACME issuance/renewal and certificate expiry monitoring; continuous DNS proof lifecycle; integrated visitor/owner route-isolation and live-revocation tests; Android ABI/APK verification; and physical-device and independent public-network acceptance. The JSON import remains the current initial node/route provisioning bridge. The existing website engine owns port 8080 (Python defaults to 8081); Relay defaults remain HTTP 8082 and HTTPS 8444.
+- Kotlin `NativeRelayService` owns foreground-service start/stop/status, notification, owner-enabled boot recovery and network-change recovery. A JNI bridge starts the Rust `relay-node` engine.
+- The Rust/Tokio gateway handles bounded visitor HTTP(S), hostname/site routing, authenticated outbound SSE host sessions and correlated visitor request/host response handling. Public visitor paths are kept separate from host and owner control surfaces.
+- Node identity is generated with Android Keystore protection. Encrypted node configuration and route bindings are stored in transactional SQLite; host credential verifiers, pairing-invite hashes and revocation state are persisted, while live sockets and pending visitor requests remain ephemeral.
+- Owner-approved pairing uses short-lived single-use invitations and host-key proof. The owner UI can issue/rotate high-entropy host credentials (shown once) and revoke a host while removing its routes.
+- Public route activation requires DNS TXT ownership verification. The engine supports Rustls HTTPS, HTTP-to-HTTPS redirects and ACME HTTP-01 issuance; the Android service schedules certificate-expiry checks and renewal attempts.
+- Gradle and GitHub Actions build the Relay library for declared Android ABIs. Rust tests cover pairing proof/expiry/revocation, visitor control-surface/path rejection, route validation and restart-safe durable identity with fail-closed pending requests.
 
-The execution checklist is maintained in [RELAY_IMPLEMENTATION_PLAN.md](RELAY_IMPLEMENTATION_PLAN.md). This document remains an approved architecture, not evidence that Relay or v0.1.0 is complete. Do not close any release gate until source, automated tests, physical-device results and external-network evidence exist.
+Remaining v0.1.0 acceptance: continuous DNS ownership/revocation lifecycle; ACME issuance/renewal against a real public domain; complete visitor/owner route isolation and live-revocation integration tests; host reconnect and in-flight request behavior across Android process/device restart; foreground-service, boot, battery and network-change behavior on named physical devices; full APK/package/signature/hash evidence; and public DNS/TLS/visitor acceptance from independent networks. A Rust restart regression test does not prove Android process-death recovery. The JSON import remains the initial node/route provisioning bridge. The existing website engine owns port 8080 (Python defaults to 8081); Relay defaults remain HTTP 8082 and HTTPS 8444.
+
+The execution checklist is maintained in [RELAY_IMPLEMENTATION_PLAN.md](RELAY_IMPLEMENTATION_PLAN.md). Source implementation, host-side unit tests and emulator results are not by themselves proof of end-to-end production acceptance. Do not close any release gate until the exact source/artifact, physical-device and external-network evidence exists.
