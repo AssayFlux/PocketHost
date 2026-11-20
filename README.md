@@ -314,7 +314,6 @@ The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows
 
 - [New Master Plan](docs/MASTER_PLAN.md)
 - [Three-Version Roadmap](docs/ROADMAP.md)
-- [Mandatory G0–G9 Release Gates](docs/RELEASE_GATES.md)
 - [Complete Repository File Inventory & Baseline](docs/REPOSITORY_BASELINE.md)
 - [Repository Baseline](docs/PROJECT_BASELINE.md)
 - [Repository Deep Audit](docs/REPOSITORY_AUDIT.md)
