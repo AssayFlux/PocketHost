@@ -2,7 +2,7 @@
 
 **Baseline date:** 2026-11-20  
 **Active branch:** `Alpha`  
-**Current head at this checkpoint:** `8c95a42afe12ebceffeaede2807e702a02b71ce8`  
+**Current head at this checkpoint:** `ece9832d2c715da7cf6a975bbf35776b3f4dbfcc`  
 **Original planning baseline:** `8879ead946fe985d056970d1614068d1baea562b`  
 **Original pre-reset snapshot:** `7d829e09162882dbbd467cc6e6a4a9cdfadcf028`  
 **Archive branch:** `archive/pre-replan-2026-11-20`
@@ -134,7 +134,7 @@ A focused source review found that configured relay-host credential verifiers we
 
 **Not yet verified:** No Android compilation, unit/instrumentation execution, provider-level picker test, APK assembly, emulator run or physical-device test has been run for this checkpoint. The added instrumentation tests are source changes only.
 
-**Branding gate:** The designated source asset `Assets/Pocket Host 7.svg` is present (14,475,269 bytes), but launcher/in-app integration is not yet complete. The Android app currently has no launcher mipmap/drawable icon resources. The SVG requires faithful raster/adaptive-icon asset generation; no substitute logo has been introduced.
+**Branding gate (implemented in Step 3):** The canonical `Assets/Pocket Host 7.svg` is rendered in app chrome with AndroidSVG. A Gradle buildSrc task uses Apache Batik to generate density-specific launcher PNGs from that same source and places the artwork inside the adaptive-icon safe zone. The manifest now declares the Pocket Host launcher/round icon and app label. These are source/build-pipeline changes; CI compilation is required before treating them as verified.
 
 
 ## 9. Workbench file-management Step 2 checkpoint — 2026-11-20
@@ -149,3 +149,16 @@ Implementation commits on `Alpha`:
 The Workbench now allows folder rename and recursive folder deletion in addition to file operations. Folder deletion is limited to the selected site's private draft workspace; the operation rejects symlinks and invalid targets, validates the subtree before deletion and revalidates the workspace afterward. Rename attempts rollback if validation fails. The Android instrumentation regression asserts that deleting a draft folder leaves live website content unchanged.
 
 **Verification boundary:** source and test changes are committed; no Android build, JVM/instrumentation run, emulator, physical-device acceptance or APK build has been performed for this checkpoint. Keep these as open verification items.
+
+
+## 10. Final integration — Step 3 checkpoint (2026-11-20)
+
+Implementation commits:
+- `986a3ce` — render the canonical SVG in the owner header/sidebar, set the Pocket Host app label, add launcher resource declarations and AndroidSVG.
+- `0c6a2d9` — add a Gradle buildSrc Apache Batik rasterizer to produce density-aware launcher artwork from the canonical SVG.
+- `c8bb01a` — correct density scaling and use the padded artwork as the adaptive foreground.
+- `ece9832` — route the legacy launcher resource to the generated canonical SVG artwork.
+
+The build task produces legacy 48dp icons and 72dp adaptive foreground artwork for mdpi, hdpi, xhdpi, xxhdpi and xxxhdpi. The adaptive foreground is inset by 18dp inside the 108dp adaptive viewport. The original SVG remains the sole artwork source; no manually substituted brand mark is used. The same source SVG is copied into app assets and rendered in the Compose app chrome.
+
+The Android integration workflow must validate the new buildSrc task, SVG rasterization, resource merge and Kotlin compilation. Until that workflow completes successfully, these changes are **implemented but not CI-verified**. No APK was assembled. Device appearance, launcher mask behavior and actual runtime SVG rendering remain device-acceptance checks.
