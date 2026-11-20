@@ -488,25 +488,44 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
     }
 }
 
+async fn safe_index_file(root: &Path) -> Result<PathBuf, StatusCode> {
+    let index = root.join("index.html");
+    let metadata = tokio::fs::symlink_metadata(&index).await.map_err(|_| StatusCode::NOT_FOUND)?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() { return Err(StatusCode::NOT_FOUND); }
+    let canonical = tokio::fs::canonicalize(&index).await.map_err(|_| StatusCode::NOT_FOUND)?;
+    if !canonical.starts_with(root) { return Err(StatusCode::FORBIDDEN); }
+    Ok(canonical)
+}
+
 async fn resolve_static_file(root: &Path, relative: &Path) -> Result<PathBuf, StatusCode> {
     if is_sensitive_request_path(relative) { return Err(StatusCode::NOT_FOUND); }
+    // Do not follow symbolic links anywhere in the requested path, even when the
+    // target is an ordinary in-root asset. Importers and file management reject them.
+    let mut cursor = root.to_path_buf();
+    for component in relative.components() {
+        let Component::Normal(name) = component else { return Err(StatusCode::FORBIDDEN); };
+        cursor.push(name);
+        match tokio::fs::symlink_metadata(&cursor).await {
+            Ok(metadata) if metadata.file_type().is_symlink() => return Err(StatusCode::NOT_FOUND),
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+            Err(_) => return Err(StatusCode::NOT_FOUND),
+        }
+    }
     let requested = tokio::fs::canonicalize(root.join(relative)).await;
     let candidate = match requested {
         Ok(path) if path.is_file() => path,
-        Ok(path) if path.is_dir() && relative.extension().is_none() => {
-            tokio::fs::canonicalize(root.join("index.html")).await.map_err(|_| StatusCode::NOT_FOUND)?
-        }
+        Ok(path) if path.is_dir() && relative.extension().is_none() => safe_index_file(root).await?,
         Err(_) if relative.extension().is_none() => {
-            // History-based SPAs (React/Vue/Svelte/etc.) expect extensionless routes
-            // to load the application shell. Missing asset paths with extensions remain 404s.
-            tokio::fs::canonicalize(root.join("index.html")).await.map_err(|_| StatusCode::NOT_FOUND)?
+            // History-based SPAs expect extensionless routes to load the app shell.
+            // Missing asset paths with extensions remain 404s.
+            safe_index_file(root).await?
         }
         Err(_) => return Err(StatusCode::NOT_FOUND),
         _ => return Err(StatusCode::NOT_FOUND),
     };
     if !candidate.starts_with(root) { return Err(StatusCode::FORBIDDEN); }
     if !candidate.is_file() { return Err(StatusCode::NOT_FOUND); }
-    // Re-check the canonical target: an in-root symlink must not alias a credential path.
     let resolved_relative = candidate.strip_prefix(root).map_err(|_| StatusCode::FORBIDDEN)?;
     if is_sensitive_request_path(resolved_relative) { return Err(StatusCode::NOT_FOUND); }
     Ok(candidate)
@@ -1242,9 +1261,13 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(root.join("index.html"), "ok").unwrap();
         std::fs::write(root.join(".env"), "PRIVATE=never-serve").unwrap();
+        std::fs::write(root.join("visible.txt"), "visible").unwrap();
         std::os::unix::fs::symlink(".env", root.join("public-config.txt")).unwrap();
+        std::os::unix::fs::symlink("visible.txt", root.join("visible-alias.txt")).unwrap();
         let result = resolve_static_file(&root, Path::new("public-config.txt")).await;
         assert_eq!(result.unwrap_err(), StatusCode::NOT_FOUND);
+        let alias = resolve_static_file(&root, Path::new("visible-alias.txt")).await;
+        assert_eq!(alias.unwrap_err(), StatusCode::NOT_FOUND);
         std::fs::remove_dir_all(root).unwrap();
     }
 
