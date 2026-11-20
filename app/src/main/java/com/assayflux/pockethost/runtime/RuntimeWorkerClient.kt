@@ -240,7 +240,7 @@ object RuntimeWorkerClient {
     }
 
     internal fun validateProjectTransferFileSize(size: Long) {
-        require(size in 0..MAX_PROJECT_FILE_BYTES) {
+        require(size >= 0L && size <= MAX_PROJECT_FILE_BYTES) {
             "Runtime project contains a file larger than the 64 MiB transfer limit."
         }
     }
