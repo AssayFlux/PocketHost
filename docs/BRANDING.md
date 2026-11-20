@@ -28,5 +28,5 @@ The adaptive icon places the 72dp artwork inside an 18dp inset on the 108dp adap
 
 - Source integration is committed on `Alpha`.
 - Android CI must confirm buildSrc compilation, Batik dependency resolution, SVG rasterization, Android resource merging and Kotlin compilation.
-- Physical launcher appearance, adaptive-mask cropping and runtime SVG rendering still require device verification.
+- Physical launcher appearance, adaptive-mask cropping and the rendered in-app logo and adaptive-mask appearance still require device verification.
 - This integration does not assemble an APK and does not change the v0.1.0 Alpha release status.
