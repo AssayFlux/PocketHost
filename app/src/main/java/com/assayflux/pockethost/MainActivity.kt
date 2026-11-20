@@ -980,7 +980,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     )
                 }
                 if (selectedTab == "Settings") {
-                if (settingsSection == "Network") {
+                if (selectedTab == "Settings" && settingsSection == "Network") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1396,7 +1396,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+                if (selectedTab == "Settings" && settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1437,7 +1437,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+                if (selectedTab == "Settings" && settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1502,7 +1502,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Network") {
+                if (selectedTab == "Settings" && settingsSection == "Network") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1625,7 +1625,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+                if (selectedTab == "Settings" && settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1671,7 +1671,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                    if (settingsSection == "Network") {
+                    if (selectedTab == "Settings" && settingsSection == "Network") {
                 Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1689,7 +1689,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     }
                 }
 
-                    if (settingsSection == "About") {
+                    if (selectedTab == "Settings" && settingsSection == "About") {
                 Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1703,9 +1703,6 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         }
                     }
                 }
-                if (selectedTab == "Dashboard") {
-                }
-
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
