@@ -12,9 +12,9 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Reason:** first prove a useful vertical slice before expanding into runtimes and distributed infrastructure.
 
-## ADR-003 — Mandatory G0–G9
+## ADR-003 — Separate engineering tests from APK packaging
 
-**Decision:** every version must document and pass all ten gates G0 through G9. A release is blocked if any gate is not PASS with evidence. See RELEASE_GATES.md.
+**Decision:** normal code pushes and pull requests run quality checks, Android compilation, native ABI builds and emulator tests. APK packaging is a separate manually triggered workflow and is not coupled to routine code verification.
 
 ## ADR-004 — First release is static hosting
 
