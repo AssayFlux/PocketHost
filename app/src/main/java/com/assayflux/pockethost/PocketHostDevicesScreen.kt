@@ -92,12 +92,11 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 OutlinedTextField(publicKey, { publicKey = it.trim() }, label = { Text("Public key · Base64 DER SPKI") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                 OutlinedTextField(displayName, { displayName = it }, label = { Text("Device display name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(product, { product = it }, label = { Text("Agent product") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(os, { os = it }, label = { Text("Operating system") }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(architecture, { architecture = it }, label = { Text("Architecture") }, modifier = Modifier.weight(1f), singleLine = true)
-                }
+                OutlinedTextField(os, { os = it }, label = { Text("Operating system") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(architecture, { architecture = it }, label = { Text("Architecture") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(protocol, { protocol = it }, label = { Text("Protocol version") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(role, { role = it.trim() }, label = { Text("Requested role (storage, traffic, build_publish, native_job, backup_recovery, edge_gateway)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(role, { role = it.trim() }, label = { Text("Requested role") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Text("Supported roles: storage, traffic, build_publish, native_job, backup_recovery, edge_gateway.", color = palette.onSurfaceVariant, fontSize = 12.sp)
                 OutlinedTextField(capabilities, { capabilities = it }, label = { Text("Requested capabilities · comma separated") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                 Button(onClick = {
                     runCatching { DeviceTrustStore.createChallenge(fingerprint.lowercase()) }
