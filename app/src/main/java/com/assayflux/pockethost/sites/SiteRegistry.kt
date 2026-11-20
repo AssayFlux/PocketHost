@@ -262,7 +262,13 @@ object SiteRegistry {
         )
         val customRoot = parts.size == 2 && parts[0] == "site-roots" &&
             parts[1].matches(Regex("[A-Za-z0-9_-]{1,64}"))
-        require(root.isDirectory && (standardRoot || customRoot)) {
+        val allowedForRuntime = when (site.runtime) {
+            "static" -> (parts.size == 1 && parts[0] == "site") || customRoot
+            "python-wsgi" -> parts.size == 1 && parts[0] == "python-project"
+            "node" -> parts.size == 1 && parts[0].matches(Regex("node-project-[A-Za-z0-9_-]{1,64}"))
+            else -> false
+        }
+        require(root.isDirectory && (standardRoot || customRoot) && allowedForRuntime) {
             "Site root must be a dedicated Pocket Host website, Python, Node, or registered custom-site directory."
         }
         return root
