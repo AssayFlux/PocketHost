@@ -19,7 +19,7 @@ object SensitivePathPolicy {
     private val blockedExtensions = setOf("pem", "key", "p12", "pfx", "jks", "keystore")
 
     fun isSensitivePath(path: String): Boolean {
-        val normalized = path.replace('\\\\', '/')
+        val normalized = path.replace('\\', '/')
         val parts = normalized.split('/').filter { it.isNotEmpty() }
         if (parts.isEmpty()) return false
         return parts.any { segment ->
@@ -29,8 +29,8 @@ object SensitivePathPolicy {
                 name in blockedNames ||
                 name == ".env" || name.startsWith(".env.") ||
                 extension in blockedExtensions ||
-                name.startsWith("service-account-") && extension == "json" ||
-                name.startsWith("serviceaccount-") && extension == "json" ||
+                (name.startsWith("service-account-") && extension == "json") ||
+                (name.startsWith("serviceaccount-") && extension == "json") ||
                 name.endsWith("-service-account.json") ||
                 name.endsWith("-serviceaccount.json")
         }
