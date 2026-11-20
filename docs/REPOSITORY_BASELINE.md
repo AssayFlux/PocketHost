@@ -588,3 +588,12 @@ At commit `66c904c59b841786b9212f0871cfc590cd0de386` (tree `fee696d4b8c4f4c46d8a
 ## Documentation realignment snapshot (2026-11-18)
 
 The current Alpha head used as the base for release-document realignment is `9debd9b630d460c5feed92d07b3c20da319a9e4d` (260 blobs, 72 directories). The isolated documentation branch is `docs/release-version-realignment-2026-11`. Its commits change release documentation only; they do not represent code fixes, a v0.1.0 build, or release acceptance. The earlier remediation branch snapshot noted above is historical and is not the active branch for this documentation pass.
+
+
+## Current Alpha snapshot correction — 2026-11-20
+
+The inventory at the top of this file is a historical snapshot and must not be treated as current. The current default-branch HEAD audited on 2026-11-20 is `cb5a925b98cf66510b9d38af37fe1c5cca846b84`; its recursive Git tree contains **290 blobs and 75 directories** (not truncated).
+
+Current `.github/workflows/` contains only `quality.yml`. Earlier inventory descriptions that list Android integration, signed-release, dependency-lock or protocol-validation workflows as present are stale for this HEAD. The latest exact-HEAD quality run #44699649949 passed six non-Android jobs (Rust engine, Control Plane, Python/Linux agent, web console, Node smoke and Gradle wrapper validation). It does not run Android compilation, instrumentation, emulators, Android ABI builds or APK packaging. Restore Android CI before relying on CI as Android release evidence.
+
+The current source tree includes the dedicated Compose screen modules and native Android Relay service/JNI/Rust gateway/ACME source, encrypted configuration and credential/revocation persistence. Source inventory is not production acceptance. No published GitHub release or release tag was found in the checked listings. See [v0.1.0 gate ledger](V0.1.0_GATE_STATUS.md) for the exact release assessment.

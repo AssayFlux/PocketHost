@@ -91,7 +91,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/route.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>VISITOR CONNECTIVITY</strong><br>
-      Local Network, Cloudflare Tunnel and the native Android AssayFlux Relay service are separate ingress paths. The Android host client has independent credentials; an initial native HTTP gateway/JNI foundation is now present, but TLS, Android foreground-service integration, durable identity/credentials and public acceptance remain open. Linux-native packaging remains v0.1.1.
+      Local Network, Cloudflare Tunnel and the native Android AssayFlux Relay service are separate ingress paths. The Android source includes a Kotlin foreground service, JNI/Rust gateway, HTTPS/ACME implementation, Keystore-encrypted configuration and durable credential/revocation state. Live DNS/TLS lifecycle, visitor/management route isolation and physical/public-network acceptance remain unverified. Linux-native packaging remains v0.1.1.
     </td>
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
@@ -124,7 +124,7 @@ The first release has one primary promise: **a website imported into Pocket Host
 - A second device on the same Wi-Fi can open the website.
 - Public custom-domain hosting through Cloudflare Tunnel or the native Android AssayFlux Relay service bundled in the Pocket Host APK.
 - Public HTTP and HTTPS with valid edge TLS; HTTP redirects to HTTPS by default. Plain HTTP content serving is a target opt-in; the current Relay edge does not implement that opt-in.
-- The native Android Relay does not require a paid VPS, but its device needs a public IPv4 path with port forwarding or globally routed IPv6 plus edge forwarding to the app's unprivileged listener ports. CGNAT without global IPv6 cannot accept inbound visitors.
+- Native Relay network prerequisite: the phone needs a public IPv4 path with port forwarding or globally routed IPv6 plus edge forwarding to the app's unprivileged listener ports. CGNAT without global IPv6 cannot accept inbound visitors. Source implementation is not proof of a live public deployment.
 - External DNS/TLS/content verification and strict separation between visitor and management routes.
 - Foreground hosting service, notification, start/stop/restart, recovery and Android lifecycle checks.
 - Encrypted full-app backup/restore and useful hosting diagnostics (static website backups support the full 500,000,000-byte import allowance; optional Python/Node projects have separate limits).
@@ -177,7 +177,7 @@ See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, 
 | Kotlin + Jetpack Compose | <code>app/</code> | Main Android application | v0.1.0 |
 | Rust + Tokio/Hyper | <code>rust-engine/</code> | Static website serving | v0.1.0 |
 | Cloudflare Tunnel | <code>app/.../tunnel/</code> + native connector | Outbound public ingress for custom domains | v0.1.0 |
-| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Initial Rust gateway/JNI source and Gradle native build task exist; TLS, service lifecycle, identity, persistence and acceptance remain open; Linux-native packaging is deferred to v0.1.1 | v0.1.0 |
+| AssayFlux Relay | <code>app/.../management/</code>, <code>control-plane/</code> (current foundation) | Kotlin foreground service, JNI/Rust gateway, HTTPS/ACME code, encrypted configuration and credential/revocation persistence are present in source; live DNS/TLS, route-isolation and physical/public acceptance remain open; Linux-native packaging is deferred to v0.1.1 | v0.1.0 |
 | HTML/CSS/browser JavaScript | Main app + Rust engine | Default static website path | v0.1.0 |
 | Workbench | Android app | Website development workflow | v0.1.1 |
 | TypeScript compiler | Android app | Bounded browser-code build tool | v0.1.1 |
@@ -216,11 +216,11 @@ The diagram includes future integration boundaries. It is not a claim that every
 
 ## REPOSITORY STATUS
 
-The audit findings and remediation register are maintained in [Remediation Audit](docs/REMEDIATION_AUDIT.md). The latest Alpha source snapshot checked for this documentation update is commit `9debd9b630d460c5feed92d07b3c20da319a9e4d` (260 tracked files, 72 directories). Documentation alignment is being prepared on `docs/release-version-realignment-2026-11`; no code remediation is claimed by that documentation branch. See [Repository Baseline](docs/REPOSITORY_BASELINE.md) for the historical inventory and snapshot deltas.
+The audit findings and remediation register are maintained in [Remediation Audit](docs/REMEDIATION_AUDIT.md). The current Alpha source snapshot audited on 2026-11-20 is commit `cb5a925b98cf66510b9d38af37fe1c5cca846b84` (290 blobs, 75 directories). Documentation reconciliation is proposed on `docs/v0.1.0-current-source-audit-2026-11-20`; no application code changes are included. See [Repository Baseline](docs/REPOSITORY_BASELINE.md) for historical inventories and snapshot deltas.
 
-The current Alpha source tree contains 260 tracked files across 72 directories after the dependency-lock commit. The previous audit snapshot at `2087938a35dc88ed7588d97ffed8bd65fe8b40a9` contained 259 tracked files; the historical remediation snapshot contained 260 blobs including its audit register: Android hosting, Rust static serving, website import/registry/backup, initial Workbench, Python/Node companion, Android trust foundations, Linux agent preview, Rust control plane, browser console, Cloudflare connector and a partial Relay visitor path.
+The earlier 259/260-file counts are historical. The current recursive Alpha tree contains 290 blobs and 75 directories. It includes Android hosting/import/backup and dedicated UI modules, a Rust static server, native Relay service/JNI/Rust gateway/ACME code, Cloudflare integration, a runtime companion, Control Plane, Linux agent, protocol contracts and web console.
 
-**Important:** the standalone native Android Relay now has a Rust/JNI gateway, Rustls HTTPS listener, startup DNS TXT ownership checks, a Keystore-encrypted node configuration store, and a dedicated Android foreground service with initial import/start/stop controls. The current configuration import is an engineering bridge. Automated ACME renewal, node identity/pairing, credential rotation/revocation, durable route state, Android ABI/APK verification and physical/public-network acceptance remain open. The existing host-side RelayAgent remains distinct from the inbound gateway. Linux-native installation is deferred to v0.1.1. See [Native Android Relay Architecture](docs/NATIVE_ANDROID_RELAY.md), [implementation plan](docs/RELAY_IMPLEMENTATION_PLAN.md) and [node configuration format](docs/RELAY_NODE_CONFIGURATION.md). The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
+**Important:** the standalone native Android Relay now has a Rust/JNI gateway, Rustls HTTPS listener, startup DNS TXT ownership checks, a Keystore-encrypted node configuration store, and a dedicated Android foreground service with initial import/start/stop controls. Current source includes pairing/credential issuance and rotation/revocation paths, durable credential/revocation storage, DNS TXT validation and ACME HTTP-01 certificate issuance/renewal checks. Their end-to-end production behavior still requires Android build/test CI, real DNS/TLS validation, public-network visitor tests and physical-device recovery acceptance. The existing host-side RelayAgent remains distinct from the inbound gateway. Linux-native installation is deferred to v0.1.1. See [Native Android Relay Architecture](docs/NATIVE_ANDROID_RELAY.md), [implementation plan](docs/RELAY_IMPLEMENTATION_PLAN.md) and [node configuration format](docs/RELAY_NODE_CONFIGURATION.md). The source baseline and complete file inventory are recorded in [Repository Baseline](docs/REPOSITORY_BASELINE.md), with the summary in [Project Baseline](docs/PROJECT_BASELINE.md) and risks in [Repository Deep Audit](docs/REPOSITORY_AUDIT.md).
 
 ## ANDROID APPLICATION
 
@@ -242,7 +242,7 @@ The Android module declares min SDK 26, target SDK 35 and native ABI targets arm
 |---|---|---|
 | Android phone/tablet | Pocket Host main app | Hosting foundation present; physical acceptance open |
 | Android runtime provider | Separate companion APK | Python + Node integrations in progress |
-| Android phone/tablet | Pocket Host Relay service | Planned Kotlin foreground service + Rust JNI engine bundled in the main APK; native gateway implementation and public acceptance remain open; public IP/IPv6 plus edge forwarding required |
+| Android phone/tablet | Pocket Host Relay service | Kotlin foreground service + Rust JNI/Rust gateway source is present in the main app; physical install, live DNS/TLS and public visitor acceptance remain open; public IP/IPv6 plus edge forwarding required |
 | Owner-owned Linux device | Relay Node package and service | v0.1.1; Linux-native installer, service integration and support matrix deferred |
 | Linux x86_64 | Pocket Host Linux Node Agent | Preview package |
 | Windows / macOS | Native worker agent | Planned |
@@ -308,7 +308,7 @@ python -m unittest discover -s tests -p 'test_protocol_contracts.py' -v
 
 ### CI and APK evidence
 
-The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs automated repository checks. The Android integration workflow has a compile-only path and a manually dispatched APK/emulator path. A compile-only job is not an APK build or device acceptance. Release claims require the exact workflow run, artifact digest and device test evidence.
+The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows/quality.yml) runs automated repository checks. **Current Alpha CI limitation (2026-11-20):** the only workflow in the current tree is `quality.yml`. The former Android integration workflow is absent, so the latest green run does not compile Android/Kotlin, build native Android ABIs, run instrumentation/emulators or package an APK. Restore Android CI before claiming Android verification. No production release artifact or tag is currently recorded.
 
 ## DOCUMENTATION
 
@@ -346,3 +346,8 @@ The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows
 </p>
 
 Pocket Host is licensed under the [Apache License 2.0](LICENSE).
+
+
+## CURRENT RELEASE AUDIT — 2026-11-20
+
+The audited Alpha HEAD is `cb5a925b98cf66510b9d38af37fe1c5cca846b84` (290 tracked blobs, 75 directories). The latest exact-HEAD quality run [#44699649949](https://github.com/AssayFlux/PocketHost/actions/runs/44699649949) passed six non-Android jobs; it is not an Android release check. The Android workflow is absent from the current tree. No published GitHub release or release tag was found in the checked listings. Pocket Host remains pre-release until G0–G9 are evidenced and owner-approved. See [current gate ledger](docs/V0.1.0_GATE_STATUS.md), [remediation audit](docs/REMEDIATION_AUDIT.md) and [repository deep audit](docs/REPOSITORY_AUDIT.md).
