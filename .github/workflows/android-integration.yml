@@ -355,7 +355,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Build signature-matched runtime companion
+      # Test-only companion package required to exercise the isolated runtime on
+      # emulators. The main PocketHost app APK remains behind the explicit
+      # build_apks release-packaging input above.
+      - name: Build signature-matched runtime test companion
         run: ./gradlew :runtime-worker:assembleDebug
       - uses: reactivecircus/android-emulator-runner@v2
         with:
