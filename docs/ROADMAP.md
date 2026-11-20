@@ -39,7 +39,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 7. Stop/restart hosting; background and foreground the app; test network change and process/device restart.
 8. Create and restore an encrypted website backup.
 9. Verify the custom domain from an independent network over HTTP and HTTPS through each configured provider; record DNS/TLS, response headers, content, provider status and management-route isolation.
-10. Record the source SHA, main APK SHA-256 (including Relay native libraries), public network topology, device/Android version, logs and G0–G9 results.
+10. Record the source SHA, main APK SHA-256 (including Relay native libraries), public network topology, device/Android version, logs and engineering-test results.
 
 ## v0.1.1 — Workbench, Runtime & Linux Relay Installation
 
