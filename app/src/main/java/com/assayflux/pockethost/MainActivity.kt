@@ -1179,6 +1179,7 @@ if (settingsSection in setOf("Relay node", "Relay host", "Cloudflare")) {
                             "This is the inbound visitor gateway on this phone, separate from the outbound host connection. Pairing invites are short-lived and single-use; ACME HTTP-01 issues and renews certificates. DNS TXT ownership proof is currently checked at node startup, not continuously.",
                             color = palette.onSurfaceVariant, fontSize = 13.sp
                         )
+                        TextButton(onClick = { settingsSection = "DNS management" }) { Text("DNS management options") }
                     }
                 }
                 }
