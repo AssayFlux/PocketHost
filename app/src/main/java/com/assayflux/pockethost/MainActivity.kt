@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
@@ -99,6 +100,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Draw edge-to-edge and apply Compose system-bar insets to the app chrome/content.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val backupRecovery = runCatching { ApplicationBackupManager.recoverInterruptedRestore(this) }
         backupRecovery.onFailure { error ->
             OperationalLog.record(this, "ERROR", "BACKUP_RESTORE_RECOVERY_FAILED",
@@ -641,11 +644,15 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             }
         ) { innerPadding ->
             Surface(Modifier.fillMaxSize(), color = palette.background) {
-                Column(
-                    Modifier.fillMaxSize().padding(innerPadding).imePadding()
-                        .verticalScroll(contentScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    // Keep tablet/desktop-like widths readable while letting phones use all available width.
+                    val contentWidth = maxWidth.coerceAtMost(840.dp)
+                    Column(
+                        Modifier.width(contentWidth).fillMaxHeight().align(Alignment.TopCenter)
+                            .padding(innerPadding).consumeWindowInsets(innerPadding).imePadding()
+                            .verticalScroll(contentScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                 if (selectedTab == "Home") {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
