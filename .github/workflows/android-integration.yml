@@ -1,8 +1,8 @@
 name: PocketHost Android integration
 
 on:
-  # Security implementation changes must be compiled and exercised on the
-  # supported Android API matrix before their gates can be considered complete.
+  # Android source, UI and security changes must be compiled and exercised on
+  # the supported API matrix before their gates can be considered complete.
   push:
     branches: [Alpha]
     paths:
