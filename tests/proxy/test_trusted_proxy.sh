@@ -29,7 +29,7 @@ docker run -d --name "$echo_name" --network "$network" --network-alias echo \
   -v "$PWD/tests/proxy/echo_server.py:/echo_server.py:ro" \
   python:3.12-alpine python /echo_server.py >/dev/null
 
-docker run -d --name "$caddy_name" --network "$network" --ip 172.31.240.10 \
+docker run -d --name "$caddy_name" --network "$network" --network-alias caddy --ip 172.31.240.10 \
   -e POCKETHOST_CLOUDFLARED_IP=172.31.240.11 \
   -v "$tmp_dir/Caddyfile:/etc/caddy/Caddyfile:ro" \
   -v "$PWD/control-plane/trusted-proxy.caddy:/etc/caddy/trusted-proxy.caddy:ro" \
