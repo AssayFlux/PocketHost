@@ -2,7 +2,7 @@
 
 **Baseline date:** 2026-11-20  
 **Active branch:** `Alpha`  
-**Current head at this checkpoint:** `ece9832d2c715da7cf6a975bbf35776b3f4dbfcc`  
+**Code checkpoint reviewed:** `29542ea1e33a64d1f9ef77a0bd9e70263038a0d7`  
 **Original planning baseline:** `8879ead946fe985d056970d1614068d1baea562b`  
 **Original pre-reset snapshot:** `7d829e09162882dbbd467cc6e6a4a9cdfadcf028`  
 **Archive branch:** `archive/pre-replan-2026-11-20`
@@ -134,7 +134,7 @@ A focused source review found that configured relay-host credential verifiers we
 
 **Not yet verified:** No Android compilation, unit/instrumentation execution, provider-level picker test, APK assembly, emulator run or physical-device test has been run for this checkpoint. The added instrumentation tests are source changes only.
 
-**Branding gate (implemented in Step 3):** The canonical `Assets/Pocket Host 7.svg` is rendered in app chrome with AndroidSVG. A Gradle buildSrc task uses Apache Batik to generate density-specific launcher PNGs from that same source and places the artwork inside the adaptive-icon safe zone. The manifest now declares the Pocket Host launcher/round icon and app label. These are source/build-pipeline changes; CI compilation is required before treating them as verified.
+**Branding gate (implemented in Step 3):** The canonical `Assets/Pocket Host 7.svg` is the only artwork source. A Gradle `buildSrc` task uses Apache Batik to rasterize it at build time into density-specific launcher PNGs; the Compose owner header/sidebar reuse the generated artwork resource. The manifest declares the Pocket Host launcher/round icon and app label. Runtime SVG parsing and a duplicate SVG asset in the APK are avoided. These are source/build-pipeline changes; CI compilation is required before treating them as verified.
 
 
 ## 9. Workbench file-management Step 2 checkpoint — 2026-11-20
@@ -153,12 +153,23 @@ The Workbench now allows folder rename and recursive folder deletion in addition
 
 ## 10. Final integration — Step 3 checkpoint (2026-11-20)
 
-Implementation commits:
-- `986a3ce` — render the canonical SVG in the owner header/sidebar, set the Pocket Host app label, add launcher resource declarations and AndroidSVG.
-- `0c6a2d9` — add a Gradle buildSrc Apache Batik rasterizer to produce density-aware launcher artwork from the canonical SVG.
-- `c8bb01a` — correct density scaling and use the padded artwork as the adaptive foreground.
-- `ece9832` — route the legacy launcher resource to the generated canonical SVG artwork.
+Implementation commits on `Alpha` include:
+- `986a3ce`, `0c6a2d9`, `c8bb01a`, `ece9832` — initial canonical SVG launcher and app-chrome integration.
+- `a30f148` — record the final integration and canonical SVG branding.
+- `1580855` — add CI validation coverage for buildSrc and brand assets.
+- `53ff9df` — document the canonical branding pipeline.
+- `d61c09c`, `29542ea` — use build-time pre-rasterized artwork in Compose; no runtime SVG parsing.
 
-The build task produces legacy 48dp icons and 72dp adaptive foreground artwork for mdpi, hdpi, xhdpi, xxhdpi and xxxhdpi. The adaptive foreground is inset by 18dp inside the 108dp adaptive viewport. The original SVG remains the sole artwork source; no manually substituted brand mark is used. The same source SVG is rasterized at build time and the generated artwork resource is reused in the Compose app chrome. This avoids runtime SVG parsing and avoids packaging a second full SVG copy.
+The current implementation uses `Assets/Pocket Host 7.svg` as the single source of truth. Apache Batik in `buildSrc` rasterizes the SVG during Android resource generation into density-qualified PNG resources for mdpi through xxxhdpi. Legacy launcher artwork is generated at 48dp; adaptive foreground artwork is generated at 72dp and inset by 18dp in the 108dp adaptive-icon viewport. The adaptive icon background is the documented brand navy. Compose owner header and sidebar render the generated `R.mipmap.ic_launcher_artwork`; the manifest declares `@mipmap/ic_launcher` and the Pocket Host app label. Generated PNGs are build outputs, not manually maintained files.
 
-The Android integration workflow must validate the new buildSrc task, SVG rasterization, resource merge and Kotlin compilation. Until that workflow completes successfully, these changes are **implemented but not CI-verified**. No APK was assembled. Device appearance, launcher mask behavior and actual rendered logo appearance remains a device-acceptance check.
+**Verification boundary:** the latest Android-native validation run is `44745388758` and was still in progress at this checkpoint; the latest quality run `44745388887` and APK-gated acceptance run `44745388739` were queued/pending. Earlier workflow runs were cancelled when newer commits superseded their heads. Do not claim the current integrated branch is CI-verified until runs on the current head complete. No APK was assembled. Launcher mask, in-app logo appearance and physical-device behavior remain device-acceptance checks.
+
+## 11. Step 1–3 integrated recheck (2026-11-20)
+
+| Step | Implementation recheck | Remaining verification |
+|---|---|---|
+| 1 — ZIP import and brand asset | ZIP picker accepts provider-agnostic file types; importer validates archive content, handles built-site `dist/` and `build/` roots, rejects ambiguous roots and empty/unreadable archives, reports activated-root counts, and retains path/sensitive-file/collision/size bounds. Canonical SVG now feeds launcher and in-app artwork through the build-time rasterizer. | Current-head Android CI must compile the Batik buildSrc task, generate PNG resources and compile app code. Provider-level picker behavior and launcher rendering need emulator/device checks. |
+| 2 — Workbench file management | Explorer supports file/folder create, rename and delete flows; recursive deletion is confined to the private per-site draft workspace, rejects unsafe targets and does not mutate the live site. Rename validation failure attempts rollback. Regression coverage checks folder deletion isolation. | Current-head Android compile/instrumentation execution and hands-on file/folder/editor workflows remain to be recorded. The supplied visual reference has not been independently confirmed pixel-for-pixel; this checkpoint is a functional file-management implementation, not a claim of exact visual reproduction. |
+| 3 — Final integration | Canonical brand source, Android launcher resources, in-app mark, Workbench file-operation wiring and implementation documentation are integrated on `Alpha`. | Wait for current-head quality and Android validation. No APK, emulator, physical-device or external-network acceptance is claimed. |
+
+**Overall status:** Steps 1–3 implementation changes are present on `Alpha`; current-head automated verification is pending. This is still v0.1.0 Alpha, not a verified release. Do not build/package APKs until the owner explicitly moves to the APK phase. No APK build was run during this implementation pass.
