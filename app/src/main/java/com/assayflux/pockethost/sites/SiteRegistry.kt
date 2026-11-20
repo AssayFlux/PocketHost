@@ -50,13 +50,7 @@ object SiteRegistry {
         require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
         require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
         validateAccessPolicy(site)
-        val requestedRoot = File(site.root)
-        require(!java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) { "Site roots cannot be symbolic links." }
-        val root = requestedRoot.canonicalFile
-        val privateRoot = context.filesDir.canonicalFile.toPath()
-        require(root != privateRoot.toFile() && root.isDirectory && root.toPath().startsWith(privateRoot)) {
-            "Site root must be an existing directory inside PocketHost private storage."
-        }
+        val root = canonicalSiteRoot(context, site)
         val normalizedHosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
         require(normalizedHosts.all { hostnamePattern.matches(it) }) { "One or more hostnames are invalid." }
         val existingAll = list(context)
@@ -108,18 +102,12 @@ object SiteRegistry {
      */
     @Synchronized fun replaceAll(context: Context, sites: List<Site>) {
         require(sites.size <= WebsiteLimits.MAX_REGISTERED_SITES) { "PocketHost supports up to 100 registered sites." }
-        val privateRoot = context.filesDir.canonicalFile.toPath()
         val normalized = sites.map { site ->
             require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid site ID." }
             require(site.name.isNotBlank() && site.name.length <= 80) { "Site name must be 1–80 characters." }
             require(site.runtime in setOf("static", "python-wsgi", "node")) { "Unsupported runtime." }
             validateAccessPolicy(site)
-            val requestedRoot = File(site.root)
-            require(!java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) { "Restored site roots cannot be symbolic links." }
-            val root = requestedRoot.canonicalFile
-            require(root != privateRoot.toFile() && root.isDirectory && root.toPath().startsWith(privateRoot)) {
-                "Restored site root must be an existing directory inside Pocket Host private storage."
-            }
+            val root = canonicalSiteRoot(context, site)
             val hosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
             require(hosts.size <= WebsiteLimits.MAX_HOSTNAMES_PER_SITE && hosts.all { hostnamePattern.matches(it) }) {
                 "Restored site contains an invalid hostname."
@@ -256,12 +244,26 @@ object SiteRegistry {
     }
 
     private fun canonicalSiteRoot(context: Context, site: Site): File {
-        val requested = File(site.root)
-        require(!java.nio.file.Files.isSymbolicLink(requested.toPath())) { "Site roots cannot be symbolic links." }
-        val root = requested.canonicalFile
         val privateRoot = context.filesDir.canonicalFile.toPath()
-        require(root != context.filesDir.canonicalFile && root.isDirectory && root.toPath().startsWith(privateRoot)) {
-            "Site root must be a dedicated directory inside PocketHost private storage."
+        val requested = File(site.root).absoluteFile.toPath().normalize()
+        require(requested.startsWith(privateRoot)) { "Site roots must be selected from PocketHost's managed site directories." }
+        var cursor = privateRoot
+        for (part in privateRoot.relativize(requested)) {
+            cursor = cursor.resolve(part)
+            require(!java.nio.file.Files.isSymbolicLink(cursor)) { "Site roots cannot contain symbolic-link path components." }
+        }
+        val root = requested.toFile().canonicalFile
+        val relative = privateRoot.relativize(root.toPath())
+        val parts = relative.map { it.toString() }
+        val standardRoot = parts.size == 1 && (
+            parts[0] == "site" ||
+            parts[0] == "python-project" ||
+            parts[0].matches(Regex("node-project-[A-Za-z0-9_-]{1,64}"))
+        )
+        val customRoot = parts.size == 2 && parts[0] == "site-roots" &&
+            parts[1].matches(Regex("[A-Za-z0-9_-]{1,64}"))
+        require(root.isDirectory && (standardRoot || customRoot)) {
+            "Site root must be a dedicated Pocket Host website, Python, Node, or registered custom-site directory."
         }
         return root
     }

@@ -35,7 +35,7 @@ class PocketHostNavigationAccessibilityTest {
         val previousRegistry = registryPreferences.getString("sites", "[]") ?: "[]"
         val visitorSiteId = "ui-visitor-" + System.nanoTime()
         val visitorHostname = "ui-" + System.nanoTime() + ".local"
-        val visitorSiteRoot = File(context.filesDir, "ui-visitor-site-${System.nanoTime()}")
+        val visitorSiteRoot = File(context.filesDir, "site-roots/ui-visitor-site-${System.nanoTime()}")
         PocketHostUiTestLogin.ensureOwnerAccount(context)
         val device = UiDevice.getInstance(instrumentation)
         val screenshotDir = File(checkNotNull(context.getExternalFilesDir(null)), "screenshots")
