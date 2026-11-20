@@ -192,6 +192,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun PocketHostDashboard(onSignOut: () -> Unit) {
     val context = LocalContext.current
+    LaunchedEffect(Unit) { HostingSchedule.onTimeChanged(context) }
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Home") }
     var settingsSection by remember { mutableStateOf("General") }
