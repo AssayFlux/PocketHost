@@ -86,13 +86,20 @@ class SiteImporterStreamSmokeTest {
         try {
             val forbidden = listOf(
                 ".aws/credentials",
+                """.aws\credentials""",
                 ".npmrc",
                 ".git-credentials",
                 ".docker/config.json",
                 ".kube/config",
                 "secrets/service-account-prod.json",
                 "tls/server.key",
-                ".env.production"
+                ".env.production",
+                "credentials.json",
+                ".config/gcloud/application_default_credentials.json",
+                "service_account.json",
+                "firebase-adminsdk-prod.json",
+                ".azure/accessTokens.json",
+                ".terraform/terraform.tfstate"
             )
             forbidden.forEach { path ->
                 val archive = zipOf("index.html" to "ok", path to "secret")
