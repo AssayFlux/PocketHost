@@ -1,26 +1,10 @@
-name: PocketHost v0.1.0 Alpha acceptance and APK
+name: PocketHost v0.1.0 Alpha acceptance (APK packaging explicitly gated)
 permissions:
   contents: read
 concurrency:
   group: pockethost-alpha-apk-${{ github.ref }}
   cancel-in-progress: false
 on:
-  push:
-    branches: [Alpha]
-    paths:
-      - ".github/workflows/android-debug-apk.yml"
-      - "app/**"
-      - "runtime-worker/**"
-      - "rust-engine/**"
-      - "relay-node/**"
-      - "gradle/**"
-      - "gradlew"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - "web-console/**"
-      - "control-plane/**"
-      - "protocol/**"
-      - "scripts/**"
   workflow_dispatch:
     inputs:
       confirm_build:
@@ -30,7 +14,6 @@ on:
         default: false
 jobs:
   acceptance-and-package:
-    if: github.event_name != 'workflow_dispatch' || inputs.confirm_build == true
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -67,8 +50,10 @@ jobs:
       - name: Run Android lint and JVM unit-test gates
         run: ./gradlew :app:lintDebug :runtime-worker:lintDebug :app:testDebugUnitTest :runtime-worker:testDebugUnitTest
       - name: Build runtime-worker APK
+        if: inputs.confirm_build == true
         run: ./gradlew :runtime-worker:assembleDebug
       - name: Build app APKs for every declared ABI
+        if: inputs.confirm_build == true
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-output"
@@ -78,6 +63,7 @@ jobs:
           done
           cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
       - name: Run Android instrumentation suite on API 35 emulator
+        if: inputs.confirm_build == true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -91,6 +77,7 @@ jobs:
             adb install "$RUNNER_TEMP/pockethost-output/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
             ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
       - name: Verify package metadata, native ABI payloads and APK signatures
+        if: inputs.confirm_build == true
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-output"
@@ -122,6 +109,7 @@ jobs:
           } | tee "$out/APK-VERIFICATION.txt"
           sha256sum "$out"/*.apk | tee "$out/SHA256SUMS"
       - name: Capture dependency inventory and web-console audit
+        if: always()
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-output"
