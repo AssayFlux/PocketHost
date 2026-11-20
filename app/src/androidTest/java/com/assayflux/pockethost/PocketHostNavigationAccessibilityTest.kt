@@ -83,6 +83,36 @@ class PocketHostNavigationAccessibilityTest {
                     device.hasObject(By.text(legacy)))
             }
             device.pressBack()
+            openDrawerDestination("Hosting")
+            device.wait(Until.findObject(By.text("Schedule")), 10_000)!!.click()
+            assertTrue("Hosting schedule page is missing",
+                device.wait(Until.hasObject(By.text("AUTOMATIC HOSTING HOURS")), 10_000))
+            device.wait(Until.findObject(By.text("Traffic & capacity")), 10_000)!!.click()
+            assertTrue("Traffic and capacity page is missing",
+                device.wait(Until.hasObject(By.text("Capacity")), 10_000))
+            device.wait(Until.findObject(By.text("Overview")), 10_000)!!.click()
+
+            openDrawerDestination("Workbench")
+            device.wait(Until.findObject(By.text("Editor")), 10_000)!!.click()
+            assertTrue("Workbench Editor page is missing",
+                device.wait(Until.hasObject(By.text("No file selected")), 10_000))
+            device.wait(Until.findObject(By.text("Changes")), 10_000)!!.click()
+            assertTrue("Workbench Changes page is missing",
+                device.wait(Until.hasObject(By.text("CHANGES")), 10_000))
+            device.wait(Until.findObject(By.text("History")), 10_000)!!.click()
+            assertTrue("Workbench History page is missing",
+                device.wait(Until.hasObject(By.text("COMMIT HISTORY")), 10_000))
+            device.wait(Until.findObject(By.text("Explorer")), 10_000)!!.click()
+
+            openDrawerDestination("Devices")
+            device.wait(Until.findObject(By.text("Fleet")), 10_000)!!.click()
+            assertTrue("Devices Fleet page is missing",
+                device.wait(Until.hasObject(By.text("REMOTE FLEET CONNECTION")), 10_000))
+            device.wait(Until.findObject(By.text("Trusted devices")), 10_000)!!.click()
+            assertTrue("Trusted devices page is missing",
+                device.wait(Until.hasObject(By.text("TRUSTED DEVICES")), 10_000))
+            device.wait(Until.findObject(By.text("Enrollment")), 10_000)!!.click()
+
             expectedContent.forEach { (destinationName, expected) ->
                 val (headerName, expectedText, screenshotName) = expected
                 openDrawerDestination(destinationName)
@@ -138,6 +168,7 @@ class PocketHostNavigationAccessibilityTest {
                 val sectionTab = device.wait(Until.findObject(By.text(section)), 10_000)
                 assertTrue("Settings section $section is not reachable", sectionTab != null)
                 sectionTab!!.click()
+                UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView(expectedText)
                 assertTrue("Settings section $section did not render $expectedText",
                     device.wait(Until.hasObject(By.text(expectedText)), 10_000))
                 assertTrue("Settings header changed while selecting $section",
