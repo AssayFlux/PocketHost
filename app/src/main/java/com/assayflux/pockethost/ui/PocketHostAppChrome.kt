@@ -75,6 +75,8 @@ internal fun PocketHostOwnerHeader(
             "Relay node" -> "Native Relay Node"
             "Relay host" -> "Relay host connection"
             "Cloudflare" -> "Cloudflare Tunnel"
+            "Cloudflare Access" -> "Cloudflare Access"
+            "DNS management" -> "DNS management"
             "Hostnames & access" -> "Hostnames & visitor access"
             "Runtimes" -> "Runtimes"
             "Python" -> "Python runtime"
