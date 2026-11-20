@@ -188,3 +188,14 @@ Commits on `Alpha`:
 - `40137c61add97edca2f0d010bb9ec6f52f9a599a` — acceptance workflow path coverage for buildSrc and canonical SVG.
 
 **Verification boundary:** These are committed build-pipeline repairs, not yet successful build evidence. Wait for the new Alpha CI runs. APK packaging remains explicitly gated and was not triggered by these pushes.
+
+
+## 13. Batik PNGTranscoder codec dependency repair — 2026-11-20
+
+The latest Android acceptance failure occurred inside Batik's `PNGTranscoder` before the generated raster could be read/scaled by the JDK ImageIO path. The diagnostic was `Could not write PNG file because no WriteAdapter is available`. The `batik-transcoder` artifact alone did not provide the PNG write adapter at runtime.
+
+`buildSrc/build.gradle.kts` now declares `org.apache.xmlgraphics:batik-codec:1.19` explicitly alongside `batik-transcoder:1.19`. The versions are aligned. This is intended to supply Batik's PNG ImageIO write adapter; it is a dependency-level repair, not yet a verified build result.
+
+Implementation commit: `2980fec7df4e5f2a92fe4996b812c612cb2087b2`.
+
+The Android acceptance workflow watches `buildSrc/**`, so this Alpha push should start a fresh workflow run automatically. Confirm that the icon-generation task passes before treating the repair as verified or proceeding to APK assembly.
