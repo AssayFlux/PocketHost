@@ -1729,8 +1729,6 @@ if (settingsSection == "Hostnames & access") {
                     }
                 }
 if (settingsSection == "Local access") {
-                }
-
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1781,6 +1779,7 @@ if (settingsSection == "Local access") {
                             enabled = hosting
                         ) { Text("Preview site") }
                     }
+                }
                 }
                 }
             }
