@@ -6,9 +6,12 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.assayflux.pockethost.diagnostics.OperationalLog
+import com.assayflux.pockethost.relay.RelayNodeConfigStore
 import java.io.File
 
 /** Opt-in boot recovery for local website hosting and the independent Relay gateway. */
+internal fun relayNodeConfigurationExists(context: Context): Boolean = RelayNodeConfigStore.isConfigured(context)
+
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != Intent.ACTION_BOOT_COMPLETED) return
@@ -36,8 +39,7 @@ class BootReceiver : BroadcastReceiver() {
 
         // Relay recovery is separately opted in and does not depend on the website directory.
         if (preferences.getBoolean("relay_auto_start_on_boot", false)) {
-            val configured = context.getSharedPreferences("pockethost_relay_node", Context.MODE_PRIVATE)
-                .contains("encrypted_config_v1")
+            val configured = relayNodeConfigurationExists(context)
             if (!configured) {
                 OperationalLog.record(context, "WARN", "RELAY_BOOT_AUTOSTART_SKIPPED",
                     "Relay auto-start is enabled but no encrypted node configuration exists.")

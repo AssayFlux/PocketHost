@@ -35,6 +35,8 @@ class NativeRelayService : Service() {
     @Volatile private var ownerRequestedRunning = false
     private val renewalScheduler = Executors.newSingleThreadScheduledExecutor()
     private var renewalTask: ScheduledFuture<*>? = null
+    private var retryTask: ScheduledFuture<*>? = null
+    private var retryAttempt = 0
     @Volatile private var activeNetwork: Network? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -42,7 +44,10 @@ class NativeRelayService : Service() {
             val previous = activeNetwork
             activeNetwork = network
             if (ownerRequestedRunning && previous != network) {
-                worker.execute { restartAfterNetworkChange("network became available") }
+                worker.execute {
+                    cancelRetry(resetAttempts = true)
+                    restartAfterNetworkChange("network became available")
+                }
             }
         }
 
@@ -92,6 +97,7 @@ class NativeRelayService : Service() {
             ACTION_STOP -> {
                 stopping = true
                 ownerRequestedRunning = false
+                cancelRetry(resetAttempts = false)
                 worker.execute {
                     val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
                     if (result != "OK") OperationalLog.record(this, "WARN", "NATIVE_RELAY_STOP", result)
@@ -120,6 +126,7 @@ class NativeRelayService : Service() {
 
     private fun restartAfterNetworkChange(reason: String) {
         if (!ownerRequestedRunning || stopping) return
+        cancelRetry(resetAttempts = true)
         val stopResult = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
         OperationalLog.record(this, "INFO", "NATIVE_RELAY_NETWORK_RECOVERY",
             "Reinitializing native Relay after $reason. $stopResult")
@@ -175,10 +182,12 @@ class NativeRelayService : Service() {
         main.post {
             if (stopping || !ownerRequestedRunning) return@post
             if (result == "OK") {
+                cancelRetry(resetAttempts = true)
                 getSystemService(NotificationManager::class.java)
                     .notify(NOTIFICATION_ID, notification("Native Relay active"))
                 OperationalLog.record(this, "INFO", "NATIVE_RELAY_READY", "Native Relay is active after $reason.")
             } else {
+                scheduleRetry()
                 OperationalLog.record(this, "ERROR", "NATIVE_RELAY_START", result)
                 getSystemService(NotificationManager::class.java)
                     .notify(NOTIFICATION_ID, notification("Relay unavailable: ${result.removePrefix("ERROR: ").take(100)}"))
@@ -190,6 +199,7 @@ class NativeRelayService : Service() {
         stopping = true
         ownerRequestedRunning = false
         renewalTask?.cancel(true)
+        cancelRetry(resetAttempts = false)
         renewalScheduler.shutdownNow()
         runCatching { connectivity.unregisterNetworkCallback(networkCallback) }
         runCatching { NativeRelay.stop() }
@@ -198,6 +208,29 @@ class NativeRelayService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+
+    /** Retry transient DNS, network and ACME failures without requiring an app reopen. */
+    @Synchronized
+    private fun scheduleRetry() {
+        if (!ownerRequestedRunning || stopping || retryTask?.isDone == false) return
+        val delaySeconds = RelayRetryPolicy.delaySeconds(retryAttempt++)
+        retryTask = renewalScheduler.schedule({
+            synchronized(this) { retryTask = null }
+            if (ownerRequestedRunning && !stopping) {
+                worker.execute { startRelay("automatic recovery retry") }
+            }
+        }, delaySeconds, TimeUnit.SECONDS)
+        OperationalLog.record(this, "WARN", "NATIVE_RELAY_RETRY_SCHEDULED",
+            "Relay startup will retry in $delaySeconds seconds.")
+    }
+
+    @Synchronized
+    private fun cancelRetry(resetAttempts: Boolean) {
+        retryTask?.cancel(false)
+        retryTask = null
+        if (resetAttempts) retryAttempt = 0
+    }
 
     private fun notification(message: String): Notification =
         Notification.Builder(this, channelId)
