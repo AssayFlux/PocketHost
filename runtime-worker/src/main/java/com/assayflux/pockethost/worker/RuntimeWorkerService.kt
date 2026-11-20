@@ -436,5 +436,7 @@ class RuntimeWorkerService : Service() {
         private const val MAX_ARCHIVE_ENTRIES = 10_000
         private const val MAX_FILE_BYTES = 64L * 1024L * 1024L
         private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
+        private const val MAX_PROJECT_PATH_DEPTH = 32
+        private const val MAX_PROJECT_PATH_CHARS = 1_024
     }
 }
