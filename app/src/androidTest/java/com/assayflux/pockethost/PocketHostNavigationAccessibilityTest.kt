@@ -141,6 +141,7 @@ class PocketHostNavigationAccessibilityTest {
                     filesTab!!.click()
                     assertTrue("File manager page did not render",
                         device.wait(Until.hasObject(By.text("SITE FILES")), 10_000))
+                    device.wait(Until.findObject(By.text("Overview")), 10_000)!!.click()
                 }
                 assertTrue("Could not capture $destinationName screenshot",
                     device.takeScreenshot(File(screenshotDir, "navigation-${screenshotName.lowercase()}.png")))
@@ -174,6 +175,7 @@ class PocketHostNavigationAccessibilityTest {
                 assertTrue("Settings header changed while selecting $section",
                     device.wait(Until.hasObject(By.text(expectedHeader)), 5_000))
                 if (section == "Hostnames & access") {
+                    UiScrollable(UiSelector().scrollable(true)).setAsVerticalList().scrollTextIntoView("Visitor access")
                     assertTrue("Visitor access policy controls are missing",
                         device.wait(Until.hasObject(By.textContains("Visitor access")), 10_000))
                     assertTrue("Hostname route publishing control is missing",
