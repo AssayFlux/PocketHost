@@ -174,6 +174,97 @@ class ApplicationBackupCustomRootTest {
         }
     }
 
+
+    @Test
+    fun restoreRejectsCaseOnlyAndFileDirectoryPrefixCollisionsBeforeActivation() {
+        val suffix = System.nanoTime().toString()
+        val siteRoot = File(context.filesDir, "site")
+        val previous = File(context.cacheDir, "collision-before-$suffix")
+        val backup = File(context.cacheDir, "collision-source-$suffix.afphb")
+        val caseCollision = File(context.cacheDir, "collision-case-$suffix.afphb")
+        val prefixCollision = File(context.cacheDir, "collision-prefix-$suffix.afphb")
+        val hadSite = siteRoot.isDirectory
+        if (hadSite) siteRoot.copyRecursively(previous, overwrite = true)
+        val passphrase = "archive-collision-passphrase"
+        try {
+            siteRoot.deleteRecursively()
+            check(siteRoot.mkdirs())
+            File(siteRoot, "index.html").writeText("<h1>must remain active</h1>")
+            assertTrue(ApplicationBackupManager.export(context, Uri.fromFile(backup), passphrase.toCharArray()))
+
+            rewriteWithConflictingPaths(
+                backup, caseCollision, passphrase.toCharArray(),
+                listOf("site/CaseCollision.html" to "one", "site/casecollision.html" to "two")
+            )
+            val caseFailure = runCatching {
+                ApplicationBackupManager.restore(context, Uri.fromFile(caseCollision), passphrase.toCharArray())
+            }.exceptionOrNull()
+            assertNotNull("Case-folded duplicate paths must be rejected.", caseFailure)
+            assertEquals("<h1>must remain active</h1>", File(siteRoot, "index.html").readText())
+
+            rewriteWithConflictingPaths(
+                backup, prefixCollision, passphrase.toCharArray(),
+                listOf("site/prefix-conflict" to "file", "site/prefix-conflict/child.html" to "child")
+            )
+            val prefixFailure = runCatching {
+                ApplicationBackupManager.restore(context, Uri.fromFile(prefixCollision), passphrase.toCharArray())
+            }.exceptionOrNull()
+            assertNotNull("A file cannot also be used as a parent directory.", prefixFailure)
+            assertEquals("<h1>must remain active</h1>", File(siteRoot, "index.html").readText())
+        } finally {
+            siteRoot.deleteRecursively()
+            if (hadSite && previous.isDirectory) previous.copyRecursively(siteRoot, overwrite = true)
+            previous.deleteRecursively()
+            backup.delete()
+            caseCollision.delete()
+            prefixCollision.delete()
+        }
+    }
+
+    private fun rewriteWithConflictingPaths(
+        source: File,
+        destination: File,
+        passphrase: CharArray,
+        conflicts: List<Pair<String, String>>
+    ) {
+        val bytes = source.readBytes()
+        val magic = "AFPHB02\\n".toByteArray(Charsets.US_ASCII)
+        require(bytes.size > magic.size + 28)
+        val salt = bytes.copyOfRange(magic.size, magic.size + 16)
+        val nonce = bytes.copyOfRange(magic.size + 16, magic.size + 28)
+        val cipherText = bytes.copyOfRange(magic.size + 28, bytes.size)
+        val plainZip = crypt(Cipher.DECRYPT_MODE, cipherText, passphrase, salt, nonce)
+        val entries = LinkedHashMap<String, Pair<Boolean, ByteArray>>()
+        ZipInputStream(ByteArrayInputStream(plainZip)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                entries[entry.name] = entry.isDirectory to if (entry.isDirectory) ByteArray(0) else zip.readBytes()
+                zip.closeEntry()
+            }
+        }
+        conflicts.forEach { (name, value) -> entries[name] = false to value.toByteArray(Charsets.UTF_8) }
+        val rewrittenZip = ByteArrayOutputStream().use { buffer ->
+            ZipOutputStream(buffer).use { zip ->
+                entries.forEach { (name, data) ->
+                    zip.putNextEntry(ZipEntry(name))
+                    if (!data.first) zip.write(data.second)
+                    zip.closeEntry()
+                }
+            }
+            buffer.toByteArray()
+        }
+        val newSalt = ByteArray(16).also(SecureRandom()::nextBytes)
+        val newNonce = ByteArray(12).also(SecureRandom()::nextBytes)
+        val encrypted = crypt(Cipher.ENCRYPT_MODE, rewrittenZip, passphrase, newSalt, newNonce)
+        DataOutputStream(destination.outputStream()).use { output ->
+            output.write(magic)
+            output.write(newSalt)
+            output.write(newNonce)
+            output.write(encrypted)
+        }
+        passphrase.fill('\\u0000')
+    }
+
     private fun rewriteWithDuplicateHostnameRoute(
         source: File,
         destination: File,
