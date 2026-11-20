@@ -16,11 +16,6 @@ object SiteImporter {
     private const val MAX_ENTRIES = 10_000
     internal const val MAX_IMPORT_BYTES = 500_000_000L
     private const val MAX_DEPTH = 32
-    private val blockedNames = setOf(
-        ".git", ".ssh", ".pockethost", "id_rsa", "id_ed25519",
-        "authorized_keys", "known_hosts"
-    )
-
     fun importTree(context: Context, treeUri: Uri): ImportReport {
         val source = DocumentFile.fromTreeUri(context, treeUri)
             ?: throw IOException("The selected folder cannot be opened.")
@@ -61,6 +56,7 @@ object SiteImporter {
                         parts.forEach(::validateName)
                         val isDirectory = entry.isDirectory || normalized.endsWith('/')
                         val archivePath = parts.joinToString("/")
+                        validateName(archivePath)
                         var parent = ""
                         for (segment in parts.dropLast(1)) {
                             parent = if (parent.isEmpty()) segment else "$parent/$segment"
@@ -158,7 +154,7 @@ object SiteImporter {
             if (depth > MAX_DEPTH) throw IOException("Website folder nesting is too deep.")
             val children = directory.listFiles() ?: throw IOException("Could not inspect prepared website files.")
             for (child in children) {
-                validateName(child.name)
+                validateName(root.toPath().relativize(child.toPath()).toString().replace(File.separatorChar, '/'))
                 if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
                     throw IOException("Prepared website contains an unsupported symbolic link.")
                 }
@@ -231,8 +227,8 @@ object SiteImporter {
                     } else if (java.nio.file.Files.isDirectory(path, noFollow)) {
                         true
                     } else if (java.nio.file.Files.isRegularFile(path, noFollow)) {
-                        val name = path.fileName?.toString()?.lowercase()
-                        if (name in blockedNames) {
+                        val relative = root.toPath().relativize(path).toString().replace(File.separatorChar, '/')
+                        if (SensitivePathPolicy.isSensitivePath(relative)) {
                             false
                         } else {
                             files++
@@ -371,7 +367,7 @@ object SiteImporter {
             counter.entries++
             if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many files and folders (limit: $MAX_ENTRIES).")
             val name = entry.name ?: throw IOException("A selected item has no usable filename.")
-            validateName(name)
+            validateName(destination.toPath().relativize(stagingRoot.toPath()).toString().replace(File.separatorChar, '/') + "/" + name)
             val target = File(destination, name)
             if (!target.canonicalFile.toPath().startsWith(stagingRoot.toPath())) throw IOException("An unsafe file path was detected.")
             when {
@@ -388,9 +384,7 @@ object SiteImporter {
     private fun validateName(name: String) {
         if (name.isBlank() || name == "." || name == ".." || name.contains('/') ||
             name.contains('\\') || name.contains('\u0000')) throw IOException("An unsafe filename was found.")
-        val lower = name.lowercase()
-        if (lower in blockedNames || lower == ".env" || lower.startsWith(".env.") ||
-            lower.endsWith(".pem") || lower.endsWith(".key") || lower.endsWith(".p12") || lower.endsWith(".pfx")) {
+        if (SensitivePathPolicy.isSensitivePath(name)) {
             throw IOException("The import contains a sensitive file or directory: $name")
         }
     }
