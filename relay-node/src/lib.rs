@@ -27,7 +27,7 @@ mod acme;
 
 use std::{
     collections::{HashMap, HashSet},
-    net::{IpAddr, SocketAddr, UdpSocket},
+    net::{IpAddr, SocketAddr, TcpListener as StdTcpListener, UdpSocket},
     sync::{Arc, Mutex, OnceLock, mpsc as std_mpsc},
     thread::JoinHandle,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -862,6 +862,14 @@ fn issue_certificate(config_json: &str) -> Result<String, String> {
         .map_err(|error| format!("Could not serialize issued ACME certificate: {error}"))
 }
 
+fn bind_https_listener(address: SocketAddr) -> Result<StdTcpListener, String> {
+    let listener = StdTcpListener::bind(address)
+        .map_err(|error| format!("Relay HTTPS listener failed at {address}: {error}"))?;
+    listener.set_nonblocking(true)
+        .map_err(|error| format!("Could not configure Relay HTTPS listener: {error}"))?;
+    Ok(listener)
+}
+
 fn start(config_json: &str, database_path: &str) -> Result<(), String> {
     let mut config: RelayConfig = serde_json::from_str(config_json)
         .map_err(|e| format!("Invalid Relay configuration: {e}"))?;
@@ -905,14 +913,10 @@ fn start(config_json: &str, database_path: &str) -> Result<(), String> {
                 // Bind HTTPS synchronously before reporting READY. bind_rustls(addr)
                 // defers the socket bind until the server future is polled, which
                 // could otherwise report a false-positive start on an occupied port.
-                let https_listener = match std::net::TcpListener::bind(https_bind) {
+                let https_listener = match bind_https_listener(https_bind) {
                     Ok(listener) => listener,
-                    Err(error) => { let _ = ready_tx.send(Err(format!("Relay HTTPS listener failed at {https_bind}: {error}"))); return; }
+                    Err(error) => { let _ = ready_tx.send(Err(error)); return; }
                 };
-                if let Err(error) = https_listener.set_nonblocking(true) {
-                    let _ = ready_tx.send(Err(format!("Could not configure Relay HTTPS listener: {error}")));
-                    return;
-                }
                 let https_server = match axum_server::tls_rustls::from_tcp_rustls(https_listener, tls_config) {
                     Ok(server) => server,
                     Err(error) => { let _ = ready_tx.send(Err(format!("Could not prepare Relay HTTPS listener: {error}"))); return; }
@@ -1031,6 +1035,19 @@ pub extern "system" fn Java_com_assayflux_pockethost_relay_NativeRelay_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn https_listener_bind_failure_is_reported_before_ready() {
+        let occupied = StdTcpListener::bind("127.0.0.1:0").unwrap();
+        let address = occupied.local_addr().unwrap();
+        assert!(bind_https_listener(address).unwrap_err().contains("Relay HTTPS listener failed"));
+    }
+
+    #[test]
+    fn https_listener_binds_requested_address_nonblocking() {
+        let listener = bind_https_listener("127.0.0.1:0".parse().unwrap()).unwrap();
+        assert!(listener.local_addr().unwrap().port() > 0);
+    }
 
     #[test]
     fn owner_pairing_invite_is_short_lived_single_use_and_proves_host_key_possession() {
