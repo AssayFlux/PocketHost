@@ -20,7 +20,7 @@ object SiteRegistry {
     @Synchronized fun list(context: Context): List<Site> {
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"
         val array = runCatching { JSONArray(raw) }.getOrDefault(JSONArray())
-        return (0 until array.length()).mapNotNull { i ->
+        val parsed = (0 until array.length()).mapNotNull { i ->
             val item = array.optJSONObject(i) ?: return@mapNotNull null
             Site(item.optString("id"), item.optString("name"), item.optString("runtime", "static"),
                 item.optString("root"), (item.optJSONArray("hostnames") ?: JSONArray()).let { hosts ->
@@ -30,6 +30,36 @@ object SiteRegistry {
                     buildMap { val names = credentials.keys(); while (names.hasNext()) { val name = names.next(); put(name, credentials.optString(name)) } }
                 } ?: emptyMap())
         }
+        // SharedPreferences are durable state, not an authorization boundary. Validate
+        // the complete table on every read so corrupt/legacy routes cannot expose private data.
+        return runCatching {
+            require(parsed.size <= WebsiteLimits.MAX_REGISTERED_SITES)
+            val validated = parsed.map { site ->
+                require(site.id.matches(Regex("[A-Za-z0-9_-]{1,64}")))
+                require(site.name.isNotBlank() && site.name.length <= 80)
+                require(site.runtime in setOf("static", "python-wsgi", "node"))
+                validateAccessPolicy(site)
+                val root = canonicalSiteRoot(context, site)
+                val hosts = site.hostnames.map { it.trim().trimEnd('.').lowercase() }
+                require(hosts.size <= WebsiteLimits.MAX_HOSTNAMES_PER_SITE && hosts.all { hostnamePattern.matches(it) })
+                require(hosts.distinct().size == hosts.size)
+                site.copy(root = root.absolutePath, hostnames = hosts)
+            }
+            require(validated.map { it.id }.distinct().size == validated.size)
+            val allHosts = validated.flatMap { it.hostnames }
+            require(allHosts.size <= WebsiteLimits.MAX_HOSTNAME_ROUTES && allHosts.distinct().size == allHosts.size)
+            require(validated.count { it.runtime == "node" }.let { it <= 1 })
+            for (i in validated.indices) {
+                for (j in i + 1 until validated.size) {
+                    val left = File(validated[i].root).toPath()
+                    val right = File(validated[j].root).toPath()
+                    val sameRoot = left == right
+                    require((sameRoot && validated[i].runtime == validated[j].runtime) ||
+                        (!left.startsWith(right) && !right.startsWith(left)))
+                }
+            }
+            validated
+        }.getOrDefault(emptyList())
     }
 
     private fun validateAccessPolicy(site: Site) {

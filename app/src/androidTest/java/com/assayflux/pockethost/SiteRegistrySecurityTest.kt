@@ -11,6 +11,21 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SiteRegistrySecurityTest {
     @Test
+    fun rejectsPersistedRoutesThatPointOutsideManagedSiteRoots() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val preferences = context.getSharedPreferences("pockethost_site_registry", 0)
+        val previous = preferences.getString("sites", "[]")
+        try {
+            val invalid = """[{"id":"forged-route","name":"Private storage","runtime":"static","root":"${context.filesDir.absolutePath}","hostnames":["private.example.test"],"enabled":true}]"""
+            preferences.edit().putString("sites", invalid).commit()
+            assertTrue("Invalid persisted roots must fail closed and never be routed.",
+                SiteRegistry.list(context).isEmpty())
+        } finally {
+            preferences.edit().putString("sites", previous ?: "[]").commit()
+        }
+    }
+
+    @Test
     fun rejectsPrivateStorageRootAndOverlappingSiteRoots() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val suffix = System.nanoTime().toString()
