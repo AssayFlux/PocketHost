@@ -7,6 +7,7 @@ import com.assayflux.pockethost.storage.SiteFileManager
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -59,4 +60,29 @@ class SiteFileManagerTest {
             File(context.filesDir, "site/$collisionFile").delete()
         }
     }
+    @Test
+    fun listsMoreThan150EntriesAndPathsDeeperThanEightLevels() {
+        val suffix = System.nanoTime().toString()
+        val relativeRoot = "list-completeness-$suffix"
+        val directory = File(context.filesDir, "site/$relativeRoot")
+        try {
+            assertTrue(directory.mkdirs())
+            repeat(165) { index ->
+                File(directory, "page-$index.txt").writeText("entry-$index")
+            }
+            val deepRelative = (1..10).joinToString("/") { "level-$it" } + "/deep.html"
+            val deepFile = File(directory, deepRelative)
+            assertTrue(deepFile.parentFile?.mkdirs() == true)
+            deepFile.writeText("<h1>deep</h1>")
+
+            val discovered = SiteFileManager.list(context)
+                .filter { it.relativePath.startsWith("$relativeRoot/") }
+            assertTrue("All entries beyond the old 150-item cap must be listed.", discovered.size > 165)
+            assertTrue("Paths deeper than eight levels must be listed.",
+                discovered.any { it.relativePath == "$relativeRoot/$deepRelative" })
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
 }
