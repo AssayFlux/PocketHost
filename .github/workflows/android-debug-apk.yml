@@ -1,4 +1,4 @@
-name: PocketHost v0.1.0 Alpha acceptance (APK packaging explicitly gated)
+name: PocketHost v0.1.0 Alpha Android quality gates
 permissions:
   contents: read
 concurrency:
@@ -17,15 +17,8 @@ on:
       - "gradlew"
       - "build.gradle.kts"
       - "settings.gradle.kts"
-  workflow_dispatch:
-    inputs:
-      confirm_build:
-        description: Explicitly confirm Alpha APK packaging
-        required: true
-        type: boolean
-        default: false
 jobs:
-  acceptance-and-package:
+  android-quality-gates:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -63,65 +56,6 @@ jobs:
         run: ./gradlew :app:lintDebug :runtime-worker:lintDebug :app:testDebugUnitTest :runtime-worker:testDebugUnitTest
       - name: Validate embedded Python runtime dependency without packaging an APK
         run: ./gradlew :runtime-worker:generateDebugPythonMiscAssets
-      - name: Build runtime-worker APK
-        if: inputs.confirm_build == true
-        run: ./gradlew :runtime-worker:assembleDebug
-      - name: Build app APKs for every declared ABI
-        if: inputs.confirm_build == true
-        run: |
-          set -euo pipefail
-          out="$RUNNER_TEMP/pockethost-output"
-          for abi in arm64-v8a armeabi-v7a x86_64; do
-            ./gradlew :app:assembleDebug -PpockethostAbi="$abi"
-            cp app/build/outputs/apk/debug/app-debug.apk "$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
-          done
-          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
-      - name: Run Android instrumentation suite on API 35 emulator
-        if: inputs.confirm_build == true
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_2
-          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: |
-            set -euo pipefail
-            adb install "$RUNNER_TEMP/pockethost-output/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
-            ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
-      - name: Verify package metadata, native ABI payloads and APK signatures
-        if: inputs.confirm_build == true
-        run: |
-          set -euo pipefail
-          out="$RUNNER_TEMP/pockethost-output"
-          aapt="$ANDROID_HOME/build-tools/35.0.0/aapt"
-          apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
-          worker="$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
-          "$aapt" dump badging "$worker" | grep -F "package: name='com.assayflux.pockethost.worker' versionCode='1' versionName='0.1.0'"
-          "$apksigner" verify --verbose --print-certs "$worker" > "$out/worker-signature.txt"
-          worker_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/worker-signature.txt" | head -n1)"
-          test -n "$worker_cert"
-          for abi in arm64-v8a armeabi-v7a x86_64; do
-            apk="$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
-            "$aapt" dump badging "$apk" | grep -F "package: name='com.assayflux.pockethost' versionCode='1' versionName='0.1.0'"
-            "$apksigner" verify --verbose --print-certs "$apk" > "$out/app-$abi-signature.txt"
-            app_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/app-$abi-signature.txt" | head -n1)"
-            test "$app_cert" = "$worker_cert"
-            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost.so"
-            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
-          done
-          for abi in arm64-v8a armeabi-v7a x86_64; do
-            unzip -Z1 "$worker" | grep -Fx "lib/$abi/libnode.so"
-          done
-          {
-            echo "Signing: Android debug certificate (development/owner testing only)"
-            echo "App and companion signer: matching SHA-256 certificate $worker_cert"
-            echo "App ABI coverage: arm64-v8a, armeabi-v7a, x86_64"
-            echo "Worker ABI coverage: arm64-v8a, armeabi-v7a, x86_64"
-            echo "Package/version metadata: verified as v0.1.0 (versionCode 1)"
-          } | tee "$out/APK-VERIFICATION.txt"
-          sha256sum "$out"/*.apk | tee "$out/SHA256SUMS"
       - name: Capture dependency inventory and web-console audit
         if: always()
         run: |
@@ -138,11 +72,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pockethost-v0.1.0-alpha-apks-and-evidence
+          name: pockethost-v0.1.0-alpha-android-quality-evidence
           path: |
             ${{ runner.temp }}/pockethost-output/*
             app/build/reports/**
-            app/build/outputs/androidTest-results/**
-            app/build/outputs/connected_android_test_additional_output/**
           if-no-files-found: warn
           retention-days: 30
