@@ -652,9 +652,130 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             Text("MOBILE OPERATING MODE", color = palette.onSurface, fontWeight = FontWeight.Bold)
                             Text("Website serving stays available in both modes. Fleet administration is enabled only in Command Center + Server.", color = palette.onSurfaceVariant)
                             Text(if (operatingMode == "COMMAND_CENTER_SERVER") "Command Center + Server" else "Server only", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = {
+                                    operatingMode = "SERVER_ONLY"
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putString("operating_mode", operatingMode).apply()
+                                    RemoteControlAgent.stop()
+                                    if (selectedTab == "Devices") selectedTab = "Home"
+                                }, modifier = Modifier.weight(1f)) { Text("Server only") }
+                                Button(onClick = {
+                                    operatingMode = "COMMAND_CENTER_SERVER"
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit().putString("operating_mode", operatingMode).apply()
+                                    if (hosting) RemoteControlAgent.start(context)
+                                }, modifier = Modifier.weight(1f)) { Text("Command Center + Server") }
+                            }
+                            if (operatingMode == "COMMAND_CENTER_SERVER") {
+                                OutlinedButton(onClick = { selectedTab = "Devices" }, modifier = Modifier.fillMaxWidth()) { Text("Manage trusted devices") }
+                            }
+                        }
+                    }
+                    PocketHostHomeScreen(
+                        hosting = hosting,
+                        status = status,
+                        requests = requests,
+                        activeConnections = activeConnections,
+                        uptimeText = uptimeText,
+                        importedSummary = importedSummary,
+                        tunnelStatus = tunnelStatus,
+                        pythonHosting = pythonHosting,
+                        nodeHosting = nodeHosting,
+                        deviceTelemetry = deviceTelemetry,
+                        recentEvents = recentEvents,
+                        operatingMode = operatingMode,
+                        onOpen = navigate
+                    )
                 }
-if (true) {
-                if (selectedTab == "Settings" && settingsSection == "Server") {
+                if (selectedTab == "Devices" && operatingMode == "COMMAND_CENTER_SERVER") {
+                    PocketHostDevicesScreen(context = context)
+                }
+                if (selectedTab == "Workbench") {
+                    PocketHostWorkbenchScreen(context = context)
+                }
+                if (selectedTab == "Learn") {
+                    PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
+                }
+                if (selectedTab == "Dashboard") {
+                if (pendingPairingCode != null) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("CONSOLE PAIRING REQUEST", color = palette.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Code: $pendingPairingCode", color = palette.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Only approve this if you initiated pairing from your own trusted browser.", color = palette.onSurfaceVariant)
+                            Button(onClick = {
+                                val approved = ManagementApiServer.approvePairing(pendingPairingCode.orEmpty())
+                                if (approved) { status = "Management console pairing approved."; pendingPairingCode = null }
+                                else status = "Pairing request expired. Start pairing again."
+                            }) { Text("Approve console pairing") }
+                        }
+                    }
+                }
+                }
+                if (selectedTab == "Settings") {
+                    PocketHostSettingsSectionNavigation(
+                        selectedSection = settingsSection,
+                        onSectionSelected = { settingsSection = it }
+                    )
+                }
+                if (selectedTab == "Settings" && settingsSection == "General") {
+                    PocketHostSettingsScreen(
+                        state = PocketHostGeneralSettingsState(
+                            appearanceMode = appearanceMode,
+                            selectedTheme = selectedTheme,
+                            biometricUnlockEnabled = biometricUnlockEnabled,
+                            autoStartOnBoot = autoStartOnBoot
+                        ),
+                        actions = PocketHostGeneralSettingsActions(
+                            onAppearanceModeChange = { mode ->
+                                appearanceMode = mode
+                                appearancePreferences.edit().putString("appearance_mode", mode).remove("dark_theme").apply()
+                            },
+                            onThemeChange = { theme ->
+                                selectedTheme = theme
+                                appearancePreferences.edit().putString("appearance_theme", theme).apply()
+                            },
+                            onBiometricUnlockChange = { enabled ->
+                                if (!enabled) {
+                                    biometricUnlockEnabled = false
+                                    context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                        .putBoolean("biometric_unlock_enabled", false).apply()
+                                    status = "Biometric app unlock disabled."
+                                } else {
+                                    val activity = context as? MainActivity
+                                    if (activity == null) {
+                                        status = "Could not open biometric confirmation."
+                                    } else {
+                                        activity.confirmBiometricUnlock { success ->
+                                            if (success) {
+                                                biometricUnlockEnabled = true
+                                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                                    .putBoolean("biometric_unlock_enabled", true).apply()
+                                                status = "Biometric app unlock enabled for the next app launch."
+                                            } else {
+                                                status = "Biometric confirmation was not completed; the setting remains off."
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            onAutoStartOnBootChange = { enabled ->
+                                autoStartOnBoot = enabled
+                                context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                    .putBoolean("auto_start_on_boot", enabled).apply()
+                            },
+                            onBatteryOptimizationSettings = {
+                                runCatching {
+                                    context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                                }.onFailure { status = it.message ?: "Could not open battery optimization settings." }
+                            }
+                        )
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
+                    FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
+                }
+                if (advancedMode) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -700,8 +821,6 @@ if (true) {
                             }
                         }
                     }
-                }
-                if (selectedTab == "Settings" && settingsSection == "Remote") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -747,7 +866,7 @@ if (true) {
                         }
                     }
                 }
-                }
+
                 }
                 if (selectedTab == "Dashboard") {
                     PocketHostDashboardScreen(
@@ -861,9 +980,7 @@ if (true) {
                     )
                 }
                 if (selectedTab == "Settings") {
-if (selectedTab == "Settings" && settingsSection in setOf("Relay node", "Relay host", "Cloudflare")) {
-                if (selectedTab == "Settings" && settingsSection == "Relay node") {
-                if (selectedTab == "Settings" && settingsSection == "Relay host") {
+                if (settingsSection == "Network") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1051,8 +1168,6 @@ if (selectedTab == "Settings" && settingsSection in setOf("Relay node", "Relay h
                         )
                     }
                 }
-                }
-                }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1188,7 +1303,6 @@ if (selectedTab == "Settings" && settingsSection in setOf("Relay node", "Relay h
                     }
                 }
 
-                if (selectedTab == "Settings" && settingsSection == "Cloudflare") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1279,12 +1393,10 @@ if (selectedTab == "Settings" && settingsSection in setOf("Relay node", "Relay h
                         )
                     }
                 }
-                }
 
                 }
 
-if (selectedTab == "Settings" && settingsSection in setOf("Python", "Node.js")) {
-                if (selectedTab == "Settings" && settingsSection in setOf("Python", "Node.js")) {
+                if (settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1322,12 +1434,10 @@ if (selectedTab == "Settings" && settingsSection in setOf("Python", "Node.js")) 
                         }
                     }
                 }
-                }
 
                 }
 
-if (selectedTab == "Settings" && settingsSection == "Python") {
-                if (selectedTab == "Settings" && settingsSection == "Python") {
+                if (settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1389,12 +1499,10 @@ if (selectedTab == "Settings" && settingsSection == "Python") {
                         Text("Runs trusted WSGI code as the app. Loopback by default; LAN access follows your network setting.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
-                }
 
                 }
 
-if (selectedTab == "Settings" && settingsSection == "Hostnames & access") {
-                if (selectedTab == "Settings" && settingsSection == "Hostnames & access") {
+                if (settingsSection == "Network") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1514,12 +1622,10 @@ if (selectedTab == "Settings" && settingsSection == "Hostnames & access") {
                         }
                     }
                 }
-                }
 
                 }
 
-if (selectedTab == "Settings" && settingsSection == "Node.js") {
-                if (selectedTab == "Settings" && settingsSection == "Node.js") {
+                if (settingsSection == "Runtimes") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1562,11 +1668,10 @@ if (selectedTab == "Settings" && settingsSection == "Node.js") {
                         Text("Runs in a separate process, not a sandbox. Prebundle node_modules; subprocess scripts and native add-ons may not work.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
-                }
 
                 }
 
-                    if (selectedTab == "Settings" && settingsSection == "Network") {
+                    if (settingsSection == "Network") {
                 Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1584,26 +1689,7 @@ if (selectedTab == "Settings" && settingsSection == "Node.js") {
                     }
                 }
 
-                if (selectedTab == "Settings" && settingsSection == "Network") {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("NETWORK & PUBLIC ACCESS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Choose a dedicated page for the native Relay Node, outbound Relay host, Cloudflare Tunnel, or hostname and visitor access.", color = palette.onSurfaceVariant)
-                            Text("Each connector has independent credentials and lifecycle controls. Enable only the route you intend to expose.", color = palette.onSurfaceVariant)
-                        }
-                    }
-                }
-                if (selectedTab == "Settings" && settingsSection == "Runtimes") {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("OPTIONAL APPLICATION RUNTIMES", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Python WSGI and Node.js are managed independently. Open the Python or Node.js page to import a project, configure its port, and start or stop that runtime.", color = palette.onSurfaceVariant)
-                            Text("Only run code you own and trust. These runtimes are not a hostile-code sandbox.", color = palette.error)
-                        }
-                    }
-                }
-
-                    if (selectedTab == "Settings" && settingsSection == "About") {
+                    if (settingsSection == "About") {
                 Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1617,7 +1703,9 @@ if (selectedTab == "Settings" && settingsSection == "Node.js") {
                         }
                     }
                 }
-                if (selectedTab == "Settings" && settingsSection == "Local access") {
+                if (selectedTab == "Dashboard") {
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1668,8 +1756,6 @@ if (selectedTab == "Settings" && settingsSection == "Node.js") {
                             enabled = hosting
                         ) { Text("Preview site") }
                     }
-                }
-                }
                 }
                 }
             }
