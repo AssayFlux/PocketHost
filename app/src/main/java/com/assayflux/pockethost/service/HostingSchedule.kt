@@ -35,6 +35,7 @@ object HostingSchedule {
             .putBoolean(KEY_ENABLED, enabled).putString(KEY_START, start)
             .putString(KEY_STOP, stop).commit()
         scheduleNext(context)
+        if (enabled) applyCurrentWindow(context, settings(context))
         val zone = ZonedDateTime.now().zone.id
         OperationalLog.record(context, "INFO", "HOSTING_SCHEDULE_UPDATED",
             if (enabled) "Daily hosting schedule enabled: ON " + start + ", OFF " + stop + " (" + zone + ")."
@@ -42,6 +43,13 @@ object HostingSchedule {
     }
 
     fun onBoot(context: Context) {
+        val config = settings(context)
+        if (!config.enabled) return
+        scheduleNext(context)
+        applyCurrentWindow(context, config)
+    }
+
+    fun onTimeChanged(context: Context) {
         val config = settings(context)
         if (!config.enabled) return
         scheduleNext(context)
