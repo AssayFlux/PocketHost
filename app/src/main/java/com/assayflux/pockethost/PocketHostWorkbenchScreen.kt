@@ -128,7 +128,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("WEBSITE PROJECT", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                        Text(selectedSiteLabel, color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(selectedSiteLabel, color = palette.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     OutlinedButton(onClick = { siteMenuExpanded = true }, enabled = !editorDirty) { Text("Switch") }
                     DropdownMenu(expanded = siteMenuExpanded, onDismissRequest = { siteMenuExpanded = false }) {
@@ -137,10 +137,9 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("WORKSPACE / DRAFT", color = palette.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("≠", color = palette.onSurfaceVariant)
-                    Text("LIVE / PRODUCTION", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("≠ LIVE / PRODUCTION", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(status, color = palette.onSurfaceVariant, fontSize = 12.sp)
             }
@@ -252,7 +251,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 else changes.forEach { change ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(change.status.uppercase(), color = palette.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
-                        Text(change.path, color = palette.onSurface, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(change.path, color = palette.onSurface, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Button(onClick = { commitMessage = ""; showCommit = true }, enabled = changes.isNotEmpty() && !loading,
