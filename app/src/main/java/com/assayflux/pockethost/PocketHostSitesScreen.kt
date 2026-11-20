@@ -116,7 +116,8 @@ internal fun PocketHostSitesScreen(
                             Text(state.importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
                             if (state.siteFiles.isEmpty()) {
                                 Text("Your first publish — no terminal needed", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                                Text("Choose a website folder or ZIP archive containing index.html. Imports are staged and validated before replacing the current website.", color = palette.onSurfaceVariant)
+                                Text("Choose a website folder or ZIP archive and keep index.html at the top level. Imports are staged and validated before replacing the current website.", color = palette.onSurfaceVariant)
+                                Text("After import, open Hosting and start hosting, then use Preview site to verify the website.", color = palette.onSurfaceVariant)
                             }
                             OutlinedButton(
                                 onClick = { actions.onPreviewSite() },
