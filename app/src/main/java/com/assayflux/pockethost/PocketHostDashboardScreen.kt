@@ -55,6 +55,7 @@ internal data class PocketHostDashboardState(
     val hosting: Boolean,
     val importing: Boolean,
     val status: String,
+    val serviceStatus: String,
     val importedSummary: String,
     val allowLan: Boolean,
     val lanAddress: String?,
@@ -107,7 +108,18 @@ internal fun PocketHostDashboardScreen(
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("HOSTING STATUS", color = palette.onPrimary.copy(alpha = 0.78f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text(if (state.hosting) "Local hosting active" else "Stopped", color = palette.onPrimary, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (state.status.length > 90) state.status.take(87) + "…" else state.status, color = palette.onPrimary.copy(alpha = 0.82f), fontSize = 13.sp)
+                        Text(
+                            if (state.serviceStatus.length > 90) state.serviceStatus.take(87) + "…" else state.serviceStatus,
+                            color = palette.onPrimary.copy(alpha = 0.9f),
+                            fontSize = 13.sp
+                        )
+                        if (state.status.isNotBlank() && state.status != state.serviceStatus) {
+                            Text(
+                                if (state.status.length > 90) state.status.take(87) + "…" else state.status,
+                                color = palette.onPrimary.copy(alpha = 0.76f),
+                                fontSize = 12.sp
+                            )
+                        }
                         Button(
                             onClick = {
                                 if (state.hosting) {
