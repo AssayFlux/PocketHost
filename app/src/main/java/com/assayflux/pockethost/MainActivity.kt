@@ -59,6 +59,7 @@ import com.assayflux.pockethost.diagnostics.DailyOperationsReport
 import com.assayflux.pockethost.diagnostics.TelemetryStore
 import com.assayflux.pockethost.diagnostics.DeviceTelemetry
 import com.assayflux.pockethost.service.HostingService
+import com.assayflux.pockethost.service.HostingSchedule
 import com.assayflux.pockethost.storage.SiteImporter
 import com.assayflux.pockethost.storage.SiteFileManager
 import com.assayflux.pockethost.storage.PythonProjectImporter
