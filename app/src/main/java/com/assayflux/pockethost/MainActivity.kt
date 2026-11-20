@@ -1737,7 +1737,7 @@ if (settingsSection == "Hostnames & access") {
                             Text("Private and restricted visitor access is available in hostname routing. Use Cloudflare Access as an additional edge policy if desired.", color = palette.onSurfaceVariant)
                             Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
                             OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Open backup and restore")
+                                Text("Open Websites & files")
                             }
                         }
                     }
