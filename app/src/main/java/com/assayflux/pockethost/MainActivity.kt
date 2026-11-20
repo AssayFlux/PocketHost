@@ -12,6 +12,8 @@ import org.json.JSONObject
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.biometric.BiometricManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -360,10 +362,27 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         }
     }
 
-    LaunchedEffect(Unit) {
+    val activityLifecycle = this@MainActivity.lifecycle
+    val uiIsStarted = remember {
+        mutableStateOf(activityLifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+    }
+    DisposableEffect(activityLifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> uiIsStarted.value = true
+                Lifecycle.Event.ON_STOP -> uiIsStarted.value = false
+                else -> Unit
+            }
+        }
+        activityLifecycle.addObserver(observer)
+        onDispose { activityLifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(uiIsStarted.value) {
+        if (!uiIsStarted.value) return@LaunchedEffect
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         var lastIdleTelemetryAt = 0L
-        while (true) {
+        while (uiIsStarted.value) {
             hosting = runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)
             val hostingStartedAt = preferences.getLong("hosting_started_elapsed_ms", 0L)
             uptimeText = if (hosting && hostingStartedAt > 0L) {
