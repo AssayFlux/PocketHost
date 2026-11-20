@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import java.io.File
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -77,9 +78,12 @@ object HostingSchedule {
     private fun schedule(context: Context, action: String, requestCode: Int, atMillis: Long) {
         val alarm = context.getSystemService(AlarmManager::class.java)
         val pending = pendingIntent(context, action, requestCode)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarm.canScheduleExactAlarms()) {
+        val exactAllowed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            runCatching { alarm.canScheduleExactAlarms() }.getOrDefault(false)
+        val exactScheduled = exactAllowed && runCatching {
             alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pending)
-        } else {
+        }.isSuccess
+        if (!exactScheduled) {
             alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pending)
         }
     }
@@ -104,20 +108,34 @@ object HostingSchedule {
     }
 
     internal fun handleAlarm(context: Context, action: String?) {
-        when (action) {
-            ACTION_START -> {
-                OperationalLog.record(context, "INFO", "HOSTING_SCHEDULE_ON", "Daily schedule switched local hosting ON.")
-                startHosting(context)
-            }
-            ACTION_STOP -> {
-                OperationalLog.record(context, "INFO", "HOSTING_SCHEDULE_OFF", "Daily schedule switched local hosting OFF.")
-                stopHosting(context)
-            }
+        if (action != ACTION_START && action != ACTION_STOP) return
+        val config = settings(context)
+        if (!config.enabled) return
+
+        val start = parse(config.start) ?: return
+        val stop = parse(config.stop) ?: return
+        val now = LocalTime.now()
+        val shouldRun = if (start < stop) now >= start && now < stop else now >= start || now < stop
+        val requestedRunState = action == ACTION_START
+        if (requestedRunState != shouldRun) {
+            OperationalLog.record(context, "WARN", "HOSTING_SCHEDULE_ALARM_DELAYED",
+                "Android delivered a hosting boundary alarm outside its intended window; the current schedule window was applied instead.")
+        } else {
+            OperationalLog.record(context, "INFO",
+                if (shouldRun) "HOSTING_SCHEDULE_ON" else "HOSTING_SCHEDULE_OFF",
+                if (shouldRun) "Daily schedule switched local hosting ON." else "Daily schedule switched local hosting OFF.")
         }
+        // Reconcile against wall-clock state so a delayed idle alarm can never apply a stale ON/OFF command.
+        applyCurrentWindow(context, config)
         scheduleNext(context)
     }
 
     private fun startHosting(context: Context) {
+        if (!File(context.filesDir, "site").isDirectory) {
+            OperationalLog.record(context, "WARN", "HOSTING_SCHEDULE_START_SKIPPED",
+                "The daily schedule reached its ON time, but no website directory exists. Import a website before enabling scheduled hosting.")
+            return
+        }
         val service = Intent(context, HostingService::class.java)
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)

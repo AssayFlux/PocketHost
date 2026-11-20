@@ -36,6 +36,8 @@ class DashboardLifecycleStatusTest {
                 assertTrue("Hosting destination is missing", hosting != null)
                 hosting!!.click()
 
+                assertTrue("Automatic hosting hours controls are missing",
+                    device.wait(Until.hasObject(By.text("AUTOMATIC HOSTING HOURS")), 10_000))
                 assertTrue("Persistent service status is not rendered",
                     device.wait(Until.hasObject(By.text("Persistent service status test")), 10_000))
                 assertTrue("Transient action feedback is not rendered separately",

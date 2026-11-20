@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -68,7 +69,18 @@ internal fun PocketHostOwnerHeader(
         "Activity" -> "Activity & logs"
         "Settings" -> when (selectedSection) {
             "Network" -> "Network & tunnels"
+            "Server" -> "Server settings"
+            "Remote" -> "Remote control"
+            "Local access" -> "Local access"
+            "Relay node" -> "Native Relay Node"
+            "Relay host" -> "Relay host connection"
+            "Cloudflare" -> "Cloudflare Tunnel"
+            "Cloudflare Access" -> "Cloudflare Access"
+            "DNS management" -> "DNS management"
+            "Hostnames & access" -> "Hostnames & visitor access"
             "Runtimes" -> "Runtimes"
+            "Python" -> "Python runtime"
+            "Node.js" -> "Node.js runtime"
             "About" -> "About"
             else -> "Settings"
         }
@@ -76,7 +88,7 @@ internal fun PocketHostOwnerHeader(
     }
     var accountExpanded by remember { mutableStateOf(false) }
     Surface(color = palette.background) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 Surface(modifier = Modifier.size(42.dp), shape = RoundedCornerShape(13.dp), color = palette.primary) {
                     Box(contentAlignment = Alignment.Center) {
@@ -124,6 +136,7 @@ private val pocketHostNavItems = listOf(
     PocketHostNavItem("Hosting", "Start, stop and monitor the web server", Icons.Outlined.Language, "Dashboard"),
     PocketHostNavItem("Websites & files", "Import, edit, publish and recover sites", Icons.Outlined.FolderOpen, "Sites"),
     PocketHostNavItem("Workbench", "Edit site files and preview changes", Icons.Outlined.Code, "Workbench"),
+    PocketHostNavItem("Deployments", "Production publish and rollback", Icons.Outlined.Code, "Deployments"),
     PocketHostNavItem("Devices", "Trusted devices and fleet administration", Icons.Outlined.Memory, "Devices"),
     PocketHostNavItem("Network & tunnels", "LAN access, Relay and Cloudflare", Icons.Outlined.NetworkCheck, "Settings:Network"),
     PocketHostNavItem("Runtimes", "Optional Python and Node.js services", Icons.Outlined.Code, "Settings:Runtimes"),

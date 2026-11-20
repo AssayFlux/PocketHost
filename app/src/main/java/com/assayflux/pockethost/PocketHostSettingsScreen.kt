@@ -34,10 +34,40 @@ internal fun PocketHostSettingsSectionNavigation(
     selectedSection: String,
     onSectionSelected: (String) -> Unit
 ) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf("General", "Network", "Runtimes", "About").forEach { section ->
-            FilterChip(selected = selectedSection == section, onClick = { onSectionSelected(section) },
-                label = { Text(section, fontSize = 12.sp) })
+    val sections = listOf(
+        "General", "Server", "Remote", "Local access",
+        "Network", "Relay node", "Relay host", "Cloudflare", "Cloudflare Access", "DNS management", "Hostnames & access",
+        "Runtimes", "Python", "Node.js", "About"
+    )
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text(
+                "SETTINGS PAGES",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+            sections.chunked(2).forEach { rowSections ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rowSections.forEach { section ->
+                        FilterChip(
+                            selected = selectedSection == section,
+                            onClick = { onSectionSelected(section) },
+                            label = { Text(section, fontSize = 12.sp, maxLines = 2) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (rowSections.size == 1) Box(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -74,7 +104,7 @@ internal fun PocketHostSettingsScreen(
                     color = palette.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
             Text("Display mode", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("System", "Light", "Dark").forEach { mode ->
                     FilterChip(selected = state.appearanceMode == mode,
                         onClick = { actions.onAppearanceModeChange(mode) },

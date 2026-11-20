@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,13 @@ import java.io.File
 @Composable
 internal fun PocketHostWorkbenchScreen(context: Context) {
     val palette = MaterialTheme.colorScheme
+    var selectedPage by remember { mutableStateOf("Explorer") }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf("Explorer", "Editor", "Changes", "History").forEach { page ->
+            FilterChip(selected = selectedPage == page, onClick = { selectedPage = page },
+                label = { Text(page, fontSize = 11.sp) }, modifier = Modifier.weight(1f))
+        }
+    }
     val scope = rememberCoroutineScope()
     val availableSites = remember {
         val registered = SiteRegistry.list(context)
@@ -120,7 +128,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("WEBSITE PROJECT", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                        Text(selectedSiteLabel, color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(selectedSiteLabel, color = palette.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     OutlinedButton(onClick = { siteMenuExpanded = true }, enabled = !editorDirty) { Text("Switch") }
                     DropdownMenu(expanded = siteMenuExpanded, onDismissRequest = { siteMenuExpanded = false }) {
@@ -129,15 +137,15 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("WORKSPACE / DRAFT", color = palette.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("≠", color = palette.onSurfaceVariant)
-                    Text("LIVE / PRODUCTION", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("≠ LIVE / PRODUCTION", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(status, color = palette.onSurfaceVariant, fontSize = 12.sp)
             }
         }
 
+        if (selectedPage == "Explorer") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -164,7 +172,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                             } else {
                                 scope.launch {
                                     runCatching { withContext(Dispatchers.IO) { WorkbenchWorkspaceManager.readText(context, selectedSite.id, entry.path) } }
-                                        .onSuccess { selectedFile = entry.path; editorText = it; editorDirty = false }
+                                        .onSuccess { selectedFile = entry.path; editorText = it; editorDirty = false; selectedPage = "Editor" }
                                         .onFailure { status = it.message ?: "Could not open file." }
                                 }
                             }
@@ -187,8 +195,19 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 }
             }
         }
+        }
 
-        selectedFile?.let { path ->
+        if (selectedPage == "Editor") {
+            if (selectedFile == null) {
+                Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("No file selected", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text("Choose a text file in Explorer to open it in the editor.", color = palette.onSurfaceVariant)
+                        OutlinedButton(onClick = { selectedPage = "Explorer" }) { Text("Open Explorer") }
+                    }
+                }
+            }
+            selectedFile?.let { path ->
             Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -220,6 +239,8 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
             }
         }
 
+        }
+        if (selectedPage == "Changes") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -230,15 +251,17 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 else changes.forEach { change ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(change.status.uppercase(), color = palette.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
-                        Text(change.path, color = palette.onSurface, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(change.path, color = palette.onSurface, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Button(onClick = { commitMessage = ""; showCommit = true }, enabled = changes.isNotEmpty() && !loading,
                     modifier = Modifier.fillMaxWidth()) { Text("Create local commit") }
-                Text("Commits save immutable local snapshots only. Production deployment and rollback controls are not yet enabled.", color = palette.onSurfaceVariant, fontSize = 11.sp)
+                Text("Commits save immutable local snapshots only. Service coming soon: production deployment and rollback controls are not enabled in this release.", color = palette.onSurfaceVariant, fontSize = 11.sp)
             }
         }
+        }
 
+        if (selectedPage == "History") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Text("COMMIT HISTORY", color = palette.onSurface, fontWeight = FontWeight.Bold)
@@ -252,13 +275,8 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 }
             }
         }
-
-        Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("PREVIEW & DEPLOYMENTS", color = palette.onSurface, fontWeight = FontWeight.Bold)
-                Text("Isolated preview, TypeScript builds, owner-approved atomic publishing and rollback are the next Workbench implementation gates. The live website is not modified by this screen.", color = palette.onSurfaceVariant, fontSize = 12.sp)
-            }
         }
+
     }
 
     if (showDiscardChanges) AlertDialog(

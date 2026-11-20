@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -47,7 +52,8 @@ internal fun PocketHostLoginScreen(context: Context, onAuthenticated: (String) -
     var error by remember { mutableStateOf("") }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 28.dp),
+        modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+            .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.Center
     ) {
         Text("AF", color = palette.primary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)

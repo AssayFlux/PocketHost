@@ -1,11 +1,14 @@
 package com.assayflux.pockethost
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.widget.Toast
 import org.json.JSONObject
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.assayflux.pockethost.engine.NativeEngine
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.MetricsStore
@@ -99,6 +103,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Draw edge-to-edge and apply Compose system-bar insets to the app chrome/content.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val systemDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !systemDark
+            isAppearanceLightNavigationBars = !systemDark
+        }
         val backupRecovery = runCatching { ApplicationBackupManager.recoverInterruptedRestore(this) }
         backupRecovery.onFailure { error ->
             OperationalLog.record(this, "ERROR", "BACKUP_RESTORE_RECOVERY_FAILED",
@@ -186,9 +197,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun Context.findActivity(): Activity? {
+    var current: Context = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return current as? Activity
+}
+
 @Composable
 private fun PocketHostDashboard(onSignOut: () -> Unit) {
     val context = LocalContext.current
+    LaunchedEffect(Unit) { HostingSchedule.onTimeChanged(context) }
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Home") }
     var settingsSection by remember { mutableStateOf("General") }
@@ -212,6 +233,13 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         "Light" -> false
         else -> isSystemInDarkTheme()
     }
+    SideEffect {
+        context.findActivity()?.let { activity ->
+            val insetsController = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
     var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
     var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
@@ -229,7 +257,6 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var uptimeText by remember { mutableStateOf("—") }
     var importing by remember { mutableStateOf(false) }
-    var advancedMode by remember { mutableStateOf(false) }
     var keepAwake by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("keep_awake", false)) }
     var portText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080).toString()) }
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
@@ -641,11 +668,15 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             }
         ) { innerPadding ->
             Surface(Modifier.fillMaxSize(), color = palette.background) {
-                Column(
-                    Modifier.fillMaxSize().padding(innerPadding).imePadding()
-                        .verticalScroll(contentScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    // Keep tablet/desktop-like widths readable while letting phones use all available width.
+                    val contentWidth = maxWidth.coerceAtMost(840.dp)
+                    Column(
+                        Modifier.width(contentWidth).fillMaxHeight().align(Alignment.TopCenter)
+                            .padding(innerPadding).consumeWindowInsets(innerPadding).imePadding()
+                            .verticalScroll(contentScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                 if (selectedTab == "Home") {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -691,6 +722,16 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 }
                 if (selectedTab == "Workbench") {
                     PocketHostWorkbenchScreen(context = context)
+                }
+                if (selectedTab == "Deployments") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
+                            Text("Production deployment and rollback", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Workbench currently supports private draft editing and immutable local snapshots. Publishing a reviewed draft to the live site and selecting a historical release for rollback are not available from this page yet.", color = palette.onSurfaceVariant)
+                            TextButton(onClick = { selectedTab = "Workbench" }) { Text("Open Workbench drafts") }
+                        }
+                    }
                 }
                 if (selectedTab == "Learn") {
                     PocketHostLearnScreen(onOpenDashboard = { selectedTab = "Dashboard" }, onOpenSites = { selectedTab = "Sites" }, onOpenSettings = { selectedTab = "Settings" })
@@ -771,11 +812,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
-                    FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
-                }
-                if (advancedMode) {
+                if (selectedTab == "Settings" && settingsSection in setOf("Server", "Remote")) {
+                if (selectedTab == "Settings" && settingsSection == "Server") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -821,6 +859,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             }
                         }
                     }
+                }
+                if (selectedTab == "Settings" && settingsSection == "Remote") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -865,6 +905,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             Text("This host agent makes outbound HTTPS requests only. The control plane cannot open inbound ports or execute arbitrary shell commands on the host.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                     }
+                }
                 }
 
                 }
@@ -980,7 +1021,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     )
                 }
                 if (selectedTab == "Settings") {
-                if (settingsSection == "Network") {
+if (settingsSection in setOf("Relay node", "Relay host", "Cloudflare")) {
+                if (selectedTab == "Settings" && settingsSection == "Relay node") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1098,50 +1140,56 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = {
-                                    nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
-                                    status = "Relay host registry refreshed."
-                                }) { Text("Refresh hosts") }
-                                Button(onClick = {
-                                    runCatching { NativeRelay.createPairingInvite(nativeRelayHostIdText) }
-                                        .onSuccess { invite ->
-                                            if (invite.startsWith("ERROR:")) {
-                                                nativeRelayPairingInvite = null
-                                                status = invite
-                                            } else {
-                                                nativeRelayPairingInvite = invite
-                                                status = "A single-use pairing invite was created. It expires in 2 minutes and is bound to this host UUID."
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                        status = "Relay host registry refreshed."
+                                    }, modifier = Modifier.weight(1f)) { Text("Refresh hosts") }
+                                    Button(onClick = {
+                                        runCatching { NativeRelay.createPairingInvite(nativeRelayHostIdText) }
+                                            .onSuccess { invite ->
+                                                if (invite.startsWith("ERROR:")) {
+                                                    nativeRelayPairingInvite = null
+                                                    status = invite
+                                                } else {
+                                                    nativeRelayPairingInvite = invite
+                                                    status = "A single-use pairing invite was created. It expires in 2 minutes and is bound to this host UUID."
+                                                }
                                             }
-                                        }
-                                        .onFailure { status = it.message ?: "Could not create Relay pairing invite." }
-                                }, enabled = nativeRelayStatus == "RUNNING") { Text("Create 2-minute pairing invite") }
-                                OutlinedButton(onClick = {
-                                    runCatching { RelayCredentialIssuer.issueOrRotate(context, nativeRelayHostIdText) }
-                                        .onSuccess { issued ->
-                                            nativeRelayCredentialToken = issued.token
-                                            nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
-                                            if (nativeRelayStatus == "RUNNING") {
-                                                NativeRelayService.stop(context)
-                                                NativeRelayService.start(context)
-                                            }
-                                            status = "A new host credential was issued. Copy it to the host device now; the raw token is not stored on this node."
-                                        }
-                                        .onFailure { status = it.message ?: "Could not issue Relay host credential." }
-                                }) { Text("Issue / rotate") }
-                                OutlinedButton(onClick = {
-                                    runCatching { RelayCredentialIssuer.revoke(context, nativeRelayHostIdText) }
-                                        .onSuccess { revoked ->
-                                            if (revoked) {
-                                                nativeRelayCredentialToken = null
+                                            .onFailure { status = it.message ?: "Could not create Relay pairing invite." }
+                                    }, enabled = nativeRelayStatus == "RUNNING", modifier = Modifier.weight(1f)) {
+                                        Text("Create pairing invite", maxLines = 2)
+                                    }
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        runCatching { RelayCredentialIssuer.issueOrRotate(context, nativeRelayHostIdText) }
+                                            .onSuccess { issued ->
+                                                nativeRelayCredentialToken = issued.token
                                                 nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
-                                                NativeRelayService.stop(context)
-                                                if (nativeRelayHostIds.isNotEmpty()) NativeRelayService.start(context)
-                                                status = "Host credential revoked and its routes removed."
-                                            } else status = "That host is not registered."
-                                        }
-                                        .onFailure { status = it.message ?: "Could not revoke Relay host." }
-                                }) { Text("Revoke host") }
+                                                if (nativeRelayStatus == "RUNNING") {
+                                                    NativeRelayService.stop(context)
+                                                    NativeRelayService.start(context)
+                                                }
+                                                status = "A new host credential was issued. Copy it to the host device now; the raw token is not stored on this node."
+                                            }
+                                            .onFailure { status = it.message ?: "Could not issue Relay host credential." }
+                                    }, modifier = Modifier.weight(1f)) { Text("Issue / rotate", maxLines = 2) }
+                                    OutlinedButton(onClick = {
+                                        runCatching { RelayCredentialIssuer.revoke(context, nativeRelayHostIdText) }
+                                            .onSuccess { revoked ->
+                                                if (revoked) {
+                                                    nativeRelayCredentialToken = null
+                                                    nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                                    NativeRelayService.stop(context)
+                                                    if (nativeRelayHostIds.isNotEmpty()) NativeRelayService.start(context)
+                                                    status = "Host credential revoked and its routes removed."
+                                                } else status = "That host is not registered."
+                                            }
+                                            .onFailure { status = it.message ?: "Could not revoke Relay host." }
+                                    }, modifier = Modifier.weight(1f)) { Text("Revoke host", maxLines = 2) }
+                                }
                             }
                             nativeRelayPairingInvite?.let { invite ->
                                 Text("Single-use pairing invite (expires in 2 minutes):", color = palette.onSurfaceVariant, fontSize = 12.sp)
@@ -1163,12 +1211,15 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             }
                         }
                         Text(
-                            "This is the inbound gateway running on this phone. It is separate from the outbound host connection below. Node configuration and host verifiers are encrypted at rest; owner-issued credentials can be rotated or revoked. Automatic pairing and certificate renewal are still being completed.",
+                            "This is the inbound visitor gateway on this phone, separate from the outbound host connection. Pairing invites are short-lived and single-use; ACME HTTP-01 issues and renews certificates. DNS TXT ownership proof is currently checked at node startup, not continuously.",
                             color = palette.onSurfaceVariant, fontSize = 13.sp
                         )
+                        TextButton(onClick = { settingsSection = "DNS management" }) { Text("DNS management options") }
                     }
                 }
+                }
 
+                if (selectedTab == "Settings" && settingsSection == "Relay host") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1302,7 +1353,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     }
                 }
+                }
 
+                if (selectedTab == "Settings" && settingsSection == "Cloudflare") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1393,10 +1446,11 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     }
                 }
+                }
 
                 }
 
-                if (settingsSection == "Runtimes") {
+if (settingsSection in setOf("Python", "Node.js")) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1404,7 +1458,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("TRUSTED APPLICATION CODE ONLY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        Text("Python and Node run with app privileges, not in an OS sandbox. Run only code you trust.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Python and Node run in the separate-UID runtime companion. They share that companion UID and are not isolated from each other as hostile-code sandboxes. Run only owner-controlled code you trust.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("I understand and will run trusted code only", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
@@ -1437,7 +1491,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+if (settingsSection == "Python") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1496,13 +1550,13 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             if (allowLan && lanAddress != null) "Python preview: http://$lanAddress:$pythonPortText" else "Python preview: http://127.0.0.1:$pythonPortText",
                             color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
                         )
-                        Text("Runs trusted WSGI code as the app. Loopback by default; LAN access follows your network setting.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Runs trusted WSGI code in the separate-UID runtime companion. Loopback by default; LAN access follows your network setting. Per-project hostile-code isolation is not provided.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
                 }
 
-                if (settingsSection == "Network") {
+if (settingsSection == "Hostnames & access") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1625,7 +1679,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+if (settingsSection == "Node.js") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1665,13 +1719,13 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             }, enabled = nodeHosting) { Text("Stop Node.js") }
                         }
                         if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Runs in a separate process, not a sandbox. Prebundle node_modules; subprocess scripts and native add-ons may not work.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Runs in the separate-UID runtime companion, not a per-project sandbox. Prebundle node_modules; subprocess scripts and native add-ons may not work.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
                 }
 
-                    if (settingsSection == "Network") {
+if (settingsSection == "Hostnames & access") {
                 Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1683,8 +1737,46 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             Text("Private and restricted visitor access is available in hostname routing. Use Cloudflare Access as an additional edge policy if desired.", color = palette.onSurfaceVariant)
                             Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
                             OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Open backup and restore")
+                                Text("Open Websites & files")
                             }
+                        }
+                    }
+                }
+
+                if (settingsSection == "DNS management") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
+                            Text("Automatic DNS record management", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Pocket Host does not create or update public DNS records yet. Native Relay currently validates its configured DNS TXT ownership proof when the node starts; it does not continuously revalidate that proof.", color = palette.onSurfaceVariant)
+                            Text("Until DNS management is implemented, configure A/AAAA records and router forwarding with your DNS provider, then restart the Relay Node after changing ownership records.", color = palette.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (settingsSection == "Cloudflare Access") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
+                            Text("In-app Cloudflare Access management", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Pocket Host does not create, edit, or verify Cloudflare Access policies. Configure Access in the Cloudflare dashboard. Do not treat this app as proof that an external Access policy is active.", color = palette.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (settingsSection == "Network") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("NETWORK & PUBLIC ACCESS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Choose a dedicated page for the native Relay Node, outbound Relay host, Cloudflare Tunnel, DNS management, Cloudflare Access, or hostname and visitor access.", color = palette.onSurfaceVariant)
+                            Text("Each connector has independent credentials and lifecycle controls. Enable only the route you intend to expose.", color = palette.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (settingsSection == "Runtimes") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("OPTIONAL APPLICATION RUNTIMES", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Python WSGI and Node.js are managed independently. Open their dedicated pages to import a project, configure its port, and start or stop that runtime.", color = palette.onSurfaceVariant)
+                            Text("Only run code you own and trust. These runtimes are not a hostile-code sandbox.", color = palette.error)
                         }
                     }
                 }
@@ -1703,9 +1795,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         }
                     }
                 }
-                if (selectedTab == "Dashboard") {
-                }
-
+if (settingsSection == "Local access") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1758,8 +1848,10 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     }
                 }
                 }
+                }
             }
         }
         }
     }
+}
 }

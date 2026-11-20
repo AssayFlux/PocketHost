@@ -34,6 +34,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -99,8 +103,16 @@ internal fun PocketHostDashboardScreen(
     actions: PocketHostDashboardActions
 ) {
     val palette = MaterialTheme.colorScheme
-    HostingScheduleCard(context)
+    var selectedPage by remember { mutableStateOf("Overview") }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf("Overview", "Schedule", "Traffic & capacity").forEach { page ->
+            FilterChip(selected = selectedPage == page, onClick = { selectedPage = page },
+                label = { Text(page, fontSize = 11.sp, maxLines = 2) }, modifier = Modifier.weight(1f))
+        }
+    }
+    if (selectedPage == "Schedule") HostingScheduleCard(context)
 
+                if (selectedPage == "Overview") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -138,7 +150,9 @@ internal fun PocketHostDashboardScreen(
                         ) { Text(if (state.hosting) "Stop hosting" else "Start hosting") }
                     }
                 }
+                }
 
+                if (selectedPage == "Overview") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -197,7 +211,9 @@ internal fun PocketHostDashboardScreen(
                         }
                     }
                 }
+                }
 
+                if (selectedPage == "Traffic & capacity") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -223,7 +239,9 @@ internal fun PocketHostDashboardScreen(
                         Text("Static website traffic only", color = palette.onSurfaceVariant, fontSize = 12.sp)
                     }
                 }
+                }
 
+                if (selectedPage == "Traffic & capacity") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -310,6 +328,7 @@ internal fun PocketHostDashboardScreen(
                         }
                         }
                     }
+                }
                 }
 
 }

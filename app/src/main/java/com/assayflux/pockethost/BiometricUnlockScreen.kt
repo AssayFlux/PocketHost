@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
@@ -42,7 +44,8 @@ internal fun BiometricUnlockScreen(onRetry: () -> Unit) {
     val palette = MaterialTheme.colorScheme
     Surface(modifier = Modifier.fillMaxSize(), color = palette.background) {
         Column(
-            modifier = Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

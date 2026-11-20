@@ -58,6 +58,7 @@ internal fun PocketHostHomeScreen(
         HomeService("Hosting", "Local website origin", if (hosting) "$requests requests" else "Not serving requests", if (hosting) "Running · $uptimeText" else "Stopped", Icons.Outlined.Language, "Dashboard"),
         HomeService("Websites & files", "Projects, publishing and backups", importedSummary, "Site workspace", Icons.Outlined.FolderOpen, "Sites"),
         HomeService("Workbench", "Edit website code safely", "Draft workspace and local commits", "Live site remains unchanged", Icons.Outlined.Code, "Workbench"),
+        HomeService("Deployments", "Publish reviewed drafts", "Production rollout and rollback", "Service coming soon", Icons.Outlined.Code, "Deployments"),
         HomeService("Network & tunnels", "LAN, Relay and Cloudflare", tunnelStatus, "Connector status", Icons.Outlined.NetworkCheck, "Settings:Network"),
         HomeService("Activity & logs", "Events and diagnostics", "$activeConnections active connections", "Operational history", Icons.Outlined.Timeline, "Activity"),
         HomeService("Learn", "Guides and operating limits", "Setup and troubleshooting", "Documentation", Icons.Outlined.School, "Learn"),
@@ -120,10 +121,10 @@ internal fun PocketHostHomeScreen(
                     }
                     Spacer(Modifier.width((containerWidth - cardWidth - 12.dp) / 2))
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     services.indices.forEach { index ->
                         Box(
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(48.dp)
                                 .semantics { contentDescription = "Show service page ${index + 1}" }
                                 .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } },
                             contentAlignment = Alignment.Center

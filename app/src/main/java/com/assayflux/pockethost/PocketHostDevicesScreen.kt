@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -59,10 +60,18 @@ internal fun PocketHostDevicesScreen(context: Context) {
     val scope = rememberCoroutineScope()
     val fleetMap = remember(fleetMapText) { runCatching { JSONObject(fleetMapText) }.getOrDefault(JSONObject()) }
     val palette = MaterialTheme.colorScheme
+    var selectedPage by remember { mutableStateOf("Enrollment") }
     val devices = remember(refresh) { runCatching { DeviceTrustStore.list(context, includeRevoked = true) }.getOrDefault(emptyList()) }
     val owner = remember { runCatching { DeviceTrustStore.ownerIdentity() }.getOrNull() }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Enrollment", "Fleet", "Trusted devices").forEach { page ->
+                FilterChip(selected = selectedPage == page, onClick = { selectedPage = page },
+                    label = { Text(page, fontSize = 11.sp, maxLines = 2) }, modifier = Modifier.weight(1f))
+            }
+        }
+        if (selectedPage == "Enrollment") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("COMMAND CENTER IDENTITY", fontWeight = FontWeight.Bold, color = palette.onSurface)
@@ -73,6 +82,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text("P-256 signing key · Android Keystore · encrypted local registry", color = palette.onSurfaceVariant)
             }
         }
+        }
+        if (selectedPage == "Enrollment") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("ENROL A DEVICE", fontWeight = FontWeight.Bold)
@@ -81,12 +92,11 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 OutlinedTextField(publicKey, { publicKey = it.trim() }, label = { Text("Public key · Base64 DER SPKI") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                 OutlinedTextField(displayName, { displayName = it }, label = { Text("Device display name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(product, { product = it }, label = { Text("Agent product") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(os, { os = it }, label = { Text("Operating system") }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(architecture, { architecture = it }, label = { Text("Architecture") }, modifier = Modifier.weight(1f), singleLine = true)
-                }
+                OutlinedTextField(os, { os = it }, label = { Text("Operating system") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(architecture, { architecture = it }, label = { Text("Architecture") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(protocol, { protocol = it }, label = { Text("Protocol version") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(role, { role = it.trim() }, label = { Text("Requested role (storage, traffic, build_publish, native_job, backup_recovery, edge_gateway)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(role, { role = it.trim() }, label = { Text("Requested role") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Text("Supported roles: storage, traffic, build_publish, native_job, backup_recovery, edge_gateway.", color = palette.onSurfaceVariant, fontSize = 12.sp)
                 OutlinedTextField(capabilities, { capabilities = it }, label = { Text("Requested capabilities · comma separated") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                 Button(onClick = {
                     runCatching { DeviceTrustStore.createChallenge(fingerprint.lowercase()) }
@@ -136,6 +146,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text(message, color = palette.onSurfaceVariant)
             }
         }
+        }
+        if (selectedPage == "Fleet") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("REMOTE FLEET CONNECTION", fontWeight = FontWeight.Bold)
@@ -166,6 +178,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 }
             }
         }
+        }
+        if (selectedPage == "Trusted devices") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -374,6 +388,7 @@ internal fun PocketHostDevicesScreen(context: Context) {
                     }
                 }
             }
+        }
         }
     }
 }

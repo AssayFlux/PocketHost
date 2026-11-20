@@ -75,7 +75,7 @@ internal fun HostingScheduleCard(context: Context) {
             Text(message, color = palette.onSurfaceVariant, fontSize = 12.sp)
             Text(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                    "Android may delay alarms while idle unless exact-alarm access is allowed. The schedule is restored after reboot."
+                    "Manual start/stop takes effect immediately; the next scheduled boundary resumes automatic control. Android may delay alarms while idle unless exact-alarm access is allowed. The schedule is restored after reboot."
                 else "The schedule is restored after reboot. Battery restrictions may delay background alarms.",
                 color = palette.onSurfaceVariant, fontSize = 11.sp
             )
