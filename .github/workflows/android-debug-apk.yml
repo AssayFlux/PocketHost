@@ -1,22 +1,52 @@
-name: PocketHost Android debug APK packaging (manual only)
+name: PocketHost v0.1.0 Alpha acceptance and APK
 permissions:
   contents: read
-
+concurrency:
+  group: pockethost-alpha-apk-${{ github.ref }}
+  cancel-in-progress: false
 on:
+  push:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-debug-apk.yml"
+      - "app/**"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "relay-node/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "web-console/**"
+      - "control-plane/**"
+      - "protocol/**"
+      - "scripts/**"
   workflow_dispatch:
     inputs:
       confirm_build:
-        description: Explicitly confirm that APK packaging should run
+        description: Explicitly confirm Alpha APK packaging
         required: true
         type: boolean
         default: false
-
 jobs:
-  package-debug-apks:
-    if: inputs.confirm_build == true
+  acceptance-and-package:
+    if: github.event_name != 'workflow_dispatch' || inputs.confirm_build == true
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Record source provenance
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pockethost-output"
+          {
+            echo "branch=$GITHUB_REF_NAME"
+            echo "commit=$GITHUB_SHA"
+            echo "version=0.1.0"
+            echo "channel=Alpha"
+            echo "workflow_run=$GITHUB_RUN_ID"
+            echo "built_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } | tee "$RUNNER_TEMP/pockethost-output/BUILD-INFO.txt"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -34,23 +64,83 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Build and verify APKs
+      - name: Run Android lint and JVM unit-test gates
+        run: ./gradlew :app:lintDebug :runtime-worker:lintDebug :app:testDebugUnitTest :runtime-worker:testDebugUnitTest
+      - name: Build runtime-worker APK
+        run: ./gradlew :runtime-worker:assembleDebug
+      - name: Build app APKs for every declared ABI
         run: |
           set -euo pipefail
-          ./gradlew :runtime-worker:assembleDebug
+          out="$RUNNER_TEMP/pockethost-output"
           for abi in arm64-v8a armeabi-v7a x86_64; do
-            ./gradlew clean :app:assembleDebug -PpockethostAbi="$abi"
-            mkdir -p "$RUNNER_TEMP/apks"
-            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/apks/pockethost-app-$abi-debug.apk"
+            ./gradlew :app:assembleDebug -PpockethostAbi="$abi"
+            cp app/build/outputs/apk/debug/app-debug.apk "$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
           done
-          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$RUNNER_TEMP/apks/pockethost-runtime-worker-debug.apk"
-          sha256sum "$RUNNER_TEMP"/apks/*.apk | tee "$RUNNER_TEMP/apks/SHA256SUMS"
-          for apk in "$RUNNER_TEMP"/apks/*.apk; do
-            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
-          done
-      - uses: actions/upload-artifact@v4
+          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
+      - name: Run Android instrumentation suite on API 35 emulator
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: pockethost-v0.1.0-alpha-debug-apks
-          path: "$RUNNER_TEMP/apks/*"
-          if-no-files-found: error
-          retention-days: 14
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb install "$RUNNER_TEMP/pockethost-output/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
+            ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64
+      - name: Verify package metadata, native ABI payloads and APK signatures
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/pockethost-output"
+          aapt="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          worker="$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
+          "$aapt" dump badging "$worker" | grep -F "package: name='com.assayflux.pockethost.worker' versionCode='1' versionName='0.1.0'"
+          "$apksigner" verify --verbose --print-certs "$worker" > "$out/worker-signature.txt"
+          worker_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/worker-signature.txt" | head -n1)"
+          test -n "$worker_cert"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            apk="$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
+            "$aapt" dump badging "$apk" | grep -F "package: name='com.assayflux.pockethost' versionCode='1' versionName='0.1.0'"
+            "$apksigner" verify --verbose --print-certs "$apk" > "$out/app-$abi-signature.txt"
+            app_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/app-$abi-signature.txt" | head -n1)"
+            test "$app_cert" = "$worker_cert"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost.so"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
+          done
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            unzip -Z1 "$worker" | grep -Fx "lib/$abi/libnode.so"
+          done
+          {
+            echo "Signing: Android debug certificate (development/owner testing only)"
+            echo "App and companion signer: matching SHA-256 certificate $worker_cert"
+            echo "App ABI coverage: arm64-v8a, armeabi-v7a, x86_64"
+            echo "Worker ABI coverage: arm64-v8a, armeabi-v7a, x86_64"
+            echo "Package/version metadata: verified as v0.1.0 (versionCode 1)"
+          } | tee "$out/APK-VERIFICATION.txt"
+          sha256sum "$out"/*.apk | tee "$out/SHA256SUMS"
+      - name: Capture dependency inventory and web-console audit
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/pockethost-output"
+          ./gradlew :app:dependencies --configuration debugRuntimeClasspath > "$out/app-gradle-dependencies.txt"
+          ./gradlew :runtime-worker:dependencies --configuration debugRuntimeClasspath > "$out/worker-gradle-dependencies.txt"
+          cargo tree --locked --manifest-path rust-engine/Cargo.toml > "$out/rust-engine-dependencies.txt"
+          cargo tree --locked --manifest-path relay-node/Cargo.toml > "$out/relay-dependencies.txt"
+          cargo tree --locked --manifest-path control-plane/Cargo.toml > "$out/control-plane-dependencies.txt"
+          npm --prefix web-console ci
+          (cd web-console && npm audit --json > "$out/web-console-npm-audit.json") || true
+      - name: Upload Alpha APKs and verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-v0.1.0-alpha-apks-and-evidence
+          path: |
+            ${{ runner.temp }}/pockethost-output/*
+            app/build/reports/**
+            app/build/outputs/androidTest-results/**
+            app/build/outputs/connected_android_test_additional_output/**
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,8 +1,8 @@
 # Pocket Host — Preliminary Five-Step Completion Plan
 
 **Target:** Pocket Host v0.1.0 Alpha  
-**Working branch:** `Alpha` only  
-**Plan status:** Steps 1–2 automated gates passed; Step 3 implementation in progress; Step 4 runtime/management hardening in progress  
+**Working branch:** Alpha only  
+**Plan status:** Steps 1–4 implementation and automated CI gates passed; Step 5 integrated acceptance and APK packaging in progress. Physical-device/public-network acceptance remains owner-dependent.  
 **Rule:** finish and verify each step before treating the next as complete. Preserve the existing codebase; refactor only where evidence shows it is necessary.
 
 ## Delivery boundary
@@ -31,6 +31,8 @@ Exit gate:
 
 **Deliverable:** reproducible engineering baseline and restored CI. No feature expansion in this step.
 
+**Evidence:** quality CI run 44721249398 passed Rust, PostgreSQL control-plane, Python, protocol, Node, web-console and script jobs. Android native/source validation passed in run 44730595964. The APK workflow was deliberately held until Step 5.
+
 ## Step 2 — Complete and harden independent local website hosting
 
 <badge>PASS — implementation and automated CI</badge>
@@ -54,7 +56,7 @@ Exit gate:
 
 **Deliverable:** dependable local static hosting with documented limits.
 
-**Verification update (2026-11-20):** path/symlink and sensitive-file protections, dedicated managed roots, non-overlapping site isolation, persisted-route fail-closed validation, ZIP tree validation, quota accounting, deployment rollback/recovery and backup staging hardening are committed. Quality CI and Android source/native validation passed on `fe2af2277bf85eba16e2d3b67ec95d86acf56637` (runs `44726189328` and `44726189341`). Physical-device import, loopback/LAN and backup acceptance remains explicitly reserved for Step 5.
+**Verification update (2026-11-20):** path/symlink and sensitive-file protections, dedicated managed roots, non-overlapping site isolation, persisted-route fail-closed validation, ZIP tree validation, quota accounting, deployment rollback/recovery and backup staging hardening are committed. Quality CI run 44726189328 passed. Physical-device import, loopback/LAN and backup acceptance remains part of Step 5.
 
 ## Step 3 — Make Android hosting lifecycle and native public access dependable
 
@@ -80,11 +82,13 @@ Exit gate:
 
 **Deliverable:** resilient Android host service and one operational, secured public-access path.
 
+**Implementation/CI evidence:** boot recovery reads transactional relay configuration; relay startup and TLS reuse checks are hardened; network changes interrupt stale control streams and trigger bounded reconnection. Rust hosting/relay and control-plane CI passed in run 44730596020. This is not a physical-device/public-network pass: lifecycle, real hostname issuance/renewal, external visitor access and end-to-end revocation remain Step 5 owner acceptance items.
+
 ## Step 4 — Integrate essential runtimes and minimum remote operations without widening the release
 
 **Purpose:** make the existing supporting components coherent while keeping the Android host independently useful.
 
-**Implementation update (2026-11-20):** Python and Node scope has been defined from the actual embedded runtime implementations. Runtime project transfer now applies matching 64 MiB per-file, 256 MiB aggregate, 10,000-entry, 32-level and 1,024-character path limits on the host transfer side; the companion rejects deep paths and oversized individual files. Case-colliding paths are rejected before transfer. Remote command handling now validates command UUIDs and fails closed if idempotency state is corrupt or cannot be durably committed. The Android instrumentation regression source covers transfer path and file-size boundaries. Automated and device acceptance are still pending.
+**Implementation update (2026-11-20):** Python and Node scope has been defined from the actual embedded runtime implementations. Runtime project transfer applies matching 64 MiB per-file, 256 MiB aggregate, 10,000-entry expanded-tree, 32-level and 1,024-character path limits on host and companion; implicit directories count toward the expanded-tree limit. Symlinks, sensitive paths and case-colliding paths are rejected. Python concurrency/request bounds and Node heap bounds are documented. Remote command handling validates command UUIDs, constrains endpoint/token inputs, and fails closed if idempotency state is corrupt or cannot be durably committed. Android instrumentation regression source covers transfer path and file-size boundaries.
 
 Work:
 - Define which Python/Node use cases are actually supported in this Alpha and verify install, start, stop, logs, resource ceilings and recovery.
@@ -104,18 +108,20 @@ Exit gate:
 
 **Deliverable:** explicitly bounded runtime support and minimum coherent owner/remote operations.
 
+**Verification:** quality CI run 44730596020 passed; Android native ABI builds and app/instrumentation/runtime-worker source compilation passed in 44730595964. Emulator and physical Python/Node workload/management acceptance are recorded in Step 5. Source compilation is not runtime execution.
+
 ## Step 5 — Integrated acceptance, Alpha APK and owner handoff
 
 **Purpose:** prove the whole v0.1.0 system rather than collecting disconnected passing builds.
 
 Work:
 - Run all Rust, Kotlin, protocol, control-plane, web and script checks relevant to the retained scope.
-- Run Android instrumentation on the declared API matrix; record any skipped jobs and reasons.
+- Run Android instrumentation on API 35 x86_64 emulator; report every skipped test explicitly. Physical device remains a separate owner acceptance requirement.
 - Test on at least one physical Android device, recording model, Android version, ABI, app/worker versions and test results.
 - Run a real-network public visitor journey, credential revocation, TLS renewal/failure recovery and network-change recovery.
 - Check data migration, clean install, upgrade install, uninstall/data-retention expectations, backup/restore and crash recovery.
 - Review permissions, exported components, secrets, logs/redaction, dependency/licence inventory and release configuration.
-- Build and verify the v0.1.0 Alpha APK artifact(s); record SHA-256 checksums and signing status.
+- Build and verify v0.1.0 Alpha APKs for arm64-v8a, armeabi-v7a and x86_64 plus the runtime-worker APK; record SHA-256, package metadata and matching signer certificate.
 - Publish a concise release report with known limitations and exact device-testing instructions.
 
 Exit gate:
@@ -125,7 +131,7 @@ Exit gate:
 - Known limitations are visible and no incomplete feature is represented as complete.
 - Hand the APK and evidence to the owner. Do not begin a later-version upgrade until the owner has tested and decided the next direction.
 
-**Deliverable:** v0.1.0 Alpha candidate APK(s), verification report, known-limitations list and owner handoff.
+**Deliverable:** v0.1.0 Alpha candidate APKs, verification report, known-limitations list and owner handoff.
 
 ## Scope summary
 
@@ -151,10 +157,10 @@ Exit gate:
 
 For each gate, record:
 - commit SHA;
-- command/workflow and toolchain versions;
+- workflow and toolchain versions;
 - pass/fail/skipped status;
 - test device/API/network details where relevant;
 - artifact name and SHA-256 where applicable;
 - open defects and owner decision.
 
-A source implementation is **present**, not **complete**, until its exit gate is evidenced. The Alpha release must not be called complete based solely on a successful APK build.
+A source implementation is present, not complete, until its exit gate is evidenced. A successful APK build is not proof of physical-device, external-network or complete Alpha acceptance.
