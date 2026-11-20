@@ -106,18 +106,8 @@ jobs:
         with:
           name: pockethost-native-android-libraries
           path: "$RUNNER_TEMP/native"
-      - name: Install cloudflared Android libraries
-        run: |
-          mkdir -p app/src/main/jniLibs
-          cp -R "$RUNNER_TEMP/native/engine-jni/." "$RUNNER_TEMP/engine-copy/"
-          cp -R "$RUNNER_TEMP/native/relay-jni/." "$RUNNER_TEMP/relay-copy/"
-          mkdir -p "$RUNNER_TEMP/verify"
-          for abi in arm64-v8a armeabi-v7a x86_64; do
-            test -s "$RUNNER_TEMP/native/engine-jni/$abi/libpockethost.so"
-            test -s "$RUNNER_TEMP/native/relay-jni/$abi/libassayflux_relay_node.so"
-          done
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
       - name: Compile Android app and instrumentation Kotlin without assembling APKs
-        run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin -PpockethostAbi=x86_64
+        run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin :runtime-worker:compileDebugKotlin :runtime-worker:externalNativeBuildDebug -PpockethostAbi=x86_64
