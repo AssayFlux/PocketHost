@@ -90,11 +90,7 @@ internal fun PocketHostOwnerHeader(
     Surface(color = palette.background) {
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                Surface(modifier = Modifier.size(42.dp), shape = RoundedCornerShape(13.dp), color = palette.primary) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("AF", color = palette.onPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+                PocketHostBrandMark(Modifier.size(42.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("Pocket Host", color = palette.onSurface, fontSize = 22.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold)
                     Text("ASSAYFLUX · YOUR DEVICE, YOUR CONTROL", color = palette.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -156,9 +152,7 @@ internal fun PocketHostSidebar(
     val palette = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(color = palette.primary, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(42.dp)) {
-                Box(contentAlignment = Alignment.Center) { Text("AF", color = palette.onPrimary, fontWeight = FontWeight.Bold) }
-            }
+            PocketHostBrandMark(Modifier.size(42.dp))
             Column {
                 Text("Pocket Host", color = palette.onSurface, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Text("ASSAYFLUX", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)

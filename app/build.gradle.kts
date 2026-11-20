@@ -6,6 +6,12 @@ plugins {
 val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val relayRustDir = rootProject.layout.projectDirectory.dir("relay-node")
 val relayJniOutput = layout.buildDirectory.dir("generated/relay/jniLibs")
+val generatedBrandAssets = layout.buildDirectory.dir("generated/brandAssets")
+val copyPocketHostBrandAsset by tasks.registering(Copy::class) {
+    from(rootProject.file("Assets/Pocket Host 7.svg"))
+    into(generatedBrandAssets)
+    rename { "pocket-host-logo.svg" }
+}
 val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
 val requestedAbi = providers.gradleProperty("pockethostAbi").orNull
 val selectedAbis = if (requestedAbi == null) supportedAbis else {
@@ -54,6 +60,7 @@ android {
     }
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
     sourceSets["main"].jniLibs.srcDir(relayJniOutput)
+    sourceSets["main"].assets.srcDir(generatedBrandAssets)
     signingConfigs {
         if (releaseSigningReady) {
             create("release") {
@@ -84,7 +91,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 }
-tasks.named("preBuild").configure { dependsOn(buildRustAndroid, buildNativeRelayAndroid) }
+tasks.named("preBuild").configure { dependsOn(buildRustAndroid, buildNativeRelayAndroid, copyPocketHostBrandAsset) }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.10.0")
@@ -93,6 +100,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("com.caverock:androidsvg-aar:1.4")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
