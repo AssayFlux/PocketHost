@@ -359,13 +359,13 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Delete workspace file?") },
-            text = { Text("Delete $target from the editable workspace? The live website remains unchanged.") },
+            title = { Text("Delete workspace entry?") },
+            text = { Text("Delete $target and its contents from the editable workspace? The live website remains unchanged.") },
             confirmButton = { TextButton(onClick = {
                 scope.launch {
-                    runCatching { withContext(Dispatchers.IO) { WorkbenchWorkspaceManager.deleteFile(context, selectedSite.id, target) } }
-                        .onSuccess { deleteTarget = null; if (selectedFile == target) selectedFile = null; refresh(); status = "Workspace file deleted. Live website unchanged." }
-                        .onFailure { status = it.message ?: "Could not delete file." }
+                    runCatching { withContext(Dispatchers.IO) { WorkbenchWorkspaceManager.deleteEntry(context, selectedSite.id, target) } }
+                        .onSuccess { deleteTarget = null; if (selectedFile == target) selectedFile = null; refresh(); status = "Workspace entry deleted. Live website unchanged." }
+                        .onFailure { status = it.message ?: "Could not delete workspace entry." }
                 }
             }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } }
