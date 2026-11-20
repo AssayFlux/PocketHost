@@ -36,8 +36,8 @@ internal fun PocketHostSettingsSectionNavigation(
 ) {
     val sections = listOf(
         "General", "Server", "Remote", "Local access",
-        "Relay node", "Relay host", "Cloudflare", "Hostnames & access",
-        "Python", "Node.js", "About"
+        "Network", "Relay node", "Relay host", "Cloudflare", "Hostnames & access",
+        "Runtimes", "Python", "Node.js", "About"
     )
     Card(
         modifier = Modifier.fillMaxWidth(),
