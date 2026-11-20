@@ -135,3 +135,17 @@ A focused source review found that configured relay-host credential verifiers we
 **Not yet verified:** No Android compilation, unit/instrumentation execution, provider-level picker test, APK assembly, emulator run or physical-device test has been run for this checkpoint. The added instrumentation tests are source changes only.
 
 **Branding gate:** The designated source asset `Assets/Pocket Host 7.svg` is present (14,475,269 bytes), but launcher/in-app integration is not yet complete. The Android app currently has no launcher mipmap/drawable icon resources. The SVG requires faithful raster/adaptive-icon asset generation; no substitute logo has been introduced.
+
+
+## 9. Workbench file-management Step 2 checkpoint — 2026-11-20
+
+Implementation commits on `Alpha`:
+- `b0b6ab3` — rollback Workbench rename when post-move validation fails; add safe recursive draft-entry deletion.
+- `199d4a1` — expose folder rename and delete actions in Explorer.
+- `e83c36e` — add regression coverage for folder deletion isolation.
+- `2e82bed` — route the Explorer confirmation flow through the safe file-or-folder deletion operation.
+- `197da44` — document scope and verification boundary in `docs/WORKBENCH_FILE_MANAGEMENT.md`.
+
+The Workbench now allows folder rename and recursive folder deletion in addition to file operations. Folder deletion is limited to the selected site's private draft workspace; the operation rejects symlinks and invalid targets, validates the subtree before deletion and revalidates the workspace afterward. Rename attempts rollback if validation fails. The Android instrumentation regression asserts that deleting a draft folder leaves live website content unchanged.
+
+**Verification boundary:** source and test changes are committed; no Android build, JVM/instrumentation run, emulator, physical-device acceptance or APK build has been performed for this checkpoint. Keep these as open verification items.
