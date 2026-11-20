@@ -2,122 +2,114 @@
 
 **Baseline date:** 2026-11-20  
 **Active branch:** `Alpha`  
-**Baseline commit:** `8879ead946fe985d056970d1614068d1baea562b`  
+**Current head at this checkpoint:** `3b127e785224165c9f2415df9ce013e60b2160a7`  
+**Original planning baseline:** `8879ead946fe985d056970d1614068d1baea562b`  
 **Original pre-reset snapshot:** `7d829e09162882dbbd467cc6e6a4a9cdfadcf028`  
 **Archive branch:** `archive/pre-replan-2026-11-20`
 
-This document records the repository state at the start of the fresh preliminary plan. It is an inventory, not a claim that every listed feature is production-ready.
+This is the current engineering baseline for Pocket Host v0.1.0 Alpha. It distinguishes source presence, automated verification, device verification and operational verification. It does not treat source presence as proof of a working release.
 
 ## 1. Repository condition
 
-The Alpha branch contains the application and supporting source code after a documentation/workflow reset. The source tree was preserved during that reset; 52 documentation/workflow files were removed. The original state is retained on the archive branch above.
+The Alpha branch contains the Android application and supporting source after a documentation/workflow reset. The source tree was preserved during that reset; 52 documentation/workflow files were removed. The original state is retained on the archive branch.
 
-The current tree was previously counted at 238 files. Main areas:
+Main areas:
 
 | Area | Current contents |
 |---|---|
-| `app/` | Android Kotlin/Jetpack Compose application, services, UI, native integration and Android tests |
+| `app/` | Android Kotlin/Jetpack Compose app, services, UI, native integration and Android tests |
 | `rust-engine/` | Rust static website hosting engine and JNI integration |
-| `relay-node/` | Rust native relay/gateway foundation and JNI integration |
+| `relay-node/` | Rust native relay/gateway and JNI integration |
 | `runtime-worker/` | Separate Android companion APK with Python/Node runtime components |
 | `runtime-library/` | Runtime catalogue and related assets |
-| `control-plane/` | Rust/Axum remote control-plane service, database migrations and deployment configuration |
+| `control-plane/` | Rust/Axum control-plane service, migrations and deployment configuration |
 | `web-console/` | React/Vite/TypeScript web console |
 | `agents/` | Linux agent and installation/operation code |
 | `protocol/` | Device protocol schemas and role/capability policy |
-| `tests/`, `scripts/` | Cross-component tests and build/validation helpers |
+| `tests/`, `scripts/` | Cross-component tests and validation helpers |
 | `Assets/` | Application assets |
 
 ## 2. Android application baseline
 
-Verified configuration:
-- Application ID and namespace: `com.assayflux.pockethost`.
-- Android compile SDK 35, minimum SDK 26, target SDK 35.
-- Version code 1 and version name `0.1.0`.
+- Application ID/namespace: `com.assayflux.pockethost`.
+- Compile SDK 35, minimum SDK 26, target SDK 35.
+- Version code 1, version name `0.1.0`.
 - Java/Kotlin target 17.
-- Kotlin, Jetpack Compose and Android instrumentation-test dependencies are present.
-- Rust native build integration targets `arm64-v8a`, `armeabi-v7a` and `x86_64`.
-- Release signing is conditional on protected keystore environment variables; production signing is not established by the repository configuration alone.
+- Native build matrix: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
+- Release signing is conditional on protected keystore environment variables. Production signing is not established by repository configuration alone.
 
-The app has substantial UI and service foundations: hosting, website/file management, workbench, deployments, devices, network/tunnel controls, runtimes, activity/logs, learning and settings. Source presence does not establish end-to-end readiness.
+The app includes hosting, website/file management, workbench, deployments, devices, network/tunnel controls, runtimes, activity/logs, learning and settings. UI/source presence does not establish end-to-end readiness.
 
-## 3. Hosting and relay foundations
+## 3. Hosting and relay architecture
 
 ### Static hosting
-The Rust engine and Android integration provide a foundation for local static hosting, site storage, import and file operations. Existing code includes bounded import/serving limits, backup/restore and release-history concepts. These limits and policies must be checked for consistency across every entry point.
+
+The Rust engine and Android integration provide local static hosting, site storage, import and file operations. Source includes bounded import/serving limits, backup/restore and release-history concepts. Physical-device loopback/LAN, multi-site isolation and backup recovery remain owner acceptance requirements.
 
 ### Native relay
-The relay is a native Android/Kotlin foreground-service plus Rust/JNI direction. Source includes foundations for device identity, encrypted configuration, SQLite state, pairing and credential operations, route handling, TLS/ACME and network recovery.
 
-**Architecture decision:** do not restore the old Termux relay approach. Continue with native Android and Rust/JNI components.
+The selected architecture is native Android/Kotlin foreground service plus Rust/JNI. Do not restore the old Termux relay approach.
 
-The remaining relay proof is significant: owner-approved pairing, credential lifecycle, route isolation, durable revocation, real DNS/TLS issuance and renewal, network-change recovery, and public visitor acceptance must be demonstrated together. Public reachability also depends on the network path; CGNAT without a usable public edge or global IPv6 prevents ordinary direct inbound hosting.
+Source includes device identity, encrypted configuration, SQLite-backed relay state, pairing, credential operations, route handling, TLS/ACME and network recovery. Rust relay source includes HTTP-01 ACME issuance and persistent relay state. These implementations still require end-to-end evidence for owner-approved pairing, credential rotation/revocation, DNS/TLS issuance and renewal, route isolation, restart persistence, network changes and external visitor access.
 
-## 4. Runtime, control plane and connected-device foundations
+Public reachability depends on the network path. CGNAT/firewall restrictions without a usable public edge or global IPv6 can prevent ordinary direct inbound hosting. The product must report this rather than implying universal reachability.
 
-- A separate runtime-worker Android application exists and includes Python 3.11, a pinned Node.js mobile SDK, native bridges and isolation-related components.
-- The current companion design is not yet evidence of a hardened hostile-code sandbox. Do not advertise arbitrary untrusted code execution as securely isolated.
-- A Rust/Axum control plane, PostgreSQL migrations, WebAuthn/session/audit foundations and deployment files exist.
-- A React/Vite/TypeScript web console exists.
-- Linux agent and shared device protocol foundations exist.
+## 4. Runtime and remote-operation baseline
 
-These are useful foundations, but deployment, end-to-end authorization, lifecycle and failure recovery still require validation. They are not a reason to expand the first milestone into a full fleet-management platform.
+- Separate runtime-worker Android application includes Python 3.11, pinned Node.js mobile runtime, native bridges and IPC.
+- Runtime trust boundary is owner-trusted application code; this is not a hardened hostile-code sandbox and does not provide per-project UID isolation.
+- Runtime transfer limits, companion caller/signature checks and remote command idempotency are documented in `docs/RUNTIMES_AND_REMOTE_OPERATIONS.md`.
+- Rust/Axum control plane, PostgreSQL migrations, WebAuthn/session/audit foundations, React web console and Linux agent exist.
 
-## 5. Build and test baseline
+Remote management is optional to local static hosting. It must not become a dependency for local site serving.
 
-Build configuration exists for Gradle, Rust, Android native libraries and the separate worker APK. Android instrumentation tests and cross-component tests are present in source.
+## 5. Verification history
 
-Historical evidence before the reset:
-- A quality CI run passed on the original Alpha commit `7d829e0...`.
-- A debug APK workflow previously built app APKs for three ABIs and a separate runtime-worker APK.
-- An integration workflow compiled Android instrumentation sources, but its API 26/33/35 emulator execution was skipped because the opt-in emulator input was not enabled.
+### Step 1
 
-Important current limitation:
-- At the initial fresh baseline, the previous `.github/workflows/` files had been removed during the requested reset. Step 1 restored the engineering workflows; see the verification update below.
-- Historical workflow results are evidence about the old commit and old workflow definitions only; they do not prove the new baseline or future changes pass.
-- No physical-device acceptance or full public visitor journey is established by this baseline record.
-- A successful build is not the same as a completed or secure release.
+- Quality workflow run [44721249398](https://github.com/AssayFlux/PocketHost/actions/runs/44721249398) passed Rust engine/relay tests, PostgreSQL-backed control-plane tests/migrations, Python tests, protocol checks, web-console build, Node smoke test and script/proxy checks.
+- Android native and source validation run [44721249324](https://github.com/AssayFlux/PocketHost/actions/runs/44721249324) passed three-ABI native compilation/ELF checks and Android app/instrumentation/runtime-worker source compilation.
+- APK packaging, emulator execution and physical-device acceptance were not part of those passes.
 
-## 6. Known gaps to carry into the plan
+### Step 2
 
-1. Restore a small, reproducible CI/build pipeline and run it against the current source.
-2. Establish reliable local hosting and consistent import, storage, path, quota, backup and restore policies.
-3. Prove Android foreground-service lifecycle, boot/schedule behavior, process-death recovery and network transitions on devices.
-4. Complete and test the native relay security and public-access path end to end.
-5. Define and enforce the supported runtime trust boundary; do not claim hostile-code isolation without evidence.
-6. Validate the minimum required remote-management integration without letting the control plane/fleet scope block the Android host.
-7. Complete integrated tests, physical-device acceptance and real-network visitor tests before calling v0.1.0 complete.
+- Website path, symlink, sensitive-file, site-root and persisted-route regression coverage was added.
+- Quality run [44726189328](https://github.com/AssayFlux/PocketHost/actions/runs/44726189328) and Android run [44726189341](https://github.com/AssayFlux/PocketHost/actions/runs/44726189341) passed their recorded hosting/relay tests, Android source compilation and three-ABI native builds.
+- Physical-device import, loopback/LAN, multi-site and backup/restore acceptance remains unverified.
 
-## 7. Step 1 verification update
+### Steps 3–4
 
-- **Automated verified:** restored quality workflow passed on Alpha (run `44721249398`), including Rust engine/relay tests, PostgreSQL-backed control-plane tests/migrations, 26 Python tests, protocol checks, web-console build, Node smoke test and script/proxy checks.
-- **Automated verified:** Android native engine and relay cross-compiled for `arm64-v8a`, `armeabi-v7a` and `x86_64`; ELF architecture checks and Android app/instrumentation/runtime-worker source compilation passed (run `44721249324`).
-- **Not performed:** APK packaging is intentionally deferred to Step 5. Emulator execution and physical-device acceptance are not claimed.
-- **Open engineering issue:** web-console dependency installation reported one high and one moderate npm advisory; resolve or explicitly disposition before final acceptance.
+- Relay boot recovery, transactional configuration use, TLS certificate reuse/startup checks and bounded network reconnection are implemented in source.
+- Runtime project transfer boundaries, companion IPC identity/signature checks, supported Python/Node scope and remote-command durable idempotency are implemented/documented.
+- Quality workflow run [44730596020](https://github.com/AssayFlux/PocketHost/actions/runs/44730596020) passed the recorded Rust hosting/relay and control-plane checks.
+- Android run [44730595964](https://github.com/AssayFlux/PocketHost/actions/runs/44730595964) passed three-ABI native builds and app/instrumentation/runtime-worker source compilation.
+- These are implementation and automated CI evidence, not device or public-network acceptance.
 
-## 8. Step 2 verification update
+### Step 5 and latest checkpoint
 
-- **Automated verified:** website path, symlink, sensitive-file, site-root and persisted-route regression coverage is included in the Alpha source.
-- **Automated verified:** Rust hosting/relay tests, Android app/instrumentation/runtime-worker source compilation and three-ABI native builds passed on `fe2af2277bf85eba16e2d3b67ec95d86acf56637` (quality run `44726189328`; Android run `44726189341`).
-- **Not yet device verified:** representative folder/ZIP import, loopback/LAN serving, multi-site isolation, interrupted restore and backup integrity on a physical phone. These remain Step 5 acceptance checks.
-- **No APK packaging:** deliberately deferred until Step 5.
+- API-26 lint and Compose source issues were corrected in commit `e4fc23129c1bf2758d73bf2b00358dba6e2d0804`.
+- Chaquopy's Maven repository was added to dependency resolution after the earlier worker packaging attempt could not resolve `com.chaquo.python.runtime:bootstrap:17.2.0`.
+- The Alpha acceptance workflow now runs Android lint/JVM tests and a non-packaging `generateDebugPythonMiscAssets` dependency gate. APK assembly, emulator instrumentation and APK verification require the explicit manual `confirm_build=true` input.
+- Latest head: `3b127e785224165c9f2415df9ce013e60b2160a7`.
+- Latest quality workflow [44737757283](https://github.com/AssayFlux/PocketHost/actions/runs/44737757283) completed successfully on that head.
+- Acceptance workflow [44737757242](https://github.com/AssayFlux/PocketHost/actions/runs/44737757242) was observed pending/queued with no jobs reported at the time of this checkpoint. Therefore the post-fix Android lint/JVM and Chaquopy asset-task gate are not yet evidenced as passed.
+- No APK was built by this checkpoint. No emulator execution, physical-device test, real DNS/TLS issuance, external visitor journey or production signing verification is claimed.
 
-## 9. Baseline rule
+## 6. Remaining release gates
 
-When implementation begins, update this file only when repository facts change or a verification result is obtained. Mark every claim as one of:
+1. Obtain a completed result for the post-fix Android lint/JVM and Chaquopy runtime asset task.
+2. Review dependency/licence/security audit outputs, including the previously reported web-console npm advisories.
+3. Execute API 35 x86_64 emulator instrumentation when owner-authorized packaging/test execution is permitted; record skips and failures accurately.
+4. On a physical Android device, test install, foreground-service lifecycle, reboot/process-death recovery, network changes, local hosting, import, multi-site isolation, backup/restore and Python/Node trusted workloads.
+5. On a controlled real hostname/network, test owner pairing, credential rotation/revocation, DNS proof, TLS issuance/renewal, route isolation and independent external visitor access.
+6. Review signing, exported components, permissions, secrets and log redaction. Production signing requires owner-provided protected signing material; debug signing is for owner testing only.
+7. Only after explicit owner authorization, package and verify the Alpha APKs. Packaging is not performed in this pass.
+
+## 7. Evidence vocabulary
+
 - **Present:** source/configuration exists.
-- **Automated verified:** a named automated test/build passed on a recorded commit.
+- **Automated verified:** a named automated check passed on a recorded commit.
 - **Device verified:** tested on a physical Android device with model/API/build recorded.
 - **Operational verified:** tested through the intended real network/public visitor path.
 
-Never promote a feature from “present” to “verified” based only on code inspection or UI presence.
-
-
-## 10. Step 3–5 implementation and acceptance checkpoint (2026-11-20)
-
-- **Step 3 implementation present:** boot recovery reads the transactional relay configuration; relay startup/TLS certificate reuse checks and network-change reconnection were hardened. Quality CI passed on commit `78eccfc921d55a3dd44862bbe09228db7f66a360` (run `44730596020`). No physical-device, live DNS/ACME, real-hostname TLS renewal, external visitor or end-to-end revocation evidence is claimed.
-- **Step 4 implementation present:** Python/Node workload boundaries, companion IPC identity/signature checks, bounded project transfer and remote command durable-idempotency rules are documented in [Runtime and Remote Operations](RUNTIMES_AND_REMOTE_OPERATIONS.md). Quality CI and Android native/source validation passed on the prior implementation commit (runs `44730596020` and `44730595964`).
-- **Step 5 pre-package checks:** latest quality workflow passed on `e4fc23129c1bf2758d73bf2b00358dba6e2d0804` (run `44735504573`); Android native ABI and source validation passed on that commit (run `44735504452`). The Android source workflow compiles app and instrumentation Kotlin and runtime-worker/native bridge sources; this is not an instrumentation execution.
-- **Build issue found:** the acceptance workflow reached the runtime-worker packaging task and could not resolve `com.chaquo.python.runtime:bootstrap:17.2.0` from the configured repositories. The source fix adds Chaquopy's Maven repository to dependency resolution. The same workflow also exposed API-26 lint issues which were corrected in commit `e4fc23129c1bf2758d73bf2b00358dba6e2d0804`.
-- **APK packaging is currently held by owner instruction.** The acceptance workflow is now manual-only; APK build, emulator instrumentation and APK verification steps require the explicit `confirm_build=true` input. No verified v0.1.0 APK artifact is available from the failed attempt.
-- **Still owner/device dependent:** physical-device lifecycle and runtime workload tests, live public visitor/TLS/revocation acceptance, and final install/upgrade/backup checks. These cannot be truthfully marked complete from hosted CI.
+Never promote a feature to verified from source inspection or UI presence alone.

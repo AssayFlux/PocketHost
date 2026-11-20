@@ -2,174 +2,92 @@
 
 **Target:** Pocket Host v0.1.0 Alpha  
 **Working branch:** Alpha only  
-**Plan status:** Steps 1–4 implementation and core automated CI gates passed; Step 5 pre-package engineering checks are in progress. APK packaging is intentionally held for the owner’s next instruction. Emulator instrumentation, physical-device and public-network acceptance remain open.  
-**Rule:** finish and verify each step before treating the next as complete. Preserve the existing codebase; refactor only where evidence shows it is necessary.
+**Current status:** Steps 1–2 implementation and automated gates passed. Steps 3–4 implementation and historical automated checks are present, but device/operational acceptance is open. Step 5 post-fix Android/Chaquopy acceptance job is pending; no APK packaging is authorized.  
+**Rule:** preserve the existing codebase, complete and verify each gate, and never claim device/network success from source or CI alone.
 
 ## Delivery boundary
 
-The first complete system is an Android phone that can independently host websites. Public access through the native relay is part of the first release goal and must be proven on a real network path. Remote management is secondary: only the minimum integration needed to preserve a coherent product and secure owner control is in scope. Full fleet operations are not a v0.1.0 gate.
+The first complete system is an Android phone that independently hosts websites. Public access through the native relay is part of the release goal and must be proven on a real network path. Remote management is secondary and limited to the minimum secure owner operations. Full fleet operations are not a v0.1.0 gate.
 
-## Step 1 — Establish the engineering baseline and trustworthy build pipeline
+## Step 1 — Engineering baseline and reproducible build pipeline
 
-<badge>PASS — automated CI</badge>
+**Status: PASS — historical automated CI.**
 
-**Purpose:** know exactly what is being built and make every subsequent change reproducible.
+Restore and run quality/native/source workflows; pin toolchains and lockfiles; record failures and artifact provenance.
 
-Work:
-- Inspect the current Android, Rust, relay, runtime-worker and supporting modules before changing behavior.
-- Restore concise CI workflows for quality checks, native ABI builds, Android compilation/APK packaging and explicitly opted-in emulator tests.
-- Pin and verify toolchains/dependencies; validate Gradle and Cargo lockfile behavior.
-- Run existing Rust, protocol, script and web-console checks; compile Android app and instrumentation sources.
-- Record existing failures and distinguish regressions from pre-existing issues.
-- Establish artifact naming, ABI verification, APK metadata/signature checks and build provenance.
+Evidence: quality run [44721249398](https://github.com/AssayFlux/PocketHost/actions/runs/44721249398) passed the recorded Rust, PostgreSQL control-plane, Python, protocol, Node, web-console and script checks. Android native/source run [44721249324](https://github.com/AssayFlux/PocketHost/actions/runs/44721249324) passed three-ABI native/ELF checks and Android source compilation. This does not prove emulator/device execution or APK install acceptance.
 
-Exit gate:
-- A clean checkout of Alpha can run the documented build commands.
-- Main app and worker APKs build reproducibly for the declared supported ABIs, or unsupported ABIs are explicitly removed from the supported matrix.
-- CI runs on Alpha and reports real failures; emulator execution is not described as passed when skipped.
-- Baseline test failures are tracked with an owner and resolution plan.
+## Step 2 — Independent local website hosting
 
-**Deliverable:** reproducible engineering baseline and restored CI. No feature expansion in this step.
+**Status: PASS — implementation and automated CI; physical-device acceptance open.**
 
-**Evidence:** quality CI run 44721249398 passed Rust, PostgreSQL control-plane, Python, protocol, Node, web-console and script jobs. Android native/source validation passed in runs 44730595964 and 44735504452. Android source compilation includes app/instrumentation Kotlin and runtime-worker/native bridge; no emulator execution is implied. APK packaging was initially attempted by the acceptance workflow and failed at Chaquopy runtime dependency resolution; this was corrected by adding the official Chaquopy Maven repository. Packaging is now manual-only and explicitly gated.
+Scope includes site creation/import, path and symlink protection, sensitive-file handling, site isolation, quota/size limits, route validation, rollback and backup/restore.
 
-## Step 2 — Complete and harden independent local website hosting
+Evidence: quality run [44726189328](https://github.com/AssayFlux/PocketHost/actions/runs/44726189328) and Android run [44726189341](https://github.com/AssayFlux/PocketHost/actions/runs/44726189341) passed recorded hosting/relay tests, Android source compilation and three-ABI native builds. Physical-device import, loopback/LAN, multi-site and interrupted-restore tests remain open.
 
-<badge>PASS — implementation and automated CI</badge>
+## Step 3 — Android lifecycle and native public relay
 
-**Purpose:** make the phone useful as a host even when relay, cloud services and optional runtimes are unavailable.
+**Status: IMPLEMENTATION PRESENT; AUTOMATED HISTORY PASSED; DEVICE/OPERATIONAL GATE OPEN.**
 
-Work:
-- Complete site creation/registration, folder and ZIP import, file management and multi-site serving.
-- Audit path traversal, symlinks, MIME/content handling, index/fallback behavior, host routing and site isolation.
-- Apply consistent file-count, nesting, compressed/uncompressed size, disk quota and request limits across import, serving, backup/restore and management APIs.
-- Verify backup integrity, interrupted restore recovery and last-known-good behavior.
-- Test local loopback and LAN serving, concurrent requests, large files, malformed requests and storage exhaustion.
-- Keep static hosting operational when the runtime-worker companion or control plane is absent.
+Implemented source includes:
+- Native Android foreground-service and Rust/JNI relay direction; no Termux relay.
+- Transactional relay configuration/state and boot recovery.
+- Owner-approved pairing flow with proof-of-possession.
+- Keystore-protected host identity/credentials and separate visitor-ingress credentials.
+- Credential issuance/rotation and revocation paths.
+- Authenticated host sessions, site-bound route handling and durable revocation state.
+- DNS ownership checks and ACME HTTP-01 certificate issuance foundations.
+- TLS certificate reuse/startup checks and bounded network-change reconnection.
 
-Exit gate:
-- A clean install can import a representative website and serve it correctly over loopback and LAN.
-- Multiple sites cannot read or overwrite each other's data.
-- Invalid paths, oversized inputs and interrupted operations fail safely.
-- Backup/restore produces a verified usable site.
-- Automated tests cover the security and failure cases, not just the happy path.
+Evidence: quality run [44730596020](https://github.com/AssayFlux/PocketHost/actions/runs/44730596020) passed the recorded Rust hosting/relay/control-plane checks; Android run [44730595964](https://github.com/AssayFlux/PocketHost/actions/runs/44730595964) passed three-ABI native builds and Android app/instrumentation/runtime-worker source compilation.
 
-**Deliverable:** dependable local static hosting with documented limits.
+Still required: physical-device lifecycle/reboot/process-death/network tests; live DNS ownership and real hostname certificate issuance/renewal; pairing and credential rotation/revocation across restart; cross-site route isolation; independent external visitor acceptance. The source and CI evidence do not satisfy those operational exit gates.
 
-**Verification update (2026-11-20):** path/symlink and sensitive-file protections, dedicated managed roots, non-overlapping site isolation, persisted-route fail-closed validation, ZIP tree validation, quota accounting, deployment rollback/recovery and backup staging hardening are committed. Quality CI run 44726189328 passed. Physical-device import, loopback/LAN and backup acceptance remains part of Step 5.
+## Step 4 — Supported runtimes and minimum remote operations
 
-## Step 3 — Make Android hosting lifecycle and native public access dependable
+**Status: IMPLEMENTATION PRESENT; AUTOMATED HISTORY PASSED; DEVICE WORKLOAD GATE OPEN.**
 
-**Purpose:** ensure the host stays understandable and recoverable, then prove one secure public route.
+Implemented/documented scope:
+- Python 3.11 WSGI contract and Node.js mobile runtime 24.22.1-0.
+- Single supported Python WSGI application and one Node application; no arbitrary package build pipeline or ASGI promise.
+- Bounded project transfer: 64 MiB per file, 256 MiB expanded aggregate, 10,000 expanded tree nodes, depth 32 and path length 1,024; symlinks, sensitive paths and case collisions rejected.
+- Companion Binder caller identity/signature/protocol checks and stale-connection invalidation.
+- Node dedicated process, documented heap bounds and Python concurrency/request bounds.
+- Owner-trusted code only; no hardened hostile-code or per-project UID sandbox claim.
+- Remote commands use bounded allowlists, durable start/result idempotency and fail-closed persistence.
+- Local static hosting remains independent of optional runtime-worker/control-plane services.
 
-Work:
-- Validate foreground-service startup/stop, Android notification/permission behavior, scheduling, reboot recovery, process death and battery/background restrictions.
-- Handle Wi-Fi/mobile transitions, IP changes, DNS changes, sleep/wake and temporary offline states.
-- Complete native relay owner-approved pairing and identity binding.
-- Complete credential issuance, rotation, expiry and revocation; persist security-critical state transactionally.
-- Enforce authenticated route ownership and cross-site isolation; test revoked credentials and stale routes end to end.
-- Validate DNS ownership proof and actual TLS certificate issuance/renewal, including failure and recovery.
-- Validate one supported public path end to end. Where direct inbound access is blocked by CGNAT/firewall, use the supported outbound relay/tunnel path and clearly report network constraints.
-- Do not reintroduce Termux as a relay runtime.
+Evidence: quality run [44730596020](https://github.com/AssayFlux/PocketHost/actions/runs/44730596020) and Android source/native run [44730595964](https://github.com/AssayFlux/PocketHost/actions/runs/44730595964) passed their recorded gates. Runtime-worker source compilation is not Python/Node execution on a device.
 
-Exit gate:
-- Physical-device lifecycle tests pass across reboot, process death and network changes.
-- Pairing requires explicit owner approval; credentials are scoped and revocable.
-- Revocation removes access in a tested end-to-end scenario and survives restart.
-- TLS is valid for a real hostname through the supported path, with renewal/failure behavior tested.
-- An independent visitor on an external network can reach the intended site, and unauthorized routes cannot reach other sites.
-- The app accurately reports unavailable network/public-access conditions.
+Still required: emulator instrumentation; physical Python/Node start/request/stop/crash/recovery and resource-bound tests; companion upgrade/signature/protocol mismatch tests; pairing, capability denial, session expiry, revocation and remote retry acceptance. Keep these as open until evidence exists.
 
-**Deliverable:** resilient Android host service and one operational, secured public-access path.
+## Step 5 — Integrated acceptance and owner handoff
 
-**Implementation/CI evidence:** boot recovery reads transactional relay configuration; relay startup and TLS reuse checks are hardened; network changes interrupt stale control streams and trigger bounded reconnection. Rust hosting/relay and control-plane CI passed in run 44730596020. This is not a physical-device/public-network pass: lifecycle, real hostname issuance/renewal, external visitor access and end-to-end revocation remain Step 5 owner acceptance items.
+**Status: PRE-PACKAGE CHECKS IN PROGRESS; APK PACKAGING HELD.**
 
-## Step 4 — Integrate essential runtimes and minimum remote operations without widening the release
+Latest head: `3b127e785224165c9f2415df9ce013e60b2160a7`.
 
-**Purpose:** make the existing supporting components coherent while keeping the Android host independently useful.
+- Latest quality workflow [44737757283](https://github.com/AssayFlux/PocketHost/actions/runs/44737757283) passed.
+- The acceptance workflow [44737757242](https://github.com/AssayFlux/PocketHost/actions/runs/44737757242) was observed pending/queued with no jobs reported. It contains post-fix Android lint/JVM checks and a non-packaging Chaquopy runtime asset task. These are not yet evidenced as passed.
+- Chaquopy's Maven repository has been added after the previous bootstrap dependency resolution failure.
+- APK assembly, emulator instrumentation and APK verification are conditional on explicit manual `confirm_build=true`; this pass does not authorize or run those steps.
+- No APK is built in this pass.
 
-**Implementation update (2026-11-20):** Python and Node scope has been defined from the actual embedded runtime implementations. Runtime project transfer applies matching 64 MiB per-file, 256 MiB aggregate, 10,000-entry expanded-tree, 32-level and 1,024-character path limits on host and companion; implicit directories count toward the expanded-tree limit. Symlinks, sensitive paths and case-colliding paths are rejected. Python concurrency/request bounds and Node heap bounds are documented. Remote command handling validates command UUIDs, constrains endpoint/token inputs, and fails closed if idempotency state is corrupt or cannot be durably committed. Android instrumentation regression source covers transfer path and file-size boundaries.
+Remaining:
+1. Obtain completed post-fix Android lint/JVM and Chaquopy runtime asset gate results.
+2. Review dependency/licence/security audit outputs and disposition npm advisories.
+3. Execute API 35 x86_64 emulator instrumentation when authorized and report every failure/skip.
+4. Complete physical-device install, lifecycle, local hosting, import, isolation, backup/restore and runtime workloads.
+5. Complete real-network pairing, revocation, DNS/TLS issuance/renewal, route isolation and independent visitor acceptance.
+6. Review permissions, exported components, secrets/log redaction and signing configuration.
+7. Only after explicit owner authorization, build and verify app/worker APKs, metadata, ABI payloads, matching signer and SHA-256.
 
-Work:
-- Define which Python/Node use cases are actually supported in this Alpha and verify install, start, stop, logs, resource ceilings and recovery.
-- Treat imported application code as trusted owner code unless a separately tested isolation boundary proves otherwise. Do not describe the current companion as a hardened hostile-code sandbox.
-- Verify runtime-worker IPC authentication, package/signature assumptions, lifecycle and failure containment.
-- Validate essential local owner management and the minimum remote status/control integration already present in the app/control-plane contract.
-- Verify device enrollment, authorization, session expiry/revocation and audit behavior only for the narrow flows retained in v0.1.0.
-- Ensure the host remains usable if the control plane, web console, Linux agent or runtime-worker is offline.
-- Mark incomplete screens/actions as unavailable rather than implying they work.
-
-Exit gate:
-- Every runtime shown as supported passes a defined workload and lifecycle test on a physical device.
-- Resource limits are enforced and failures do not corrupt static hosting.
-- No unsupported isolation/security promise is made.
-- Essential management flows are authenticated, owner-authorized and revocable.
-- Remote services are optional to local hosting; no full fleet-management feature set is required.
-
-**Deliverable:** explicitly bounded runtime support and minimum coherent owner/remote operations.
-
-**Verification:** quality CI run 44730596020 passed; Android native ABI builds and app/instrumentation/runtime-worker source compilation passed in 44730595964. Emulator and physical Python/Node workload/management acceptance are recorded in Step 5. Source compilation is not runtime execution.
-
-## Step 5 — Integrated acceptance, Alpha APK and owner handoff
-
-**Purpose:** prove the whole v0.1.0 system rather than collecting disconnected passing builds. Per the owner’s latest instruction, complete all non-packaging engineering and preflight checks now; do not produce any APK until the owner has addressed their next issue and explicitly asks for packaging.
-
-Work:
-- Run all Rust, Kotlin, protocol, control-plane, web and script checks relevant to the retained scope.
-- Run Android instrumentation on API 35 x86_64 emulator when APK packaging is authorized; report every skipped test explicitly. Physical device remains a separate owner acceptance requirement.
-- Test on at least one physical Android device, recording model, Android version, ABI, app/worker versions and test results.
-- Run a real-network public visitor journey, credential revocation, TLS renewal/failure recovery and network-change recovery.
-- Check data migration, clean install, upgrade install, uninstall/data-retention expectations, backup/restore and crash recovery.
-- Review permissions, exported components, secrets, logs/redaction, dependency/licence inventory and release configuration.
-- After owner authorization only, build and verify v0.1.0 Alpha APKs for arm64-v8a, armeabi-v7a and x86_64 plus the runtime-worker APK; record SHA-256, package metadata and matching signer certificate.
-- Publish a concise release report with known limitations and exact device-testing instructions.
-
-Exit gate:
-- No unresolved release-blocking security, data-loss, build or core hosting defects.
-- All required acceptance checks have evidence; skipped tests remain explicitly open.
-- The APK installs and passes the documented owner smoke test.
-- Known limitations are visible and no incomplete feature is represented as complete.
-- Hand the APK and evidence to the owner. Do not begin a later-version upgrade until the owner has tested and decided the next direction.
-
-**Deliverable:** pre-package verification report and known-limitations list now; candidate APKs and final owner handoff only after the owner’s next issue is resolved and APK packaging is explicitly authorized.
+**Exit rule:** v0.1.0 is not declared complete until all required evidence exists. CI success or a future APK build alone does not prove device, public-network or security acceptance.
 
 ## Scope summary
 
-### Included in this preliminary plan
-- Android app and native Rust/JNI build stability.
-- Local static multi-site hosting and file/site management.
-- Android service lifecycle, schedules and recovery.
-- Native relay security, credential lifecycle, route isolation, TLS/DNS and one real public-access path.
-- Narrow, explicitly supported Python/Node runtime behavior only where it can be verified.
-- Essential owner security and minimum management integration.
-- Reproducible CI, automated/emulator/device/network acceptance and Alpha APK delivery.
+Included: Android host, local static multi-site hosting, native relay, bounded supported Python/Node workloads, essential owner security/remote operations, automated and device/network acceptance, and owner-authorized Alpha APK.
 
-### Explicitly deferred
-- Full connected-device fleet platform and feature-complete remote console.
-- Distributed hosting, clustering, orchestration and autoscaling.
-- Arbitrary untrusted code execution and hardened multi-tenant sandboxing.
-- Broad runtime/language expansion and arbitrary package build pipelines.
-- Full Workbench production deployment platform.
-- Universal DNS-provider automation and advanced access-policy management.
-- Billing, SaaS multi-tenancy, marketplace and plugin ecosystem.
+Deferred: full fleet console, distributed hosting, arbitrary untrusted-code sandboxing, arbitrary package build pipelines, broad runtime catalogue execution, billing, SaaS multi-tenancy and marketplace.
 
-## Completion tracking
-
-For each gate, record:
-- commit SHA;
-- workflow and toolchain versions;
-- pass/fail/skipped status;
-- test device/API/network details where relevant;
-- artifact name and SHA-256 where applicable;
-- open defects and owner decision.
-
-A source implementation is present, not complete, until its exit gate is evidenced. A successful APK build is not proof of physical-device, external-network or complete Alpha acceptance.
-
-
-### Step 5 current hold point (2026-11-20)
-
-- Quality workflow passed on `e4fc23129c1bf2758d73bf2b00358dba6e2d0804` (run `44735504573`).
-- Android native three-ABI build, ELF verification and Android source compilation passed on that commit (run `44735504452`).
-- The acceptance workflow exposed a missing Chaquopy runtime repository. The repository configuration now includes `https://chaquo.com/maven`, ahead of Google/Maven Central, consistent with Chaquopy's own repository guidance.
-- The acceptance workflow now runs lint/JVM tests on relevant Alpha pushes and can also be dispatched manually. Runtime-worker/app APK tasks, emulator instrumentation and APK verification are conditional on the explicit `confirm_build=true` input; ordinary pushes never package APKs.
-- **Not yet complete:** re-run lint/JVM checks after the repository fix; resolve the Chaquopy Python runtime asset task without assembling an APK; physical-device and real-network acceptance; final dependency/license/secrets/signing review; APK build/verification. APK and emulator packaging tasks are deliberately held until the owner authorizes them.
+Do not begin a later-version implementation track until the owner has installed and tested v0.1.0 and decided what comes next.
