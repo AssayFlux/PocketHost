@@ -171,5 +171,5 @@ A source implementation is present, not complete, until its exit gate is evidenc
 - Quality workflow passed on `e4fc23129c1bf2758d73bf2b00358dba6e2d0804` (run `44735504573`).
 - Android native three-ABI build, ELF verification and Android source compilation passed on that commit (run `44735504452`).
 - The acceptance workflow exposed a missing Chaquopy runtime repository. The repository configuration now includes `https://chaquo.com/maven`, ahead of Google/Maven Central, consistent with Chaquopy's own repository guidance.
-- The acceptance workflow is now manual-only. Lint/JVM tests can run without packaging; runtime-worker/app APK tasks, emulator instrumentation and APK verification are conditional on `confirm_build=true`.
+- The acceptance workflow now runs lint/JVM tests on relevant Alpha pushes and can also be dispatched manually. Runtime-worker/app APK tasks, emulator instrumentation and APK verification are conditional on the explicit `confirm_build=true` input; ordinary pushes never package APKs.
 - **Not yet complete:** re-run lint/JVM checks after the repository fix; execute emulator instrumentation; physical-device and real-network acceptance; final dependency/license/secrets/signing review; APK build/verification. APK and emulator packaging tasks are deliberately held until the owner authorizes them.

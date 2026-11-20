@@ -5,6 +5,16 @@ concurrency:
   group: pockethost-alpha-apk-${{ github.ref }}
   cancel-in-progress: false
 on:
+  push:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-debug-apk.yml"
+      - "app/**"
+      - "runtime-worker/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
   workflow_dispatch:
     inputs:
       confirm_build:
