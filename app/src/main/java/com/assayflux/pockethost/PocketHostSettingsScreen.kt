@@ -36,7 +36,7 @@ internal fun PocketHostSettingsSectionNavigation(
 ) {
     val sections = listOf(
         "General", "Server", "Remote", "Local access",
-        "Network", "Relay node", "Relay host", "Cloudflare", "Hostnames & access",
+        "Network", "Relay node", "Relay host", "Cloudflare", "Cloudflare Access", "DNS management", "Hostnames & access",
         "Runtimes", "Python", "Node.js", "About"
     )
     Card(
