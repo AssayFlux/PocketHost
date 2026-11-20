@@ -59,6 +59,8 @@ jobs:
           gradle-version: "8.9"
       - name: Run Android lint and JVM unit-test gates
         run: ./gradlew :app:lintDebug :runtime-worker:lintDebug :app:testDebugUnitTest :runtime-worker:testDebugUnitTest
+      - name: Validate embedded Python runtime dependency without packaging an APK
+        run: ./gradlew :runtime-worker:generateDebugPythonMiscAssets
       - name: Build runtime-worker APK
         if: inputs.confirm_build == true
         run: ./gradlew :runtime-worker:assembleDebug
