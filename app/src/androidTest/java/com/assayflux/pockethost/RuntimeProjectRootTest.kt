@@ -3,6 +3,7 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.runtime.RuntimeProjectRoot
+import com.assayflux.pockethost.runtime.RuntimeWorkerClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -13,6 +14,28 @@ import java.nio.file.Files
 @RunWith(AndroidJUnit4::class)
 class RuntimeProjectRootTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun runtimeProjectTransferEnforcesPortablePathsAndFileBudgets() {
+        RuntimeWorkerClient.validateProjectTransferPath("src/main.py")
+        RuntimeWorkerClient.validateProjectTransferPath("wsgi.py")
+        assertThrows(IllegalArgumentException::class.java) {
+            RuntimeWorkerClient.validateProjectTransferPath("../outside.py")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RuntimeWorkerClient.validateProjectTransferPath("/absolute/path")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RuntimeWorkerClient.validateProjectTransferPath("a/".repeat(33) + "file.py")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RuntimeWorkerClient.validateProjectTransferPath("a\\b.py")
+        }
+        RuntimeWorkerClient.validateProjectTransferFileSize(64L * 1024L * 1024L)
+        assertThrows(IllegalArgumentException::class.java) {
+            RuntimeWorkerClient.validateProjectTransferFileSize(64L * 1024L * 1024L + 1L)
+        }
+    }
 
     @Test
     fun acceptsProjectInsideEveryAllowedPrivateDirectory() {

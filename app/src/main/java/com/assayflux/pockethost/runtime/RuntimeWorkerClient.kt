@@ -230,12 +230,28 @@ object RuntimeWorkerClient {
             .any { name.endsWith(it) }
     }
 
+    internal fun validateProjectTransferPath(relativePath: String) {
+        require(relativePath.isNotBlank() && relativePath.length <= MAX_PROJECT_PATH_CHARS &&
+            !relativePath.startsWith("/") && !relativePath.contains('\\') &&
+            relativePath.split('/').size <= MAX_PROJECT_PATH_DEPTH &&
+            relativePath.split('/').none { it.isBlank() || it == "." || it == ".." }) {
+            "Runtime project path must be relative, normalized, at most 1,024 characters and no deeper than 32 levels."
+        }
+    }
+
+    internal fun validateProjectTransferFileSize(size: Long) {
+        require(size in 0..MAX_PROJECT_FILE_BYTES) {
+            "Runtime project contains a file larger than the 64 MiB transfer limit."
+        }
+    }
+
     private fun createProjectArchive(context: Context, root: File): File {
         val canonicalRoot = root.canonicalFile
         require(canonicalRoot.isDirectory) { "Runtime project directory does not exist." }
         val archive = File.createTempFile("pockethost-project-", ".zip", context.cacheDir)
         var totalBytes = 0L
         var entries = 0
+        val portableNames = HashMap<String, String>()
         try {
             ZipOutputStream(archive.outputStream().buffered()).use { zip ->
                 Files.walk(canonicalRoot.toPath()).use { paths ->
@@ -246,9 +262,11 @@ object RuntimeWorkerClient {
                             relative == "__pycache__" || relative.startsWith("__pycache__/") ||
                             relative == ".pockethost" || relative.startsWith(".pockethost/") ||
                             isSensitiveProjectPath(relative)) return@forEach
-                        require(relative.length <= MAX_PROJECT_PATH_CHARS &&
-                            relative.split('/').size <= MAX_PROJECT_PATH_DEPTH) {
-                            "Runtime project path exceeds the 1,024-character or 32-level limit."
+                        validateProjectTransferPath(relative)
+                        val portablePath = relative.lowercase(java.util.Locale.ROOT)
+                        val previousPath = portableNames.putIfAbsent(portablePath, relative)
+                        require(previousPath == null || previousPath == relative) {
+                            "Runtime project contains paths that differ only by letter case."
                         }
                         require(!Files.isSymbolicLink(path)) { "Runtime project contains a symbolic link; remove it before transfer." }
                         entries++
@@ -258,7 +276,7 @@ object RuntimeWorkerClient {
                             zip.closeEntry()
                         } else if (Files.isRegularFile(path)) {
                             val size = Files.size(path)
-                            require(size <= MAX_PROJECT_FILE_BYTES) { "Runtime project contains a file larger than the 64 MiB transfer limit." }
+                            validateProjectTransferFileSize(size)
                             totalBytes += size
                             require(totalBytes <= MAX_PROJECT_BYTES) { "Runtime project exceeds the 256 MiB transfer limit." }
                             zip.putNextEntry(ZipEntry(relative))
