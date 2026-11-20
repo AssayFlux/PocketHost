@@ -169,7 +169,7 @@ class ApplicationBackupCustomRootTest {
         passphrase: CharArray
     ) {
         val bytes = source.readBytes()
-        val magic = "AFPHB02\\n".toByteArray(Charsets.US_ASCII)
+        val magic = "AFPHB02\n".toByteArray(Charsets.US_ASCII)
         require(bytes.size > magic.size + 28)
         require(bytes.copyOfRange(0, magic.size).contentEquals(magic))
         val salt = bytes.copyOfRange(magic.size, magic.size + 16)
@@ -227,7 +227,7 @@ class ApplicationBackupCustomRootTest {
             output.write(newNonce)
             output.write(encrypted)
         }
-        passphrase.fill('\\u0000')
+        passphrase.fill('\u0000')
     }
 
     @Test
