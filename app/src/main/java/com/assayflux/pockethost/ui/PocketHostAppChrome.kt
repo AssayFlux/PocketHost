@@ -69,7 +69,16 @@ internal fun PocketHostOwnerHeader(
         "Activity" -> "Activity & logs"
         "Settings" -> when (selectedSection) {
             "Network" -> "Network & tunnels"
+            "Server" -> "Server settings"
+            "Remote" -> "Remote control"
+            "Local access" -> "Local access"
+            "Relay node" -> "Native Relay Node"
+            "Relay host" -> "Relay host connection"
+            "Cloudflare" -> "Cloudflare Tunnel"
+            "Hostnames & access" -> "Hostnames & visitor access"
             "Runtimes" -> "Runtimes"
+            "Python" -> "Python runtime"
+            "Node.js" -> "Node.js runtime"
             "About" -> "About"
             else -> "Settings"
         }
