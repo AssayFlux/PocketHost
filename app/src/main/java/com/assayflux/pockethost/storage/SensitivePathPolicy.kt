@@ -12,7 +12,8 @@ object SensitivePathPolicy {
     )
     private val blockedNames = setOf(
         ".env", ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".gitconfig",
-        "credentials", "credentials.json", "application_default_credentials.json", "service_account.json",\n        "id_rsa", "id_dsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk", "identity",
+        "credentials", "credentials.json", "application_default_credentials.json", "service_account.json",
+        "id_rsa", "id_dsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk", "identity",
         "authorized_keys", "known_hosts", "kubeconfig", "service-account.json",
         "serviceaccount.json", "secrets.json"
     )
