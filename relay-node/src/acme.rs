@@ -152,7 +152,7 @@ pub async fn issue(request: AcmeRequest) -> Result<AcmeCertificateBundle, String
 
     let readiness = async {
         let mut authorizations = order.authorizations();
-        while let Some(authorization) = futures_util::StreamExt::next(&mut authorizations).await {
+        while let Some(authorization) = authorizations.next().await {
             let mut authorization = authorization
                 .map_err(|error| format!("Could not refresh ACME authorization: {error}"))?;
             if authorization.status == AuthorizationStatus::Valid {

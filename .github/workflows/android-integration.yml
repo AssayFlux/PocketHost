@@ -28,6 +28,7 @@ on:
       - "scripts/validate-android-role-policy.py"
       - "runtime-worker/**"
       - "rust-engine/**"
+      - "relay-node/**"
       - "gradle/**"
       - "gradlew"
       - "build.gradle.kts"
@@ -79,8 +80,27 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  relay-rust-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Resolve Relay dependency lockfile
+        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
+      - name: Test native Relay engine without write credentials
+        run: cargo test --manifest-path relay-node/Cargo.toml --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-relay-pr-lockfile
+          path: relay-node/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7
+
   relay-android-abi:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
