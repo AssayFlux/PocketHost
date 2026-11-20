@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -80,6 +81,7 @@ internal fun PocketHostSitesScreen(
     actions: PocketHostSitesActions
 ) {
     val palette = MaterialTheme.colorScheme
+    var selectedPage by remember { mutableStateOf("Overview") }
     val fileSearch = remember { mutableStateOf("") }
     val filePage = remember(fileSearch.value) { mutableStateOf(0) }
     val matchingSiteFiles = remember(state.siteFiles, fileSearch.value) {
@@ -97,17 +99,49 @@ internal fun PocketHostSitesScreen(
                     colors = CardDefaults.cardColors(containerColor = palette.surface)
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("WEBSITE", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
-                        Text(state.importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Overview", "Files", "Backup", "Releases").forEach { page ->
+                                FilterChip(
+                                    selected = selectedPage == page,
+                                    onClick = { selectedPage = page },
+                                    label = { Text(page, fontSize = 11.sp) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                        if (selectedPage == "Overview") {
+                            Text("WEBSITE OVERVIEW", fontWeight = FontWeight.SemiBold, color = palette.onSurface)
+                            Text(state.importedSummary, color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            if (state.siteFiles.isEmpty()) {
+                                Text("Your first publish — no terminal needed", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("Choose a website folder or ZIP archive containing index.html. Imports are staged and validated before replacing the current website.", color = palette.onSurfaceVariant)
+                            }
+                            OutlinedButton(
+                                onClick = { actions.onPreviewSite() },
+                                enabled = state.hosting,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Preview site") }
+                            Button(
+                                onClick = { actions.onImportFolder() },
+                                enabled = !state.hosting && !state.importing,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (state.importing) "Importing website…" else "Choose website folder") }
+                            OutlinedButton(
+                                onClick = { actions.onImportZip() },
+                                enabled = !state.hosting && !state.importing,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Import website ZIP") }
+                            Text("Maximum import: 500 MB for the ZIP archive and extracted website contents; 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 13.sp)
+                        }
+                        if (selectedPage == "Files") {
+                        Text("SITE FILES", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         Text("Site files and folders", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(onClick = { actions.onShowCreateSiteFileChange(true) }, enabled = !state.hosting && !state.importing,
                             modifier = Modifier.fillMaxWidth()) { Text("New text file") }
                         OutlinedButton(onClick = { actions.onUploadIndividualFile() }, enabled = !state.hosting && !state.importing,
                             modifier = Modifier.fillMaxWidth()) { Text("Upload individual file") }
                         if (state.siteFiles.isEmpty()) {
-                            Text("Your first publish — no terminal needed", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("1. Choose a website folder or import a ZIP below.\n2. Keep index.html at the top level of that folder.\n3. Open Dashboard and start hosting; then return here and choose Preview site to verify it.", color = palette.onSurfaceVariant)
-                            Text("No website imported yet. Your current site stays in place until a new import has been validated.", color = palette.onSurfaceVariant)
+                            Text("No website files yet. Use Overview to import a folder or ZIP archive.", color = palette.onSurfaceVariant)
                         } else {
                             OutlinedTextField(
                                 value = fileSearch.value,
@@ -187,22 +221,8 @@ internal fun PocketHostSitesScreen(
                             }
                         }
                         Text(if (SiteFileManager.hasIndex(context)) "Entry page: index.html" else "No index.html found at the site root yet.", color = palette.onSurfaceVariant)
-                        OutlinedButton(
-                            onClick = { actions.onPreviewSite() },
-                            enabled = state.hosting,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Preview site") }
-                        Button(
-                            onClick = { actions.onImportFolder() },
-                            enabled = !state.hosting && !state.importing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (state.importing) "Importing website…" else "Choose website folder") }
-                        OutlinedButton(
-                            onClick = { actions.onImportZip() },
-                            enabled = !state.hosting && !state.importing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Import website ZIP") }
-                        Text("Imports are staged and validated before replacing the current website. Maximum import: 500 MB for the ZIP archive and 500 MB for extracted website contents; 5,000 files and 10,000 total entries.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        }
+                        if (selectedPage == "Backup") {
                         OutlinedTextField(
                             value = state.backupPassphrase,
                             onValueChange = { if (it.length <= 128) actions.onBackupPassphraseChange(it) },
@@ -223,22 +243,27 @@ internal fun PocketHostSitesScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Restore encrypted full app backup") }
                         Text("Includes website files, optional Python/Node projects, hostname routes and safe port settings. Device credentials and common secret files are excluded. Review source for embedded secrets before sharing. Restored runtimes stay stopped until you approve trusted code.", color = palette.onSurfaceVariant, fontSize = 13.sp)
-                        if (state.previousReleases.isNotEmpty()) {
-                            OutlinedButton(
-                                onClick = {
-                                    val result = runCatching { SiteImporter.rollbackLatest(context) }
-                                    result.onSuccess {
-                                        actions.onPreviousReleasesChange(SiteImporter.listReleases(context))
-                                        actions.onImportedSummaryChange("Restored previous deployment")
-                                        actions.onStatusChange("Rollback completed. Restart hosting to load the restored site.")
-                                        context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
-                                            .putString("site_summary", "Restored previous deployment").apply()
-                                    }.onFailure { actions.onStatusChange(it.message ?: "Rollback failed.") }
-                                },
-                                enabled = !state.hosting && !state.importing,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Rollback previous deployment") }
-                            Text("${state.previousReleases.size} previous release(s) retained · latest first", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        }
+                        if (selectedPage == "Releases") {
+                            if (state.previousReleases.isNotEmpty()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val result = runCatching { SiteImporter.rollbackLatest(context) }
+                                        result.onSuccess {
+                                            actions.onPreviousReleasesChange(SiteImporter.listReleases(context))
+                                            actions.onImportedSummaryChange("Restored previous deployment")
+                                            actions.onStatusChange("Rollback completed. Restart hosting to load the restored site.")
+                                            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+                                                .putString("site_summary", "Restored previous deployment").apply()
+                                        }.onFailure { actions.onStatusChange(it.message ?: "Rollback failed.") }
+                                    },
+                                    enabled = !state.hosting && !state.importing,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("Rollback previous deployment") }
+                                Text("${state.previousReleases.size} previous release(s) retained · latest first", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                            } else {
+                                Text("No previous deployments are available to roll back.", color = palette.onSurfaceVariant)
+                            }
                         }
                     }
                 }
