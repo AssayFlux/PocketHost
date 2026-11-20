@@ -156,14 +156,36 @@ object WorkbenchWorkspaceManager {
         if (!parent.isDirectory) throw IOException("The destination folder must already exist.")
         if (java.nio.file.Files.isSymbolicLink(source.toPath())) throw IOException("Symbolic links are not supported.")
         java.nio.file.Files.move(source.toPath(), destination.toPath())
+        try {
+            validateTree(root)
+        } catch (error: IOException) {
+            runCatching { java.nio.file.Files.move(destination.toPath(), source.toPath()) }
+            throw error
+        }
+    }
+
+    /** Deletes a regular file or a folder tree from the private draft only. */
+    fun deleteEntry(context: Context, projectId: String, relativePath: String) {
+        val root = workspaceRoot(context, projectId)
+        val target = resolve(root, relativePath)
+        if (!target.exists() || target.canonicalFile == root.canonicalFile) {
+            throw IOException("The selected workspace entry does not exist or cannot be deleted.")
+        }
+        if (java.nio.file.Files.isSymbolicLink(target.toPath())) {
+            throw IOException("Symbolic links are not supported in Workbench.")
+        }
+        // Validate before deletion so an unexpected special entry cannot be followed.
+        if (target.isDirectory) validateTree(target)
+        else if (!target.isFile) throw IOException("Only regular files and folders can be deleted.")
+        if (!target.deleteRecursively()) throw IOException("Could not delete the workspace entry.")
         validateTree(root)
     }
 
+    /** Backwards-compatible file-only operation. */
     fun deleteFile(context: Context, projectId: String, relativePath: String) {
-        val root = workspaceRoot(context, projectId)
-        val target = resolve(root, relativePath)
-        if (!target.isFile || java.nio.file.Files.isSymbolicLink(target.toPath())) throw IOException("Only regular files can be deleted.")
-        if (!target.delete()) throw IOException("Could not delete the workspace file.")
+        val target = resolve(workspaceRoot(context, projectId), relativePath)
+        if (!target.isFile) throw IOException("Only regular files can be deleted.")
+        deleteEntry(context, projectId, relativePath)
     }
 
     /** Compares workspace content with the currently live tree without modifying either. */
