@@ -228,7 +228,7 @@ class ApplicationBackupCustomRootTest {
         conflicts: List<Pair<String, String>>
     ) {
         val bytes = source.readBytes()
-        val magic = "AFPHB02\\n".toByteArray(Charsets.US_ASCII)
+        val magic = "AFPHB02\n".toByteArray(Charsets.US_ASCII)
         require(bytes.size > magic.size + 28)
         val salt = bytes.copyOfRange(magic.size, magic.size + 16)
         val nonce = bytes.copyOfRange(magic.size + 16, magic.size + 28)
