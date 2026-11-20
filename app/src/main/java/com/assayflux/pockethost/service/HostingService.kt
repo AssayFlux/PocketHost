@@ -84,12 +84,12 @@ class HostingService : Service() {
         }
 
         val engineAlreadyRunning = NativeEngine.status() == "RUNNING"
-            if (!RuntimeTrustGate.isAcknowledged(this) &&
-                (statePreferences.getBoolean("python_enabled", false) || statePreferences.getBoolean("node_enabled", false))) {
-                statePreferences.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).commit()
-                OperationalLog.record(this, "WARN", "OPTIONAL_RUNTIMES_BLOCKED",
-                    "Python/Node startup was blocked because trusted-code acknowledgement is absent. Static hosting remains available.")
-            }
+        if (!RuntimeTrustGate.isAcknowledged(this) &&
+            (statePreferences.getBoolean("python_enabled", false) || statePreferences.getBoolean("node_enabled", false))) {
+            statePreferences.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).commit()
+            OperationalLog.record(this, "WARN", "OPTIONAL_RUNTIMES_BLOCKED",
+                "Python/Node startup was blocked because trusted-code acknowledgement is absent. Static hosting remains available.")
+        }
         val registeredRoutes = SiteRegistry.hostRoutingJson(
             this, statePreferences.getInt("python_port", 8081), statePreferences.getInt("node_port", 3000)
         ).toString()

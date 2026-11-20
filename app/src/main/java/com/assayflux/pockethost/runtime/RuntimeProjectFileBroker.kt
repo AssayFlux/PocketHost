@@ -18,9 +18,12 @@ object RuntimeProjectFileBroker {
 
     const val MAX_BROKERED_FILE_BYTES = 64L * 1024L * 1024L
     const val MAX_BROKER_WRITE_BYTES = 1024 * 1024
+    // Linux O_CLOEXEC is 02000000 (0x80000); use the stable kernel flag because
+    // android.system.OsConstants exposes it only from API 27, while Alpha supports API 26.
+    private const val O_CLOEXEC = 0x80000
 
     fun captureRootIdentity(projectRoot: File): RootIdentity {
-        val flags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
+        val flags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or O_CLOEXEC or OsConstants.O_NONBLOCK
         val fd = Os.open(projectRoot.absoluteFile.toPath().normalize().toString(), flags, 0)
         try {
             val stat = Os.fstat(fd)
@@ -60,7 +63,7 @@ object RuntimeProjectFileBroker {
         require(content.size <= MAX_BROKER_WRITE_BYTES) { "Write chunk exceeds the broker limit." }
         val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
-        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
+        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or O_CLOEXEC or OsConstants.O_NONBLOCK
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         return try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
@@ -70,7 +73,7 @@ object RuntimeProjectFileBroker {
                 directoryFd = nextFd
             }
             val fileFd = openChildFile(directoryFd, segments.last(), OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_NOFOLLOW or
-                    OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK or
+                    O_CLOEXEC or OsConstants.O_NONBLOCK or
                     (if (append) OsConstants.O_APPEND else 0),
                 OsConstants.S_IRUSR or OsConstants.S_IWUSR
             )
@@ -109,7 +112,7 @@ object RuntimeProjectFileBroker {
     ): ParcelFileDescriptor {
         val segments = safeSegments(relativePath)
         val rootPath = projectRoot.absoluteFile.toPath().normalize().toString()
-        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
+        val directoryFlags = OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or O_CLOEXEC or OsConstants.O_NONBLOCK
         var directoryFd = Os.open(rootPath, directoryFlags, 0)
         try {
             verifyRootIdentity(Os.fstat(directoryFd), expectedRootIdentity)
@@ -119,7 +122,7 @@ object RuntimeProjectFileBroker {
                 directoryFd = nextFd
             }
 
-            val flags = accessMode or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC or OsConstants.O_NONBLOCK
+            val flags = accessMode or OsConstants.O_NOFOLLOW or O_CLOEXEC or OsConstants.O_NONBLOCK
             val fileFd = openChildFile(directoryFd, segments.last(), flags,
                 OsConstants.S_IRUSR or OsConstants.S_IWUSR
             )

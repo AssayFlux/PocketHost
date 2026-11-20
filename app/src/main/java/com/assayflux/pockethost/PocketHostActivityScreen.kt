@@ -41,82 +41,82 @@ internal fun PocketHostActivityScreen(
 ) {
     val palette = MaterialTheme.colorScheme
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = palette.surface)
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("RECENT OPERATIONS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("All", "Errors", "Today").forEach { filter ->
-                                FilterChip(selected = filterMode == filter, onClick = { onFilterModeChange(filter) }, label = { Text(filter) })
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = palette.surface)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("RECENT OPERATIONS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("All", "Errors", "Today").forEach { filter ->
+                    FilterChip(selected = filterMode == filter, onClick = { onFilterModeChange(filter) }, label = { Text(filter) })
+                }
+            }
+            OutlinedTextField(
+                value = filterText,
+                onValueChange = onFilterTextChange,
+                label = { Text("Filter events, levels or messages") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            val filteredEvents = events.filter { event ->
+                val matchesText = filterText.isBlank() ||
+                    event.level.contains(filterText, ignoreCase = true) ||
+                    event.event.contains(filterText, ignoreCase = true) ||
+                    event.message.contains(filterText, ignoreCase = true)
+                val matchesMode = when (filterMode) {
+                    "Errors" -> event.level.equals("ERROR", ignoreCase = true)
+                    "Today" -> event.timestamp.startsWith(LocalDate.now().toString())
+                    else -> true
+                }
+                matchesText && matchesMode
+            }.take(100)
+            if (filteredEvents.isEmpty()) {
+                Text(if (events.isEmpty()) "No operational events recorded yet." else "No events match this filter.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+            } else {
+                filteredEvents.forEach { event ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else palette.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(event.event.replace('_', ' '), color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = androidx.compose.ui.Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
+                            Text(event.timestamp.take(19).replace('T', ' '), color = palette.onSurfaceVariant, fontSize = 11.sp)
                         }
-                        OutlinedTextField(
-                            value = filterText,
-                            onValueChange = onFilterTextChange,
-                            label = { Text("Filter events, levels or messages") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        val filteredEvents = events.filter { event ->
-                            val matchesText = filterText.isBlank() ||
-                                event.level.contains(filterText, ignoreCase = true) ||
-                                event.event.contains(filterText, ignoreCase = true) ||
-                                event.message.contains(filterText, ignoreCase = true)
-                            val matchesMode = when (filterMode) {
-                                "Errors" -> event.level.equals("ERROR", ignoreCase = true)
-                                "Today" -> event.timestamp.startsWith(LocalDate.now().toString())
-                                else -> true
-                            }
-                            matchesText && matchesMode
-                        }.take(100)
-                        if (filteredEvents.isEmpty()) {
-                            Text(if (events.isEmpty()) "No operational events recorded yet." else "No events match this filter.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        } else {
-                            filteredEvents.forEach { event ->
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                            Text(event.level, color = if (event.level == "ERROR") Color(0xFF9C3D35) else palette.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                            Text(event.event.replace('_', ' '), color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                                modifier = androidx.compose.ui.Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                        }
-                                        Text(event.timestamp.take(19).replace('T', ' '), color = palette.onSurfaceVariant, fontSize = 11.sp)
-                                    }
-                                    if (event.message.isNotBlank()) Text(event.message, color = palette.onSurfaceVariant, fontSize = 14.sp)
-                                }
-                            }
-                        }
-                        Text("App-private rotating log · credentials and bearer tokens are redacted.", color = palette.onSurfaceVariant, fontSize = 14.sp)
-                        OutlinedButton(
-                            onClick = { onExportLogs() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Export redacted logs") }
-                        OutlinedButton(
-                            onClick = { onExportDiagnostics() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Export diagnostics bundle") }
-                        OutlinedButton(onClick = { onShowClearConfirmationChange(true) },
-                            enabled = events.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                            Text("Clear logs")
-                        }
-                        if (showClearConfirmation) {
-                            AlertDialog(
-                                onDismissRequest = { onShowClearConfirmationChange(false) },
-                                title = { Text("Clear operational logs?") },
-                                text = { Text("This permanently removes the app's retained operational event log files from this device. Export them first if you need a copy.") },
-                                confirmButton = {
-                                    TextButton(onClick = {
-                                        onClearLogs()
-                                        onShowClearConfirmationChange(false)
-                                    }) { Text("Clear logs") }
-                                },
-                                dismissButton = { TextButton(onClick = { onShowClearConfirmationChange(false) }) { Text("Cancel") } }
-                            )
-                        }
+                        if (event.message.isNotBlank()) Text(event.message, color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
+            }
+            Text("App-private rotating log · credentials and bearer tokens are redacted.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+            OutlinedButton(
+                onClick = { onExportLogs() },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Export redacted logs") }
+            OutlinedButton(
+                onClick = { onExportDiagnostics() },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Export diagnostics bundle") }
+            OutlinedButton(onClick = { onShowClearConfirmationChange(true) },
+                enabled = events.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                Text("Clear logs")
+            }
+            if (showClearConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { onShowClearConfirmationChange(false) },
+                    title = { Text("Clear operational logs?") },
+                    text = { Text("This permanently removes the app's retained operational event log files from this device. Export them first if you need a copy.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            onClearLogs()
+                            onShowClearConfirmationChange(false)
+                        }) { Text("Clear logs") }
+                    },
+                    dismissButton = { TextButton(onClick = { onShowClearConfirmationChange(false) }) { Text("Cancel") } }
+                )
+            }
+        }
+    }
 
 }
