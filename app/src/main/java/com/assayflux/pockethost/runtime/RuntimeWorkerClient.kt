@@ -206,16 +206,23 @@ object RuntimeWorkerClient {
     }
 
     private fun isSensitiveProjectPath(relativePath: String): Boolean {
-        val normalized = relativePath.lowercase()
-        val segments = normalized.split('/')
+        val normalized = relativePath.replace('\\\\', '/').lowercase(java.util.Locale.ROOT)
+        val segments = normalized.split('/').filter { it.isNotEmpty() }
         val name = segments.lastOrNull().orEmpty()
-        if (segments.any { it in setOf(".ssh", ".aws", ".azure", ".gnupg", ".pki") }) return true
-        if (segments.size >= 2 && segments.takeLast(2) == listOf(".docker", "config.json")) return true
+        if (segments.any { it in setOf(
+                ".ssh", ".aws", ".azure", ".docker", ".kube", ".gnupg", ".pki",
+                ".terraform", ".pulumi", "secrets"
+            ) }) return true
+        if (segments.windowed(2).any { it[0] == ".config" && it[1] == "gcloud" }) return true
         if (name.startsWith(".env") || name in setOf(
-                ".netrc", ".npmrc", ".pypirc", ".git-credentials", "credentials",
-                "credentials.json", "secrets", "secrets.json", "service-account.json",
-                "id_rsa", "id_ed25519", "known_hosts", "kubeconfig"
+                ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".gitconfig",
+                "credentials", "credentials.json", "application_default_credentials.json",
+                "service-account.json", "serviceaccount.json", "service_account.json",
+                "secrets.json", "id_rsa", "id_dsa", "id_ed25519", "id_ecdsa",
+                "known_hosts", "kubeconfig", "identity", "authorized_keys"
             )) return true
+        if ((name.startsWith("service-account-") || name.startsWith("serviceaccount-") ||
+                name.startsWith("firebase-adminsdk")) && name.endsWith(".json")) return true
         return listOf(".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".mobileprovision")
             .any { name.endsWith(it) }
     }
