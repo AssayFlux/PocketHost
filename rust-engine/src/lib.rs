@@ -159,13 +159,33 @@ fn allow_request_rate(client_ip: IpAddr) -> bool {
     buckets.entry(client_ip).or_insert_with(|| RateBucket::new(now)).take_token(now)
 }
 
-fn effective_client_ip(peer_ip: IpAddr, forwarded_ip: Option<&str>) -> IpAddr {
-    if peer_ip.is_loopback() {
-        if let Some(forwarded) = forwarded_ip.and_then(|value| value.trim().parse::<IpAddr>().ok()) {
-            return forwarded;
-        }
-    }
+fn effective_client_ip(peer_ip: IpAddr, _forwarded_ip: Option<&str>) -> IpAddr {
+    // A loopback socket is not proof that the caller is Cloudflared. Any local
+    // app can forge CF-Connecting-IP, so rate-limit identity stays bound to the
+    // actual socket peer until an authenticated proxy contract is configured.
     peer_ip
+}
+
+fn is_sensitive_request_path(relative: &Path) -> bool {
+    let blocked_directories = [".git", ".ssh", ".aws", ".docker", ".kube", ".pockethost", ".gnupg"];
+    let blocked_names = [
+        ".env", ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".gitconfig",
+        "credentials", "id_rsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk",
+        "authorized_keys", "known_hosts", "kubeconfig", "service-account.json",
+        "serviceaccount.json", "secrets.json",
+    ];
+    relative.components().any(|component| {
+        let Component::Normal(value) = component else { return true };
+        let Some(name) = value.to_str() else { return true };
+        let name = name.to_ascii_lowercase();
+        let extension = name.rsplit_once('.').map(|(_, ext)| ext).unwrap_or("");
+        blocked_directories.contains(&name.as_str()) ||
+            blocked_names.contains(&name.as_str()) ||
+            name == ".env" || name.starts_with(".env.") ||
+            matches!(extension, "pem" | "key" | "p12" | "pfx" | "jks" | "keystore") ||
+            ((name.starts_with("service-account-") || name.starts_with("serviceaccount-")) && extension == "json") ||
+            name.ends_with("-service-account.json") || name.ends_with("-serviceaccount.json")
+    })
 }
 
 fn try_reserve_connection(counter: &AtomicU64, limit: u64) -> bool {
@@ -467,6 +487,7 @@ async fn proxy_request(mut req: Request<Incoming>, port: u16) -> Result<Response
 }
 
 async fn resolve_static_file(root: &Path, relative: &Path) -> Result<PathBuf, StatusCode> {
+    if is_sensitive_request_path(relative) { return Err(StatusCode::NOT_FOUND); }
     let requested = tokio::fs::canonicalize(root.join(relative)).await;
     let candidate = match requested {
         Ok(path) if path.is_file() => path,
@@ -1102,11 +1123,23 @@ mod tests {
     }
 
     #[test]
-    fn forwarded_client_ip_is_trusted_only_from_loopback_proxy() {
+    fn forwarded_client_ip_is_not_trusted_without_authenticated_proxy_identity() {
         let forwarded = Some("203.0.113.7");
-        assert_eq!(effective_client_ip("127.0.0.1".parse().unwrap(), forwarded), "203.0.113.7".parse::<IpAddr>().unwrap());
+        assert_eq!(effective_client_ip("127.0.0.1".parse().unwrap(), forwarded), "127.0.0.1".parse::<IpAddr>().unwrap());
         assert_eq!(effective_client_ip("192.0.2.9".parse().unwrap(), forwarded), "192.0.2.9".parse::<IpAddr>().unwrap());
-        assert_eq!(effective_client_ip("127.0.0.1".parse().unwrap(), Some("not-an-ip")), "127.0.0.1".parse::<IpAddr>().unwrap());
+    }
+
+    #[test]
+    fn static_server_never_exposes_credential_paths() {
+        for path in [
+            ".aws/credentials", ".npmrc", ".git-credentials", ".docker/config.json",
+            ".kube/config", "secrets/service-account-prod.json", "tls/server.key",
+            ".env.production",
+        ] {
+            assert!(is_sensitive_request_path(Path::new(path)), "must block {path}");
+        }
+        assert!(!is_sensitive_request_path(Path::new(".well-known/acme-challenge/token")));
+        assert!(!is_sensitive_request_path(Path::new("assets/app.js")));
     }
 
     #[test]

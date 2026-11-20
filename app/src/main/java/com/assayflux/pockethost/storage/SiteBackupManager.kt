@@ -60,6 +60,7 @@ object SiteBackupManager {
                     throw IOException("Website contains a path outside its deployment directory.")
                 }
                 val relative = root.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/')
+                SensitivePathPolicy.requireSafePath(relative)
                 val parts = relative.split('/')
                 val depth = parts.size
                 if (depth > MAX_DEPTH) throw IOException("Website folder nesting exceeds the backup limit.")
@@ -142,6 +143,7 @@ object SiteBackupManager {
             lower.endsWith(".pem") || lower.endsWith(".key") || lower.endsWith(".p12") || lower.endsWith(".pfx")) {
             throw IOException("Website contains a sensitive or unsafe filename: $name")
         }
+        SensitivePathPolicy.requireSafePath(name)
     }
 
     private fun deriveKey(passphrase: CharArray, salt: ByteArray): SecretKeySpec {

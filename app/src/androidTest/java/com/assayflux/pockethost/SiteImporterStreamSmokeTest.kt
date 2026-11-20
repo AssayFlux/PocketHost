@@ -74,6 +74,35 @@ class SiteImporterStreamSmokeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test
+    fun rejectsCredentialAndPrivateKeyPathsFromZip() {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(base.cacheDir, "site-secret-path-" + System.nanoTime())
+        assertTrue(root.mkdirs())
+        val context = object : ContextWrapper(base) {
+            override fun getFilesDir(): File = root
+            override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
+        }
+        try {
+            val forbidden = listOf(
+                ".aws/credentials",
+                ".npmrc",
+                ".git-credentials",
+                ".docker/config.json",
+                ".kube/config",
+                "secrets/service-account-prod.json",
+                "tls/server.key",
+                ".env.production"
+            )
+            forbidden.forEach { path ->
+                val archive = zipOf("index.html" to "ok", path to "secret")
+                assertTrue("ZIP must reject $path",
+                    runCatching { SiteImporter.importZipStream(context, ByteArrayInputStream(archive)) }.isFailure)
+                assertTrue(!File(root, "site").exists())
+            }
+        } finally { root.deleteRecursively() }
+    }
+
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
         val archive = ByteArrayOutputStream()
         ZipOutputStream(archive).use { zip ->

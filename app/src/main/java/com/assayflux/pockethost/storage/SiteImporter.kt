@@ -16,11 +16,6 @@ object SiteImporter {
     private const val MAX_ENTRIES = 10_000
     internal const val MAX_IMPORT_BYTES = 500_000_000L
     private const val MAX_DEPTH = 32
-    private val blockedNames = setOf(
-        ".git", ".ssh", ".pockethost", "id_rsa", "id_ed25519",
-        "authorized_keys", "known_hosts"
-    )
-
     fun importTree(context: Context, treeUri: Uri): ImportReport {
         val source = DocumentFile.fromTreeUri(context, treeUri)
             ?: throw IOException("The selected folder cannot be opened.")
@@ -61,6 +56,9 @@ object SiteImporter {
                         parts.forEach(::validateName)
                         val isDirectory = entry.isDirectory || normalized.endsWith('/')
                         val archivePath = parts.joinToString("/")
+                        if (SensitivePathPolicy.isSensitivePath(archivePath)) {
+                            throw IOException("ZIP contains a sensitive credential or private-key path.")
+                        }
                         var parent = ""
                         for (segment in parts.dropLast(1)) {
                             parent = if (parent.isEmpty()) segment else "$parent/$segment"
@@ -231,8 +229,8 @@ object SiteImporter {
                     } else if (java.nio.file.Files.isDirectory(path, noFollow)) {
                         true
                     } else if (java.nio.file.Files.isRegularFile(path, noFollow)) {
-                        val name = path.fileName?.toString()?.lowercase()
-                        if (name in blockedNames) {
+                        val relative = root.toPath().relativize(path).toString().replace(File.separatorChar, '/')
+                        if (SensitivePathPolicy.isSensitivePath(relative)) {
                             false
                         } else {
                             files++
@@ -388,9 +386,7 @@ object SiteImporter {
     private fun validateName(name: String) {
         if (name.isBlank() || name == "." || name == ".." || name.contains('/') ||
             name.contains('\\') || name.contains('\u0000')) throw IOException("An unsafe filename was found.")
-        val lower = name.lowercase()
-        if (lower in blockedNames || lower == ".env" || lower.startsWith(".env.") ||
-            lower.endsWith(".pem") || lower.endsWith(".key") || lower.endsWith(".p12") || lower.endsWith(".pfx")) {
+        if (SensitivePathPolicy.isSensitivePath(name)) {
             throw IOException("The import contains a sensitive file or directory: $name")
         }
     }
