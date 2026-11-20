@@ -241,8 +241,6 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
         }
 
         if (selectedPage == "Changes") {
-        }
-
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
