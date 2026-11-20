@@ -19,10 +19,12 @@ object SensitivePathPolicy {
     private val blockedExtensions = setOf("pem", "key", "p12", "pfx", "jks", "keystore")
 
     fun isSensitivePath(path: String): Boolean {
-        val normalized = path.replace('\\', '/')
+        val normalized = path.replace('\\\\', '/')
         val parts = normalized.split('/').filter { it.isNotEmpty() }
         if (parts.isEmpty()) return false
-        val portablePath = normalized.trim('/').lowercase(java.util.Locale.ROOT)\n        if (portablePath == ".config/gcloud" || portablePath.startsWith(".config/gcloud/")) return true\n        return parts.any { segment ->
+        val portablePath = normalized.trim('/').lowercase(java.util.Locale.ROOT)
+        if (portablePath == ".config/gcloud" || portablePath.startsWith(".config/gcloud/")) return true
+        return parts.any { segment ->
             val name = segment.lowercase(java.util.Locale.ROOT)
             val extension = name.substringAfterLast('.', "")
             name in blockedDirectories ||
@@ -30,12 +32,12 @@ object SensitivePathPolicy {
                 name == ".env" || name.startsWith(".env.") ||
                 extension in blockedExtensions ||
                 (name.startsWith("service-account-") && extension == "json") ||
-                (name.startsWith("serviceaccount-") && extension == "json") ||\n                (name.startsWith("firebase-adminsdk") && extension == "json") ||
+                (name.startsWith("serviceaccount-") && extension == "json") ||
+                (name.startsWith("firebase-adminsdk") && extension == "json") ||
                 name.endsWith("-service-account.json") ||
                 name.endsWith("-serviceaccount.json")
         }
     }
-
     fun requireSafePath(path: String) {
         require(!isSensitivePath(path)) {
             "Sensitive credential and private-key files cannot be included in a public website."
