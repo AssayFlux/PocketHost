@@ -48,8 +48,8 @@ object ApplicationBackupManager {
     private const val MAX_ENTRIES = 30_000
     private const val MAX_TOTAL_BYTES = 650_000_000L
     private const val MAX_ENCRYPTED_BYTES = 680_000_000L
-    private const val MAX_DEPTH = 32
-    private const val STATIC_LIMIT = 500_000_000L
+    private const val MAX_DEPTH = WebsiteLimits.MAX_DEPTH
+    private const val STATIC_LIMIT = WebsiteLimits.MAX_TOTAL_BYTES
     private const val PYTHON_LIMIT = 50L * 1024L * 1024L
     private const val NODE_LIMIT = 100L * 1024L * 1024L
 
@@ -96,7 +96,14 @@ object ApplicationBackupManager {
 
             val files = context.filesDir
             val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
-            val site = File(files, "site").canonicalFile
+            val siteInput = File(files, "site")
+            if (java.nio.file.Files.isSymbolicLink(siteInput.toPath())) {
+                throw IOException("Website root cannot be a symbolic link.")
+            }
+            val site = siteInput.canonicalFile
+            if (site.parentFile != files.canonicalFile) {
+                throw IOException("Website root must remain directly inside Pocket Host private storage.")
+            }
             val pythonInput = File(
                 preferences.getString("python_project_root", File(files, "python-project").absolutePath)
                     ?: File(files, "python-project").absolutePath
@@ -621,7 +628,11 @@ object ApplicationBackupManager {
         val defaultArchiveRoots = mapOf("static" to "site", "python-wsgi" to "python", "node" to "node")
         val privateRoot = context.filesDir.canonicalFile.toPath()
         SiteRegistry.list(context).forEach { entry ->
-            val root = File(entry.root).canonicalFile
+            val requestedRoot = File(entry.root)
+            if (java.nio.file.Files.isSymbolicLink(requestedRoot.toPath())) {
+                throw IOException("Registered site roots cannot be symbolic links.")
+            }
+            val root = requestedRoot.canonicalFile
             val canonicalRoot = root.canonicalPath
             var archiveRoot = defaultArchiveRoots[entry.runtime]
                 ?: throw IOException("The backup encountered an unsupported site runtime.")
@@ -746,7 +757,7 @@ object ApplicationBackupManager {
         var rootFiles = 0
         var rootEntries = 0
         val rootFileLimit = when {
-            prefix == "site" || prefix == "python" || prefix.startsWith("custom-static/") -> 5_000
+            prefix == "site" || prefix == "python" || prefix.startsWith("custom-static/") -> WebsiteLimits.MAX_FILES
             prefix == "node" -> 10_000
             else -> MAX_FILES
         }
@@ -772,7 +783,7 @@ object ApplicationBackupManager {
                 rootEntries++
                 if (prefix.startsWith("custom-static/")) {
                     counters.customStaticEntries++
-                    if (counters.customStaticEntries > 10_000) {
+                    if (counters.customStaticEntries > WebsiteLimits.MAX_ENTRIES) {
                         throw IOException("Custom static sites contain too many combined archive entries.")
                     }
                 }
@@ -788,7 +799,7 @@ object ApplicationBackupManager {
                     rootFiles++
                     if (prefix.startsWith("custom-static/")) {
                         counters.customStaticFiles++
-                        if (counters.customStaticFiles > 5_000) {
+                        if (counters.customStaticFiles > WebsiteLimits.MAX_FILES) {
                             throw IOException("Custom static sites contain too many combined files.")
                         }
                     }
