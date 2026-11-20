@@ -771,6 +771,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     )
                 }
+                if (selectedTab == "Settings" && settingsSection == "General") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
                     FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
@@ -866,7 +867,6 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         }
                     }
                 }
-
                 }
                 if (selectedTab == "Dashboard") {
                     PocketHostDashboardScreen(
@@ -1756,6 +1756,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             enabled = hosting
                         ) { Text("Preview site") }
                     }
+                }
                 }
                 }
             }
