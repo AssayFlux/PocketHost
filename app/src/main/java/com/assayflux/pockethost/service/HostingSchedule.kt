@@ -77,9 +77,12 @@ object HostingSchedule {
     private fun schedule(context: Context, action: String, requestCode: Int, atMillis: Long) {
         val alarm = context.getSystemService(AlarmManager::class.java)
         val pending = pendingIntent(context, action, requestCode)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarm.canScheduleExactAlarms()) {
+        val exactAllowed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            runCatching { alarm.canScheduleExactAlarms() }.getOrDefault(false)
+        val exactScheduled = exactAllowed && runCatching {
             alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pending)
-        } else {
+        }.isSuccess
+        if (!exactScheduled) {
             alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pending)
         }
     }

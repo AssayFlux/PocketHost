@@ -123,7 +123,7 @@ internal fun PocketHostHomeScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     services.indices.forEach { index ->
                         Box(
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(48.dp)
                                 .semantics { contentDescription = "Show service page ${index + 1}" }
                                 .clickable { scope.launch { scrollState.animateScrollTo((index * stepPx).coerceAtMost(scrollState.maxValue)) } },
                             contentAlignment = Alignment.Center

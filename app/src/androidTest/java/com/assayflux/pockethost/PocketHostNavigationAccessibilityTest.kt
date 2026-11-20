@@ -49,7 +49,7 @@ class PocketHostNavigationAccessibilityTest {
             "Devices" to Triple("Devices", "COMMAND CENTER IDENTITY", "Devices"),
             "Activity & logs" to Triple("Activity & logs", "RECENT OPERATIONS", "Activity"),
             "Learn" to Triple("Learn", "Learn Pocket Host", "Learn"),
-            "Settings" to Triple("Settings", "Dark theme", "Settings")
+            "Settings" to Triple("Settings", "Make Pocket Host feel like yours", "Settings")
         )
         fun openDrawerDestination(label: String) {
             val menu = device.wait(Until.findObject(By.desc("Open app navigation")), 10_000)
@@ -106,7 +106,7 @@ class PocketHostNavigationAccessibilityTest {
                 Triple("Network", "CLOUDFLARE TUNNEL", "Network & tunnels"),
                 Triple("Runtimes", "TRUSTED APPLICATION CODE ONLY", "Runtimes"),
                 Triple("About", "AssayFlux Pocket Host", "About"),
-                Triple("General", "Dark theme", "Settings")
+                Triple("General", "Make Pocket Host feel like yours", "Settings")
             ).forEach { (section, expectedText, expectedHeader) ->
                 val sectionTab = device.wait(Until.findObject(By.text(section)), 10_000)
                 assertTrue("Settings section $section is not reachable", sectionTab != null)

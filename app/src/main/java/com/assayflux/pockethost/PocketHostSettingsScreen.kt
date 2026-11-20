@@ -74,7 +74,7 @@ internal fun PocketHostSettingsScreen(
                     color = palette.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
             Text("Display mode", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("System", "Light", "Dark").forEach { mode ->
                     FilterChip(selected = state.appearanceMode == mode,
                         onClick = { actions.onAppearanceModeChange(mode) },
