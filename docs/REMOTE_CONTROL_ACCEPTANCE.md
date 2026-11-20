@@ -38,7 +38,7 @@ Do not claim generic Linux, Windows, macOS, iOS, SBC or MCU support. Record exac
 
 ## 7. Connectivity
 
-Local Network and Cloudflare Tunnel are independent of the fleet control plane. The target standalone AssayFlux Relay Node must also be independent of fleet admin credentials and APIs; current RelayAgent/gateway are still coupled and this is a v0.1.0 prerequisite. Test DNS/TLS and visitor access from an independent network. Visitor ingress must not expose management API, control plane, runtime broker or MCU controls.
+Local Network and Cloudflare Tunnel are independent of the fleet control plane. The v0.1.0 native Android Relay is implemented as a standalone visitor gateway in the main APK and does not depend on PostgreSQL or fleet-admin APIs. Its host-side agent uses a separate scoped credential and the established outbound HTTPS/SSE contract. A separate Linux-native Relay Node package remains a v0.1.1 deliverable; do not conflate that later installer with the Android v0.1.0 service. Test DNS/TLS and visitor access from an independent network. Visitor ingress must not expose management API, control plane, runtime broker or MCU controls.
 
 ## 8. Security, storage and recovery
 
