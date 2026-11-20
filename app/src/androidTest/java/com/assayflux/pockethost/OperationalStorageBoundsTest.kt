@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.diagnostics.OperationalLog
 import com.assayflux.pockethost.diagnostics.TelemetryStore
+import com.assayflux.pockethost.storage.SiteFileManager
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,6 +13,24 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OperationalStorageBoundsTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun websiteFileManagerDoesNotListOrReadSensitiveSymlinkAliases() {
+        val root = File(context.filesDir, "site")
+        root.mkdirs()
+        val secret = File(root, ".env")
+        val alias = File(root, "public-config.txt")
+        try {
+            secret.writeText("PRIVATE=never-serve")
+            java.nio.file.Files.deleteIfExists(alias.toPath())
+            java.nio.file.Files.createSymbolicLink(alias.toPath(), secret.toPath().fileName)
+            assertTrue(SiteFileManager.list(context).none { it.relativePath == "public-config.txt" })
+            assertTrue(runCatching { SiteFileManager.readText(context, "public-config.txt") }.isFailure)
+        } finally {
+            java.nio.file.Files.deleteIfExists(alias.toPath())
+            secret.delete()
+        }
+    }
 
     @Test
     fun operationalLogsAndTelemetryRotateWithinTheirConfiguredBudgets() {

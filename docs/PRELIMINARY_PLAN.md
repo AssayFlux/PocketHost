@@ -2,7 +2,7 @@
 
 **Target:** Pocket Host v0.1.0 Alpha  
 **Working branch:** `Alpha` only  
-**Plan status:** initial approved planning baseline  
+**Plan status:** Step 1 exit gate passed; Step 2 implementation in progress  
 **Rule:** finish and verify each step before treating the next as complete. Preserve the existing codebase; refactor only where evidence shows it is necessary.
 
 ## Delivery boundary

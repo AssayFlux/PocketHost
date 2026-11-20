@@ -30,9 +30,9 @@ object SiteBackupManager {
     private const val SALT_BYTES = 16
     private const val NONCE_BYTES = 12
     private const val ITERATIONS = 210_000
-    private const val MAX_FILES = 5_000
-    private const val MAX_BYTES = 50L * 1024L * 1024L
-    private const val MAX_DEPTH = 32
+    private const val MAX_FILES = WebsiteLimits.MAX_FILES
+    private const val MAX_BYTES = WebsiteLimits.MAX_TOTAL_BYTES
+    private const val MAX_DEPTH = WebsiteLimits.MAX_DEPTH
 
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
         try {
@@ -53,8 +53,14 @@ object SiteBackupManager {
         header.flush()
         ZipOutputStream(BoundedOutputStream(CipherOutputStream(header, cipher), MAX_BYTES)).use { zip ->
             val counter = Counter()
-            root.walkTopDown().forEach { file ->
+            root.walkTopDown().onEnter { file ->
+                if (file != root && java.nio.file.Files.isSymbolicLink(file.toPath())) {
+                    throw IOException("Website contains an unsupported symbolic link.")
+                }
+                true
+            }.forEach { file ->
                 if (file == root) return@forEach
+                if (java.nio.file.Files.isSymbolicLink(file.toPath())) throw IOException("Website contains an unsupported symbolic link.")
                 val canonical = file.canonicalFile
                 if (!canonical.toPath().startsWith(root.toPath())) {
                     throw IOException("Website contains a path outside its deployment directory.")
@@ -80,7 +86,7 @@ object SiteBackupManager {
                             val count = input.read(buffer)
                             if (count < 0) break
                             counter.bytes += count
-                            if (counter.bytes > MAX_BYTES) throw IOException("Website exceeds the 50 MiB backup limit.")
+                            if (counter.bytes > MAX_BYTES) throw IOException("Website exceeds the 500 MB website limit.")
                             zip.write(buffer, 0, count)
                         }
                     }
@@ -120,7 +126,7 @@ object SiteBackupManager {
                             val count = decrypted.read(buffer)
                             if (count < 0) break
                             total += count
-                            if (total > MAX_BYTES) throw IOException("Decrypted backup exceeds the 50 MiB safety limit.")
+                            if (total > MAX_BYTES) throw IOException("Decrypted backup exceeds the 500 MB website limit.")
                             output.write(buffer, 0, count)
                         }
                     }
@@ -178,7 +184,7 @@ object SiteBackupManager {
 
         private fun ensureCapacity(length: Int) {
             if (length < 0 || written + length > limit) {
-                throw IOException("Encrypted backup exceeds the 50 MiB archive limit.")
+                throw IOException("Encrypted backup exceeds the 500 MB archive limit.")
             }
         }
     }

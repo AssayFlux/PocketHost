@@ -1,5 +1,8 @@
 package com.assayflux.pockethost.storage
 
+import java.io.File
+import java.nio.file.Files
+
 /**
  * Shared deny-list for files that must never become public website content.
  *
@@ -44,6 +47,22 @@ object SensitivePathPolicy {
                 name.endsWith("-service-account.json") ||
                 name.endsWith("-serviceaccount.json")
         }
+    }
+
+    /** Reject symlinks and apply the deny-list to both requested and resolved paths. */
+    fun requireSafeResolvedPath(root: File, target: File) {
+        val rootPath = root.canonicalFile.toPath()
+        val targetPath = target.toPath().toAbsolutePath().normalize()
+        require(targetPath.startsWith(rootPath)) { "The selected path escapes the website directory." }
+        var cursor = rootPath
+        for (part in rootPath.relativize(targetPath)) {
+            cursor = cursor.resolve(part)
+            require(!Files.isSymbolicLink(cursor)) { "Symbolic links are not supported inside website roots." }
+        }
+        val resolved = target.canonicalFile.toPath()
+        require(resolved.startsWith(rootPath)) { "The selected path escapes the website directory." }
+        val resolvedRelative = rootPath.relativize(resolved).toString().replace(File.separatorChar, '/')
+        requireSafePath(resolvedRelative)
     }
 
     fun requireSafePath(path: String) {

@@ -88,7 +88,14 @@ Important current limitation:
 6. Validate the minimum required remote-management integration without letting the control plane/fleet scope block the Android host.
 7. Complete integrated tests, physical-device acceptance and real-network visitor tests before calling v0.1.0 complete.
 
-## 7. Baseline rule
+## 7. Step 1 verification update
+
+- **Automated verified:** restored quality workflow passed on Alpha (run `44721249398`), including Rust engine/relay tests, PostgreSQL-backed control-plane tests/migrations, 26 Python tests, protocol checks, web-console build, Node smoke test and script/proxy checks.
+- **Automated verified:** Android native engine and relay cross-compiled for `arm64-v8a`, `armeabi-v7a` and `x86_64`; ELF architecture checks and Android app/instrumentation/runtime-worker source compilation passed (run `44721249324`).
+- **Not performed:** APK packaging is intentionally deferred to Step 5. Emulator execution and physical-device acceptance are not claimed.
+- **Open engineering issue:** web-console dependency installation reported one high and one moderate npm advisory; resolve or explicitly disposition before final acceptance.
+
+## 8. Baseline rule
 
 When implementation begins, update this file only when repository facts change or a verification result is obtained. Mark every claim as one of:
 - **Present:** source/configuration exists.

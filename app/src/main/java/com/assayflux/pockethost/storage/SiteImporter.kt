@@ -12,10 +12,10 @@ import java.util.zip.ZipInputStream
 data class ImportReport(val fileCount: Int, val totalBytes: Long, val source: String)
 
 object SiteImporter {
-    private const val MAX_FILES = 5_000
-    private const val MAX_ENTRIES = 10_000
-    internal const val MAX_IMPORT_BYTES = 500_000_000L
-    private const val MAX_DEPTH = 32
+    private const val MAX_FILES = WebsiteLimits.MAX_FILES
+    private const val MAX_ENTRIES = WebsiteLimits.MAX_ENTRIES
+    internal const val MAX_IMPORT_BYTES = WebsiteLimits.MAX_TOTAL_BYTES
+    private const val MAX_DEPTH = WebsiteLimits.MAX_DEPTH
     fun importTree(context: Context, treeUri: Uri): ImportReport {
         val source = DocumentFile.fromTreeUri(context, treeUri)
             ?: throw IOException("The selected folder cannot be opened.")
@@ -160,6 +160,7 @@ object SiteImporter {
                 if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
                     throw IOException("Prepared website contains an unsupported symbolic link.")
                 }
+                SensitivePathPolicy.requireSafePath(child.name)
                 if (!child.canonicalFile.toPath().startsWith(root.toPath())) {
                     throw IOException("Prepared website contains a path outside its staging directory.")
                 }
@@ -370,8 +371,9 @@ object SiteImporter {
             if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many files and folders (limit: $MAX_ENTRIES).")
             val name = entry.name ?: throw IOException("A selected item has no usable filename.")
             validateName(name)
+            SensitivePathPolicy.requireSafePath(name)
             val target = File(destination, name)
-            if (!target.canonicalFile.toPath().startsWith(stagingRoot.toPath())) throw IOException("An unsafe file path was detected.")
+            if (java.nio.file.Files.isSymbolicLink(target.toPath()) || !target.canonicalFile.toPath().startsWith(stagingRoot.toPath())) throw IOException("An unsafe file path was detected.")
             when {
                 entry.isDirectory -> {
                     if (!target.exists() && !target.mkdir()) throw IOException("Could not create folder: $name")

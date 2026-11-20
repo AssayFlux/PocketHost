@@ -506,6 +506,9 @@ async fn resolve_static_file(root: &Path, relative: &Path) -> Result<PathBuf, St
     };
     if !candidate.starts_with(root) { return Err(StatusCode::FORBIDDEN); }
     if !candidate.is_file() { return Err(StatusCode::NOT_FOUND); }
+    // Re-check the canonical target: an in-root symlink must not alias a credential path.
+    let resolved_relative = candidate.strip_prefix(root).map_err(|_| StatusCode::FORBIDDEN)?;
+    if is_sensitive_request_path(resolved_relative) { return Err(StatusCode::NOT_FOUND); }
     Ok(candidate)
 }
 
@@ -1182,6 +1185,20 @@ mod tests {
             assert_eq!(asset, std::fs::canonicalize(root.join("assets/app.js")).unwrap());
             assert_eq!(resolve_static_file(&root, Path::new("assets/missing.js")).await.unwrap_err(), StatusCode::NOT_FOUND);
         });
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn static_server_blocks_sensitive_files_reached_through_in_root_symlinks() {
+        let root = std::env::temp_dir().join(format!("pockethost-symlink-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("index.html"), "ok").unwrap();
+        std::fs::write(root.join(".env"), "PRIVATE=never-serve").unwrap();
+        std::os::unix::fs::symlink(".env", root.join("public-config.txt")).unwrap();
+        let result = resolve_static_file(&root, Path::new("public-config.txt")).await;
+        assert_eq!(result.unwrap_err(), StatusCode::NOT_FOUND);
         std::fs::remove_dir_all(root).unwrap();
     }
 

@@ -9,7 +9,7 @@ import java.util.UUID
 
 /** Safe app-private file operations for the currently deployed static website. */
 object SiteFileManager {
-    private const val MAX_EDIT_BYTES = 256L * 1024L
+    private const val MAX_EDIT_BYTES = WebsiteLimits.MAX_EDIT_BYTES
     private val textExtensions = setOf("html", "htm", "css", "js", "mjs", "json", "txt", "md", "xml", "svg", "yaml", "yml", "toml", "py", "ts", "tsx", "jsx", "csv")
 
     data class Entry(
@@ -22,7 +22,15 @@ object SiteFileManager {
 
     fun list(context: Context): List<Entry> {
         val root = root(context)
-        return root.walkTopDown().filter { it != root }.map { file ->
+        return root.walkTopDown()
+            .onEnter { directory ->
+                directory == root || (!java.nio.file.Files.isSymbolicLink(directory.toPath()) &&
+                    !SensitivePathPolicy.isSensitivePath(root.toPath().relativize(directory.toPath()).toString().replace(File.separatorChar, '/')))
+            }
+            .filter { file ->
+                file != root && !java.nio.file.Files.isSymbolicLink(file.toPath()) &&
+                    !SensitivePathPolicy.isSensitivePath(root.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/'))
+            }.map { file ->
             val directory = file.isDirectory
             val ext = file.extension.lowercase()
             Entry(
@@ -46,15 +54,9 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, displayName)
         require(!target.exists()) { "A file or folder already exists at this path." }
-        val parts = displayName.split('/')
-        require(parts.none { part ->
-            val lower = part.lowercase()
-            lower in setOf(".git", ".ssh", ".pockethost", ".env", "id_rsa", "id_ed25519", "authorized_keys", "known_hosts") ||
-                lower.startsWith(".env.") || lower.endsWith(".pem") || lower.endsWith(".key") ||
-                lower.endsWith(".p12") || lower.endsWith(".pfx")
-        }) { "Sensitive files cannot be added to the public website." }
         val parent = target.parentFile ?: error("Invalid destination path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the destination folder." }
+        SensitivePathPolicy.requireSafeResolvedPath(root, target)
         val temporary = File(parent, "." + target.name + "." + UUID.randomUUID() + ".upload")
         var total = 0L
         try {
@@ -67,7 +69,7 @@ object SiteFileManager {
                         val count = source.read(buffer)
                         if (count < 0) break
                         total += count
-                        require(total <= 50L * 1024L * 1024L) { "Individual website files are limited to 50 MiB." }
+                        require(total <= WebsiteLimits.MAX_SINGLE_FILE_BYTES) { "Individual website files are limited to 500 MB." }
                         output.write(buffer, 0, count)
                     }
                     output.fd.sync()
@@ -182,9 +184,7 @@ object SiteFileManager {
         require(parts.none { it.any(Char::isISOControl) }) { "The file path contains unsupported characters." }
         SensitivePathPolicy.requireSafePath(value)
         val target = File(root, value)
-        val rootPath = root.canonicalPath
-        val canonical = target.canonicalFile
-        require(canonical.path.startsWith(rootPath + File.separator)) { "The selected path escapes the website directory." }
+        SensitivePathPolicy.requireSafeResolvedPath(root, target)
         return target
     }
 
