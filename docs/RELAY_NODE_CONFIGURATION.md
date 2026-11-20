@@ -54,7 +54,7 @@ For every route, generate a distinct random value of at least 24 characters and 
 
 - The certificate must cover every configured hostname and include the full certificate chain.
 - The private key must be an unencrypted PKCS#8 PEM key matching the certificate.
-- This Alpha engineering format accepts an already-issued certificate; automatic ACME issuance, renewal and expiry monitoring are not yet implemented.
+- The encrypted node configuration stores ACME contact email, explicit Let's Encrypt Terms acceptance and ACME account credentials. When the certificate is absent or within 30 days of expiry, the foreground service requests HTTP-01 issuance/renewal and securely persists the returned certificate, key and account state.
 - When TLS certificate and key are present, the engine can bind the configured interface. Without both values, HTTP is loopback-only.
 - Forward public TCP 80 to Android port 8082 and public TCP 443 to Android port 8444. The HTTP listener redirects configured hostnames to HTTPS.
 - CGNAT without a public IPv6 path or inbound edge forwarding cannot accept unsolicited public visitor traffic. Cloudflare Tunnel remains a separate fallback.
@@ -63,4 +63,4 @@ Never publish the JSON configuration. It contains the TLS private key and DNS ch
 
 ## Current limitations
 
-This import flow is still an engineering provisioning bridge, not the final pairing ceremony. Node identity, owner-issued credential creation/rotation/revocation, encrypted SQLite configuration persistence and revocation tombstones are implemented. Short-lived single-use pairing invites, automatic ACME issuance/renewal, certificate expiry monitoring and continuous DNS TXT proof lifecycle remain incomplete. DNS TXT proof is rechecked at node startup, not continuously. Do not claim v0.1.0 acceptance until those gaps and the physical/public-network tests are closed.
+This import flow remains an engineering node/route provisioning bridge. The owner pairing flow is implemented separately: it creates a two-minute single-use invite for a configured host, the host proves possession of its Android Keystore P-256 key over verified HTTPS, and the node stores only the credential verifier. Automatic ACME HTTP-01 issuance/renewal and the 30-day expiry check are implemented in the native service. DNS TXT ownership is verified at node startup, not continuously. Remaining acceptance includes real-domain issuance/renewal, integrated route isolation and live revocation, physical-device lifecycle tests and independent public-network visitor journeys. Do not claim v0.1.0 acceptance until those tests pass.

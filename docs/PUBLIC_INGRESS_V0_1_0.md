@@ -1,7 +1,7 @@
 # Pocket Host — Public Ingress v0.1.0
 
 **Release:** v0.1.0 — First Hosting  
-**Status:** mandatory target; source implementation and public acceptance remain incomplete.  
+**Status:** native implementation substantially present; automated integration and public acceptance remain incomplete.  
 **Native Relay design:** [NATIVE_ANDROID_RELAY.md](NATIVE_ANDROID_RELAY.md)
 
 ## 1. User outcome and providers
@@ -65,19 +65,15 @@ A local listener or “connected” status is not proof of public DNS, TLS or vi
 ## 6. Existing source versus target
 
 Current source contains:
-- Android `RelayAgent` outbound HTTPS/SSE request/response client.
-- Android Keystore-backed `RelayCredentialStore`.
-- Rust/Axum visitor gateway and DNS TXT hostname proof inside the fleet control-plane executable.
-- Separate visitor/control listeners and Caddy TLS configuration.
+- Android `RelayAgent` outbound HTTPS/SSE request/response client and Android Keystore-backed `RelayCredentialStore`.
+- A standalone `relay-node/` Rust/Tokio library with JNI start/stop/status, bounded visitor HTTP(S), authenticated outbound SSE host sessions, hostname/site routing, DNS TXT startup validation, Rustls TLS and HTTP-to-HTTPS redirects.
+- Encrypted transactional SQLite node configuration, host credential verifiers, durable revocation tombstones and short-lived single-use pairing invites with P-256 host proof.
+- Native ACME HTTP-01 issuance/renewal and Kotlin foreground-service scheduling, owner-controlled lifecycle, boot recovery and network-change listener recovery.
+- Owner UI for route/credential management and pairing flows.
 
-Current gaps:
-- The gateway is coupled to PostgreSQL and the fleet control-plane process.
-- The current `RelayHub` keeps active sessions and pending requests in memory.
-- `relay-node/` contains only a Cargo manifest scaffold.
-- There is no native Android gateway JNI engine, inbound listener, Kotlin Relay foreground service, node-side credential issuer or durable standalone node store.
-- There is no physical-device or independent public-domain acceptance evidence for the native Relay.
+Remaining gaps are acceptance and hardening, not the absence of the native implementation: integrated visitor/owner route-isolation and live-revocation tests; continuous DNS TXT lifecycle (currently verified at startup); exact-SHA all-ABI and release package inspection; certificate renewal on a real public domain; and physical-device plus independent public-network acceptance. The fleet-control-plane RelayHub remains a separate deployment and is not the standalone Android Relay runtime.
 
-The target implementation is the Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK. The current Compose/Caddy deployment is not the Android Relay runtime and must not be treated as a required dependency.
+The Kotlin foreground service + Rust/Tokio JNI engine is the target and current implementation bundled into the main app. Compose/Caddy deployment is not a required dependency for the Android Relay.
 
 ## 7. Release gates
 
