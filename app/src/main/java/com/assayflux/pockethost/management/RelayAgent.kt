@@ -1,6 +1,8 @@
 package com.assayflux.pockethost.management
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import android.util.Base64
 import org.json.JSONObject
 import org.json.JSONArray
@@ -15,6 +17,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.Semaphore
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
@@ -32,6 +35,9 @@ object RelayAgent {
     @Volatile private var generation = 0L
     @Volatile private var worker: Thread? = null
     @Volatile private var streamConnection: HttpURLConnection? = null
+    @Volatile private var connectivityManager: ConnectivityManager? = null
+    @Volatile private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile private var reconnectSignal: Semaphore? = null
     private val requests = ThreadPoolExecutor(
         4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(64),
         { runnable -> Thread(runnable, "PocketHost-Relay-Request").apply { isDaemon = true } },
@@ -56,6 +62,38 @@ object RelayAgent {
         running = true
         currentState = "CONNECTING"
         val app = context.applicationContext
+        val signal = Semaphore(0)
+        reconnectSignal = signal
+        val connectivity = app.getSystemService(ConnectivityManager::class.java)
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            private var active: Network? = null
+
+            override fun onAvailable(network: Network) {
+                if (active != network) {
+                    active = network
+                    streamConnection?.disconnect()
+                    signal.release()
+                }
+            }
+
+            override fun onLost(network: Network) {
+                if (active == network) {
+                    active = null
+                    streamConnection?.disconnect()
+                    signal.release()
+                }
+            }
+        }
+        runCatching {
+            connectivity.registerDefaultNetworkCallback(callback)
+            connectivityManager = connectivity
+            networkCallback = callback
+        }.onFailure {
+            com.assayflux.pockethost.diagnostics.OperationalLog.record(
+                app, "WARN", "RELAY_NETWORK_MONITOR",
+                it.message?.take(160) ?: "Could not register Relay network recovery callback."
+            )
+        }
         worker = Thread({
             var retry = 1_000L
             while (running && generation == runGeneration && !Thread.currentThread().isInterrupted) {
@@ -72,8 +110,12 @@ object RelayAgent {
                     }
                     val jitter = (retry * 0.2).toLong()
                     val delay = retry - jitter + java.util.concurrent.ThreadLocalRandom.current().nextLong((jitter * 2 + 1).coerceAtLeast(1))
-                    try { Thread.sleep(delay) } catch (_: InterruptedException) { break }
-                    retry = (retry * 2).coerceAtMost(60_000L)
+                    try {
+                        val networkChanged = signal.tryAcquire(delay, TimeUnit.MILLISECONDS)
+                        retry = if (networkChanged) 1_000L else (retry * 2).coerceAtMost(60_000L)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
                 }
             }
             if (generation == runGeneration) {
@@ -92,6 +134,15 @@ object RelayAgent {
         currentState = "STOPPED"
         streamConnection?.disconnect()
         streamConnection = null
+        reconnectSignal?.release()
+        reconnectSignal = null
+        val connectivity = connectivityManager
+        val callback = networkCallback
+        connectivityManager = null
+        networkCallback = null
+        if (connectivity != null && callback != null) {
+            runCatching { connectivity.unregisterNetworkCallback(callback) }
+        }
         worker?.interrupt()
         worker = null
     }
