@@ -232,7 +232,6 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var hosting by remember { mutableStateOf(runCatching { NativeEngine.status() == "RUNNING" }.getOrDefault(false)) }
     var uptimeText by remember { mutableStateOf("—") }
     var importing by remember { mutableStateOf(false) }
-    var advancedMode by remember { mutableStateOf(false) }
     var keepAwake by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("keep_awake", false)) }
     var portText by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getInt("port", 8080).toString()) }
     var allowLan by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("allow_lan", false)) }
@@ -1793,4 +1792,5 @@ if (settingsSection == "Local access") {
         }
         }
     }
+}
 }
