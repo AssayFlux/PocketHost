@@ -15,16 +15,16 @@ This register separates confirmed defects from documentation drift, maintainabil
 
 | ID | Severity | Area | Finding and evidence | Correction | State |
 |---|---|---|---|---|---|
-| PH-001 | Critical | CI security | `.github/workflows/quality.yml` granted `contents: write` to a PR job, ran PR-controlled Cargo build scripts, then exposed `GITHUB_TOKEN` to a later push. A malicious same-repository PR could potentially plant a Git hook during build and execute it when the later push ran. This is a credible attack path, not evidence of exploitation. | Remove write permission and token-bearing push step; use `cargo check --locked`. | Implemented; CI pending |
-| PH-002 | High | Relay transport | Android allowed 8 MiB request bodies / 12 MiB JSON events but limited one SSE line to 64 KiB. The gateway emits one JSON `data:` line; Base64 expands 8 MiB to about 11.2 MiB before envelope overhead. Larger visitor requests could disconnect and time out. | Set line ceiling to 12 MiB plus the 6-character `data: ` prefix; add max-boundary regression coverage. | Implemented; instrumentation pending |
-| PH-003 | Medium | Android networking | Endpoint validators accepted cleartext `localhost` (Relay also `::1`) while network security XML permits only `127.0.0.1`. Accepted settings could fail at connection time. | Restrict development HTTP endpoints to `127.0.0.1`; test rejected aliases. Public endpoints remain HTTPS-only. | Implemented; instrumentation pending |
-| PH-004 | Medium | ZIP import | `SiteImporter` checked traversal but did not reject duplicate archive paths, case-only collisions or file/directory prefix conflicts. This is an archive integrity/ambiguity gap, not a demonstrated traversal exploit. | Track explicit paths, implicit directories, entry types and case-folded portable names; reject collisions before extraction. Add negative tests. | Implemented; instrumentation pending |
-| PH-005 | Medium | Capacity docs | Rust source sets `MAX_FILE_BYTES = 500_000_000`; several docs said 50 MiB. The separate limits are Rust serving 500,000,000 bytes, manual single-file import 50 MiB, and text editor 256 KiB. | Standardize all docs and keep these operations distinct. ZIP input and expanded site content are each 500,000,000 bytes. | Identified docs reconciled; test verification pending |
-| PH-006 | Medium | Relay docs | Some docs said Android RelayAgent reused RemoteControlAgent credentials and required remote-control config. Source now uses dedicated `RelayCredentialStore`; HostingService starts Relay independently. | Correct architecture and public-ingress docs. Keep missing native inbound gateway and node-side credential issuer explicit. | Core docs updated; sweep pending |
-| PH-007 | Medium | Baseline drift | Baselines cited old commits and 252/257 files while current tree contained 259 blobs and 72 directories; historical inventory was described as current. | Record source commit/tree counts and clearly label the older path inventory historical. | Core docs updated; final refresh pending |
-| PH-008 | Low | Backup roadmap | Roadmap claimed backup capacity was below the 500 MB import limit. Source has static 500,000,000 bytes, Python 50 MiB, Node 100 MiB, 650,000,000 bytes total uncompressed and 680,000,000 bytes encrypted. | Replace obsolete mismatch claim; retain near-limit/device testing as open. | Roadmap and baseline docs reconciled; test verification pending |
+| PH-001 | Critical | CI security | The former PR quality job granted `contents: write`, ran PR-controlled build scripts and exposed a token to a later push. This was a credible attack path, not evidence of exploitation. | PR #102 removed Relay CI write credentials and bot push behavior, committed the Relay lockfile and uses locked dependency resolution. | Fix merged to Alpha; fresh quality/PR CI verification pending |
+| PH-002 | High | Relay transport | Android allowed 8 MiB request bodies / 12 MiB JSON events but limited one SSE line to 64 KiB, so larger visitor requests could disconnect and time out. | SSE line framing ceiling was aligned with the 12 MiB event limit plus `data: ` framing; Rust and Android framing regression tests were added. | Implementation and Rust tests merged; Android instrumentation pending |
+| PH-003 | Medium | Android networking | Endpoint validators previously accepted cleartext aliases not permitted by Android network security configuration. | Development HTTP endpoints are restricted to `127.0.0.1`; public endpoints remain HTTPS-only and negative instrumentation cases were added. | Implementation merged; Android instrumentation pending |
+| PH-004 | Medium | ZIP import | ZIP import previously did not consistently reject duplicate, case-only or file/directory prefix collisions. | Site import and full-app backup restore now validate portable paths, explicit/implicit directories and entry types before extraction. Regression fixtures cover import collisions and encrypted-backup case/prefix collisions; exact duplicate backup central-directory entries remain an additional fixture opportunity. | Implementation/tests merged; Android instrumentation pending |
+| PH-005 | Medium | Capacity docs | Documentation previously conflated the 500,000,000-byte Rust/ZIP limits with 50 MiB manual single-file import and 256 KiB editor limits. | The source-backed limits are now distinguished across the capacity and release documentation; ZIP input and expanded site limits are each 500,000,000 bytes. | Documentation reconciled; physical near-limit acceptance remains open |
+| PH-006 | Medium | Relay docs | Older documentation conflated RelayAgent and RemoteControlAgent credentials. | Documentation now describes the dedicated RelayCredentialStore and independent HostingService startup; remaining docs should be checked during final release-documentation sweep. | Core docs reconciled; final documentation sweep pending |
+| PH-007 | Medium | Baseline drift | Historical baseline inventories and source/tree counts were presented as current. | Baseline docs label historical inventories and record source commit/tree metadata; final accepted-source snapshot and artifact inventory remain part of G9. | Historical docs reconciled; final release snapshot pending |
+| PH-008 | Low | Backup roadmap | Documentation previously misstated backup capacity relative to site import limits. | Roadmap and baseline docs now distinguish static-site, Python, Node, total uncompressed and encrypted-output quotas. Near-limit physical-device and interrupted-restore acceptance remains open. | Documentation reconciled; device acceptance pending |
 | PH-009 | Low | Repository footprint | Nine design SVGs under `Assets/` total approximately 115.6 MB. Root `Pocket Host 1.svg` is an exact duplicate blob of `Assets/Pocket Host 1.svg` (14,353,338 bytes). | Leave assets untouched until references/ownership are checked; record optimization candidate. | Documented |
-| PH-010 | Low | Android build efficiency | Gradle computed `selectedAbis` but cargo-ndk always built all three ABIs, repeating work in per-ABI CI builds. | Pass selected ABI list into cargo-ndk. | Implemented; Gradle pending |
+| PH-010 | Low | Android build efficiency | Gradle previously computed selected ABIs while cargo-ndk built all three for each per-ABI build. | Selected ABI values are now passed through to cargo-ndk; all declared Relay ABIs have passed a CI build at least once. | Implemented; latest all-ABI run pending |
 
 ## 2. Source-backed capacity contract
 
@@ -46,28 +46,33 @@ MB is decimal; MiB is binary. Do not call 500,000,000 bytes 500 MiB.
 
 ## 3. Important gaps, not misclassified defects
 
-1. **Native Android Relay service is not implemented.** `relay-node/` contains a Cargo manifest scaffold only. The partial visitor gateway remains inside the combined Rust/Axum control-plane process, with PostgreSQL and an in-memory RelayHub. Android host credentials are independent; the Android JNI engine, inbound listener, Kotlin foreground service, node-side credential issuer and durable node store remain missing.
-2. **Public ingress acceptance is open.** No independently recorded real-domain DNS/TLS/content test from an external network is established by source inspection.
+1. **Native Android Relay implementation exists; production acceptance is still open.** Alpha now contains a Kotlin foreground service, JNI bridge and Rust visitor gateway; authenticated outbound host sessions, owner pairing, durable credential/revocation state, DNS TXT validation and ACME certificate issuance/renewal are implemented. Remaining proof includes real DNS/TLS lifecycle, process/device restart recovery, visitor/management route isolation and acceptance from independent public networks on named physical devices.
+2. **Public ingress acceptance is open.** A Caddy trusted-proxy policy and spoofing integration test have been added, but the first CI run exposed a Caddy client-IP placeholder defect. PR #103 corrected the placeholder; PR #99 mounts the shared policy in production Compose. A clean CI pass of the trusted/untrusted peer test and real-domain DNS/TLS/content acceptance are still required.
 3. **Physical Android acceptance is open.** CI compile/package and API 26/33/35 emulator coverage do not prove OEM battery behavior, physical lifecycle, thermal/storage pressure or public connectivity.
 4. **Debug APKs are not production release evidence.** They are not a signed production release or provenance attestation.
 5. **Runtime companion is not a hostile multi-tenant OS sandbox.** Python and Node code run under the companion app UID.
-6. **Relay sessions are in-memory.** Active sessions and pending requests are lost on gateway restart.
-7. **Near-limit backup/import acceptance remains open.** Constants do not prove 500 MB boundary behavior, free-space preflight, peak memory or interrupted restore on physical devices.
+6. **Relay live sessions are intentionally ephemeral.** Durable host identities, credential verifiers and route configuration permit reconnect; active SSE sockets and pending visitor requests are not replayed after gateway restart. A Rust restart regression test passed, but Android process-death and live-traffic recovery remain unproven.
+7. **Near-limit backup/import acceptance remains open.** Constants and ZIP regression fixtures do not prove 500 MB boundary behavior, free-space preflight, peak memory or interrupted restore on physical devices.
+8. **Android PR verification has improved but is not yet a release gate.** Kotlin and instrumentation-source compilation, native Relay Rust tests and all-ABI native builds are configured for PRs; API 26/33/35 emulator instrumentation runs on Alpha pushes. Required branch protection and a deliberate broken-Kotlin negative test remain unproven.
 
-## 4. Verification plan
+## 4. Verification plan — evidence snapshot (2026-11-20)
 
-| Check | Command / evidence | State |
+| Check | Latest observed evidence | State |
 |---|---|---|
-| Rust engine | `cargo test --manifest-path rust-engine/Cargo.toml --locked` | Not run in this editing session |
-| Control plane | `cargo test --manifest-path control-plane/Cargo.toml --locked` | Not run |
-| Android compile | `./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin -PpockethostAbi=x86_64` | Not run |
-| Android instrumentation | `./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64` on API 26/33/35 | Not run |
-| Python | `PYTHONPATH=agents/linux/src python -m unittest discover -s tests/python -v` | Not run |
-| Console | `cd web-console && npm ci && npm run build` | Not run |
-| Node smoke | `node tests/node/metrics-smoke.cjs` | Not run |
-| Protocol | `python scripts/validate-protocol.py` and protocol tests | Not run |
-| Public Relay | Real DNS/TLS and visitor request from independent network | Not evidenced |
-| Physical Android | Named physical devices and Android versions | Not evidenced |
+| Rust engine | Quality run #44687150775 on Alpha passed the Rust job; PR #104 adds further deny-list tests and awaits rerun. | Earlier pass; current security changes pending |
+| Control plane / Caddy | Quality run #44687150775 failed specifically in the trusted-proxy integration test: Caddy forwarded the literal `{http.request.client_ip}` placeholder. PR #103 changes it to `{client_ip}`; PR #99 mounts the shared policy in production Compose. | Root cause corrected in source; clean rerun pending |
+| Android Kotlin compile | Android compile passed on Alpha run #44684951777 before later lifecycle, file-manager and backup-test changes. | Earlier pass; current source compile pending |
+| Android instrumentation | API 26/33/35 emulator jobs have not produced a complete successful matrix in the observed runs. PRs #95, #98 and #101 add further instrumentation coverage. | Pending |
+| Native Relay Rust | Rust tests passed in PR #93 and PR #102 validation. | Passed for those commits; rerun with latest changes pending |
+| Relay / Cloudflared Android ABIs | All declared native ABIs and Cloudflared architecture checks passed in run #44684951777; later all-ABI run is pending. | Earlier pass; latest rerun pending |
+| Python | Quality run #44687150775 passed. | Passed on that Alpha commit |
+| Console | Quality run #44687150775 passed. | Passed on that Alpha commit |
+| Node smoke | Quality run #44687150775 passed. | Passed on that Alpha commit |
+| Protocol contracts | Latest Alpha protocol validation runs passed. | Passed on observed commits |
+| Public Relay | Real DNS/TLS and visitor request from an independent network. | Not evidenced |
+| Physical Android | Named physical devices, Android versions, battery/network/restart logs. | Not evidenced |
+
+A green job is evidence only for the exact source SHA and target it ran against. New source changes reopen the relevant verification until the updated commit passes.
 
 ## 5. Remediation commit trail
 
