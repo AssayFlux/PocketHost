@@ -776,7 +776,7 @@ object ApplicationBackupManager {
                 }
                 val childRelative = if (relative.isEmpty()) child.name else "$relative/${child.name}"
                 SensitivePathPolicy.requireSafePath(childRelative)
-                val maximumRelativeDepth = if (prefix.startsWith("custom-static/")) MAX_DEPTH - 1 else MAX_DEPTH
+                val maximumRelativeDepth = MAX_DEPTH
                 if (childRelative.split('/').size > maximumRelativeDepth) {
                     throw IOException("Project folder nesting exceeds the backup limit.")
                 }
@@ -893,7 +893,7 @@ object ApplicationBackupManager {
                 val rootName = normalized.substringBefore('/')
                 if (rootName in rootEntries) {
                     rootEntries[rootName] = (rootEntries[rootName] ?: 0) + 1
-                    if ((rootEntries[rootName] ?: 0) > 10_000) {
+                    if ((rootEntries[rootName] ?: 0) > WebsiteLimits.MAX_ENTRIES) {
                         throw IOException("$rootName project contains too many archive entries.")
                     }
                 }
@@ -913,7 +913,8 @@ object ApplicationBackupManager {
                 parts.drop(1).forEach(::validateName)
                 val relativeProjectPath = parts.drop(1).joinToString("/")
                 if (relativeProjectPath.isNotEmpty()) SensitivePathPolicy.requireSafePath(relativeProjectPath)
-                if (parts.size > MAX_DEPTH + 1) throw IOException("The backup contains excessive folder nesting.")
+                val maximumArchiveDepth = if (parts[0] == "custom-static") MAX_DEPTH + 2 else MAX_DEPTH + 1
+                if (parts.size > maximumArchiveDepth) throw IOException("The backup contains excessive folder nesting.")
                 val archivePath = parts.joinToString("/")
                 val isDirectory = entry.isDirectory || normalized.endsWith("/")
                 var parent = ""

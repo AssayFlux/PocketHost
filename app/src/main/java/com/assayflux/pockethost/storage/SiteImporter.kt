@@ -53,7 +53,7 @@ object SiteImporter {
                             throw IOException("ZIP contains an unsafe path.")
                         }
                         val parts = normalized.split('/').filter { it.isNotEmpty() }
-                        if (parts.isEmpty() || parts.size > MAX_DEPTH + 1) throw IOException("ZIP folder nesting is too deep.")
+                        if (parts.isEmpty() || parts.size > MAX_DEPTH) throw IOException("ZIP folder nesting is too deep.")
                         parts.forEach(::validateName)
                         val isDirectory = entry.isDirectory || normalized.endsWith('/')
                         val archivePath = parts.joinToString("/")
@@ -166,6 +166,9 @@ object SiteImporter {
             val children = directory.listFiles() ?: throw IOException("Could not inspect prepared website files.")
             for (child in children) {
                 validateName(child.name)
+                if (root.toPath().relativize(child.toPath()).nameCount > MAX_DEPTH) {
+                    throw IOException("Website folder nesting is too deep.")
+                }
                 if (java.nio.file.Files.isSymbolicLink(child.toPath())) {
                     throw IOException("Prepared website contains an unsupported symbolic link.")
                 }
@@ -380,6 +383,9 @@ object SiteImporter {
             if (counter.entries > MAX_ENTRIES) throw IOException("Website contains too many files and folders (limit: $MAX_ENTRIES).")
             val name = entry.name ?: throw IOException("A selected item has no usable filename.")
             validateName(name)
+            if (stagingRoot.toPath().relativize(File(destination, name).toPath()).nameCount > MAX_DEPTH) {
+                throw IOException("Website folder nesting is too deep.")
+            }
             SensitivePathPolicy.requireSafePath(name)
             val target = File(destination, name)
             if (java.nio.file.Files.isSymbolicLink(target.toPath()) || !target.canonicalFile.toPath().startsWith(stagingRoot.toPath())) throw IOException("An unsafe file path was detected.")

@@ -11,7 +11,7 @@
 | Hostname routes | 1,000 total; 100 per site |
 | Website files | 5,000 |
 | Files plus directories | 10,000 entries |
-| Relative directory depth | 32 |
+| Relative path segments per file or directory | 32 |
 | Total expanded website content | 500,000,000 bytes |
 | Individual file import | 500,000,000 bytes, subject to total site budget |
 | Text editor read/write | 256 KiB |
