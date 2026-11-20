@@ -91,3 +91,8 @@ Included: Android host, local static multi-site hosting, native relay, bounded s
 Deferred: full fleet console, distributed hosting, arbitrary untrusted-code sandboxing, arbitrary package build pipelines, broad runtime catalogue execution, billing, SaaS multi-tenancy and marketplace.
 
 Do not begin a later-version implementation track until the owner has installed and tested v0.1.0 and decided what comes next.
+
+
+### Step 3 focused correction — credential rotation persistence
+
+Source review found a restart bug in configured Relay credential rotation: SQLite retained an existing verifier rather than applying the owner-updated configuration. Commit [f2f6ec5](https://github.com/AssayFlux/PocketHost/commit/f2f6ec518062b0f6b5ed169cd046b8f1c9b50193) changes configured-host loading to an upsert and adds a restart regression test proving the previous token stops authenticating and the replacement token works. CI for this commit is running; do not mark the correction verified until the Rust/Android checks pass.

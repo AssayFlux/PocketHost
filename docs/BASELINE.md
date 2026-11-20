@@ -113,3 +113,8 @@ Remote management is optional to local static hosting. It must not become a depe
 - **Operational verified:** tested through the intended real network/public visitor path.
 
 Never promote a feature to verified from source inspection or UI presence alone.
+
+
+## 8. Credential-rotation persistence correction (2026-11-20)
+
+A focused source review found that configured relay-host credential verifiers were only inserted when absent. Updating the owner-managed encrypted relay configuration therefore did not replace an existing SQLite verifier, so a rotated token could fail after relay restart. Commit [f2f6ec5](https://github.com/AssayFlux/PocketHost/commit/f2f6ec518062b0f6b5ed169cd046b8f1c9b50193) changes configured-host loading to an SQLite upsert and adds a regression test that rotates the configured token, restarts the relay state and asserts the old token is rejected while the new token authenticates. Paired hosts not represented in the explicit config remain database-managed. The fix is committed; its CI run is pending/in progress and is not yet marked verified.

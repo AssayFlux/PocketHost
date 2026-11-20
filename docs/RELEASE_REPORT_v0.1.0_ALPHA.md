@@ -70,3 +70,8 @@ Historical automated evidence:
 - No arbitrary npm install/build pipeline, multi-Node-app concurrency, ASGI support or hostile-code sandbox.
 - No full fleet console, distributed hosting, billing or marketplace.
 - Emulator coverage, once run, is API 35 x86_64 only; other Android versions/vendors need owner testing.
+
+
+## Additional Step 3 code-review correction
+
+Commit [f2f6ec5](https://github.com/AssayFlux/PocketHost/commit/f2f6ec518062b0f6b5ed169cd046b8f1c9b50193) fixes configured relay credential rotation persistence across process restart by synchronizing explicit owner-configured host verifiers into SQLite on load. A regression test verifies old-token rejection and new-token acceptance after restart. The corresponding quality and Android native/source workflows are pending/in progress; this is not yet a passing test result.
