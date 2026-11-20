@@ -215,6 +215,13 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         "Light" -> false
         else -> isSystemInDarkTheme()
     }
+    SideEffect {
+        (context as? MainActivity)?.let { activity ->
+            val insetsController = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
     var biometricUnlockEnabled by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("biometric_unlock_enabled", false)) }
     var autoStartOnBoot by remember { mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).getBoolean("auto_start_on_boot", false)) }
     var logFilterMode by remember { mutableStateOf("All") }
