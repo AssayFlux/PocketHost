@@ -933,7 +933,6 @@ object ApplicationBackupManager {
                 if (!target.toPath().startsWith(stage.canonicalFile.toPath())) {
                     throw IOException("The backup path escapes its restore staging directory.")
                 }
-                val isDirectory = entry.isDirectory || normalized.endsWith("/")
                 if (isDirectory) {
                     if (!target.exists() && !target.mkdirs()) throw IOException("Could not create a restore folder.")
                 } else {
