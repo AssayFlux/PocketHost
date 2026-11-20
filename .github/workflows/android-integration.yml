@@ -179,6 +179,30 @@ jobs:
         run: python3 scripts/validate-android-role-policy.py
       - name: Compile app and Android instrumentation sources without packaging APKs
         run: ./gradlew :app:compileDebugKotlin :app:compileDebugAndroidTestKotlin -PpockethostAbi=x86_64
+      - name: Prove the Android compile gate rejects broken Kotlin
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="app/src/main/java/com/assayflux/pockethost/CompileGateProbe.kt"
+          log="$RUNNER_TEMP/android-negative-compile.log"
+          trap 'rm -f "$probe"' EXIT
+          cat > "$probe" <<'KOTLIN'
+          package com.assayflux.pockethost
+          internal class CompileGateProbe {
+              val deliberatelyInvalid: String =
+          }
+          KOTLIN
+          if ./gradlew :app:compileDebugKotlin -PpockethostAbi=x86_64 >"$log" 2>&1; then
+            cat "$log"
+            echo "Android Kotlin compilation unexpectedly accepted malformed source." >&2
+            exit 1
+          fi
+          if ! grep -Fq "CompileGateProbe.kt" "$log"; then
+            cat "$log"
+            echo "Compilation failed, but not because the injected Kotlin source was rejected." >&2
+            exit 1
+          fi
+          echo "PASS: Android compile gate rejected the intentionally malformed Kotlin source."
 
   android-apk:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
