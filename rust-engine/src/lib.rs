@@ -167,7 +167,7 @@ fn effective_client_ip(peer_ip: IpAddr, _forwarded_ip: Option<&str>) -> IpAddr {
 }
 
 fn is_sensitive_request_path(relative: &Path) -> bool {
-    let blocked_directories = [".git", ".ssh", ".aws", ".docker", ".kube", ".pockethost", ".gnupg", ".azure", ".terraform", ".pulumi"];
+    let blocked_directories = [".git", ".ssh", ".aws", ".azure", ".docker", ".kube", ".pki", ".pockethost", ".gnupg", ".terraform", ".pulumi", "secrets"];
     let blocked_names = [
         ".env", ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".gitconfig",
         "credentials", "credentials.json", "application_default_credentials.json", "service_account.json",
@@ -185,7 +185,7 @@ fn is_sensitive_request_path(relative: &Path) -> bool {
         blocked_directories.contains(&name) ||
             blocked_names.contains(&name) ||
             name == ".env" || name.starts_with(".env.") ||
-            matches!(extension, "pem" | "key" | "p12" | "pfx" | "jks" | "keystore") ||
+            matches!(extension, "pem" | "key" | "p12" | "pfx" | "jks" | "keystore" | "mobileprovision") ||
             ((name.starts_with("service-account-") || name.starts_with("serviceaccount-") || name.starts_with("firebase-adminsdk")) && extension == "json") ||
             name.ends_with("-service-account.json") || name.ends_with("-serviceaccount.json")
     })
@@ -1143,6 +1143,11 @@ mod tests {
             "firebase-adminsdk-prod.json",
             ".azure/accessTokens.json",
             ".terraform/terraform.tfstate",
+            ".pki/private/client.key",
+            ".pulumi/credentials.json",
+            "secrets/credentials.json",
+            "identity",
+            "profile.mobileprovision",
         ] {
             assert!(is_sensitive_request_path(Path::new(path)), "must block {path}");
         }
