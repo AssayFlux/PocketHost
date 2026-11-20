@@ -80,6 +80,17 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  relay-rust-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Test native Relay engine without write credentials
+        run: cargo test --manifest-path relay-node/Cargo.toml --locked
+
   relay-android-abi:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
