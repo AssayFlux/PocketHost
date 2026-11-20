@@ -1105,50 +1105,56 @@ if (settingsSection in setOf("Relay node", "Relay host", "Cloudflare")) {
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = {
-                                    nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
-                                    status = "Relay host registry refreshed."
-                                }) { Text("Refresh hosts") }
-                                Button(onClick = {
-                                    runCatching { NativeRelay.createPairingInvite(nativeRelayHostIdText) }
-                                        .onSuccess { invite ->
-                                            if (invite.startsWith("ERROR:")) {
-                                                nativeRelayPairingInvite = null
-                                                status = invite
-                                            } else {
-                                                nativeRelayPairingInvite = invite
-                                                status = "A single-use pairing invite was created. It expires in 2 minutes and is bound to this host UUID."
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                        status = "Relay host registry refreshed."
+                                    }, modifier = Modifier.weight(1f)) { Text("Refresh hosts") }
+                                    Button(onClick = {
+                                        runCatching { NativeRelay.createPairingInvite(nativeRelayHostIdText) }
+                                            .onSuccess { invite ->
+                                                if (invite.startsWith("ERROR:")) {
+                                                    nativeRelayPairingInvite = null
+                                                    status = invite
+                                                } else {
+                                                    nativeRelayPairingInvite = invite
+                                                    status = "A single-use pairing invite was created. It expires in 2 minutes and is bound to this host UUID."
+                                                }
                                             }
-                                        }
-                                        .onFailure { status = it.message ?: "Could not create Relay pairing invite." }
-                                }, enabled = nativeRelayStatus == "RUNNING") { Text("Create 2-minute pairing invite") }
-                                OutlinedButton(onClick = {
-                                    runCatching { RelayCredentialIssuer.issueOrRotate(context, nativeRelayHostIdText) }
-                                        .onSuccess { issued ->
-                                            nativeRelayCredentialToken = issued.token
-                                            nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
-                                            if (nativeRelayStatus == "RUNNING") {
-                                                NativeRelayService.stop(context)
-                                                NativeRelayService.start(context)
-                                            }
-                                            status = "A new host credential was issued. Copy it to the host device now; the raw token is not stored on this node."
-                                        }
-                                        .onFailure { status = it.message ?: "Could not issue Relay host credential." }
-                                }) { Text("Issue / rotate") }
-                                OutlinedButton(onClick = {
-                                    runCatching { RelayCredentialIssuer.revoke(context, nativeRelayHostIdText) }
-                                        .onSuccess { revoked ->
-                                            if (revoked) {
-                                                nativeRelayCredentialToken = null
+                                            .onFailure { status = it.message ?: "Could not create Relay pairing invite." }
+                                    }, enabled = nativeRelayStatus == "RUNNING", modifier = Modifier.weight(1f)) {
+                                        Text("Create pairing invite", maxLines = 2)
+                                    }
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        runCatching { RelayCredentialIssuer.issueOrRotate(context, nativeRelayHostIdText) }
+                                            .onSuccess { issued ->
+                                                nativeRelayCredentialToken = issued.token
                                                 nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
-                                                NativeRelayService.stop(context)
-                                                if (nativeRelayHostIds.isNotEmpty()) NativeRelayService.start(context)
-                                                status = "Host credential revoked and its routes removed."
-                                            } else status = "That host is not registered."
-                                        }
-                                        .onFailure { status = it.message ?: "Could not revoke Relay host." }
-                                }) { Text("Revoke host") }
+                                                if (nativeRelayStatus == "RUNNING") {
+                                                    NativeRelayService.stop(context)
+                                                    NativeRelayService.start(context)
+                                                }
+                                                status = "A new host credential was issued. Copy it to the host device now; the raw token is not stored on this node."
+                                            }
+                                            .onFailure { status = it.message ?: "Could not issue Relay host credential." }
+                                    }, modifier = Modifier.weight(1f)) { Text("Issue / rotate", maxLines = 2) }
+                                    OutlinedButton(onClick = {
+                                        runCatching { RelayCredentialIssuer.revoke(context, nativeRelayHostIdText) }
+                                            .onSuccess { revoked ->
+                                                if (revoked) {
+                                                    nativeRelayCredentialToken = null
+                                                    nativeRelayHostIds = RelayCredentialIssuer.registeredHostIds(context)
+                                                    NativeRelayService.stop(context)
+                                                    if (nativeRelayHostIds.isNotEmpty()) NativeRelayService.start(context)
+                                                    status = "Host credential revoked and its routes removed."
+                                                } else status = "That host is not registered."
+                                            }
+                                            .onFailure { status = it.message ?: "Could not revoke Relay host." }
+                                    }, modifier = Modifier.weight(1f)) { Text("Revoke host", maxLines = 2) }
+                                }
                             }
                             nativeRelayPairingInvite?.let { invite ->
                                 Text("Single-use pairing invite (expires in 2 minutes):", color = palette.onSurfaceVariant, fontSize = 12.sp)
