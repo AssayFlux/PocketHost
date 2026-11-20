@@ -38,7 +38,12 @@ on:
   workflow_dispatch:
     inputs:
       run_emulators:
-        description: Run API 26, 33 and 35 emulator instrumentation after APK build
+        description: Run API 26, 33 and 35 emulator instrumentation
+        required: true
+        type: boolean
+        default: false
+      build_apks:
+        description: Build debug APK artifacts only after the v0.1.0 release owner authorizes packaging
         required: true
         type: boolean
         default: false
@@ -204,8 +209,10 @@ jobs:
           fi
           echo "PASS: Android compile gate rejected the intentionally malformed Kotlin source."
 
+  # Packaging is deliberately opt-in. Pushes and pull requests run source,
+  # native ABI, Kotlin and emulator verification without producing APK artifacts.
   android-apk:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.build_apks
     needs: cloudflared-android
     runs-on: ubuntu-latest
     steps:
