@@ -127,6 +127,7 @@ object SiteFileManager {
         require(target.isFile) { "The selected file no longer exists." }
         require(extension(relativePath) in textExtensions) { "This file type is not supported by the text editor." }
         val parent = target.parentFile ?: error("Invalid file path.")
+        ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val temporary = File(parent, "." + target.name + ".pockethost-tmp")
         val backup = File(parent, "." + target.name + ".pockethost-bak")
         temporary.delete()
@@ -161,7 +162,9 @@ object SiteFileManager {
     }
 
     fun deleteFile(context: Context, relativePath: String) {
-        val file = resolve(root(context), relativePath)
+        val root = root(context)
+        usage(root)
+        val file = resolve(root, relativePath)
         require(file.isFile) { "Only individual files can be deleted here." }
         check(file.delete()) { "Could not delete the selected file." }
     }
