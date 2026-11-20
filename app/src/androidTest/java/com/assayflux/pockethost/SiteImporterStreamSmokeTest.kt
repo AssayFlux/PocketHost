@@ -86,6 +86,7 @@ class SiteImporterStreamSmokeTest {
         try {
             val forbidden = listOf(
                 ".aws/credentials",
+                """.aws\credentials""",
                 ".npmrc",
                 ".git-credentials",
                 ".docker/config.json",
