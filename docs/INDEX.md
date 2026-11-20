@@ -1,6 +1,6 @@
 # Pocket Host — Documentation Index
 
-This documentation set follows the new three-version pathway. The former five-step roadmap is retired. G0–G9 is mandatory for every release.
+This documentation set follows the three-version pathway. The former five-step roadmap is retired.
 
 ## Start here
 1. [README](../README.md) — product summary, release pathway and build entry points.
@@ -58,4 +58,4 @@ This documentation set follows the new three-version pathway. The former five-st
 - [Device protocol](../protocol/README.md)
 - [Management API OpenAPI](management-api-v1.yaml)
 
-Technical specifications may describe later capabilities. They do not change version scope or prove acceptance. Use ROADMAP.md and RELEASE_GATES.md as the delivery source of truth.
+Technical specifications may describe later capabilities. They do not change version scope or prove acceptance. Use ROADMAP.md as the delivery source of truth.
