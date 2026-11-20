@@ -164,11 +164,9 @@ The complete development workflow is assigned to **v0.1.1**: editor tabs and uns
 
 Keep v0.1.0 focused on a working, testable Android hosting app. Release packaging and publishing are not part of the normal engineering-test workflow.
 
-## MANDATORY RELEASE RULE: G0–G9
+## ENGINEERING TESTS AND APK BUILDS
 
-**Every version must document and pass all ten release gates, G0 through G9.** This rule applies to v0.1.0, v0.1.1, v0.1.2 and every later version. A gate is PASS only with implementation and recorded verification evidence. A document, source file, successful compile or simulator-only run is not sufficient. No release may ship with any gate open.
-
-See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, per-version acceptance matrix and required evidence ledger.
+Normal code changes run automated quality checks, Android compilation, native ABI builds and emulator tests. APK packaging runs separately through a manual Android APK build workflow, so routine code tests do not package APKs.
 
 ## TECHNOLOGY BOUNDARIES
 
