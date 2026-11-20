@@ -1707,11 +1707,30 @@ if (settingsSection == "Hostnames & access") {
                     }
                 }
 
+                if (settingsSection == "DNS management") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
+                            Text("Automatic DNS record management", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Pocket Host does not create or update public DNS records yet. Native Relay currently validates its configured DNS TXT ownership proof when the node starts; it does not continuously revalidate that proof.", color = palette.onSurfaceVariant)
+                            Text("Until DNS management is implemented, configure A/AAAA records and router forwarding with your DNS provider, then restart the Relay Node after changing ownership records.", color = palette.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (settingsSection == "Cloudflare Access") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
+                            Text("In-app Cloudflare Access management", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Pocket Host does not create, edit, or verify Cloudflare Access policies. Configure Access in the Cloudflare dashboard. Do not treat this app as proof that an external Access policy is active.", color = palette.onSurfaceVariant)
+                        }
+                    }
+                }
                 if (settingsSection == "Network") {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("NETWORK & PUBLIC ACCESS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Choose a dedicated page for the native Relay Node, outbound Relay host, Cloudflare Tunnel, or hostname and visitor access.", color = palette.onSurfaceVariant)
+                            Text("Choose a dedicated page for the native Relay Node, outbound Relay host, Cloudflare Tunnel, DNS management, Cloudflare Access, or hostname and visitor access.", color = palette.onSurfaceVariant)
                             Text("Each connector has independent credentials and lifecycle controls. Enable only the route you intend to expose.", color = palette.onSurfaceVariant)
                         }
                     }
