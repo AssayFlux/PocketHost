@@ -235,7 +235,7 @@ internal fun PocketHostWorkbenchScreen(context: Context) {
                 }
                 Button(onClick = { commitMessage = ""; showCommit = true }, enabled = changes.isNotEmpty() && !loading,
                     modifier = Modifier.fillMaxWidth()) { Text("Create local commit") }
-                Text("Commits save immutable local snapshots only. Production deployment and rollback controls are not yet enabled.", color = palette.onSurfaceVariant, fontSize = 11.sp)
+                Text("Commits save immutable local snapshots only. Service coming soon: production deployment and rollback controls are not enabled in this release.", color = palette.onSurfaceVariant, fontSize = 11.sp)
             }
         }
 
