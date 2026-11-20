@@ -19,7 +19,7 @@ cat > "$tmp_dir/Caddyfile" <<'CADDY'
 }
 :8080 {
     reverse_proxy echo:8081 {
-        header_up X-Verified-Client-IP {http.request.client_ip}
+        header_up X-Verified-Client-IP {client_ip}
     }
 }
 CADDY
