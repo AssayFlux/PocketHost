@@ -1794,6 +1794,27 @@ if (settingsSection == "Hostnames & access") {
                             Text("Android host agent powered by Rust and Kotlin, with optional trusted Python/Node runtime providers.", color = palette.onSurfaceVariant)
                         }
                     }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = palette.surface)
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("AUTHOR'S SECTION", color = palette.primary, fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp, letterSpacing = 1.sp)
+                            Text("AssayFlux — building thoughtful tools where creativity meets engineering.",
+                                color = palette.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                            Column(
+                                Modifier.fillMaxWidth(),
+                                horizontalAlignment = androidx.compose.ui.Alignment.End,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                PocketHostAuthorSignature(Modifier.width(112.dp).height(56.dp))
+                                Text("Md Safarujjaman", color = palette.onSurface,
+                                    fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall)
+                            }
+                        }
+                    }
                 }
 if (settingsSection == "Local access") {
                 Card(
