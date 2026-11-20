@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -59,10 +60,18 @@ internal fun PocketHostDevicesScreen(context: Context) {
     val scope = rememberCoroutineScope()
     val fleetMap = remember(fleetMapText) { runCatching { JSONObject(fleetMapText) }.getOrDefault(JSONObject()) }
     val palette = MaterialTheme.colorScheme
+    var selectedPage by remember { mutableStateOf("Enrollment") }
     val devices = remember(refresh) { runCatching { DeviceTrustStore.list(context, includeRevoked = true) }.getOrDefault(emptyList()) }
     val owner = remember { runCatching { DeviceTrustStore.ownerIdentity() }.getOrNull() }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Enrollment", "Fleet", "Trusted devices").forEach { page ->
+                FilterChip(selected = selectedPage == page, onClick = { selectedPage = page },
+                    label = { Text(page, fontSize = 11.sp, maxLines = 2) }, modifier = Modifier.weight(1f))
+            }
+        }
+        if (selectedPage == "Enrollment") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("COMMAND CENTER IDENTITY", fontWeight = FontWeight.Bold, color = palette.onSurface)
@@ -73,6 +82,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text("P-256 signing key · Android Keystore · encrypted local registry", color = palette.onSurfaceVariant)
             }
         }
+        }
+        if (selectedPage == "Enrollment") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("ENROL A DEVICE", fontWeight = FontWeight.Bold)
@@ -136,6 +147,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 Text(message, color = palette.onSurfaceVariant)
             }
         }
+        }
+        if (selectedPage == "Fleet") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("REMOTE FLEET CONNECTION", fontWeight = FontWeight.Bold)
@@ -166,6 +179,8 @@ internal fun PocketHostDevicesScreen(context: Context) {
                 }
             }
         }
+        }
+        if (selectedPage == "Trusted devices") {
         Card(colors = CardDefaults.cardColors(containerColor = palette.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -374,6 +389,7 @@ internal fun PocketHostDevicesScreen(context: Context) {
                     }
                 }
             }
+        }
         }
     }
 }
