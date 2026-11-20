@@ -1188,6 +1188,52 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn loopback_server_routes_multiple_hostnames_to_isolated_static_roots() {
+        use std::io::{Read, Write};
+        use std::net::{TcpListener as StdListener, TcpStream};
+        use std::time::Duration;
+
+        let base = std::env::temp_dir().join(format!("pockethost-multisite-{}", std::process::id()));
+        let site_a = base.join("site-a");
+        let site_b = base.join("site-b");
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&site_a).unwrap();
+        std::fs::create_dir_all(&site_b).unwrap();
+        std::fs::write(site_a.join("index.html"), "SITE-A").unwrap();
+        std::fs::write(site_a.join("only-a.txt"), "A-PRIVATE-CONTENT").unwrap();
+        std::fs::write(site_b.join("index.html"), "SITE-B").unwrap();
+        std::fs::write(site_b.join("only-b.txt"), "B-PRIVATE-CONTENT").unwrap();
+
+        let probe = StdListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = probe.local_addr().unwrap().port();
+        drop(probe);
+        let routes = [
+            ("a.example.test".to_string(), SiteTarget::Static(site_a.clone())),
+            ("b.example.test".to_string(), SiteTarget::Static(site_b.clone())),
+        ].into_iter().collect();
+        start_engine_with_hosts(base.to_str().unwrap(), port, false, routes, HashMap::new()).unwrap();
+
+        let request = |host: &str, path: &str| {
+            let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+            stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+            write!(stream, "GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n").unwrap();
+            let mut response = String::new();
+            stream.read_to_string(&mut response).unwrap();
+            response
+        };
+
+        let a_index = request("a.example.test", "/");
+        let b_index = request("b.example.test", "/");
+        let a_cannot_read_b = request("a.example.test", "/only-b.txt");
+        assert!(a_index.contains("SITE-A"), "unexpected response: {a_index}");
+        assert!(b_index.contains("SITE-B"), "unexpected response: {b_index}");
+        assert!(a_cannot_read_b.starts_with("HTTP/1.1 404"), "cross-site path leaked: {a_cannot_read_b}");
+
+        stop_engine().unwrap();
+        std::fs::remove_dir_all(base).unwrap();
+    }
+
     #[cfg(unix)]
     #[tokio::test]
     async fn static_server_blocks_sensitive_files_reached_through_in_root_symlinks() {
