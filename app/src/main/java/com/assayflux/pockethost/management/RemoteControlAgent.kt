@@ -118,6 +118,8 @@ object RemoteControlAgent {
         }, "PocketHost-Remote-Control").apply { isDaemon = true; start() }
     }
 
+    internal fun isRunningForTests(): Boolean = running
+
     @Synchronized
     fun stop() {
         generation += 1
