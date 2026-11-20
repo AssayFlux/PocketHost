@@ -1236,4 +1236,68 @@ mod tests {
         assert!(RelayState::from_config(config, database_path.to_str().unwrap()).await.is_err());
         let _ = std::fs::remove_file(database_path);
     }
+
+    #[tokio::test]
+    async fn durable_host_identity_survives_restart_while_sessions_and_pending_requests_fail_closed() {
+        let device_id = Uuid::new_v4();
+        let token = "restart-recovery-test-token";
+        let database_path = std::env::temp_dir()
+            .join(format!("pockethost-relay-restart-{}.db", Uuid::new_v4()));
+        let make_config = || RelayConfig {
+            bind_address: "127.0.0.1".into(),
+            http_port: 8082,
+            https_port: 8444,
+            tls_certificate_pem: None,
+            tls_private_key_pem: None,
+            acme_contact_email: None,
+            acme_terms_accepted: false,
+            acme_directory_url: None,
+            acme_account_credentials: None,
+            dns_resolver: "127.0.0.1:53".into(),
+            hosts: vec![HostConfig {
+                device_id,
+                credential_sha256: hex_sha256(token.as_bytes()),
+            }],
+            routes: Vec::new(),
+        };
+
+        let first = RelayState::from_config(make_config(), database_path.to_str().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(first.authenticate(token), Some(device_id));
+        let (_old_session_id, old_receiver) = first.connect(device_id).unwrap();
+        let request_id = Uuid::new_v4();
+        let (pending_sender, pending_receiver) = oneshot::channel();
+        first.0.lock().unwrap().pending.insert(
+            request_id,
+            Pending {
+                device_id,
+                site_id: "site".into(),
+                sender: pending_sender,
+            },
+        );
+        assert_eq!(first.0.lock().unwrap().sessions.len(), 1);
+        drop(old_receiver);
+        drop(first);
+
+        // Dropping the gateway closes any in-flight visitor response instead of
+        // replaying it against a new host session after process restart.
+        assert!(pending_receiver.await.is_err());
+
+        let restarted = RelayState::from_config(make_config(), database_path.to_str().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(restarted.authenticate(token), Some(device_id));
+        {
+            let hub = restarted.0.lock().unwrap();
+            assert!(hub.sessions.is_empty());
+            assert!(hub.pending.is_empty());
+        }
+        let (_new_session_id, _new_receiver) = restarted.connect(device_id).unwrap();
+        assert_eq!(restarted.0.lock().unwrap().sessions.len(), 1);
+
+        drop(restarted);
+        let _ = std::fs::remove_file(database_path);
+    }
+
 }
