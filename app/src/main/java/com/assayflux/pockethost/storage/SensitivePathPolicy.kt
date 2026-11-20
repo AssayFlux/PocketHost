@@ -8,11 +8,11 @@ package com.assayflux.pockethost.storage
  */
 object SensitivePathPolicy {
     private val blockedDirectories = setOf(
-        ".git", ".ssh", ".aws", ".docker", ".kube", ".pockethost", ".gnupg"
+        ".git", ".ssh", ".aws", ".docker", ".kube", ".pockethost", ".gnupg", ".azure", ".terraform", ".pulumi"
     )
     private val blockedNames = setOf(
         ".env", ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".gitconfig",
-        "credentials", "id_rsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk",
+        "credentials", "credentials.json", "application_default_credentials.json", "service_account.json",\n        "id_rsa", "id_dsa", "id_ed25519", "id_ecdsa", "id_ed25519_sk", "identity",
         "authorized_keys", "known_hosts", "kubeconfig", "service-account.json",
         "serviceaccount.json", "secrets.json"
     )
@@ -22,7 +22,7 @@ object SensitivePathPolicy {
         val normalized = path.replace('\\', '/')
         val parts = normalized.split('/').filter { it.isNotEmpty() }
         if (parts.isEmpty()) return false
-        return parts.any { segment ->
+        val portablePath = normalized.trim('/').lowercase(java.util.Locale.ROOT)\n        if (portablePath == ".config/gcloud" || portablePath.startsWith(".config/gcloud/")) return true\n        return parts.any { segment ->
             val name = segment.lowercase(java.util.Locale.ROOT)
             val extension = name.substringAfterLast('.', "")
             name in blockedDirectories ||
@@ -30,7 +30,7 @@ object SensitivePathPolicy {
                 name == ".env" || name.startsWith(".env.") ||
                 extension in blockedExtensions ||
                 (name.startsWith("service-account-") && extension == "json") ||
-                (name.startsWith("serviceaccount-") && extension == "json") ||
+                (name.startsWith("serviceaccount-") && extension == "json") ||\n                (name.startsWith("firebase-adminsdk") && extension == "json") ||
                 name.endsWith("-service-account.json") ||
                 name.endsWith("-serviceaccount.json")
         }
