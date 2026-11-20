@@ -771,11 +771,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = !advancedMode, onClick = { advancedMode = false }, label = { Text("Simple") })
-                    FilterChip(selected = advancedMode, onClick = { advancedMode = true }, label = { Text("Advanced") })
-                }
-                if (advancedMode) {
+                if (selectedTab == "Settings" && settingsSection in setOf("Server", "Remote")) {
+                if (selectedTab == "Settings" && settingsSection == "Server") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -821,6 +818,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             }
                         }
                     }
+                }
+                if (selectedTab == "Settings" && settingsSection == "Remote") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = palette.surface)
@@ -865,6 +864,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             Text("This host agent makes outbound HTTPS requests only. The control plane cannot open inbound ports or execute arbitrary shell commands on the host.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         }
                     }
+                }
                 }
 
                 }
@@ -980,7 +980,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     )
                 }
                 if (selectedTab == "Settings") {
-                if (settingsSection == "Network") {
+if (settingsSection in setOf("Relay node", "Relay host", "Cloudflare")) {
+                if (selectedTab == "Settings" && settingsSection == "Relay node") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1168,7 +1169,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     }
                 }
+                }
 
+                if (selectedTab == "Settings" && settingsSection == "Relay host") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1302,7 +1305,9 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     }
                 }
+                }
 
+                if (selectedTab == "Settings" && settingsSection == "Cloudflare") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1393,10 +1398,11 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         )
                     }
                 }
+                }
 
                 }
 
-                if (settingsSection == "Runtimes") {
+if (settingsSection in setOf("Python", "Node.js")) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1437,7 +1443,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+if (settingsSection == "Python") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1502,7 +1508,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Network") {
+if (settingsSection == "Hostnames & access") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1625,7 +1631,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                if (settingsSection == "Runtimes") {
+if (settingsSection == "Node.js") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1671,7 +1677,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
 
                 }
 
-                    if (settingsSection == "Network") {
+if (settingsSection == "Hostnames & access") {
                 Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -1685,6 +1691,25 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
                                 Text("Open backup and restore")
                             }
+                        }
+                    }
+                }
+
+                if (settingsSection == "Network") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("NETWORK & PUBLIC ACCESS", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Choose a dedicated page for the native Relay Node, outbound Relay host, Cloudflare Tunnel, or hostname and visitor access.", color = palette.onSurfaceVariant)
+                            Text("Each connector has independent credentials and lifecycle controls. Enable only the route you intend to expose.", color = palette.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (settingsSection == "Runtimes") {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("OPTIONAL APPLICATION RUNTIMES", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text("Python WSGI and Node.js are managed independently. Open their dedicated pages to import a project, configure its port, and start or stop that runtime.", color = palette.onSurfaceVariant)
+                            Text("Only run code you own and trust. These runtimes are not a hostile-code sandbox.", color = palette.error)
                         }
                     }
                 }
@@ -1703,7 +1728,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         }
                     }
                 }
-                if (selectedTab == "Dashboard") {
+if (settingsSection == "Local access") {
                 }
 
                 Card(
