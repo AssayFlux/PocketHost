@@ -99,19 +99,9 @@ In scope:
 - Strict separation of public visitor routes from management, runtime broker and MCU controls.
 - Cross-device recovery, fault isolation and operational security acceptance.
 
-## 4. Mandatory G0–G9 release rule
+## 4. Engineering test workflow
 
-The normative gate definitions and per-version matrix are in [RELEASE_GATES.md](RELEASE_GATES.md).
-
-- Every release has exactly ten gates, G0 through G9.
-- Each gate records owner, measurable criteria, source commit, build, target, test procedure and evidence.
-- Allowed states: NOT_STARTED, IN_PROGRESS, BLOCKED, FAIL and PASS.
-- PASS requires implementation and actual test evidence on the required target.
-- A document, screenshot of an unimplemented UI, successful compile or emulator-only test cannot independently close a physical-device gate.
-- No gate may be skipped, waived silently or marked PASS by schedule pressure.
-- All ten gates must be PASS before release approval.
-- A code or scope change that invalidates evidence reopens the affected gate and its dependent gates.
-- Release record includes source SHA, workflow URL, artifact SHA-256, supported devices/OS, test evidence, known issues and owner sign-off.
+Normal pushes and pull requests run repository quality checks, Android source compilation, native ABI builds and API 26/33/35 emulator tests. APK packaging is a separate manual workflow and does not run as part of routine code verification.
 
 ## 5. Execution discipline
 
