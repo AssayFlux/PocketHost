@@ -99,6 +99,7 @@ internal fun PocketHostDashboardScreen(
     actions: PocketHostDashboardActions
 ) {
     val palette = MaterialTheme.colorScheme
+    HostingScheduleCard(context)
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
