@@ -154,3 +154,8 @@ The current tree contains exactly one workflow: `.github/workflows/quality.yml`.
 ### Release-readiness conclusion
 
 Current Alpha has substantial implementation and a successful non-Android quality run. It is **not verified production-ready**: restore Android CI; run exact-SHA Android compile/instrumentation/emulator checks; build and inspect production-signed artifacts; perform physical-device and independent-network acceptance; record hashes/provenance/SBOM; and close G0–G9 with owner approval. See [V0.1.0_GATE_STATUS.md](V0.1.0_GATE_STATUS.md) and [REMEDIATION_AUDIT.md](REMEDIATION_AUDIT.md).
+
+
+### Branch governance finding
+
+GitHub branch metadata for the audited snapshot reports `Alpha` as `protected: false`; the accessible repository rulesets listing returned an empty array. The branch-protection detail endpoint returned 403 to the audit integration, so exact required-check/review settings could not be independently inspected. Treat branch governance as unverified and configure a ruleset requiring PR review plus successful Android and quality workflows before merges.
