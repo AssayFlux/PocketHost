@@ -1176,7 +1176,7 @@ if (settingsSection in setOf("Relay node", "Relay host", "Cloudflare")) {
                             }
                         }
                         Text(
-                            "This is the inbound gateway running on this phone. It is separate from the outbound host connection below. Node configuration and host verifiers are encrypted at rest; owner-issued credentials can be rotated or revoked. Automatic pairing and certificate renewal are still being completed.",
+                            "This is the inbound visitor gateway on this phone, separate from the outbound host connection. Pairing invites are short-lived and single-use; ACME HTTP-01 issues and renews certificates. DNS TXT ownership proof is currently checked at node startup, not continuously.",
                             color = palette.onSurfaceVariant, fontSize = 13.sp
                         )
                     }
@@ -1422,7 +1422,7 @@ if (settingsSection in setOf("Python", "Node.js")) {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("TRUSTED APPLICATION CODE ONLY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                        Text("Python and Node run with app privileges, not in an OS sandbox. Run only code you trust.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Python and Node run in the separate-UID runtime companion. They share that companion UID and are not isolated from each other as hostile-code sandboxes. Run only owner-controlled code you trust.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("I understand and will run trusted code only", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
@@ -1514,7 +1514,7 @@ if (settingsSection == "Python") {
                             if (allowLan && lanAddress != null) "Python preview: http://$lanAddress:$pythonPortText" else "Python preview: http://127.0.0.1:$pythonPortText",
                             color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
                         )
-                        Text("Runs trusted WSGI code as the app. Loopback by default; LAN access follows your network setting.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Runs trusted WSGI code in the separate-UID runtime companion. Loopback by default; LAN access follows your network setting. Per-project hostile-code isolation is not provided.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
@@ -1683,7 +1683,7 @@ if (settingsSection == "Node.js") {
                             }, enabled = nodeHosting) { Text("Stop Node.js") }
                         }
                         if (nodeHosting) Text("Node.js preview: http://127.0.0.1:$nodePortText", color = palette.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Runs in a separate process, not a sandbox. Prebundle node_modules; subprocess scripts and native add-ons may not work.", color = palette.onSurfaceVariant, fontSize = 14.sp)
+                        Text("Runs in the separate-UID runtime companion, not a per-project sandbox. Prebundle node_modules; subprocess scripts and native add-ons may not work.", color = palette.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
