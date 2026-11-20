@@ -175,15 +175,15 @@ fn is_sensitive_request_path(relative: &Path) -> bool {
         "authorized_keys", "known_hosts", "kubeconfig", "service-account.json",
         "serviceaccount.json", "secrets.json",
     ];
+    if relative.components().any(|component| !matches!(component, Component::Normal(_))) {
+        return true;
+    }
     let portable_path = relative.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
     if portable_path == ".config/gcloud" || portable_path.starts_with(".config/gcloud/") { return true; }
-    relative.components().any(|component| {
-        let Component::Normal(value) = component else { return true };
-        let Some(name) = value.to_str() else { return true };
-        let name = name.to_ascii_lowercase();
+    portable_path.split('/').filter(|segment| !segment.is_empty()).any(|name| {
         let extension = name.rsplit_once('.').map(|(_, ext)| ext).unwrap_or("");
-        blocked_directories.contains(&name.as_str()) ||
-            blocked_names.contains(&name.as_str()) ||
+        blocked_directories.contains(&name) ||
+            blocked_names.contains(&name) ||
             name == ".env" || name.starts_with(".env.") ||
             matches!(extension, "pem" | "key" | "p12" | "pfx" | "jks" | "keystore") ||
             ((name.starts_with("service-account-") || name.starts_with("serviceaccount-") || name.starts_with("firebase-adminsdk")) && extension == "json") ||
