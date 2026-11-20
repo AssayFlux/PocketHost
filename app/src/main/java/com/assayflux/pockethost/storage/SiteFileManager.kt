@@ -180,6 +180,7 @@ object SiteFileManager {
         val parts = value.split('/')
         require(parts.none { it.isBlank() || it == "." || it == ".." }) { "Path traversal and empty path segments are not allowed." }
         require(parts.none { it.any(Char::isISOControl) }) { "The file path contains unsupported characters." }
+        SensitivePathPolicy.requireSafePath(value)
         val target = File(root, value)
         val rootPath = root.canonicalPath
         val canonical = target.canonicalFile
