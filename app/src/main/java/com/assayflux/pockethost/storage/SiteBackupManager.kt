@@ -13,6 +13,7 @@ import java.io.IOException
 import java.security.SecureRandom
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.CipherInputStream
 import javax.crypto.CipherOutputStream
@@ -35,6 +36,7 @@ object SiteBackupManager {
     private const val MAX_DEPTH = WebsiteLimits.MAX_DEPTH
 
     fun export(context: Context, destination: Uri, passphrase: CharArray): Boolean {
+        val temporary = File(context.cacheDir, "pockethost-site-backup-${UUID.randomUUID()}.tmp")
         try {
         require(passphrase.size >= 12) { "Use a backup passphrase with at least 12 characters." }
         if (NativeEngine.status() == "RUNNING") throw IOException("Stop hosting before exporting a website backup.")
@@ -47,9 +49,7 @@ object SiteBackupManager {
         val nonce = ByteArray(NONCE_BYTES).also(SecureRandom()::nextBytes)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, deriveKey(passphrase, salt), GCMParameterSpec(128, nonce))
-        val output = context.contentResolver.openOutputStream(destination)
-            ?: throw IOException("Cannot open the selected backup destination.")
-        val header = DataOutputStream(output)
+        val header = DataOutputStream(temporary.outputStream())
         header.write(MAGIC)
         header.write(salt)
         header.write(nonce)
@@ -97,8 +97,16 @@ object SiteBackupManager {
                 }
             }
         }
+        // Build the complete archive before opening the destination, so validation failures
+        // never truncate a previously valid backup selected by the owner.
+        val output = context.contentResolver.openOutputStream(destination)
+            ?: throw IOException("Cannot open the selected backup destination.")
+        output.use { destinationStream ->
+            temporary.inputStream().use { source -> source.copyTo(destinationStream) }
+        }
         return true
         } finally {
+            temporary.delete()
             passphrase.fill('\u0000')
         }
     }

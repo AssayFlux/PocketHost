@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.sites.SiteRegistry
 import com.assayflux.pockethost.storage.ApplicationBackupManager
+import com.assayflux.pockethost.storage.SiteBackupManager
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -89,6 +90,37 @@ class ApplicationBackupCustomRootTest {
             rollbackBackup.delete()
             invalidBackup.delete()
             siteBefore.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun failedSiteBackupExportPreservesExistingDestination() {
+        val suffix = System.nanoTime().toString()
+        val siteRoot = File(context.filesDir, "site")
+        val previousSite = File(context.cacheDir, "site-before-failed-backup-$suffix")
+        val hadSite = siteRoot.isDirectory
+        if (hadSite) siteRoot.copyRecursively(previousSite, overwrite = true)
+        val outside = File(context.cacheDir, "outside-site-backup-$suffix.txt")
+        val destination = File(context.cacheDir, "existing-site-backup-$suffix.afphb")
+        val sentinel = "previous-valid-site-backup".toByteArray()
+        try {
+            siteRoot.deleteRecursively()
+            check(siteRoot.mkdirs())
+            File(siteRoot, "index.html").writeText("<h1>site</h1>")
+            outside.writeText("outside private content")
+            java.nio.file.Files.createSymbolicLink(File(siteRoot, "linked-outside.txt").toPath(), outside.toPath())
+            destination.writeBytes(sentinel)
+            val failure = runCatching {
+                SiteBackupManager.export(context, Uri.fromFile(destination), "site-backup-passphrase".toCharArray())
+            }.exceptionOrNull()
+            assertNotNull("Backup export must reject symbolic links.", failure)
+            assertTrue("A failed backup must not truncate an existing destination.", destination.readBytes().contentEquals(sentinel))
+        } finally {
+            siteRoot.deleteRecursively()
+            if (hadSite && previousSite.isDirectory) previousSite.copyRecursively(siteRoot, overwrite = true)
+            outside.delete()
+            destination.delete()
+            previousSite.deleteRecursively()
         }
     }
 
