@@ -54,6 +54,9 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, displayName)
         require(!target.exists()) { "A file or folder already exists at this path." }
+        require(root.toPath().relativize(target.toPath()).nameCount <= WebsiteLimits.MAX_DEPTH) {
+            "Website folder nesting is limited to 32 levels."
+        }
         val parent = target.parentFile ?: error("Invalid destination path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the destination folder." }
         val before = usage(root)
@@ -110,6 +113,9 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, relativePath)
         require(!target.exists()) { "A file or folder already exists at this path." }
+        require(root.toPath().relativize(target.toPath()).nameCount <= WebsiteLimits.MAX_DEPTH) {
+            "Website folder nesting is limited to 32 levels."
+        }
         val parent = target.parentFile ?: error("Invalid file path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the parent folder." }
         ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
