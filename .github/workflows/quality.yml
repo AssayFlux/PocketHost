@@ -64,6 +64,7 @@ jobs:
           POCKETHOST_CONTROL_TUNNEL_TOKEN: ci-only-cloudflare-tunnel-token
         run: |
           docker pull cloudflare/cloudflared:2026.11.0
+          grep -Fq "./trusted-proxy.caddy:/etc/caddy/trusted-proxy.caddy:ro" control-plane/compose.yaml
           docker compose --profile public -f control-plane/compose.yaml config --quiet
           docker compose --profile cloudflare -f control-plane/compose.yaml config --quiet
 
