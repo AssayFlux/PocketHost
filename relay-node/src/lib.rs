@@ -1243,7 +1243,7 @@ mod tests {
         let token = "restart-recovery-test-token";
         let database_path = std::env::temp_dir()
             .join(format!("pockethost-relay-restart-{}.db", Uuid::new_v4()));
-        let config = RelayConfig {
+        let make_config = || RelayConfig {
             bind_address: "127.0.0.1".into(),
             http_port: 8082,
             https_port: 8444,
@@ -1261,7 +1261,7 @@ mod tests {
             routes: Vec::new(),
         };
 
-        let first = RelayState::from_config(config.clone(), database_path.to_str().unwrap())
+        let first = RelayState::from_config(make_config(), database_path.to_str().unwrap())
             .await
             .unwrap();
         assert_eq!(first.authenticate(token), Some(device_id));
@@ -1284,7 +1284,7 @@ mod tests {
         // replaying it against a new host session after process restart.
         assert!(pending_receiver.await.is_err());
 
-        let restarted = RelayState::from_config(config, database_path.to_str().unwrap())
+        let restarted = RelayState::from_config(make_config(), database_path.to_str().unwrap())
             .await
             .unwrap();
         assert_eq!(restarted.authenticate(token), Some(device_id));
