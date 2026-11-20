@@ -92,7 +92,7 @@ class SiteImporterStreamSmokeTest {
                 ".kube/config",
                 "secrets/service-account-prod.json",
                 "tls/server.key",
-                ".env.production"
+                ".env.production",\n                "credentials.json",\n                ".config/gcloud/application_default_credentials.json",\n                "service_account.json",\n                "firebase-adminsdk-prod.json",\n                ".azure/accessTokens.json",\n                ".terraform/terraform.tfstate"
             )
             forbidden.forEach { path ->
                 val archive = zipOf("index.html" to "ok", path to "secret")
