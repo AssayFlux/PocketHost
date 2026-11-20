@@ -54,6 +54,8 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, displayName)
         require(!target.exists()) { "A file or folder already exists at this path." }
+        val parent = target.parentFile ?: error("Invalid destination path.")
+        require(parent.mkdirs() || parent.isDirectory) { "Could not create the destination folder." }
         val before = usage(root)
         require(before.files < WebsiteLimits.MAX_FILES && before.entries < WebsiteLimits.MAX_ENTRIES) {
             "The website has reached its file or entry limit."
@@ -61,8 +63,6 @@ object SiteFileManager {
         require(root.toPath().relativize(target.toPath()).nameCount <= WebsiteLimits.MAX_DEPTH) {
             "Website folder nesting is limited to 32 levels."
         }
-        val parent = target.parentFile ?: error("Invalid destination path.")
-        require(parent.mkdirs() || parent.isDirectory) { "Could not create the destination folder." }
         SensitivePathPolicy.requireSafeResolvedPath(root, target)
         val temporary = File(parent, "." + target.name + "." + UUID.randomUUID() + ".upload")
         var total = 0L
@@ -113,6 +113,7 @@ object SiteFileManager {
         ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val parent = target.parentFile ?: error("Invalid file path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the parent folder." }
+        ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val safeTarget = resolve(root, relativePath)
         val temporary = File(parent, "." + target.name + ".pockethost-tmp")
         temporary.delete()
@@ -147,6 +148,7 @@ object SiteFileManager {
         val root = root(context)
         val source = resolve(root, sourcePath)
         val destination = resolve(root, destinationPath)
+        usage(root)
         require(source.exists()) { "The selected file or folder no longer exists." }
         require(source.canonicalFile != root) { "The website root cannot be renamed." }
         require(!destination.exists()) { "A file or folder already exists at the new path." }
@@ -229,6 +231,8 @@ object SiteFileManager {
         }.forEach { file ->
             if (file == root) return@forEach
             require(!java.nio.file.Files.isSymbolicLink(file.toPath())) { "Symbolic links are not supported inside website roots." }
+            val relative = root.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/')
+            SensitivePathPolicy.requireSafePath(relative)
             entries++
             require(entries <= WebsiteLimits.MAX_ENTRIES) { "The website has too many files and folders." }
             if (file.isDirectory) Unit else if (file.isFile) {
