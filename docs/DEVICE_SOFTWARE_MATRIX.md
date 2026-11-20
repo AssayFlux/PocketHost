@@ -8,7 +8,7 @@
 |---|---|---|---|
 | Android phone/tablet | Pocket Host main APK | Kotlin/Compose app, Rust JNI hosting, site management, diagnostics and service foundations | v0.1.0 |
 | Android runtime provider | Separate runtime-worker APK | Existing CPython 3.11 and Node.js 24.22.1 implementations, shipped together | v0.1.1 |
-| Android phone/tablet | Pocket Host native Relay service | Planned Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK; implementation and device acceptance remain open | v0.1.0 |
+| Android phone/tablet | Pocket Host native Relay service | Kotlin foreground service + Rust/Tokio JNI gateway, owner pairing/credentials, durable node state, DNS TXT proof and ACME/TLS are implemented in the main APK; physical-device and independent public-network acceptance remain open | v0.1.0 |
 | Linux home server / mini PC | AssayFlux Relay Node | No standalone Relay Node package exists; Linux-native package, installer and service lifecycle are deferred to v0.1.1 | v0.1.1 target |
 | Browser | web-console | React/TypeScript/Vite operator console; Relay hostname panel source exists but is not a standalone gateway | v0.1.2 full console; minimal Relay setup in v0.1.0 |
 | Linux x86_64 | Linux Node Agent | Preview Python package with SQLite jobs and HTTPS polling | v0.1.2 |
