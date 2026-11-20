@@ -57,13 +57,11 @@ internal fun HostingScheduleCard(context: Context) {
                     value = start, onValueChange = { start = it.take(5) },
                     label = { Text("Server ON") }, placeholder = { Text("08:00") },
                     singleLine = true, modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 OutlinedTextField(
                     value = stop, onValueChange = { stop = it.take(5) },
                     label = { Text("Server OFF") }, placeholder = { Text("22:00") },
                     singleLine = true, modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             }
             Button(onClick = {
