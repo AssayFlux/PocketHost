@@ -14,8 +14,10 @@ class SiteRegistrySecurityTest {
     fun rejectsPrivateStorageRootAndOverlappingSiteRoots() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val suffix = System.nanoTime().toString()
-        val parent = File(context.filesDir, "site-roots/isolation-$suffix")
+        val siteRoots = File(context.filesDir, "site-roots")
+        val parent = File(siteRoots, "isolation-$suffix")
         val nested = File(parent, "nested")
+        val alias = File(siteRoots, "alias-$suffix")
         val parentId = "isolation_parent_$suffix"
         val nestedId = "isolation_nested_$suffix"
         try {
@@ -36,9 +38,20 @@ class SiteRegistrySecurityTest {
                 context.filesDir.absolutePath, emptyList(), true)
             assertTrue("The app files directory must never be served as a website.",
                 runCatching { SiteRegistry.put(context, privateRootSite) }.isFailure)
+            val siteRootsParent = SiteRegistry.Site("site_roots_parent_$suffix", "Site roots parent", "static",
+                siteRoots.absolutePath, emptyList(), true)
+            assertTrue("The custom-sites parent must never be served as a website.",
+                runCatching { SiteRegistry.put(context, siteRootsParent) }.isFailure)
+
+            java.nio.file.Files.createSymbolicLink(alias.toPath(), parent.toPath())
+            val aliasedRoot = SiteRegistry.Site("aliased_root_$suffix", "Aliased root", "static",
+                alias.absolutePath, emptyList(), true)
+            assertTrue("Symlink path components must be rejected.",
+                runCatching { SiteRegistry.put(context, aliasedRoot) }.isFailure)
         } finally {
             SiteRegistry.remove(context, parentId)
             SiteRegistry.remove(context, nestedId)
+            java.nio.file.Files.deleteIfExists(alias.toPath())
             parent.deleteRecursively()
         }
     }
