@@ -53,25 +53,12 @@ concurrency:
 jobs:
   relay-rust:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
-      - name: Generate Relay dependency lockfile
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - name: Test native Relay engine on the CI host
         run: cargo test --manifest-path relay-node/Cargo.toml --locked
-      - name: Commit initial Relay lockfile when it is first generated
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add relay-node/Cargo.lock
-          if ! git diff --cached --quiet; then
-            git commit -m "build(relay): lock native gateway dependencies"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
       - name: Preserve generated Relay lockfile for review
         uses: actions/upload-artifact@v4
         with:
@@ -88,8 +75,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
-      - name: Resolve Relay dependency lockfile
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - name: Test native Relay engine without write credentials
         run: cargo test --manifest-path relay-node/Cargo.toml --locked
       - uses: actions/upload-artifact@v4
@@ -114,8 +99,6 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
-      - name: Resolve Relay lockfile for Android target
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - name: Build native Relay for all declared Android ABIs
         working-directory: relay-node
         run: |
@@ -189,8 +172,6 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
-      - name: Generate Relay dependency lockfile
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -226,8 +207,6 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
-      - name: Generate Relay dependency lockfile
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -342,8 +321,6 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
-      - name: Generate Relay dependency lockfile
-        run: cargo generate-lockfile --manifest-path relay-node/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
