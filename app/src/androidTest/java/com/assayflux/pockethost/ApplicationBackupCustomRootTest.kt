@@ -133,6 +133,104 @@ class ApplicationBackupCustomRootTest {
     }
 
     @Test
+    fun restoreRejectsDuplicateCentralDirectoryPathsBeforeActivation() {
+        val suffix = System.nanoTime().toString()
+        val siteRoot = File(context.filesDir, "site")
+        val previous = File(context.cacheDir, "duplicate-entry-before-$suffix")
+        val backup = File(context.cacheDir, "duplicate-entry-source-$suffix.afphb")
+        val malformed = File(context.cacheDir, "duplicate-entry-malformed-$suffix.afphb")
+        val hadSite = siteRoot.isDirectory
+        if (hadSite) siteRoot.copyRecursively(previous, overwrite = true)
+        val passphrase = "duplicate-entry-passphrase"
+        try {
+            siteRoot.deleteRecursively()
+            check(siteRoot.mkdirs())
+            File(siteRoot, "index.html").writeText("<h1>active site survives duplicate archive entry</h1>")
+            assertTrue(ApplicationBackupManager.export(context, Uri.fromFile(backup), passphrase.toCharArray()))
+            rewriteWithDuplicateArchivePath(backup, malformed, passphrase.toCharArray())
+
+            val failure = runCatching {
+                ApplicationBackupManager.restore(context, Uri.fromFile(malformed), passphrase.toCharArray())
+            }.exceptionOrNull()
+            assertNotNull("Duplicate ZIP central-directory paths must be rejected.", failure)
+            assertEquals("<h1>active site survives duplicate archive entry</h1>", File(siteRoot, "index.html").readText())
+        } finally {
+            siteRoot.deleteRecursively()
+            if (hadSite && previous.isDirectory) previous.copyRecursively(siteRoot, overwrite = true)
+            previous.deleteRecursively()
+            backup.delete()
+            malformed.delete()
+        }
+    }
+
+    private fun rewriteWithDuplicateArchivePath(
+        source: File,
+        destination: File,
+        passphrase: CharArray
+    ) {
+        val bytes = source.readBytes()
+        val magic = "AFPHB02\\n".toByteArray(Charsets.US_ASCII)
+        require(bytes.size > magic.size + 28)
+        require(bytes.copyOfRange(0, magic.size).contentEquals(magic))
+        val salt = bytes.copyOfRange(magic.size, magic.size + 16)
+        val nonce = bytes.copyOfRange(magic.size + 16, magic.size + 28)
+        val cipherText = bytes.copyOfRange(magic.size + 28, bytes.size)
+        val plainZip = crypt(Cipher.DECRYPT_MODE, cipherText, passphrase, salt, nonce)
+        val entries = mutableListOf<Pair<String, Pair<Boolean, ByteArray>>>()
+        ZipInputStream(ByteArrayInputStream(plainZip)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                entries += entry.name to (entry.isDirectory to if (entry.isDirectory) ByteArray(0) else zip.readBytes())
+                zip.closeEntry()
+            }
+        }
+        entries += "site/duplicate-a.txt" to (false to "first".toByteArray(Charsets.UTF_8))
+        entries += "site/duplicate-b.txt" to (false to "second".toByteArray(Charsets.UTF_8))
+        val rewrittenZip = ByteArrayOutputStream().use { buffer ->
+            ZipOutputStream(buffer).use { zip ->
+                entries.forEach { (name, data) ->
+                    zip.putNextEntry(ZipEntry(name))
+                    if (!data.first) zip.write(data.second)
+                    zip.closeEntry()
+                }
+            }
+            buffer.toByteArray()
+        }
+        val from = "site/duplicate-b.txt".toByteArray(Charsets.US_ASCII)
+        val to = "site/duplicate-a.txt".toByteArray(Charsets.US_ASCII)
+        require(from.size == to.size)
+        var cursor = 0
+        var replacements = 0
+        while (cursor <= rewrittenZip.size - from.size) {
+            var matches = true
+            for (offset in from.indices) {
+                if (rewrittenZip[cursor + offset] != from[offset]) {
+                    matches = false
+                    break
+                }
+            }
+            if (matches) {
+                System.arraycopy(to, 0, rewrittenZip, cursor, to.size)
+                replacements++
+                cursor += to.size
+            } else {
+                cursor++
+            }
+        }
+        require(replacements == 2) { "Expected to rewrite both ZIP local and central directory names, found $replacements." }
+        val newSalt = ByteArray(16).also(SecureRandom()::nextBytes)
+        val newNonce = ByteArray(12).also(SecureRandom()::nextBytes)
+        val encrypted = crypt(Cipher.ENCRYPT_MODE, rewrittenZip, passphrase, newSalt, newNonce)
+        DataOutputStream(destination.outputStream()).use { output ->
+            output.write(magic)
+            output.write(newSalt)
+            output.write(newNonce)
+            output.write(encrypted)
+        }
+        passphrase.fill('\\u0000')
+    }
+
+    @Test
     fun wrongPassphraseAndCiphertextTamperingFailBeforeChangingActiveSite() {
         val suffix = System.nanoTime().toString()
         val siteRoot = File(context.filesDir, "site")
