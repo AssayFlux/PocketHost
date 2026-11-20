@@ -199,3 +199,12 @@ The latest Android acceptance failure occurred inside Batik's `PNGTranscoder` be
 Implementation commit: `2980fec7df4e5f2a92fe4996b812c612cb2087b2`.
 
 The Android acceptance workflow watches `buildSrc/**`, so this Alpha push should start a fresh workflow run automatically. Confirm that the icon-generation task passes before treating the repair as verified or proceeding to APK assembly.
+
+
+## 14. Batik artifact resolution follow-up — 2026-11-20
+
+The first codec-dependency repair did not reach lint or icon generation: Gradle reported that Maven Central could not resolve `org.apache.xmlgraphics:batik-codec:1.19` from its requested POM URL. Although artifact indexes list the 1.19 module, the actual Alpha runner did not resolve it. To avoid repeating that failing resolution, `buildSrc` now aligns both `batik-transcoder` and `batik-codec` on the published Batik 1.20 release.
+
+Commit: `0efb6a379d7345131d4b30a91f6ba8956e524f60`.
+
+This is a second dependency-resolution attempt, not a verified fix. The next Android acceptance run must demonstrate successful dependency resolution, `:buildSrc:compileJava`, launcher PNG generation, and the lint/JVM test tasks before the rasterizer issue can be considered closed.
