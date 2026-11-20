@@ -110,7 +110,6 @@ object SiteFileManager {
         val root = root(context)
         val target = resolve(root, relativePath)
         require(!target.exists()) { "A file or folder already exists at this path." }
-        ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())
         val parent = target.parentFile ?: error("Invalid file path.")
         require(parent.mkdirs() || parent.isDirectory) { "Could not create the parent folder." }
         ensureFileBudget(root, target, content.toByteArray(Charsets.UTF_8).size.toLong())

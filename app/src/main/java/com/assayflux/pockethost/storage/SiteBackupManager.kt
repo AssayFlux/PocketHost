@@ -38,7 +38,10 @@ object SiteBackupManager {
         try {
         require(passphrase.size >= 12) { "Use a backup passphrase with at least 12 characters." }
         if (NativeEngine.status() == "RUNNING") throw IOException("Stop hosting before exporting a website backup.")
-        val root = File(context.filesDir, "site").canonicalFile
+        val siteDirectory = File(context.filesDir, "site")
+        if (java.nio.file.Files.isSymbolicLink(siteDirectory.toPath())) throw IOException("Website root cannot be a symbolic link.")
+        val root = siteDirectory.canonicalFile
+        if (root.parentFile != context.filesDir.canonicalFile) throw IOException("Website root must remain inside PocketHost private storage.")
         if (!File(root, "index.html").isFile) throw IOException("There is no deployed website to back up.")
         val salt = ByteArray(SALT_BYTES).also(SecureRandom()::nextBytes)
         val nonce = ByteArray(NONCE_BYTES).also(SecureRandom()::nextBytes)
@@ -72,7 +75,7 @@ object SiteBackupManager {
                 if (depth > MAX_DEPTH) throw IOException("Website folder nesting exceeds the backup limit.")
                 parts.forEach(::validateBackupName)
                 counter.entries++
-                if (counter.entries > 10_000) throw IOException("Website contains too many files and folders for backup.")
+                if (counter.entries > WebsiteLimits.MAX_ENTRIES) throw IOException("Website contains too many files and folders for backup.")
                 if (file.isDirectory) {
                     zip.putNextEntry(ZipEntry("site/$relative/"))
                     zip.closeEntry()
