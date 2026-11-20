@@ -9,14 +9,12 @@ import androidx.test.uiautomator.Until
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.FileInputStream
 
 @RunWith(AndroidJUnit4::class)
 class PocketHostFontScaleAccessibilityTest {
     private fun shell(instrumentation: android.app.Instrumentation, command: String): String {
         val descriptor = instrumentation.uiAutomation.executeShellCommand(command)
-        return FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText() }
-            .also { descriptor.close() }
+        return android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor).bufferedReader().use { it.readText() }
     }
 
     @Test
