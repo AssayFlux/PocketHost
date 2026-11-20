@@ -48,7 +48,7 @@ object SiteRegistry {
             require(validated.map { it.id }.distinct().size == validated.size)
             val allHosts = validated.flatMap { it.hostnames }
             require(allHosts.size <= WebsiteLimits.MAX_HOSTNAME_ROUTES && allHosts.distinct().size == allHosts.size)
-            require(validated.count { it.runtime == "node" }.let { it <= 1 })
+            require(validated.filter { it.runtime == "node" }.map { it.root }.distinct().size <= 1)
             for (i in validated.indices) {
                 for (j in i + 1 until validated.size) {
                     val left = File(validated[i].root).toPath()
