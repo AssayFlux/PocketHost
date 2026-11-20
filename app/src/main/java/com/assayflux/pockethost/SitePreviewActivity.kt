@@ -9,21 +9,25 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
 import com.assayflux.pockethost.ui.theme.PocketHostTheme
 
 class SitePreviewActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val port = getSharedPreferences("pockethost_state", MODE_PRIVATE).getInt("port", 8080)
         val localUrl = "http://127.0.0.1:$port/"
         setContent {
             PocketHostTheme {
-                Column(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                     Text("Site preview", modifier = Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge)
                     AndroidView(
