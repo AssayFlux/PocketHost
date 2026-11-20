@@ -56,6 +56,7 @@ class NativeRelayService : Service() {
                 activeNetwork = null
                 if (ownerRequestedRunning) {
                     worker.execute {
+                        cancelRetry(resetAttempts = false)
                         if (!ownerRequestedRunning || stopping) return@execute
                         val result = runCatching { NativeRelay.stop() }.getOrElse { "ERROR: ${it.message}" }
                         OperationalLog.record(this@NativeRelayService, "WARN", "NATIVE_RELAY_NETWORK_LOST",
