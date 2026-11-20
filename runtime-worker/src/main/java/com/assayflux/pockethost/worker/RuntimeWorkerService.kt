@@ -74,7 +74,7 @@ class RuntimeWorkerService : Service() {
     }
 
     private fun isSensitiveProjectPath(relativePath: String): Boolean {
-        val normalized = relativePath.replace('\\\\', '/').lowercase(java.util.Locale.ROOT)
+        val normalized = relativePath.replace('\\', '/').lowercase(java.util.Locale.ROOT)
         val segments = normalized.split('/').filter { it.isNotEmpty() }
         val name = segments.lastOrNull().orEmpty()
         if (segments.any { it in setOf(
