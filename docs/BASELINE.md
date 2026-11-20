@@ -208,3 +208,17 @@ The first codec-dependency repair did not reach lint or icon generation: Gradle 
 Commit: `0efb6a379d7345131d4b30a91f6ba8956e524f60`.
 
 This is a second dependency-resolution attempt, not a verified fix. The next Android acceptance run must demonstrate successful dependency resolution, `:buildSrc:compileJava`, launcher PNG generation, and the lint/JVM test tasks before the rasterizer issue can be considered closed.
+
+
+## 15. Separate Android quality and APK packaging workflows — 2026-11-20
+
+The Android CI responsibilities are now split into two independent workflows:
+
+- `.github/workflows/android-debug-apk.yml` is the push-triggered Android quality workflow. It runs Android lint, JVM unit-test tasks and the non-packaging Python runtime asset prerequisite check. It does not assemble APKs or run emulator instrumentation.
+- `.github/workflows/android-alpha-apk.yml` is the manually dispatched APK/ABI builder. Its ABI selector supports `all`, `arm64-v8a`, `armeabi-v7a` and `x86_64`. It builds the companion runtime-worker APK, builds the app APK for each selected ABI, verifies package metadata, debug signatures and native library payloads, calculates SHA-256 checksums and uploads a dedicated 30-day artifact.
+
+To build all app ABIs, open **Actions → PocketHost v0.1.0 Alpha APK and ABI packaging → Run workflow**, select branch `Alpha`, and leave ABI set to `all`. A single-ABI build can be selected when only one app target is needed. The companion worker APK is built on every invocation and is checked for all three Node native ABI payloads.
+
+The packaging workflow uses the Android debug signing identity and is for development/owner testing only. It does not create a production-signed release. Emulator instrumentation and physical-device acceptance remain separate verification activities.
+
+**Workflow separation commit:** this documents the intended split; a successful workflow run is required before claiming that any APK artifact exists.
