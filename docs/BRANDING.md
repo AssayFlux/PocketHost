@@ -6,8 +6,8 @@
 
 The supplied SVG is the canonical artwork. It is not replaced by a separately drawn logo or a text placeholder.
 
-- The Compose owner header and navigation sidebar render the SVG through AndroidSVG.
-- Gradle copies the SVG into the app's generated assets directory as `pocket-host-logo.svg`.
+- The Compose owner header and navigation sidebar use the generated `ic_launcher_artwork` resource.
+- SVG rasterization happens at build time; the large vector is not parsed on the Android main thread and is not duplicated into the APK assets directory.
 - The app manifest uses the Pocket Host label and references the launcher icon resources.
 
 ## Launcher asset generation

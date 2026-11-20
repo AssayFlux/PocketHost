@@ -159,6 +159,6 @@ Implementation commits:
 - `c8bb01a` — correct density scaling and use the padded artwork as the adaptive foreground.
 - `ece9832` — route the legacy launcher resource to the generated canonical SVG artwork.
 
-The build task produces legacy 48dp icons and 72dp adaptive foreground artwork for mdpi, hdpi, xhdpi, xxhdpi and xxxhdpi. The adaptive foreground is inset by 18dp inside the 108dp adaptive viewport. The original SVG remains the sole artwork source; no manually substituted brand mark is used. The same source SVG is copied into app assets and rendered in the Compose app chrome.
+The build task produces legacy 48dp icons and 72dp adaptive foreground artwork for mdpi, hdpi, xhdpi, xxhdpi and xxxhdpi. The adaptive foreground is inset by 18dp inside the 108dp adaptive viewport. The original SVG remains the sole artwork source; no manually substituted brand mark is used. The same source SVG is rasterized at build time and the generated artwork resource is reused in the Compose app chrome. This avoids runtime SVG parsing and avoids packaging a second full SVG copy.
 
 The Android integration workflow must validate the new buildSrc task, SVG rasterization, resource merge and Kotlin compilation. Until that workflow completes successfully, these changes are **implemented but not CI-verified**. No APK was assembled. Device appearance, launcher mask behavior and actual runtime SVG rendering remain device-acceptance checks.

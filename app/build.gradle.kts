@@ -67,7 +67,6 @@ android {
     }
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
     sourceSets["main"].jniLibs.srcDir(relayJniOutput)
-    sourceSets["main"].assets.srcDir(generatedBrandAssets)
     sourceSets["main"].res.srcDir(generatedBrandResources)
     signingConfigs {
         if (releaseSigningReady) {
@@ -99,7 +98,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 }
-tasks.named("preBuild").configure { dependsOn(buildRustAndroid, buildNativeRelayAndroid, copyPocketHostBrandAsset, generatePocketHostLauncherIcons) }
+tasks.named("preBuild").configure { dependsOn(buildRustAndroid, buildNativeRelayAndroid, generatePocketHostLauncherIcons) }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.10.0")
@@ -108,8 +107,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.core:core-ktx:1.15.0")
-    implementation("com.caverock:androidsvg-aar:1.4")
-    implementation("androidx.biometric:biometric:1.1.0")
+        implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     androidTestImplementation("androidx.test:runner:1.6.2")
