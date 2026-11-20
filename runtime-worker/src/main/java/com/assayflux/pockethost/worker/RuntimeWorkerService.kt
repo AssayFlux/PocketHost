@@ -147,6 +147,10 @@ class RuntimeWorkerService : Service() {
                         !isSensitiveProjectPath(name)) {
                         "Project archive contains an unsafe path."
                     }
+                    require(name.length <= MAX_PROJECT_PATH_CHARS &&
+                        name.split('/').size <= MAX_PROJECT_PATH_DEPTH) {
+                        "Project archive path exceeds the 1,024-character or 32-level limit."
+                    }
                     val segments = name.split('/')
                     var parent = ""
                     for (segment in segments.dropLast(1)) {

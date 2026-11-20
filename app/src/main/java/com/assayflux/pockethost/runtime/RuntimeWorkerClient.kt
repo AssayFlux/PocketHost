@@ -42,7 +42,10 @@ object RuntimeWorkerClient {
     private const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
     private const val EXPECTED_PROTOCOL_VERSION = 1
     private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
+    private const val MAX_PROJECT_FILE_BYTES = 64L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRIES = 10_000
+    private const val MAX_PROJECT_PATH_DEPTH = 32
+    private const val MAX_PROJECT_PATH_CHARS = 1_024
 
     private fun workerIntent() = Intent().setComponent(ComponentName(WORKER_PACKAGE, WORKER_SERVICE))
 
@@ -241,15 +244,21 @@ object RuntimeWorkerClient {
                         val relative = canonicalRoot.toPath().relativize(path).toString().replace(File.separatorChar, '/')
                         if (relative == ".git" || relative.startsWith(".git/") ||
                             relative == "__pycache__" || relative.startsWith("__pycache__/") ||
-                            relative.startsWith(".pockethost/") || isSensitiveProjectPath(relative)) return@forEach
+                            relative == ".pockethost" || relative.startsWith(".pockethost/") ||
+                            isSensitiveProjectPath(relative)) return@forEach
+                        require(relative.length <= MAX_PROJECT_PATH_CHARS &&
+                            relative.split('/').size <= MAX_PROJECT_PATH_DEPTH) {
+                            "Runtime project path exceeds the 1,024-character or 32-level limit."
+                        }
                         require(!Files.isSymbolicLink(path)) { "Runtime project contains a symbolic link; remove it before transfer." }
                         entries++
-                        require(entries <= MAX_ARCHIVE_ENTRIES) { "Runtime project contains too many files." }
+                        require(entries <= MAX_ARCHIVE_ENTRIES) { "Runtime project contains too many files and directories." }
                         if (Files.isDirectory(path)) {
                             zip.putNextEntry(ZipEntry("$relative/"))
                             zip.closeEntry()
                         } else if (Files.isRegularFile(path)) {
                             val size = Files.size(path)
+                            require(size <= MAX_PROJECT_FILE_BYTES) { "Runtime project contains a file larger than the 64 MiB transfer limit." }
                             totalBytes += size
                             require(totalBytes <= MAX_PROJECT_BYTES) { "Runtime project exceeds the 256 MiB transfer limit." }
                             zip.putNextEntry(ZipEntry(relative))

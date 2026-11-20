@@ -12,7 +12,7 @@ object PythonHostRuntime {
     private fun configure(context: Context) {
         val memory = android.app.ActivityManager.MemoryInfo()
         context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(memory)
-        val automaticWorkers = (memory.totalMem / (512L * 1024L * 1024L)).toInt().coerceIn(4, 16)
+        val automaticWorkers = (memory.totalMem / (1024L * 1024L * 1024L)).toInt().coerceIn(2, 8)
         val workers = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             .getInt("python_max_workers", automaticWorkers).coerceIn(2, 16)
         RuntimeWorkerClient.configurePython(context, workers)

@@ -67,17 +67,19 @@ object RemoteControlAgent {
         val encrypted = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
         val packed = cipher.iv + encrypted
         if (restartAgent) stop()
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("endpoint", uri.toString())
             .putString("token", Base64.encodeToString(packed, Base64.NO_WRAP))
-            .apply()
+            .commit()
+        check(saved) { "Could not persist remote-control credentials." }
         if (restartAgent) start(context)
     }
 
     @Synchronized
     fun clear(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
         stop()
+        val cleared = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+        check(cleared) { "Could not persist remote-control credential revocation." }
     }
 
     @Synchronized
@@ -145,12 +147,17 @@ object RemoteControlAgent {
         for (index in 0 until commands.length()) {
             val command = commands.getJSONObject(index)
             val id = command.optString("id")
+            if (!id.matches(Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))) {
+                OperationalLog.record(context, "WARN", "REMOTE_COMMAND_REJECTED",
+                    "Control plane supplied a command with an invalid identifier.")
+                continue
+            }
             val kind = command.optString("kind")
             val payload = command.optJSONObject("payload") ?: JSONObject()
             val commandPrefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            val processed = runCatching {
-                JSONObject(commandPrefs.getString("processed_commands", "{}") ?: "{}")
-            }.getOrDefault(JSONObject())
+            // Corrupt idempotency state is a fail-closed condition: silently resetting
+            // it could replay a non-idempotent command after process death.
+            val processed = JSONObject(commandPrefs.getString("processed_commands", "{}") ?: "{}")
             val saved = processed.optJSONObject(id)
             val outcome = when {
                 saved?.optString("_state") == "started" ->
@@ -160,7 +167,9 @@ object RemoteControlAgent {
                     // Persist a start marker before side effects. If Android kills the
                     // process mid-command, a lease retry must not execute it twice.
                     processed.put(id, JSONObject().put("_state", "started"))
-                    commandPrefs.edit().putString("processed_commands", processed.toString()).commit()
+                    check(commandPrefs.edit().putString("processed_commands", processed.toString()).commit()) {
+                        "Could not durably record the remote command start marker; command was not executed."
+                    }
                     runCatching {
                         if (kind == "deploy_site") {
                             val artifactId = payload.getString("artifactId")
@@ -181,10 +190,14 @@ object RemoteControlAgent {
                 processed.remove(oldest)
             }
             // Persist the final result before acknowledging; a lost ACK is safe to retry.
-            commandPrefs.edit().putString("processed_commands", processed.toString()).commit();
+            check(commandPrefs.edit().putString("processed_commands", processed.toString()).commit()) {
+                "Could not durably save the remote command result; acknowledgement withheld."
+            }
             val success = outcome.optInt("status", 500) in 200..299
             if (success && kind == "apply_config") {
-                commandPrefs.edit().putLong("config_version", payload.optLong("version", 0L)).commit()
+                check(commandPrefs.edit().putLong("config_version", payload.optLong("version", 0L)).commit()) {
+                    "Could not durably save the applied remote configuration version."
+                }
             }
             runCatching {
                 post(endpoint, token, "/v1/device/commands/$id/ack",
