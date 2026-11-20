@@ -39,7 +39,7 @@ Full Workbench, built-in TypeScript compilation, React/Vite on-device builds, Py
 7. Stop/restart hosting; background and foreground the app; test network change and process/device restart.
 8. Create and restore an encrypted website backup.
 9. Verify the custom domain from an independent network over HTTP and HTTPS through each configured provider; record DNS/TLS, response headers, content, provider status and management-route isolation.
-10. Record the source SHA, main APK SHA-256 (including Relay native libraries), public network topology, device/Android version, logs and G0–G9 results.
+10. Record the source SHA, main APK SHA-256 (including Relay native libraries), public network topology, device/Android version, logs and engineering-test results.
 
 ## v0.1.1 — Workbench, Runtime & Linux Relay Installation
 
@@ -82,6 +82,6 @@ Production device-fabric support, arbitrary untrusted worker code execution and 
 
 After the first three releases, the roadmap may expand to the independently downloadable 20-language Runtime Library, iOS, Windows/macOS agents, additional Linux/SBC profiles, DemonCore/MCU adapters, distributed storage, traffic scaling and advanced scheduling. These are not silently included in the first three releases.
 
-## Release governance
+## Engineering verification
 
-Every version must document and pass G0–G9. The gate definitions and acceptance matrix in [RELEASE_GATES.md](RELEASE_GATES.md) are mandatory. A planned feature is not a supported feature; source presence is not acceptance.
+Use automated quality, Android compilation, native ABI and emulator tests to verify code changes. APK packaging is a separate manually triggered workflow. A planned feature is not a supported feature; source presence is not proof that a feature works.

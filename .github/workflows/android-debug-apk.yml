@@ -1,0 +1,125 @@
+name: PocketHost Android debug APK build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pockethost-android-debug-apk
+  cancel-in-progress: false
+
+jobs:
+  build-debug-apks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools ndk;27.2.12479018"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Build cloudflared Android native libraries
+        run: bash scripts/build-cloudflared-android.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
+      - name: Configure NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build separate ABI debug APKs
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pockethost-debug-apks"
+          ./gradlew :runtime-worker:assembleDebug
+          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$RUNNER_TEMP/pockethost-debug-apks/pockethost-runtime-worker-debug.apk"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            ./gradlew clean :app:assembleDebug -PpockethostAbi="$abi"
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/pockethost-debug-apks/app-$abi-debug.apk"
+          done
+          mkdir -p app/build/outputs/apk/debug
+          rm -f app/build/outputs/apk/debug/app-debug.apk
+          cp "$RUNNER_TEMP"/pockethost-debug-apks/*.apk app/build/outputs/apk/debug/
+      - name: Verify ABI-specific APK contents
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          count=0
+          worker="app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk"
+          worker_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$worker" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+          test -n "$worker_cert"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$worker" > "$RUNNER_TEMP/worker-badging.txt"
+          grep -Fq "package: name='com.assayflux.pockethost.worker'" "$RUNNER_TEMP/worker-badging.txt"
+          grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/worker-badging.txt"
+          unzip -Z1 "$worker" > "$RUNNER_TEMP/worker-contents.txt"
+          sha256sum "$worker"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            grep -Fxq "lib/$abi/libnode.so" "$RUNNER_TEMP/worker-contents.txt"
+            grep -Fxq "lib/$abi/libnodebridge.so" "$RUNNER_TEMP/worker-contents.txt"
+          done
+          for apk in app/build/outputs/apk/debug/app-*-debug.apk; do
+            count=$((count + 1))
+            case "$apk" in
+              *arm64-v8a*) abi=arm64-v8a ;;
+              *armeabi-v7a*) abi=armeabi-v7a ;;
+              *x86_64*) abi=x86_64 ;;
+              *) echo "Unexpected APK: $apk"; exit 1 ;;
+            esac
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/app-badging.txt"
+            grep -Fq "package: name='com.assayflux.pockethost'" "$RUNNER_TEMP/app-badging.txt"
+            grep -Fq "sdkVersion:'26'" "$RUNNER_TEMP/app-badging.txt"
+            unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libpockethost.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libassayflux_relay_node.so" "$RUNNER_TEMP/apk-contents.txt"
+            grep -Fxq "lib/$abi/libcloudflared.so" "$RUNNER_TEMP/apk-contents.txt"
+            cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk" | awk '/Signer #1 certificate SHA-256 digest:/{print $NF}')
+            test "$cert" = "$worker_cert" || { echo "App and companion debug certificates differ."; exit 1; }
+            sha256sum "$apk"
+          done
+          test "$count" -eq 3
+      # Publish each APK as a separate, small artifact. The combined ZIP
+      # exceeds the connector's reliable download size and can arrive truncated.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-arm64-v8a-debug
+          path: app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-armeabi-v7a-debug
+          path: app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-app-x86_64-debug
+          path: app/build/outputs/apk/debug/app-x86_64-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-runtime-worker-debug
+          path: app/build/outputs/apk/debug/pockethost-runtime-worker-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+

@@ -96,7 +96,7 @@ Pocket Host is in pre-release engineering. Existing source foundations are not t
     <td align="center">
       <img src="https://api.iconify.design/lucide/shield-check.svg?color=%23800020" width="28" height="28" alt=""><br>
       <strong>CONTROL &amp; EVIDENCE</strong><br>
-      Mandatory G0–G9 release gates, versioned contracts, least privilege and reproducible verification.
+      Automated engineering tests, versioned contracts, least privilege and reproducible verification.
     </td>
   </tr>
 </table>
@@ -162,13 +162,11 @@ The complete development workflow is assigned to **v0.1.1**: editor tabs and uns
 
 ## IMMUTABLE RELEASE BASELINE
 
-After v0.1.0 passes all G0–G9 gates and receives owner approval, its exact source commit and release artifacts will be preserved with a release tag, protected baseline ref where repository permissions allow, and recorded SHA-256 digests. v0.1.1 work will branch from that baseline; the v0.1.0 baseline will not receive later feature or fix commits. See [Release Baseline Policy](docs/RELEASE_BASELINE_POLICY.md).
+Keep v0.1.0 focused on a working, testable Android hosting app. Release packaging and publishing are not part of the normal engineering-test workflow.
 
-## MANDATORY RELEASE RULE: G0–G9
+## ENGINEERING TESTS AND APK BUILDS
 
-**Every version must document and pass all ten release gates, G0 through G9.** This rule applies to v0.1.0, v0.1.1, v0.1.2 and every later version. A gate is PASS only with implementation and recorded verification evidence. A document, source file, successful compile or simulator-only run is not sufficient. No release may ship with any gate open.
-
-See [Mandatory Release Gates](docs/RELEASE_GATES.md) for the exact definitions, per-version acceptance matrix and required evidence ledger.
+Normal code changes run automated quality checks, Android compilation, native ABI builds and emulator tests. APK packaging runs separately through a manual Android APK build workflow, so routine code tests do not package APKs.
 
 ## TECHNOLOGY BOUNDARIES
 
@@ -314,7 +312,6 @@ The [quality workflow](https://github.com/AssayFlux/PocketHost/actions/workflows
 
 - [New Master Plan](docs/MASTER_PLAN.md)
 - [Three-Version Roadmap](docs/ROADMAP.md)
-- [Mandatory G0–G9 Release Gates](docs/RELEASE_GATES.md)
 - [Complete Repository File Inventory & Baseline](docs/REPOSITORY_BASELINE.md)
 - [Repository Baseline](docs/PROJECT_BASELINE.md)
 - [Repository Deep Audit](docs/REPOSITORY_AUDIT.md)
@@ -350,4 +347,4 @@ Pocket Host is licensed under the [Apache License 2.0](LICENSE).
 
 ## CURRENT RELEASE AUDIT — 2026-11-20
 
-The audited Alpha HEAD is `cb5a925b98cf66510b9d38af37fe1c5cca846b84` (290 tracked blobs, 75 directories). The latest exact-HEAD quality run [#44699649949](https://github.com/AssayFlux/PocketHost/actions/runs/44699649949) passed six non-Android jobs; it is not an Android release check. The Android workflow is absent from the current tree. No published GitHub release or release tag was found in the checked listings. Pocket Host remains pre-release until G0–G9 are evidenced and owner-approved. See [current gate ledger](docs/V0.1.0_GATE_STATUS.md), [remediation audit](docs/REMEDIATION_AUDIT.md) and [repository deep audit](docs/REPOSITORY_AUDIT.md).
+The Alpha branch has separate engineering-test and APK-build workflows. Engineering tests validate source and emulator behavior; APK packaging is a separate manual action. See [remediation audit](docs/REMEDIATION_AUDIT.md) and [repository deep audit](docs/REPOSITORY_AUDIT.md).

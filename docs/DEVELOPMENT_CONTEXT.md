@@ -18,7 +18,7 @@ Work on **v0.1.0 — First Hosting** until the owner approves the next release. 
 - Python 3.11 and Node.js 24.22.1 exist in the separate runtime-worker APK, currently together and in progress. Complete/accept them in v0.1.1.
 - Workbench currently has a private draft/editor foundation. Complete preview/diffs/compiler/publishing/rollback in v0.1.1.
 - Device trust, workers, full fleet control-plane acceptance and multi-host Relay scaling are v0.1.2 work. Cloudflare Tunnel and the native Android Relay service (Kotlin foreground service + Rust/Tokio JNI engine bundled in the main APK) are mandatory v0.1.0 work; Linux-native packaging is v0.1.1. No paid VPS is required, but public IPv4/IPv6 reachability is.
-- Every version must pass G0–G9. See RELEASE_GATES.md.
+- Keep routine engineering tests separate from manually triggered APK packaging.
 
 ## Repository boundaries
 

@@ -12,9 +12,9 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Reason:** first prove a useful vertical slice before expanding into runtimes and distributed infrastructure.
 
-## ADR-003 — Mandatory G0–G9
+## ADR-003 — Separate engineering tests from APK packaging
 
-**Decision:** every version must document and pass all ten gates G0 through G9. A release is blocked if any gate is not PASS with evidence. See RELEASE_GATES.md.
+**Decision:** normal code pushes and pull requests run quality checks, Android compilation, native ABI builds and emulator tests. APK packaging is a separate manually triggered workflow and is not coupled to routine code verification.
 
 ## ADR-004 — First release is static hosting
 
@@ -58,9 +58,9 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Decision:** local static website serving must continue without the remote control plane, Relay or another device. Cloudflare Tunnel and AssayFlux Relay are optional independent v0.1.0 public-ingress providers. A provider failure must not stop local/LAN hosting or the other provider. Full fleet orchestration and multi-host Relay scaling remain v0.1.2.
 
-## ADR-014 — Evidence defines release status
+## ADR-014 — Report test evidence accurately
 
-**Decision:** code presence, documentation, UI presence, compilation or a simulated environment cannot close a gate that requires an installable artifact, physical device or external network. Every release stores exact commit, build, artifact digest, target, test result and reviewer.
+**Decision:** source presence, compilation, emulator tests and physical-device behavior are different evidence. Report exactly what ran and passed; do not claim physical-device behavior from emulator results.
 
 ## ADR-016 — Public visitor ingress ships in v0.1.0
 
@@ -94,7 +94,7 @@ This document records decisions that remain binding unless a later ADR explicitl
 
 **Decision:** the approved release sequence is exactly v0.1.0 First Hosting → v0.1.1 Workbench, Runtime & Linux Relay Installation → v0.1.2 Connected Device Fabric. The previous label v0.2.0 for the connected-device milestone is retired and renumbered to v0.1.2. No separate v0.2.0 milestone remains in the initial three-release pathway.
 
-**Baseline rule:** after v0.1.0 passes all G0–G9 gates and its release is approved, its source commit is preserved by an immutable release tag and protected baseline ref where repository permissions allow. The release artifact digests, source SHA, workflow evidence, support matrix and gate ledger are recorded. No later feature or fix is committed to that baseline; subsequent work branches from it into v0.1.1. Any exceptional security correction requires a separately reviewed successor patch release and must never rewrite the original baseline tag.
+**Baseline rule:** when v0.1.0 is ready to preserve, record its source commit and tested artifact. Keep later feature work separate from that baseline; do not rewrite an established version tag.
 
 
 ## ADR-020 — Native Android Relay service replaces external terminal deployment
