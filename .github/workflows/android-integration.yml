@@ -57,11 +57,28 @@ jobs:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
       - name: Configure Android NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build pinned Cloudflare Tunnel executable for all Android ABIs
+        run: bash scripts/build-cloudflared-android.sh
+      - name: Verify Cloudflare executable ELF architectures and permissions
+        run: |
+          set -euo pipefail
+          readelf="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            binary="app/src/main/jniLibs/$abi/libcloudflared.so"
+            test -s "$binary"
+            test -x "$binary"
+            "$readelf" -h "$binary"
+            "$readelf" -h "$binary" | grep -F "DYN"
+          done
       - name: Build static hosting engine for all declared Android ABIs
         working-directory: rust-engine
         run: cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o "$RUNNER_TEMP/engine-jni" build --release --locked
@@ -82,6 +99,8 @@ jobs:
         with:
           name: pockethost-native-android-libraries
           path: |
+            app/src/main/jniLibs/**/libcloudflared.so
+            app/src/main/assets/licenses/cloudflared/**
             ${{ runner.temp }}/engine-jni/**
             ${{ runner.temp }}/relay-jni/**
           if-no-files-found: error
