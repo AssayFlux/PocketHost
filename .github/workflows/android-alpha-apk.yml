@@ -6,10 +6,6 @@ concurrency:
   group: pockethost-alpha-apk-builder-${{ github.ref }}-${{ inputs.abi || 'all' }}
   cancel-in-progress: false
 on:
-  push:
-    branches: [Alpha]
-    paths:
-      - '.github/workflows/android-alpha-apk.yml'
   workflow_dispatch:
     inputs:
       abi:
@@ -54,11 +50,17 @@ jobs:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
       - name: Configure Android NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build pinned Cloudflare Tunnel executable for all Android ABIs
+        run: bash scripts/build-cloudflared-android.sh
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -111,10 +113,16 @@ jobs:
             test "$app_cert" = "$worker_cert"
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost.so"
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libcloudflared.so"
+            unzip -p "$apk" "lib/$abi/libcloudflared.so" > "$out/cloudflared-$abi"
+            test -s "$out/cloudflared-$abi"
+            "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h "$out/cloudflared-$abi" | grep -F "DYN"
           done
           for abi in arm64-v8a armeabi-v7a x86_64; do
             unzip -Z1 "$worker" | grep -Fx "lib/$abi/libnode.so"
           done
+          test -d app/src/main/assets/licenses/cloudflared
+          find app/src/main/assets/licenses/cloudflared -type f -print -quit | grep -q .
           sha256sum "$out"/*.apk | tee "$out/SHA256SUMS"
           echo "APK metadata, signing certificate and requested ABI payloads verified." | tee "$out/APK-VERIFICATION.txt"
       - name: Upload APKs and build evidence
