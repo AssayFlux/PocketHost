@@ -1,12 +1,14 @@
 # Pocket Host v0.1.0 Alpha — Release and Acceptance Report
 
-**Branch:** Alpha  
-**Version:** 0.1.0  
-**Channel:** Alpha  
-**Current head:** `8c95a42afe12ebceffeaede2807e702a02b71ce8`  
+**Branch:** `Alpha`  
+**Version:** `0.1.0`  
+**Channel:** `Alpha`  
+**Audited source snapshot:** `218d25793b7b7104e4c5583c716bb53586cdf156`  
+**Current audit:** [Engineering audit and remediation (2026-11-21)](ENGINEERING_AUDIT_2026-11-21.md)  
 **Signing:** Debug signing is intended only for owner testing. No production signing material is established by the repository workflow.  
-**Status:** repository Step 1 source changes are committed; their Android compilation and tests have not yet been run. Existing historical CI evidence remains historical only; emulator, physical-device and external-network acceptance remain open. APK packaging remains owner-gated and was not run.
+**Status:** substantial implementation is present; post-remediation CI confirmation and owner device acceptance remain open. APK packaging was not run and remains manual-only. No API emulator or external-network tests were run.
 
+> Historical workflow IDs and checkpoint claims in the sections below describe the state at the time they were recorded. They are not evidence that the current Alpha head passed.
 ## Latest workflow evidence
 
 - Latest quality workflow [44737757283](https://github.com/AssayFlux/PocketHost/actions/runs/44737757283) completed successfully on head `3b127e785224165c9f2415df9ce013e60b2160a7`.
@@ -82,3 +84,28 @@ Commit [f2f6ec5](https://github.com/AssayFlux/PocketHost/commit/f2f6ec518062b0f6
 Commit `8c95a42afe12ebceffeaede2807e702a02b71ce8` updates ZIP picker MIME handling, nested built-site root detection, ambiguous-root rejection, activated-site import summary counts, and visible import status in the Sites overview. New instrumentation test cases cover project metadata plus a nested `dist/` output and ambiguous `dist/`/`build/` roots.
 
 These are committed source changes, not verified runtime behavior. Android compilation and test execution are still required. The designated Pocket Host 7 SVG has not yet been converted into launcher and in-app assets; no alternative mark has been substituted. No APK was built.
+
+## Current audit and remediation — 2026-11-21
+
+The Cloudflared integration gap found in the repository audit has been addressed in source and workflow configuration:
+- The pinned `2026.11.0` Cloudflared Android executable is built for arm64-v8a, armeabi-v7a and x86_64 by the Android native engineering workflow.
+- The engineering workflow validates executable presence/permissions and ELF headers, uploads the generated executable and license notices separately, and restores them before Android Kotlin/source compilation.
+- The manual APK workflow builds the same binaries and checks the selected ABI's `libcloudflared.so` entry and ELF type in the APK.
+- The APK workflow is manual-dispatch only; pushes and workflow-file edits cannot start an APK build.
+- Generated `.build/` workspaces are ignored by Git.
+
+These are committed workflow changes, not successful build evidence. The first post-remediation CI run must pass before Cloudflared integration is marked verified. No APK was assembled or uploaded during this repair pass.
+
+## Current acceptance boundary
+
+| Area | Current status |
+|---|---|
+| General engineering tests | Awaiting post-remediation CI result |
+| Android native builds including Cloudflared | Awaiting post-remediation CI result |
+| Android Kotlin and instrumentation-source compilation | Awaiting post-remediation CI result |
+| Android lint and JVM unit tests | Awaiting post-remediation CI result |
+| API emulator tests | Not run; owner authorization required |
+| APK assembly/signature/ABI/artifact checks | Not run; owner authorization required |
+| Physical-device and independent-network acceptance | Owner testing required |
+
+Do not infer production readiness or physical-device acceptance from source presence or workflow configuration.
