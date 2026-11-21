@@ -42,7 +42,7 @@ The generated Go executable is named `libcloudflared.so` because Android extract
 ## Workflow boundaries
 
 - `.github/workflows/quality.yml`: general Rust, control-plane/PostgreSQL, Python/protocol, web-console, Node and shell/script checks.
-- `.github/workflows/android-debug-apk.yml`: Android lint, JVM unit tests and runtime asset prerequisite validation; no APK assembly.
+- `.github/workflows/android-debug-apk.yml`: Android lint, JVM unit tests and runtime asset prerequisite validation; no APK assembly. It now watches the Cloudflared build script so this repair also schedules Android quality checks.
 - `.github/workflows/android-integration.yml`: Android native ABI builds, Cloudflared build/ELF verification, and Android app/instrumentation-source/runtime-worker compilation; no APK assembly and no emulator execution.
 - `.github/workflows/android-alpha-apk.yml`: manual-only APK packaging and artifact verification. It is not automatically triggered by pushes.
 
