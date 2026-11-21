@@ -129,6 +129,20 @@ jobs:
         with:
           name: pockethost-native-android-libraries
           path: "$RUNNER_TEMP/native"
+      - name: Restore verified Cloudflare executable and notices
+        run: |
+          set -euo pipefail
+          test -d "$RUNNER_TEMP/native/jniLibs"
+          mkdir -p app/src/main/jniLibs app/src/main/assets/licenses
+          cp -a "$RUNNER_TEMP/native/jniLibs/." app/src/main/jniLibs/
+          if [[ -d "$RUNNER_TEMP/native/assets/licenses/cloudflared" ]]; then
+            mkdir -p app/src/main/assets/licenses
+            cp -a "$RUNNER_TEMP/native/assets/licenses/cloudflared" app/src/main/assets/licenses/
+          fi
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            test -s "app/src/main/jniLibs/$abi/libcloudflared.so"
+            test -x "app/src/main/jniLibs/$abi/libcloudflared.so"
+          done
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
