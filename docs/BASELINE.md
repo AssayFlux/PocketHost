@@ -232,6 +232,8 @@ The current source snapshot inspected for the audit was `218d25793b7b7104e4c5583
 - `f954703`, `439c5da`, `fb8de4e` — integrate Cloudflared build, ELF/permission checks, dedicated CI artifact upload/download and restoration before Android source compilation.
 - `7b886df` — keep APK packaging manual-only and require Cloudflared in the selected APK ABI payload, with ELF and license checks.
 - `f2a9305` — ignore generated `.build/` workspaces.
+- `afa9fe6` — ensure Android lint/JVM quality checks are triggered by Cloudflared build-script changes.
+- `e5377e4` — record the quality-workflow trigger correction in the audit.
 - `effa271` — add the current engineering audit and remediation record.
 
 **Important verification boundary:** the pipeline is now configured to build and verify Cloudflared, but configuration is not a passing CI result. The post-remediation GitHub Actions runs must complete successfully before this integration can be marked verified. No APK was assembled, signed, uploaded or installed. No API emulator or external-network tests were run.
