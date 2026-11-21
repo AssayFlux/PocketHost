@@ -8,14 +8,15 @@
 **Signing:** Debug signing is intended only for owner testing. No production signing material is established by the repository workflow.  
 **Status:** substantial implementation is present; post-remediation CI confirmation and owner device acceptance remain open. APK packaging was not run and remains manual-only. No API emulator or external-network tests were run.
 
-> Historical workflow IDs and checkpoint claims in the sections below describe the state at the time they were recorded. They are not evidence that the current Alpha head passed.
-## Latest workflow evidence
+ > Historical workflow IDs and checkpoint claims in the sections below describe the state at the time they were recorded. They are not evidence that the current Alpha head passed.
+
+## Historical workflow evidence (superseded)
 
 - Latest quality workflow [44737757283](https://github.com/AssayFlux/PocketHost/actions/runs/44737757283) completed successfully on head `3b127e785224165c9f2415df9ce013e60b2160a7`.
 - Acceptance workflow [44737757242](https://github.com/AssayFlux/PocketHost/actions/runs/44737757242) was observed pending/queued, with no jobs reported at the time of inspection. It is not a pass.
 - That acceptance workflow includes Android lint and JVM unit tests, then `:runtime-worker:generateDebugPythonMiscAssets` to validate Chaquopy runtime dependency resolution without assembling an APK.
 - The earlier worker packaging attempt failed to resolve `com.chaquo.python.runtime:bootstrap:17.2.0`; `https://chaquo.com/maven` has since been added to dependency resolution.
-- APK assembly, emulator instrumentation and APK verification are conditional on manual `confirm_build=true`. No APK was built in this pass.
+- At the time of this historical record, APK assembly and emulator instrumentation were guarded by `confirm_build=true`. That workflow design has since been replaced by a separate manual-dispatch-only APK workflow. No APK was built in this pass.
 
 Historical automated evidence:
 - Quality [44730596020](https://github.com/AssayFlux/PocketHost/actions/runs/44730596020): recorded Rust hosting/relay, PostgreSQL control-plane, Python/protocol, Node, web-console and script checks passed.
