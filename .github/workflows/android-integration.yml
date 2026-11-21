@@ -99,10 +99,16 @@ jobs:
         with:
           name: pockethost-native-android-libraries
           path: |
-            app/src/main/jniLibs/**/libcloudflared.so
-            app/src/main/assets/licenses/cloudflared/**
             ${{ runner.temp }}/engine-jni/**
             ${{ runner.temp }}/relay-jni/**
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-cloudflared-android
+          path: |
+            app/src/main/jniLibs/**/libcloudflared.so
+            app/src/main/assets/licenses/cloudflared/**
           if-no-files-found: error
           retention-days: 7
 
@@ -129,15 +135,19 @@ jobs:
         with:
           name: pockethost-native-android-libraries
           path: "$RUNNER_TEMP/native"
+      - uses: actions/download-artifact@v4
+        with:
+          name: pockethost-cloudflared-android
+          path: "$RUNNER_TEMP/cloudflared"
       - name: Restore verified Cloudflare executable and notices
         run: |
           set -euo pipefail
-          test -d "$RUNNER_TEMP/native/jniLibs"
+          test -d "$RUNNER_TEMP/cloudflared/jniLibs"
           mkdir -p app/src/main/jniLibs app/src/main/assets/licenses
-          cp -a "$RUNNER_TEMP/native/jniLibs/." app/src/main/jniLibs/
-          if [[ -d "$RUNNER_TEMP/native/assets/licenses/cloudflared" ]]; then
+          cp -a "$RUNNER_TEMP/cloudflared/jniLibs/." app/src/main/jniLibs/
+          if [[ -d "$RUNNER_TEMP/cloudflared/assets/licenses/cloudflared" ]]; then
             mkdir -p app/src/main/assets/licenses
-            cp -a "$RUNNER_TEMP/native/assets/licenses/cloudflared" app/src/main/assets/licenses/
+            cp -a "$RUNNER_TEMP/cloudflared/assets/licenses/cloudflared" app/src/main/assets/licenses/
           fi
           for abi in arm64-v8a armeabi-v7a x86_64; do
             test -s "app/src/main/jniLibs/$abi/libcloudflared.so"
