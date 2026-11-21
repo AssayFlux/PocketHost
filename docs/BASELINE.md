@@ -1,13 +1,13 @@
 # Pocket Host — Repository Baseline
 
-**Baseline date:** 2026-11-20  
+**Baseline date:** 2026-11-21  
 **Active branch:** `Alpha`  
-**Code checkpoint reviewed:** `29542ea1e33a64d1f9ef77a0bd9e70263038a0d7`  
+**Audited source snapshot:** `218d25793b7b7104e4c5583c716bb53586cdf156`  
 **Original planning baseline:** `8879ead946fe985d056970d1614068d1baea562b`  
 **Original pre-reset snapshot:** `7d829e09162882dbbd467cc6e6a4a9cdfadcf028`  
 **Archive branch:** `archive/pre-replan-2026-11-20`
 
-This is the current engineering baseline for Pocket Host v0.1.0 Alpha. It distinguishes source presence, automated verification, device verification and operational verification. It does not treat source presence as proof of a working release.
+This document contains historical checkpoints followed by the current audit addendum in Section 16. Section 16 and the linked engineering audit supersede earlier status snapshots for current-branch state. It distinguishes source presence, automated verification, device verification and operational verification. It does not treat source presence as proof of a working release.
 
 ## 1. Repository condition
 
