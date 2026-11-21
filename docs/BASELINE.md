@@ -222,3 +222,18 @@ To build all app ABIs, open **Actions → PocketHost v0.1.0 Alpha APK and ABI pa
 The packaging workflow uses the Android debug signing identity and is for development/owner testing only. It does not create a production-signed release. Emulator instrumentation and physical-device acceptance remain separate verification activities.
 
 **Workflow separation commit:** this documents the intended split; a successful workflow run is required before claiming that any APK artifact exists.
+
+## 16. Current engineering audit and Cloudflared CI remediation — 2026-11-21
+
+Use [ENGINEERING_AUDIT_2026-11-21.md](ENGINEERING_AUDIT_2026-11-21.md) as the current audit summary. Earlier checkpoint sections above are historical records and must not be read as the current branch status.
+
+The current source snapshot inspected for the audit was `218d25793b7b7104e4c5583c716bb53586cdf156`. The following engineering corrections were committed directly to `Alpha`: 
+- `ca62487` — harden the pinned Cloudflared Android build script, validate toolchain prerequisites, remove stale ABI outputs and verify executable outputs.
+- `f954703`, `439c5da`, `fb8de4e` — integrate Cloudflared build, ELF/permission checks, dedicated CI artifact upload/download and restoration before Android source compilation.
+- `7b886df` — keep APK packaging manual-only and require Cloudflared in the selected APK ABI payload, with ELF and license checks.
+- `f2a9305` — ignore generated `.build/` workspaces.
+- `effa271` — add the current engineering audit and remediation record.
+
+**Important verification boundary:** the pipeline is now configured to build and verify Cloudflared, but configuration is not a passing CI result. The post-remediation GitHub Actions runs must complete successfully before this integration can be marked verified. No APK was assembled, signed, uploaded or installed. No API emulator or external-network tests were run.
+
+**Current v0.1.0 status:** implementation and CI wiring are substantially present; current-head automated evidence and owner device acceptance remain outstanding. This is not a production-ready certification.
