@@ -17,6 +17,7 @@ on:
       - "gradlew"
       - "build.gradle.kts"
       - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
 jobs:
   android-quality-gates:
     runs-on: ubuntu-24.04
