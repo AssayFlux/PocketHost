@@ -20,5 +20,6 @@ hyper-util = { version = "0.1", features = ["tokio", "server-auto", "client", "c
 http-body-util = "0.1"
 bytes = "1"
 percent-encoding = "2"
+socket2 = "0.6.5"
 
 serde_json = "1"
