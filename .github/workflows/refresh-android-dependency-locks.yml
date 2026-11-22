@@ -5,7 +5,6 @@ on:
     branches: [Alpha]
     paths:
       - "app/build.gradle.kts"
-      - "app/src/**"
       - "app/gradle.lockfile"
       - "gradle/**"
       - "gradlew"
