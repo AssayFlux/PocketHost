@@ -34,38 +34,59 @@ internal fun PocketHostSettingsSectionNavigation(
     selectedSection: String,
     onSectionSelected: (String) -> Unit
 ) {
-    val sections = listOf(
-        "General", "Server", "Remote", "Local access",
-        "Network", "Relay node", "Relay host", "Cloudflare", "Cloudflare Access", "DNS management", "Hostnames & access",
-        "Runtimes", "Python", "Node.js", "About"
+    val palette = MaterialTheme.colorScheme
+    val groups = listOf(
+        "General" to listOf("General"),
+        "Server" to listOf("Server"),
+        "Access" to listOf("Remote", "Local access", "Network", "DNS management", "Hostnames & access"),
+        "Remote services" to listOf("Relay node", "Relay host", "Cloudflare", "Cloudflare Access"),
+        "Runtimes" to listOf("Runtimes", "Python", "Node.js"),
+        "About" to listOf("About")
     )
+    val activeGroup = groups.firstOrNull { selectedSection in it.second } ?: groups.first()
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = palette.surface)
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Text(
-                "SETTINGS PAGES",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "SETTINGS",
+                color = palette.primary,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = 1.2.sp
             )
-            sections.chunked(2).forEach { rowSections ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rowSections.forEach { section ->
-                        FilterChip(
-                            selected = selectedSection == section,
-                            onClick = { onSectionSelected(section) },
-                            label = { Text(section, fontSize = 12.sp, maxLines = 2) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    if (rowSections.size == 1) Box(Modifier.weight(1f))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                groups.forEach { (group, _) ->
+                    FilterChip(
+                        selected = activeGroup.first == group,
+                        onClick = {
+                            val destination = groups.first { it.first == group }.second.first()
+                            onSectionSelected(destination)
+                        },
+                        label = { Text(group, maxLines = 1, fontSize = 12.sp) }
+                    )
+                }
+            }
+            Text(activeGroup.first, color = palette.onSurfaceVariant,
+                fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                activeGroup.second.forEach { section ->
+                    FilterChip(
+                        selected = selectedSection == section,
+                        onClick = { onSectionSelected(section) },
+                        label = { Text(section, maxLines = 1, fontSize = 12.sp) }
+                    )
                 }
             }
         }
