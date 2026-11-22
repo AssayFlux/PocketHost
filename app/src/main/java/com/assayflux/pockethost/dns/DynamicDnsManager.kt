@@ -28,25 +28,51 @@ internal object PublicAddressDetector {
     )
 
     private fun detectOne(endpoints: List<String>, ipv6: Boolean): String? {
-        for (endpoint in endpoints) {
-            try {
+        val observed = endpoints.mapNotNull { endpoint ->
+            runCatching {
                 val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 5000
                     readTimeout = 5000
                     instanceFollowRedirects = false
                     setRequestProperty("Accept", "text/plain")
                 }
-                val value = try {
-                    if (connection.responseCode !in 200..299) null
-                    else connection.inputStream.bufferedReader().use { it.readText().trim() }
+                try {
+                    if (connection.responseCode !in 200..299) return@runCatching null
+                    val value = connection.inputStream.bufferedReader().use { it.readText().trim() }
+                    if (value.isBlank() || value.length > 64) return@runCatching null
+                    val address = InetAddress.getByName(value)
+                    if (!isGloballyRoutable(address, ipv6)) return@runCatching null
+                    address.hostAddress?.substringBefore('%')
                 } finally { connection.disconnect() }
-                if (value.isNullOrBlank() || value.length > 64) continue
-                val address = InetAddress.getByName(value)
-                if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress || address.isMulticastAddress) continue
-                if ((address is Inet6Address) == ipv6) return address.hostAddress?.substringBefore('%')
-            } catch (_: Exception) { }
+            }.getOrNull()
+        }.distinct()
+        return observed.singleOrNull()
+    }
+
+    internal fun isGloballyRoutable(address: InetAddress, ipv6: Boolean): Boolean {
+        if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress ||
+            address.isSiteLocalAddress || address.isMulticastAddress) return false
+        if (ipv6) {
+            if (address !is Inet6Address) return false
+            val bytes = address.address
+            val first = bytes[0].toInt() and 0xff
+            if ((first and 0xe0) != 0x20) return false
+            if ((bytes[0].toInt() and 0xff) == 0x20 && (bytes[1].toInt() and 0xff) == 0x01 &&
+                (bytes[2].toInt() and 0xff) == 0x0d && (bytes[3].toInt() and 0xff) == 0xb8) return false
+            return true
         }
-        return null
+        if (address !is java.net.Inet4Address) return false
+        val p = address.address.map { it.toInt() and 0xff }
+        if (p[0] == 0 || p[0] == 10 || p[0] == 127 || p[0] >= 224) return false
+        if (p[0] == 100 && p[1] in 64..127) return false
+        if (p[0] == 169 && p[1] == 254) return false
+        if (p[0] == 172 && p[1] in 16..31) return false
+        if (p[0] == 192 && p[1] == 168) return false
+        if (p[0] == 192 && p[1] == 0 && p[2] == 2) return false
+        if (p[0] == 198 && p[1] in 18..19) return false
+        if (p[0] == 198 && p[1] == 51 && p[2] == 100) return false
+        if (p[0] == 203 && p[1] == 0 && p[2] == 113) return false
+        return true
     }
 }
 
