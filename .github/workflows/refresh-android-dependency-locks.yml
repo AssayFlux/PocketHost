@@ -4,6 +4,7 @@ on:
   push:
     branches: [Alpha]
     paths:
+      - ".github/workflows/refresh-android-dependency-locks.yml"
       - "app/build.gradle.kts"
       - "app/gradle.lockfile"
       - "gradle/**"
