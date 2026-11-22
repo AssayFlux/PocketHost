@@ -73,7 +73,7 @@ internal fun DynamicDnsManagerScreen() {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("DYNAMIC DNS", fontWeight = FontWeight.Bold)
-                Text("Automatically discover public IPv4/IPv6 addresses and update matching Cloudflare A/AAAA records. Tunnel hostnames must not be overwritten with your phone IP.", style = MaterialTheme.typography.bodySmall)
+                Text("Discover public IPv4/IPv6 addresses and synchronize Cloudflare A/AAAA records independently. This updates records matching the selected hostname; review existing DNS ownership before syncing.", style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(domain, { domain = it.trim(); prefs.edit().putString("domain", domain).apply() }, label = { Text("Cloudflare zone (e.g. example.com)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(host, { host = it.trim(); prefs.edit().putString("host", host).apply() }, label = { Text("Record name (@ or www)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -114,23 +114,32 @@ internal fun DynamicDnsManagerScreen() {
                             try {
                                 val addresses = withContext(Dispatchers.IO) { PublicAddressDetector.detect() }
                                 detected = addresses
-                                withContext(Dispatchers.IO) {
+                                val outcomes = withContext(Dispatchers.IO) {
                                     val apiToken = currentToken()
                                     val zone = CloudflareDnsApi.findZone(apiToken, domain)
                                     val fqdn = if (host == "@") zone.name else "${host.trimEnd('.').lowercase()}.${zone.name}"
                                     val existing = CloudflareDnsApi.records(apiToken, zone.id)
-                                    if (includeIpv4) {
-                                        val ip = addresses.ipv4 ?: error("Public IPv4 was not detected; A record was not changed.")
-                                        val record = existing.firstOrNull { it.type == "A" && it.name.equals(fqdn, true) }
-                                        CloudflareDnsApi.save(apiToken, zone, record?.id, "A", host, ip, proxied, "10")
+                                    val results = mutableListOf<String>()
+                                    fun syncFamily(enabled: Boolean, type: String, address: String?) {
+                                        if (!enabled) return
+                                        try {
+                                            val ip = address ?: throw IllegalStateException("No public address detected; record left unchanged.")
+                                            val matches = existing.filter { it.type == type && it.name.equals(fqdn, true) }
+                                            require(matches.size <= 1) {
+                                                "Found multiple $type records for $fqdn. Resolve the duplicates in Cloudflare; none were changed."
+                                            }
+                                            val record = matches.singleOrNull()
+                                            CloudflareDnsApi.save(apiToken, zone, record?.id, type, host, ip, proxied, "10")
+                                            results += "$type updated to $ip"
+                                        } catch (failure: Exception) {
+                                            results += "$type not updated: ${failure.message ?: "unknown error"}"
+                                        }
                                     }
-                                    if (includeIpv6) {
-                                        val ip = addresses.ipv6 ?: error("Public IPv6 was not detected; AAAA record was not changed.")
-                                        val record = existing.firstOrNull { it.type == "AAAA" && it.name.equals(fqdn, true) }
-                                        CloudflareDnsApi.save(apiToken, zone, record?.id, "AAAA", host, ip, proxied, "10")
-                                    }
+                                    syncFamily(includeIpv4, "A", addresses.ipv4)
+                                    syncFamily(includeIpv6, "AAAA", addresses.ipv6)
+                                    results
                                 }
-                                status = "DNS synchronization succeeded. Verify the records and website route before sharing the domain."
+                                status = outcomes.joinToString("\n").ifBlank { "No address families were selected." }
                             } catch (error: Exception) {
                                 status = error.message ?: "DNS synchronization failed."
                             } finally { busy = false }
@@ -141,6 +150,6 @@ internal fun DynamicDnsManagerScreen() {
                 Text(status, style = MaterialTheme.typography.bodySmall)
             }
         }
-        Text("This first DDNS build provides on-demand detection and synchronization. Automatic background scheduling, change history and additional DNS providers are subsequent implementation work.", style = MaterialTheme.typography.bodySmall)
+        Text("This is on-demand synchronization only. It does not prove inbound reachability or bypass CGNAT, carrier firewalls or blocked ports. Background scheduling, ownership tracking and history remain subsequent work.", style = MaterialTheme.typography.bodySmall)
     }
 }
