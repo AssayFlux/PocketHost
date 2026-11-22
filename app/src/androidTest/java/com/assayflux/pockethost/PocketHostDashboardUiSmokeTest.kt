@@ -44,7 +44,10 @@ class PocketHostDashboardUiSmokeTest {
             device.waitForWindowUpdate(context.packageName, 30_000)
             val homeVisible = device.wait(Until.hasObject(By.text("Dashboard")), 60_000) &&
                 device.wait(Until.hasObject(By.desc("Open app navigation")), 15_000) &&
-                device.wait(Until.hasObject(By.desc("Open account and app menu")), 15_000)
+                device.wait(Until.hasObject(By.desc("Open account and app menu")), 15_000) &&
+                device.wait(Until.hasObject(By.text("Traffic")), 15_000) &&
+                device.wait(Until.hasObject(By.text("Notifications")), 15_000) &&
+                device.wait(Until.hasObject(By.text("Recent logs")), 15_000)
             // Capture the hierarchy after the UI has settled; the initial frame can be
             // empty while Compose performs first-run storage recovery and initialization.
             device.dumpWindowHierarchy(hierarchy)
@@ -88,7 +91,18 @@ class PocketHostDashboardUiSmokeTest {
             device.click(classicTheme!!.visibleBounds.centerX(), classicTheme.visibleBounds.centerY())
             instrumentation.waitForIdleSync()
             device.pressBack()
-
+            val profileControl = device.wait(Until.findObject(By.desc("Open account and app menu")), 5_000)
+            assertTrue("Profile dropdown control is missing", profileControl != null)
+            profileControl!!.click()
+            val profileItem = device.wait(Until.findObject(By.text("Profile & password")), 5_000)
+            assertTrue("Profile and password menu item is missing", profileItem != null)
+            profileItem!!.click()
+            assertTrue("Profile screen did not open",
+                device.wait(Until.hasObject(By.text("Profile & security")), 10_000))
+            assertTrue("Change password controls are missing",
+                device.wait(Until.hasObject(By.text("Change password")), 5_000))
+            assertTrue("Fingerprint security settings shortcut is missing",
+                device.wait(Until.hasObject(By.text("Fingerprint & device security")), 5_000))
         }
 
         assertTrue("Home screenshot is empty", screenshot.isFile && screenshot.length() > 10_000)
