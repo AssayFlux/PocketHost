@@ -61,7 +61,7 @@ private fun accessibleContentColor(background: Color): Color =
 
 object PocketHostPalettes {
     val names = listOf(
-        "Classic", "Midnight", "Forest", "Burgundy", "Ocean",
+        "Command Center", "Classic", "Midnight", "Forest", "Burgundy", "Ocean",
         "Graphite", "Sandstone", "Lavender", "Copper", "Arctic"
     )
 
@@ -71,6 +71,12 @@ object PocketHostPalettes {
         val darkMuted: Color, val darkAccent: Color)
 
     private fun palette(name: String) = when (name) {
+        "Command Center" -> Palette(
+            Color(0xFFF1F6F3), Color(0xFFFFFFFF), Color(0xFFE2ECE6),
+            Color(0xFF14251D), Color(0xFF52685D), Color(0xFF137A57), Color(0xFF416B5A),
+            Color(0xFF0A1510), Color(0xFF12231B), Color(0xFF1D3428),
+            Color(0xFFEAF5EE), Color(0xFFB7CBBF), Color(0xFF55D6A0)
+        )
         "Midnight" -> Palette(Color(0xFFF0F1F4),Color(0xFFE3E6EC),Color(0xFFD4DAE4),Color(0xFF202735),Color(0xFF596579),Color(0xFF536B91),Color(0xFF8A744F),Color(0xFF11151D),Color(0xFF1C2330),Color(0xFF283344),Color(0xFFF1F3F7),Color(0xFFB5C0D0),Color(0xFFD5A84B))
         "Forest" -> Palette(Color(0xFFF0F3EA),Color(0xFFE1E9D9),Color(0xFFD0DDC8),Color(0xFF243126),Color(0xFF526653),Color(0xFF52734F),Color(0xFF9A7847),Color(0xFF172019),Color(0xFF222E25),Color(0xFF304235),Color(0xFFEAF1E8),Color(0xFFB6C7B5),Color(0xFF9DBA83))
         "Burgundy" -> Palette(Color(0xFFF7EFED),Color(0xFFEEDFDA),Color(0xFFE2CBC6),Color(0xFF352321),Color(0xFF70534E),Color(0xFF873F4C),Color(0xFFB18A62),Color(0xFF211719),Color(0xFF302124),Color(0xFF432D31),Color(0xFFF4E9E7),Color(0xFFD0B9B5),Color(0xFFD18B98))
