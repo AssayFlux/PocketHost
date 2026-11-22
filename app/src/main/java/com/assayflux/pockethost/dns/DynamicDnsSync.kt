@@ -96,7 +96,7 @@ internal object DynamicDnsSync {
             val savedId = CloudflareDnsApi.save(token, zone, recordId, type, host, ip, proxied, "10")
             owners.put(ownerKey, savedId)
             check(preferences.edit().putString(OWNERSHIP, owners.toString()).commit()) { "Could not persist DNS record ownership; verify the Cloudflare record before retrying." }
-            val verified = verifyPublicDns(fqdn, type, ip)
+            val verified = verifyPublicDns(fqdn, type, ip, proxied)
             if (!verified) throw IllegalStateException("Cloudflare accepted the change, but public DNS has not converged yet. It will be checked again.")
             val timestamp = Instant.now().toString()
             preferences.edit().putString("last_success_$type", timestamp).putString("last_address_$type", ip).apply()
@@ -106,7 +106,7 @@ internal object DynamicDnsSync {
         }
     }
 
-    private fun verifyPublicDns(name: String, type: String, expected: String): Boolean {
+    private fun verifyPublicDns(name: String, type: String, expected: String, proxied: Boolean): Boolean {
         val encoded = URLEncoder.encode(name, "UTF-8")
         val expectedNormalized = expected.substringBefore('%').lowercase()
         repeat(3) { attempt ->
@@ -120,7 +120,7 @@ internal object DynamicDnsSync {
                     if (connection.responseCode !in 200..299) return@runCatching false
                     val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                     val answers = json.optJSONArray("Answer") ?: JSONArray()
-                    (0 until answers.length()).any { i ->
+                    if (proxied) answers.length() > 0 else (0 until answers.length()).any { i ->
                         answers.optJSONObject(i)?.optString("data")?.trimEnd('.')?.lowercase() == expectedNormalized
                     }
                 } finally { connection.disconnect() }
