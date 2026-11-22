@@ -79,6 +79,7 @@ import com.assayflux.pockethost.relay.RelayNodeConfigStore
 import com.assayflux.pockethost.relay.RelayNodeIdentityStore
 import com.assayflux.pockethost.relay.RelayCredentialIssuer
 import com.assayflux.pockethost.dns.CloudflareDnsManagerScreen
+import com.assayflux.pockethost.dns.DynamicDnsManagerScreen
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -1747,6 +1748,9 @@ if (settingsSection == "Node.js") {
 
 if (settingsSection == "DNS management") {
                     CloudflareDnsManagerScreen()
+                }
+                if (settingsSection == "Dynamic DNS") {
+                    DynamicDnsManagerScreen()
                 }
                 if (settingsSection == "Cloudflare Access") {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
