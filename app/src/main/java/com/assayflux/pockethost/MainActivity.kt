@@ -948,6 +948,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             capacityBenchmark = capacityBenchmark,
                             deviceTelemetry = deviceTelemetry,
                             selectedCapacityConcurrency = selectedCapacityConcurrency,
+                            dailyReports = DailyOperationsReport.list(context),
+                            recentEvents = recentEvents,
                             notificationPermissionRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                         ),
