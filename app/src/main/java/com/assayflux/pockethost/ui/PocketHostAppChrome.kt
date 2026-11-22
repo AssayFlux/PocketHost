@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 internal fun PocketHostOwnerHeader(
+    currentUserId: String,
     selectedTab: String,
     selectedSection: String,
     hosting: Boolean,
