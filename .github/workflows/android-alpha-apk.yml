@@ -4,7 +4,7 @@ permissions:
   contents: read
 concurrency:
   group: pockethost-alpha-apk-builder-${{ github.ref }}-${{ inputs.abi || 'all' }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 on:
   push:
     branches: [Alpha]
