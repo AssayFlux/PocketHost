@@ -10,6 +10,8 @@ import android.Manifest
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -104,10 +106,13 @@ internal fun PocketHostDashboardScreen(
 ) {
     val palette = MaterialTheme.colorScheme
     var selectedPage by remember { mutableStateOf("Overview") }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
         listOf("Overview", "Schedule", "Traffic & capacity").forEach { page ->
             FilterChip(selected = selectedPage == page, onClick = { selectedPage = page },
-                label = { Text(page, fontSize = 11.sp, maxLines = 2) }, modifier = Modifier.weight(1f))
+                label = { Text(page, fontSize = 12.sp, maxLines = 1) })
         }
     }
     if (selectedPage == "Schedule") HostingScheduleCard(context)
