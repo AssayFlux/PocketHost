@@ -5,14 +5,15 @@ Pocket Host is an Android-first, self-hosted platform for managing and serving w
 ## Current development line
 
 - Active branch: `Alpha`
-- Current audited source snapshot: `218d25793b7b7104e4c5583c716bb53586cdf156`
+- Current verification snapshot: `976f281a13e03320e8d6a831e5913cac16a93ed0`
 - Release target: `v0.1.0` (Alpha; not yet declared complete)
 - Architecture direction: native Android services and Rust/JNI relay components. Termux is not the relay architecture.
 
 ## Project documents
 
 - [Repository baseline](docs/BASELINE.md): what exists now and what remains unverified.
-- [Current engineering audit](docs/ENGINEERING_AUDIT_2026-11-21.md): Cloudflared CI remediation, workflow boundaries and outstanding verification.
+- [Current engineering audit](docs/ENGINEERING_AUDIT_2026-11-21.md): historical Cloudflared CI remediation and workflow boundaries.
+- [v0.1.0 Phase 2 acceptance](docs/V0.1.0_PHASE2_ACCEPTANCE.md): current automated, emulator, device and real-network verification status.
 - [North Star](docs/NORTH_STAR.md): long-term product direction and boundaries.
 - [Preliminary five-step plan](docs/PRELIMINARY_PLAN.md): the scoped sequence for completing the first useful release.
 - [Runtime and remote operations](docs/RUNTIMES_AND_REMOTE_OPERATIONS.md): supported runtime contracts, limits and trust boundaries.
