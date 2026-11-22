@@ -151,6 +151,11 @@ internal fun DynamicDnsManagerScreen() {
                     scope.launch {
                         busy = true
                         try {
+                            val probePrefs = context.getSharedPreferences("pockethost_ddns", 0)
+                            val now = System.currentTimeMillis()
+                            val lastProbe = probePrefs.getLong("last_external_probe_ms", 0L)
+                            require(now - lastProbe >= 60_000L) { "External probes are rate-limited to one run per minute." }
+                            probePrefs.edit().putLong("last_external_probe_ms", now).apply()
                             val gatewayPort = context.getSharedPreferences("pockethost_state", 0).getInt("port", 8080)
                             val base = assessments.ifEmpty {
                                 withContext(Dispatchers.IO) { NetworkDiagnostics.assess(context, detected!!) }
@@ -166,6 +171,8 @@ internal fun DynamicDnsManagerScreen() {
                             }
                             assessments = checked
                             status = "External TCP probes completed. Results are point-in-time and do not guarantee reachability from every network."
+                        } catch (error: Exception) {
+                            status = error.message ?: "External reachability probe failed."
                         } finally { busy = false }
                     }
                 }) { Text("Probe inbound access externally") }
