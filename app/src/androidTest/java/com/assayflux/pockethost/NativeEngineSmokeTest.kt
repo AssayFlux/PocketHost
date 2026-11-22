@@ -10,6 +10,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.Socket
 import java.net.ServerSocket
+import org.json.JSONObject
 
 @RunWith(AndroidJUnit4::class)
 class NativeEngineSmokeTest {
@@ -38,6 +39,32 @@ class NativeEngineSmokeTest {
             root.deleteRecursively()
         }
         assertEquals("STOPPED", NativeEngine.status())
+    }
+
+    @Test
+    fun unifiedGatewayRoutesMultipleStaticSitesByHostname() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(context.cacheDir, "pockethost-gateway-root-${System.nanoTime()}")
+        val siteA = File(root, "site-a")
+        val siteB = File(root, "site-b")
+        assertTrue(siteA.mkdirs())
+        assertTrue(siteB.mkdirs())
+        File(siteA, "index.html").writeText("gateway-static-a")
+        File(siteB, "index.html").writeText("gateway-static-b")
+        val routes = JSONObject()
+            .put("a.pockethost.test", JSONObject().put("runtime", "static").put("root", siteA.absolutePath))
+            .put("b.pockethost.test", JSONObject().put("runtime", "static").put("root", siteB.absolutePath))
+        val port = ServerSocket(0).use { it.localPort }
+        try {
+            assertEquals("OK", NativeEngine.startMultiSiteWithBindMode(
+                root.absolutePath, routes.toString(), port, "loopback", false
+            ))
+            assertTrue(exchange(port, "", "a.pockethost.test").contains("gateway-static-a"))
+            assertTrue(exchange(port, "", "b.pockethost.test").contains("gateway-static-b"))
+        } finally {
+            NativeEngine.stop()
+            root.deleteRecursively()
+        }
     }
 
     @Test
@@ -76,10 +103,10 @@ class NativeEngineSmokeTest {
         }
     }
 
-    private fun exchange(port: Int, extraHeaders: String): String = Socket().use { socket ->
+    private fun exchange(port: Int, extraHeaders: String, host: String = "localhost"): String = Socket().use { socket ->
         socket.soTimeout = 5_000
         socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
-        val request = "GET / HTTP/1.1\r\nHost: localhost\r\n" + extraHeaders + "Connection: close\r\n\r\n"
+        val request = "GET / HTTP/1.1\r\nHost: $host\r\n" + extraHeaders + "Connection: close\r\n\r\n"
         socket.getOutputStream().write(request.toByteArray())
         socket.getOutputStream().flush()
         socket.getInputStream().bufferedReader().use { it.readText() }
