@@ -1291,9 +1291,13 @@ mod tests {
         let probe = StdListener::bind(("127.0.0.1", 0)).unwrap();
         let port = probe.local_addr().unwrap().port();
         drop(probe);
+        let upstream_probe = StdListener::bind(("127.0.0.1", 0)).unwrap();
+        let unavailable_upstream_port = upstream_probe.local_addr().unwrap().port();
+        drop(upstream_probe);
         let routes = [
             ("a.example.test".to_string(), SiteTarget::Static(site_a.clone())),
             ("b.example.test".to_string(), SiteTarget::Static(site_b.clone())),
+            ("node.example.test".to_string(), SiteTarget::Proxy { port: unavailable_upstream_port }),
         ].into_iter().collect();
         start_engine_with_hosts(base.to_str().unwrap(), port, "loopback", routes, HashMap::new()).unwrap();
 
@@ -1309,6 +1313,8 @@ mod tests {
         let a_index = request("a.example.test", "/");
         let b_index = request("b.example.test", "/");
         let a_cannot_read_b = request("a.example.test", "/only-b.txt");
+        let unavailable_node = request("node.example.test", "/");
+        assert!(unavailable_node.starts_with("HTTP/1.1 502"), "failed upstream was not reported: {unavailable_node}");
         assert!(a_index.contains("SITE-A"), "unexpected response: {a_index}");
         assert!(b_index.contains("SITE-B"), "unexpected response: {b_index}");
         assert!(a_cannot_read_b.starts_with("HTTP/1.1 404"), "cross-site path leaked: {a_cannot_read_b}");
