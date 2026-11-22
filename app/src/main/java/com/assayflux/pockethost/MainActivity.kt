@@ -212,7 +212,13 @@ private fun Context.findActivity(): Activity? {
 @Composable
 private fun PocketHostDashboard(onSignOut: () -> Unit) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { HostingSchedule.onTimeChanged(context) }
+    LaunchedEffect(Unit) {
+        HostingSchedule.onTimeChanged(context)
+        val ddnsPreferences = context.getSharedPreferences("pockethost_ddns", Context.MODE_PRIVATE)
+        if (ddnsPreferences.getBoolean("auto_sync", false)) {
+            com.assayflux.pockethost.dns.DynamicDnsSync.schedule(context, true)
+        }
+    }
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf("Dashboard") }
     var settingsSection by remember { mutableStateOf("General") }
