@@ -65,8 +65,8 @@ internal fun PocketHostOwnerHeader(
     val palette = MaterialTheme.colorScheme
     val headerTitle = when (selectedTab) {
         "Dashboard" -> "Hosting"
-        "Sites" -> "Websites & files"
-        "Activity" -> "Activity & logs"
+        "Sites" -> "Websites"
+        "Activity" -> "Activity"
         "Settings" -> when (selectedSection) {
             "Network" -> "Network & tunnels"
             "Server" -> "Server settings"
@@ -77,49 +77,102 @@ internal fun PocketHostOwnerHeader(
             "Cloudflare" -> "Cloudflare Tunnel"
             "Cloudflare Access" -> "Cloudflare Access"
             "DNS management" -> "DNS management"
-            "Hostnames & access" -> "Hostnames & visitor access"
+            "Hostnames & access" -> "Hostnames & access"
             "Runtimes" -> "Runtimes"
             "Python" -> "Python runtime"
             "Node.js" -> "Node.js runtime"
-            "About" -> "About"
+            "About" -> "About Pocket Host"
             else -> "Settings"
         }
         else -> selectedTab
     }
     var accountExpanded by remember { mutableStateOf(false) }
     Surface(color = palette.background) {
-        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                PocketHostBrandMark(Modifier.size(42.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text("Pocket Host", color = palette.onSurface, fontSize = 22.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold)
-                    Text("ASSAYFLUX · YOUR DEVICE, YOUR CONTROL", color = palette.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PocketHostBrandMark(Modifier.size(42.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("POCKET HOST", color = palette.onSurface, fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
+                Text(headerTitle, color = palette.onSurface, fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Surface(
+                color = if (hosting) palette.primaryContainer else palette.surfaceVariant,
+                shape = RoundedCornerShape(50)
+            ) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.size(7.dp).clip(CircleShape)
+                        .background(if (hosting) palette.primary else palette.outline))
+                    Text(if (hosting) "LIVE" else "OFFLINE",
+                        color = if (hosting) palette.onPrimaryContainer else palette.onSurfaceVariant,
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Surface(color = palette.surface, shape = RoundedCornerShape(17.dp), shadowElevation = 1.dp) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onMenuClick, modifier = Modifier.semantics { contentDescription = "Open app navigation" }) {
-                        Icon(Icons.Outlined.Menu, contentDescription = null, tint = palette.primary)
-                    }
-                    Column(Modifier.weight(1f).padding(start = 5.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(headerTitle, color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Box(Modifier.size(7.dp).clip(CircleShape).background(if (hosting) palette.primary else palette.outline))
-                            Text(if (hosting) "Hosting running" else "Hosting stopped", color = palette.onSurfaceVariant, fontSize = 10.sp)
-                        }
-                    }
-                    Box {
-                        IconButton(onClick = { accountExpanded = true }, modifier = Modifier.semantics { contentDescription = "Open account and app menu" }) {
-                            Icon(Icons.Outlined.Person, contentDescription = null, tint = palette.primary)
-                        }
-                        DropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
-                            DropdownMenuItem(text = { Text("App settings") }, leadingIcon = { Icon(Icons.Outlined.Settings, null) }, onClick = { accountExpanded = false; onNavigate("Settings:General") })
-                            DropdownMenuItem(text = { Text("Network & access") }, leadingIcon = { Icon(Icons.Outlined.Security, null) }, onClick = { accountExpanded = false; onNavigate("Settings:Network") })
-                            DropdownMenuItem(text = { Text("About Pocket Host") }, leadingIcon = { Icon(Icons.Outlined.Info, null) }, onClick = { accountExpanded = false; onNavigate("Settings:About") })
-                            DropdownMenuItem(text = { Text("Sign out") }, leadingIcon = { Icon(Icons.Outlined.Person, null) }, onClick = { accountExpanded = false; onSignOut() })
-                        }
-                    }
+            IconButton(onClick = onMenuClick,
+                modifier = Modifier.semantics { contentDescription = "Open app navigation" }) {
+                Icon(Icons.Outlined.Menu, contentDescription = null, tint = palette.onSurface)
+            }
+            Box {
+                IconButton(onClick = { accountExpanded = true },
+                    modifier = Modifier.semantics { contentDescription = "Open account and app menu" }) {
+                    Icon(Icons.Outlined.Person, contentDescription = null, tint = palette.onSurface)
                 }
+                DropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
+                    DropdownMenuItem(text = { Text("App settings") },
+                        leadingIcon = { Icon(Icons.Outlined.Settings, null) },
+                        onClick = { accountExpanded = false; onNavigate("Settings:General") })
+                    DropdownMenuItem(text = { Text("Network & access") },
+                        leadingIcon = { Icon(Icons.Outlined.Security, null) },
+                        onClick = { accountExpanded = false; onNavigate("Settings:Network") })
+                    DropdownMenuItem(text = { Text("About Pocket Host") },
+                        leadingIcon = { Icon(Icons.Outlined.Info, null) },
+                        onClick = { accountExpanded = false; onNavigate("Settings:About") })
+                    DropdownMenuItem(text = { Text("Sign out") },
+                        leadingIcon = { Icon(Icons.Outlined.Person, null) },
+                        onClick = { accountExpanded = false; onSignOut() })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PocketHostBottomNavigation(
+    selectedTab: String,
+    selectedSection: String,
+    onNavigate: (String) -> Unit
+) {
+    val palette = MaterialTheme.colorScheme
+    val items = listOf(
+        Triple("Home", "Home", Icons.Outlined.Dashboard),
+        Triple("Hosting", "Dashboard", Icons.Outlined.Language),
+        Triple("Sites", "Sites", Icons.Outlined.FolderOpen),
+        Triple("Workbench", "Workbench", Icons.Outlined.Code),
+        Triple("More", "Settings:General", Icons.Outlined.Settings)
+    )
+    Surface(color = palette.surface, tonalElevation = 3.dp) {
+        androidx.compose.material3.NavigationBar(
+            containerColor = palette.surface,
+            contentColor = palette.onSurface,
+            windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
+        ) {
+            items.forEach { (label, destination, icon) ->
+                val selected = when (destination) {
+                    "Settings:General" -> selectedTab == "Settings"
+                    else -> selectedTab == destination
+                }
+                androidx.compose.material3.NavigationBarItem(
+                    selected = selected,
+                    onClick = { onNavigate(destination) },
+                    icon = { Icon(icon, contentDescription = null) },
+                    label = { Text(label, maxLines = 1) },
+                    alwaysShowLabel = true
+                )
             }
         }
     }
@@ -154,7 +207,7 @@ internal fun PocketHostSidebar(
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PocketHostBrandMark(Modifier.size(42.dp))
             Column {
-                Text("Pocket Host", color = palette.onSurface, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("POCKET HOST", color = palette.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, letterSpacing = 1.sp)
                 Text("ASSAYFLUX", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
         }
