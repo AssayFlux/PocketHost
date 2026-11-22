@@ -90,16 +90,15 @@ class HostingService : Service() {
             OperationalLog.record(this, "WARN", "OPTIONAL_RUNTIMES_BLOCKED",
                 "Python/Node startup was blocked because trusted-code acknowledgement is absent. Static hosting remains available.")
         }
-        val registeredRoutes = SiteRegistry.hostRoutingJson(
-            this, statePreferences.getInt("python_port", 8081), statePreferences.getInt("node_port", 3000)
-        ).toString()
-        val result = if (engineAlreadyRunning) "OK"
-            else if (registeredRoutes != "{}") NativeEngine.startMultiSite(
-                site.absolutePath, registeredRoutes, statePreferences.getInt("port", 8080),
-                statePreferences.getBoolean("allow_lan", false)
-            ) else NativeEngine.start(
-                site.absolutePath, statePreferences.getInt("port", 8080), statePreferences.getBoolean("allow_lan", false)
+        val bindMode = com.assayflux.pockethost.engine.HostingGateway.BindMode.fromPreferences(
+            statePreferences.getString("gateway_bind_mode", null),
+            statePreferences.getBoolean("allow_lan", false)
+        )
+        val result = if (engineAlreadyRunning) "OK" else runCatching {
+            com.assayflux.pockethost.engine.HostingGateway.start(
+                this, statePreferences.getInt("port", 8080), bindMode
             )
+        }.getOrElse { "ERROR: ${it.message ?: "Gateway startup failed"}" }
         if (result == "OK") {
             if (!engineAlreadyRunning || !statePreferences.contains("hosting_started_elapsed_ms")) {
                 statePreferences.edit().putLong("hosting_started_elapsed_ms", android.os.SystemClock.elapsedRealtime()).apply()
@@ -269,7 +268,7 @@ class HostingService : Service() {
         runCatching { NodeHostRuntime.stop(this) }
         runCatching { PythonHostRuntime.stop(this) }
         runCatching { com.assayflux.pockethost.runtime.RuntimeWorkerClient.shutdownWorker(this) }
-        runCatching { NativeEngine.stop() }
+        runCatching { com.assayflux.pockethost.engine.HostingGateway.stop() }
         releaseWakeLock()
         statePreferences.edit().remove("hosting_started_elapsed_ms").apply()
         if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {
