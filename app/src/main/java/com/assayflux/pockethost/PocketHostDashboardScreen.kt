@@ -116,7 +116,10 @@ internal fun PocketHostDashboardScreen(
     val reports = state.dailyReports.associateBy { it.optString("date") }
     val today = java.time.LocalDate.now()
     val lastSevenDays = (6 downTo 0).map { today.minusDays(it.toLong()) }
-    val chartValues = lastSevenDays.map { day -> day to (reports[day.toString()]?.optLong("totalRequests") ?: 0L) }
+    val chartValues = lastSevenDays.map { day ->
+        val requestsForDay = if (day == today) state.todayRequests else (reports[day.toString()]?.optLong("totalRequests") ?: 0L)
+        day to requestsForDay
+    }
     val maximum = (chartValues.maxOfOrNull { it.second } ?: 0L).coerceAtLeast(1L)
     val alerts = state.recentEvents.filter { it.level.equals("ERROR", true) || it.level.equals("WARN", true) }.take(4)
 
@@ -203,7 +206,7 @@ internal fun PocketHostDashboardScreen(
                                 .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
                                 .background(Color(0xFF76956A)))
                             Spacer(Modifier.height(5.dp))
-                            Text(day.dayOfMonth.toString(), color = palette.onSurfaceVariant, fontSize = 10.sp)
+                            Text("${day.dayOfMonth}/${day.monthValue}", color = palette.onSurfaceVariant, fontSize = 8.sp)
                         }
                     }
                 }
