@@ -1,0 +1,69 @@
+name: PocketHost Android emulator acceptance
+permissions:
+  contents: read
+concurrency:
+  group: pockethost-emulator-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-emulator-acceptance.yml"
+      - ".github/workflows/android-integration.yml"
+      - "app/**"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "relay-node/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
+  workflow_dispatch:
+jobs:
+  emulator-instrumentation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
+      - name: Configure Android NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build pinned Cloudflare Tunnel executable for Android
+        run: bash scripts/build-cloudflared-android.sh
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Prepare and install companion runtime worker
+        run: |
+          set -euo pipefail
+          ./gradlew :runtime-worker:generateDebugPythonMiscAssets :runtime-worker:assembleDebug
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none"
+          script: |
+            set -euo pipefail
+            adb install -r runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk
+            ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 --stacktrace
