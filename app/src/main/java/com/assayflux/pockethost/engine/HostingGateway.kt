@@ -2,6 +2,7 @@ package com.assayflux.pockethost.engine
 
 import android.content.Context
 import com.assayflux.pockethost.sites.SiteRegistry
+import java.security.MessageDigest
 
 /**
  * Single lifecycle boundary for the direct-origin HTTP gateway.
@@ -41,17 +42,28 @@ object HostingGateway {
         )
         val root = java.io.File(context.filesDir, "site")
         if (!root.exists() && !root.mkdirs()) return "Cannot create the managed website directory."
+        val routeDigest = MessageDigest.getInstance("SHA-256")
+            .digest(routes.toString().toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        val alreadyRunning = NativeEngine.status() == "RUNNING"
+        val unchanged = alreadyRunning &&
+            preferences.getString("gateway_route_digest", null) == routeDigest &&
+            preferences.getString("gateway_bind_mode", null) == bindMode.wireValue &&
+            preferences.getInt("gateway_port", -1) == port
+        if (unchanged) return "OK"
+        if (alreadyRunning) {
+            val stopped = NativeEngine.stop()
+            if (stopped != "OK") return "Cannot safely replace the active gateway: $stopped"
+        }
         val result = NativeEngine.startMultiSiteWithBindMode(
-            root.absolutePath,
-            routes.toString(),
-            port,
-            bindMode.wireValue,
+            root.absolutePath, routes.toString(), port, bindMode.wireValue,
             bindMode == BindMode.PUBLIC_ORIGIN
         )
         if (result == "OK") {
             preferences.edit()
                 .putString("gateway_bind_mode", bindMode.wireValue)
                 .putInt("gateway_port", port)
+                .putString("gateway_route_digest", routeDigest)
                 .apply()
         }
         return result
