@@ -91,15 +91,15 @@ internal fun PocketHostOwnerHeader(
     var accountExpanded by remember { mutableStateOf(false) }
     Surface(color = palette.background) {
         Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            PocketHostBrandMark(Modifier.size(42.dp))
+            PocketHostBrandMark(Modifier.size(36.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("POCKET HOST", color = palette.onSurface, fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
-                Text(headerTitle, color = palette.onSurface, fontSize = 19.sp,
+                Text(headerTitle, color = palette.onSurface, fontSize = 18.sp,
                     fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Surface(
@@ -168,27 +168,13 @@ internal fun PocketHostBottomNavigation(
                     "Settings:General" -> selectedTab == "Settings"
                     else -> selectedTab == destination
                 }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onNavigate(destination) }
-                        .padding(horizontal = 4.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Icon(
-                        icon,
-                        contentDescription = label,
-                        tint = if (selected) palette.primary else palette.onSurfaceVariant
-                    )
-                    Text(
-                        label,
-                        color = if (selected) palette.primary else palette.onSurfaceVariant,
-                        fontSize = 10.sp,
-                        maxLines = 1
-                    )
-                }
+                androidx.compose.material3.NavigationBarItem(
+                    selected = selected,
+                    onClick = { onNavigate(destination) },
+                    icon = { Icon(icon, contentDescription = null) },
+                    label = { Text(label, maxLines = 1, fontSize = 10.sp) },
+                    alwaysShowLabel = true
+                )
             }
         }
     }
