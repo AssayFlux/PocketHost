@@ -274,6 +274,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     var todayBytes by remember { mutableLongStateOf(0L) }
     var activeConnections by remember { mutableLongStateOf(0L) }
     var recentEvents by remember { mutableStateOf(emptyList<OperationalLog.Entry>()) }
+    var dailyReports by remember { mutableStateOf(emptyList<JSONObject>()) }
     var logFilter by remember { mutableStateOf("") }
     var importedSummary by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -436,6 +437,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             pendingPairingCode = ManagementApiServer.pendingApprovalCode()
             preferences.getString("service_status", null)?.let { serviceStatus = it }
             recentEvents = withContext(Dispatchers.IO) { OperationalLog.read(context, 500) }
+            dailyReports = withContext(Dispatchers.IO) { DailyOperationsReport.list(context) }
             capacityInfo = withContext(Dispatchers.IO) { CapacityController.tick(context)
                 .put("activeConnections", NativeEngine.activeConnections())
                 .put("queuedConnections", NativeEngine.queuedConnections())
@@ -948,7 +950,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                             capacityBenchmark = capacityBenchmark,
                             deviceTelemetry = deviceTelemetry,
                             selectedCapacityConcurrency = selectedCapacityConcurrency,
-                            dailyReports = DailyOperationsReport.list(context),
+                            dailyReports = dailyReports,
                             recentEvents = recentEvents,
                             notificationPermissionRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
