@@ -120,11 +120,11 @@ object PocketHostPalettes {
 }
 
 private val PocketHostTypography = Typography(
-    displayLarge = TextStyle(fontFamily=FontFamily.Serif, fontWeight=FontWeight.SemiBold, fontSize=36.sp, lineHeight=42.sp),
-    displayMedium = TextStyle(fontFamily=FontFamily.Serif, fontWeight=FontWeight.SemiBold, fontSize=30.sp, lineHeight=36.sp),
-    headlineLarge = TextStyle(fontFamily=FontFamily.Serif, fontWeight=FontWeight.SemiBold, fontSize=26.sp, lineHeight=32.sp),
-    headlineMedium = TextStyle(fontFamily=FontFamily.Serif, fontWeight=FontWeight.SemiBold, fontSize=22.sp, lineHeight=28.sp),
-    titleLarge = TextStyle(fontFamily=FontFamily.Serif, fontWeight=FontWeight.SemiBold, fontSize=19.sp, lineHeight=25.sp),
+    displayLarge = TextStyle(fontFamily=FontFamily.SansSerif, fontWeight=FontWeight.SemiBold, fontSize=36.sp, lineHeight=42.sp),
+    displayMedium = TextStyle(fontFamily=FontFamily.SansSerif, fontWeight=FontWeight.SemiBold, fontSize=30.sp, lineHeight=36.sp),
+    headlineLarge = TextStyle(fontFamily=FontFamily.SansSerif, fontWeight=FontWeight.SemiBold, fontSize=26.sp, lineHeight=32.sp),
+    headlineMedium = TextStyle(fontFamily=FontFamily.SansSerif, fontWeight=FontWeight.SemiBold, fontSize=22.sp, lineHeight=28.sp),
+    titleLarge = TextStyle(fontFamily=FontFamily.SansSerif, fontWeight=FontWeight.SemiBold, fontSize=19.sp, lineHeight=25.sp),
     titleMedium = TextStyle(fontWeight=FontWeight.SemiBold, fontSize=16.sp, lineHeight=22.sp),
     titleSmall = TextStyle(fontWeight=FontWeight.Medium, fontSize=14.sp, lineHeight=20.sp),
     bodyLarge = TextStyle(fontSize=16.sp, lineHeight=24.sp),
@@ -144,7 +144,7 @@ private val PocketHostShapes = Shapes(
 @Composable
 fun PocketHostTheme(
     darkTheme: Boolean = false,
-    themeName: String = "Classic",
+    themeName: String = "Command Center",
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
