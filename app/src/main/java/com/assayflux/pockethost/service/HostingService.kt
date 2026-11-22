@@ -109,7 +109,11 @@ class HostingService : Service() {
             CapacityController.apply(this)
             startMetricsMonitor()
             val pythonEnabled = statePreferences.getBoolean("python_enabled", false)
-            val host = if (statePreferences.getBoolean("allow_lan", false)) "LAN" else "loopback"
+            val host = when (bindMode) {
+                com.assayflux.pockethost.engine.HostingGateway.BindMode.LOOPBACK -> "loopback"
+                com.assayflux.pockethost.engine.HostingGateway.BindMode.LAN -> "LAN"
+                com.assayflux.pockethost.engine.HostingGateway.BindMode.PUBLIC_ORIGIN -> "public-origin"
+            }
             val staticPort = statePreferences.getInt("port", 8080)
             val baseMessage = "$host static server ready on port $staticPort"
             val initialMessage = if (pythonEnabled) "$baseMessage · Starting Python WSGI…" else baseMessage
