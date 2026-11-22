@@ -40,6 +40,42 @@ class NativeEngineSmokeTest {
         assertEquals("STOPPED", NativeEngine.status())
     }
 
+    @Test
+    fun publicOriginBindingRequiresExplicitConsent() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(context.cacheDir, "pockethost-bind-mode-${System.nanoTime()}")
+        assertTrue(root.mkdirs())
+        val port = ServerSocket(0).use { it.localPort }
+        try {
+            val result = NativeEngine.startMultiSiteWithBindMode(
+                root.absolutePath, "{}", port, "public-origin", false
+            )
+            assertTrue(result.contains("explicit user consent", ignoreCase = true))
+            assertEquals("STOPPED", NativeEngine.status())
+        } finally {
+            NativeEngine.stop()
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun unsupportedGatewayBindModeIsRejectedBeforeBinding() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(context.cacheDir, "pockethost-invalid-bind-${System.nanoTime()}")
+        assertTrue(root.mkdirs())
+        val port = ServerSocket(0).use { it.localPort }
+        try {
+            val result = NativeEngine.startMultiSiteWithBindMode(
+                root.absolutePath, "{}", port, "internet-everywhere", false
+            )
+            assertTrue(result.contains("Unsupported gateway bind mode"))
+            assertEquals("STOPPED", NativeEngine.status())
+        } finally {
+            NativeEngine.stop()
+            root.deleteRecursively()
+        }
+    }
+
     private fun exchange(port: Int, extraHeaders: String): String = Socket().use { socket ->
         socket.soTimeout = 5_000
         socket.connect(java.net.InetSocketAddress("127.0.0.1", port), 5_000)
