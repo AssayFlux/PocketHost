@@ -5,6 +5,10 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import org.json.JSONObject
 
 internal data class AddressFamilyDiagnostics(
     val family: String,
@@ -44,6 +48,67 @@ internal object NetworkDiagnostics {
             AddressFamilyDiagnostics("IPv4", v4, local4, v4Assessment),
             AddressFamilyDiagnostics("IPv6", addresses.ipv6, local6, v6Assessment)
         )
+    }
+
+    /**
+     * Explicit, opt-in remote TCP probe. The user's public IP and selected port are
+     * sent to Check-Host.net measurement nodes; this is not a PocketHost-controlled service.
+     */
+    fun probeInbound(address: String, port: Int): String {
+        require(port in 1024..65535) { "Choose the configured unprivileged gateway port (1024–65535)." }
+        val parsed = InetAddress.getByName(address)
+        require(PublicAddressDetector.isGloballyRoutable(parsed, parsed is Inet6Address)) {
+            "The target is not a globally routable public address."
+        }
+        val target = if (parsed is Inet6Address) "tcp://[${parsed.hostAddress?.substringBefore('%')}]:$port"
+            else "tcp://${parsed.hostAddress}:$port"
+        val encoded = URLEncoder.encode(target, "UTF-8")
+        val request = URL("https://check-host.net/check-tcp?host=$encoded&max_nodes=3")
+        val initial = request.openConnection() as HttpURLConnection
+        val requestId = try {
+            initial.connectTimeout = 7000
+            initial.readTimeout = 9000
+            initial.setRequestProperty("Accept", "application/json")
+            require(initial.responseCode in 200..299) { "Remote probe service rejected the request (HTTP ${initial.responseCode})." }
+            val json = JSONObject(initial.inputStream.bufferedReader().use { it.readText() })
+            require(json.optInt("ok", 0) == 1) { "Remote probe service did not accept the check." }
+            json.optString("request_id").takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("Remote probe did not return a request ID.")
+        } finally { initial.disconnect() }
+
+        repeat(5) { attempt ->
+            val connection = URL("https://check-host.net/check-result/${URLEncoder.encode(requestId, "UTF-8")}")
+                .openConnection() as HttpURLConnection
+            val results = try {
+                connection.connectTimeout = 7000
+                connection.readTimeout = 9000
+                connection.setRequestProperty("Accept", "application/json")
+                if (connection.responseCode !in 200..299) null
+                else JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            } finally { connection.disconnect() }
+            if (results != null) {
+                val keys = results.keys()
+                var total = 0
+                var reachable = 0
+                while (keys.hasNext()) {
+                    val node = keys.next()
+                    val value = results.opt(node)
+                    if (value == null || value == JSONObject.NULL) continue
+                    total++
+                    val nodeResult = when (value) {
+                        is org.json.JSONArray -> value.optJSONObject(0)
+                        is JSONObject -> value
+                        else -> null
+                    }
+                    if (nodeResult != null && !nodeResult.has("error") && nodeResult.has("time")) reachable++
+                }
+                if (total > 0) return if (reachable > 0)
+                    "Reachable from $reachable/$total external TCP probes (Check-Host.net)."
+                else "No external probe could connect ($total probes). CGNAT, firewall, routing or port filtering may be responsible."
+            }
+            if (attempt < 4) Thread.sleep(1500L)
+        }
+        return "External probe timed out; inbound reachability remains unverified."
     }
 
     fun isCarrierGradeNat(value: String): Boolean {
