@@ -108,7 +108,7 @@ internal fun PocketHostOwnerHeader(
                 Surface(
                     color = palette.surfaceVariant,
                     shape = RoundedCornerShape(50),
-                    modifier = Modifier.clickable { accountExpanded = true }
+                    modifier = Modifier.clickable { accountExpanded = true }.semantics { contentDescription = "Open account and app menu" }
                 ) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -202,6 +202,11 @@ private val pocketHostNavItems = listOf(
     PocketHostNavItem("Deployments", "Releases, snapshots and recovery", Icons.Outlined.Timeline, "Deployments"),
     PocketHostNavItem("Devices", "Trusted devices and fleet access", Icons.Outlined.Memory, "Devices"),
     PocketHostNavItem("Network settings", "Ports, LAN and connectivity", Icons.Outlined.NetworkCheck, "Settings:Network"),
+    PocketHostNavItem("Remote control", "Remote administration connection", Icons.Outlined.Security, "Settings:Remote"),
+    PocketHostNavItem("Cloudflare Access", "Identity-aware access protection", Icons.Outlined.Security, "Settings:Cloudflare Access"),
+    PocketHostNavItem("Local access", "Local network and private access", Icons.Outlined.NetworkCheck, "Settings:Local access"),
+    PocketHostNavItem("Server settings", "Ports, limits and power behavior", Icons.Outlined.Settings, "Settings:Server"),
+    PocketHostNavItem("Runtime overview", "Runtime health and resource controls", Icons.Outlined.Memory, "Settings:Runtimes"),
     PocketHostNavItem("Cloudflare Tunnel", "Public tunnel connection", Icons.Outlined.Language, "Settings:Cloudflare"),
     PocketHostNavItem("Relay Node", "Operate this device as a relay node", Icons.Outlined.NetworkCheck, "Settings:Relay node"),
     PocketHostNavItem("Relay Host", "Connect this host to a relay", Icons.Outlined.NetworkCheck, "Settings:Relay host"),
