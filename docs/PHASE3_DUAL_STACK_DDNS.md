@@ -14,7 +14,7 @@ Branch: `Alpha`
 - PocketHost persists Cloudflare record IDs it created or that the owner explicitly adopted. Background work updates only those managed IDs; duplicate records and unowned existing records are not overwritten.
 - The foreground UI has an explicit adopt-existing confirmation. Background synchronization never adopts an unowned record.
 - After each update, DNS-over-HTTPS answers are checked. DNS-only records must return the expected origin address. Proxied records must return an answer but are not expected to reveal the origin address.
-- WorkManager schedules unique periodic work at Android's 15-minute minimum interval, with a connected-network constraint and exponential backoff. The schedule is restored when the app opens.
+- WorkManager schedules unique periodic work at Android's 15-minute minimum interval, with a connected-network constraint and exponential backoff. A 30-second minimum interval also rate-limits foreground and worker attempts; an in-process synchronization lock prevents concurrent duplicate record creation. The schedule is restored when the app opens.
 - Each A/AAAA result is recorded independently. A bounded local history retains up to 100 family results; notifications report successful sync and attention/retry states.
 
 ## Security and operational boundaries

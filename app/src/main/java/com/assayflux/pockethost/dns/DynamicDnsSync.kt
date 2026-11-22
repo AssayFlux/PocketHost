@@ -48,6 +48,7 @@ internal object DynamicDnsSync {
     fun isScheduled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("auto_sync", false)
 
+    @Synchronized
     fun run(context: Context, allowAdoptExisting: Boolean = false): List<FamilyResult> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
@@ -97,7 +98,10 @@ internal object DynamicDnsSync {
                 allowAdopt -> record.id
                 else -> throw IllegalStateException("An existing unowned $type record was found. Enable the explicit adopt-existing confirmation to manage it.")
             }
-            val savedId = CloudflareDnsApi.save(token, zone, recordId, type, host, ip, proxied, "10")
+            val alreadyCurrent = record != null && record.id == recordId &&
+                record.proxied == proxied && sameAddress(record.content, ip)
+            val savedId = if (alreadyCurrent) record!!.id
+                else CloudflareDnsApi.save(token, zone, recordId, type, host, ip, proxied, "10")
             owners.put(ownerKey, savedId)
             check(preferences.edit().putString(OWNERSHIP, owners.toString()).commit()) { "Could not persist DNS record ownership; verify the Cloudflare record before retrying." }
             val verified = verifyPublicDns(fqdn, type, ip, proxied)
@@ -109,6 +113,10 @@ internal object DynamicDnsSync {
             FamilyResult(type, false, error.message ?: "DNS update failed.")
         }
     }
+
+    private fun sameAddress(first: String, second: String): Boolean = runCatching {
+        java.net.InetAddress.getByName(first).address.contentEquals(java.net.InetAddress.getByName(second).address)
+    }.getOrDefault(false)
 
     private fun verifyPublicDns(name: String, type: String, expected: String, proxied: Boolean): Boolean {
         val encoded = URLEncoder.encode(name, "UTF-8")

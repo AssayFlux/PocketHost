@@ -104,7 +104,7 @@ internal object NetworkDiagnostics {
                     }
                     if (nodeResult != null && !nodeResult.has("error") && nodeResult.has("time")) reachable++
                 }
-                if (total >= expectedNodes || attempt == 4) return if (reachable > 0)
+                if (total > 0 && (total >= expectedNodes || attempt == 4)) return if (reachable > 0)
                     "Reachable from $reachable/$total external TCP probes (Check-Host.net)."
                 else "No external probe could connect ($total probes). CGNAT, firewall, routing or port filtering may be responsible."
             }
