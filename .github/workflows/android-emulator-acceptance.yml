@@ -56,13 +56,18 @@ jobs:
           set -euo pipefail
           ./gradlew :runtime-worker:generateDebugPythonMiscAssets :runtime-worker:assembleDebug
       - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # GitHub-hosted runners may lack KVM. The action then adds -accel off;
+          # explicitly allow Android Emulator's TCG software CPU fallback.
+          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          emulator-boot-timeout: 900
           disable-animations: true
-          emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none"
+          emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -camera-front none"
           script: |
             set -euo pipefail
             adb install -r runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk
