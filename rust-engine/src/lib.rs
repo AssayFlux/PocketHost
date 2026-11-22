@@ -814,10 +814,13 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
 }
 
 fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
-    start_engine_with_hosts(root, port, allow_lan, HashMap::new(), HashMap::new())
+    start_engine_with_hosts(root, port, if allow_lan { "lan" } else { "loopback" }, HashMap::new(), HashMap::new())
 }
 
-fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: HashMap<String, SiteTarget>, host_access: HashMap<String, SiteAccess>) -> Result<(), String> {
+fn start_engine_with_hosts(root: &str, port: u16, bind_mode: &str, host_paths: HashMap<String, SiteTarget>, host_access: HashMap<String, SiteAccess>) -> Result<(), String> {
+    if !matches!(bind_mode, "loopback" | "lan" | "public-origin") {
+        return Err("Unsupported gateway bind mode".into());
+    }
     let root = std::fs::canonicalize(root).map_err(|e| format!("Invalid site directory: {e}"))?;
     if !root.is_dir() { return Err("Site path is not a directory".into()); }
     let mut canonical_hosts = HashMap::new();
@@ -881,8 +884,9 @@ fn start_engine_with_hosts(root: &str, port: u16, allow_lan: bool, host_paths: H
     }
     REJECTED_CONNECTIONS.store(0, Ordering::Relaxed);
 
-    // LAN exposure is opt-in from the Android dashboard. Public tunnel exposure is separate.
-    let bind_host = if allow_lan { "0.0.0.0" } else { "127.0.0.1" };
+    // Public-origin is separately consent-gated at the JNI boundary.
+    // LAN and public-origin bind to IPv4 interfaces; internet reachability is a separate diagnostic.
+    let bind_host = if bind_mode == "loopback" { "127.0.0.1" } else { "0.0.0.0" };
     let listener = std::net::TcpListener::bind((bind_host, port))
         .map_err(|e| format!("Cannot bind port {port}: {e}"))?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
@@ -982,7 +986,60 @@ pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMu
             }
             sites.insert(host, target);
         }
-        start_engine_with_hosts(&root, port as u16, allow_lan == 1, sites, access)?;
+        start_engine_with_hosts(&root, port as u16, if allow_lan == 1 { "lan" } else { "loopback" }, sites, access)?;
+        Ok("OK".to_string())
+    })();
+    to_jstring(&mut env, result.unwrap_or_else(|e| e))
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_assayflux_pockethost_engine_NativeEngine_startMultiSiteWithBindMode(
+    mut env: JNIEnv, _class: JClass, root: JString, sites_json: JString,
+    port: jint, bind_mode: JString, public_consent: jboolean,
+) -> jstring {
+    let result = (|| {
+        let root: String = env.get_string(&root).map_err(|e| e.to_string())?.into();
+        let json: String = env.get_string(&sites_json).map_err(|e| e.to_string())?.into();
+        let mode: String = env.get_string(&bind_mode).map_err(|e| e.to_string())?.into();
+        if !(1024..=65535).contains(&port) { return Err("Port must be 1024–65535".to_string()); }
+        if !matches!(mode.as_str(), "loopback" | "lan" | "public-origin") {
+            return Err("Unsupported gateway bind mode".to_string());
+        }
+        if mode == "public-origin" && public_consent != 1 {
+            return Err("Public-origin binding requires explicit user consent".to_string());
+        }
+        let raw: HashMap<String, serde_json::Value> =
+            serde_json::from_str(&json).map_err(|e| format!("Invalid hostname registry: {e}"))?;
+        let mut sites = HashMap::new();
+        let mut access = HashMap::new();
+        for (host, value) in raw {
+            let target = if let Some(path) = value.as_str() {
+                SiteTarget::Static(PathBuf::from(path))
+            } else {
+                match value.get("runtime").and_then(|v| v.as_str()).unwrap_or("static") {
+                    "static" => SiteTarget::Static(PathBuf::from(
+                        value.get("root").and_then(|v| v.as_str()).ok_or("Static route requires root")?
+                    )),
+                    "python-wsgi" | "node" => {
+                        let raw_port = value.get("port").and_then(|v| v.as_u64()).ok_or("Proxy route requires port")?;
+                        if !(1024..=65535).contains(&raw_port) {
+                            return Err(format!("Invalid upstream port for {host}"));
+                        }
+                        SiteTarget::Proxy { port: raw_port as u16 }
+                    },
+                    runtime => return Err(format!("Unsupported runtime route: {runtime}")),
+                }
+            };
+            if let Some(policy) = value.get("access") {
+                let mode_value = policy.get("mode").and_then(|v| v.as_str()).unwrap_or("public").to_string();
+                let credentials = policy.get("credentials").and_then(|v| v.as_object()).map(|values| {
+                    values.iter().filter_map(|(name, value)| value.as_str().map(|hash| (name.clone(), hash.to_string()))).collect::<HashMap<_,_>>()
+                }).unwrap_or_default();
+                access.insert(host.clone(), SiteAccess { mode: mode_value, credentials });
+            }
+            sites.insert(host, target);
+        }
+        start_engine_with_hosts(&root, port as u16, &mode, sites, access)?;
         Ok("OK".to_string())
     })();
     to_jstring(&mut env, result.unwrap_or_else(|e| e))
