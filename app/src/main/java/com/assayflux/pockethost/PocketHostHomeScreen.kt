@@ -97,7 +97,7 @@ internal fun PocketHostHomeScreen(
                     }
                     Surface(color = if (hosting) palette.primaryContainer else palette.surfaceVariant,
                         shape = RoundedCornerShape(50)) {
-                        Text(if (hosting) "LIVE" else "OFFLINE",
+                        Text(if (hosting) "RUNNING" else "OFFLINE",
                             modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
                             color = if (hosting) palette.onPrimaryContainer else palette.onSurfaceVariant,
                             fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
@@ -137,7 +137,7 @@ internal fun PocketHostHomeScreen(
                                 colors = CardDefaults.cardColors(containerColor = palette.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                             ) {
-                                Column(Modifier.fillMaxSize().padding(16.dp),
+                                Column(Modifier.fillMaxWidth().padding(16.dp).heightIn(min = 120.dp),
                                     verticalArrangement = Arrangement.SpaceBetween) {
                                     Row(verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
