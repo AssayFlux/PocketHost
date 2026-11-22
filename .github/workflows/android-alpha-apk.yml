@@ -1,5 +1,5 @@
-name: PocketHost v0.1.0 Alpha APK and ABI packaging
-run-name: Pocket Host Alpha APK build (${{ inputs.abi || 'all' }})
+name: PocketHost v0.1.0 Alpha Universal Installer APK
+run-name: Pocket Host Alpha universal installer APK
 permissions:
   contents: read
 concurrency:
@@ -21,17 +21,6 @@ on:
       - "settings.gradle.kts"
       - "scripts/build-cloudflared-android.sh"
   workflow_dispatch:
-    inputs:
-      abi:
-        description: App APK ABI target
-        required: true
-        type: choice
-        default: all
-        options:
-          - all
-          - arm64-v8a
-          - armeabi-v7a
-          - x86_64
 jobs:
   build-and-verify-apks:
     runs-on: ubuntu-24.04
@@ -50,7 +39,7 @@ jobs:
             echo "commit=$GITHUB_SHA"
             echo "version=0.1.0"
             echo "channel=Alpha"
-            echo "abi_selection=${{ inputs.abi }}"
+            echo "abi_selection=universal (arm64-v8a, armeabi-v7a, x86_64)"
             echo "workflow_run=$GITHUB_RUN_ID"
             echo "built_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "signing=debug (development and owner testing only)"
@@ -82,67 +71,51 @@ jobs:
         run: ./gradlew :runtime-worker:generateDebugPythonMiscAssets
       - name: Build companion runtime-worker APK
         run: ./gradlew :runtime-worker:assembleDebug
-      - name: Build selected app ABI APKs
+      - name: Build one universal PocketHost installer APK
         shell: bash
-        env:
-          ABI_SELECTION: ${{ inputs.abi || 'all' }}
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-apks"
-          if [[ "$ABI_SELECTION" == "all" ]]; then
-            abis=(arm64-v8a armeabi-v7a x86_64)
-          else
-            abis=("$ABI_SELECTION")
-          fi
-          printf '%s\n' "${abis[@]}" > "$out/APP-ABIS.txt"
-          for abi in "${abis[@]}"; do
-            ./gradlew :app:assembleDebug -PpockethostAbi="$abi"
-            cp app/build/outputs/apk/debug/app-debug.apk "$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
-          done
-          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
-      - name: Verify APK metadata, signatures and native ABI payloads
+          echo "arm64-v8a,armeabi-v7a,x86_64" > "$out/APP-ABIS.txt"
+          ./gradlew :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$out/pockethost-v0.1.0-alpha-universal-debug.apk"
+      - name: Verify universal APK, embedded companion and native ABIs
         shell: bash
-        env:
-          ABI_SELECTION: ${{ inputs.abi || 'all' }}
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-apks"
           aapt="$ANDROID_HOME/build-tools/35.0.0/aapt"
           apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           worker="$out/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
+          apk="$out/pockethost-v0.1.0-alpha-universal-debug.apk"
           "$aapt" dump badging "$worker" | grep -F "package: name='com.assayflux.pockethost.worker' versionCode='1' versionName='0.1.0'"
           "$apksigner" verify --verbose --print-certs "$worker" > "$out/worker-signature.txt"
           worker_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/worker-signature.txt" | head -n1)"
           test -n "$worker_cert"
-          if [[ "$ABI_SELECTION" == "all" ]]; then
-            abis=(arm64-v8a armeabi-v7a x86_64)
-          else
-            abis=("$ABI_SELECTION")
-          fi
-          for abi in "${abis[@]}"; do
-            apk="$out/pockethost-v0.1.0-alpha-$abi-debug.apk"
-            "$aapt" dump badging "$apk" | grep -F "package: name='com.assayflux.pockethost' versionCode='1' versionName='0.1.0'"
-            "$apksigner" verify --verbose --print-certs "$apk" > "$out/app-$abi-signature.txt"
-            app_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/app-$abi-signature.txt" | head -n1)"
-            test "$app_cert" = "$worker_cert"
+          "$aapt" dump badging "$apk" | grep -F "package: name='com.assayflux.pockethost' versionCode='1' versionName='0.1.0'"
+          "$apksigner" verify --verbose --print-certs "$apk" > "$out/app-signature.txt"
+          app_cert="$(sed -n 's/.*certificate SHA-256 digest: //p' "$out/app-signature.txt" | head -n1)"
+          test "$app_cert" = "$worker_cert"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost.so"
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libcloudflared.so"
-            unzip -p "$apk" "lib/$abi/libcloudflared.so" > "$out/cloudflared-$abi"
-            test -s "$out/cloudflared-$abi"
-            "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h "$out/cloudflared-$abi" | grep -F "DYN"
           done
+          unzip -Z1 "$apk" | grep -Fx "assets/pockethost-runtime-worker.apk"
+          unzip -p "$apk" "assets/pockethost-runtime-worker.apk" > "$out/embedded-runtime-worker.apk"
+          cmp "$worker" "$out/embedded-runtime-worker.apk"
           for abi in arm64-v8a armeabi-v7a x86_64; do
-            unzip -Z1 "$worker" | grep -Fx "lib/$abi/libnode.so"
+            unzip -Z1 "$out/embedded-runtime-worker.apk" | grep -Fx "lib/$abi/libnode.so"
           done
           test -d app/src/main/assets/licenses/cloudflared
           find app/src/main/assets/licenses/cloudflared -type f -print -quit | grep -q .
-          sha256sum "$out"/*.apk | tee "$out/SHA256SUMS"
-          echo "APK metadata, signing certificate and requested ABI payloads verified." | tee "$out/APK-VERIFICATION.txt"
+          sha256sum "$apk" | tee "$out/SHA256SUMS"
+          echo "Universal APK, embedded runtime companion, signing certificate and native ABI payloads verified." | tee "$out/APK-VERIFICATION.txt"
+          rm -f "$worker" "$out/worker-signature.txt" "$out/embedded-runtime-worker.apk"
       - name: Upload APKs and build evidence
         uses: actions/upload-artifact@v4
         with:
-          name: pockethost-v0.1.0-alpha-apks-${{ inputs.abi || 'all' }}
+          name: pockethost-v0.1.0-alpha-universal-installer-apk
           path: ${{ runner.temp }}/pockethost-apks/*
           if-no-files-found: error
           retention-days: 30
