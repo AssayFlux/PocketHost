@@ -134,7 +134,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance = getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
             val savedMode = appearance.getString("appearance_mode", null)
-                ?: if (appearance.contains("dark_theme")) { if (appearance.getBoolean("dark_theme", false)) "Dark" else "Light" } else "System"
+                ?: if (appearance.contains("dark_theme")) { if (appearance.getBoolean("dark_theme", false)) "Dark" else "Light" } else "Light"
             val useDark = when (savedMode) { "Dark" -> true; "Light" -> false; else -> isSystemInDarkTheme() }
             val savedTheme = appearance.getString("appearance_theme", "Command Center") ?: "Command Center"
             PocketHostTheme(darkTheme = useDark, themeName = savedTheme) {
