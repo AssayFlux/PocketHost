@@ -125,7 +125,12 @@ internal object DynamicDnsSync {
                     val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                     val answers = json.optJSONArray("Answer") ?: JSONArray()
                     if (proxied) answers.length() > 0 else (0 until answers.length()).any { i ->
-                        answers.optJSONObject(i)?.optString("data")?.trimEnd('.')?.lowercase() == expectedNormalized
+                        val data = answers.optJSONObject(i)?.optString("data")?.trimEnd('.')
+                        data != null && runCatching {
+                            java.net.InetAddress.getByName(data).address.contentEquals(
+                                java.net.InetAddress.getByName(expectedNormalized).address
+                            )
+                        }.getOrDefault(false)
                     }
                 } finally { connection.disconnect() }
             }.getOrDefault(false)
