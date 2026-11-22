@@ -40,7 +40,7 @@ internal object DynamicDnsSync {
             .build()
         manager.enqueueUniquePeriodicWork(
             "pockethost-dynamic-dns-periodic",
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.KEEP,
             request
         )
     }
