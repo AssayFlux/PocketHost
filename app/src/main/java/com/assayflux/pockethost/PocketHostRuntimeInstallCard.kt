@@ -36,7 +36,6 @@ internal fun PocketHostRuntimeInstallCard() {
     var installed by remember { mutableStateOf(RuntimeWorkerInstaller.isInstalled(context)) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    val canInstall = RuntimeWorkerInstaller.canRequestInstallPermission(context)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -58,10 +57,10 @@ internal fun PocketHostRuntimeInstallCard() {
             if (message.isNotBlank()) Text(message, color = palette.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             Button(
                 onClick = {
+                    installed = RuntimeWorkerInstaller.isInstalled(context)
                     if (installed) {
-                        installed = RuntimeWorkerInstaller.isInstalled(context)
-                        message = if (installed) "Runtime companion is ready." else "Runtime companion is not installed."
-                    } else if (!canInstall) {
+                        message = "Runtime companion is ready."
+                    } else if (!RuntimeWorkerInstaller.canRequestInstallPermission(context)) {
                         runCatching {
                             context.startActivity(RuntimeWorkerInstaller.installPermissionSettingsIntent(context)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -85,7 +84,6 @@ internal fun PocketHostRuntimeInstallCard() {
                 Text(when {
                     busy -> "Preparing…"
                     installed -> "Refresh installation status"
-                    !canInstall -> "Allow installation in Android settings"
                     else -> "Install runtime companion"
                 })
             }
