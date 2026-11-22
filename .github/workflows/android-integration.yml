@@ -142,20 +142,27 @@ jobs:
       - name: Restore verified Cloudflare executable and notices
         run: |
           set -euo pipefail
-          test -d "$RUNNER_TEMP/cloudflared/app/src/main/jniLibs"
-          mkdir -p app/src/main/jniLibs app/src/main/assets/licenses
-          cp -a "$RUNNER_TEMP/cloudflared/app/src/main/jniLibs/." app/src/main/jniLibs/
-          if [[ -d "$RUNNER_TEMP/cloudflared/app/src/main/assets/licenses/cloudflared" ]]; then
-            mkdir -p app/src/main/assets/licenses
-            cp -a "$RUNNER_TEMP/cloudflared/app/src/main/assets/licenses/cloudflared" app/src/main/assets/licenses/
-          fi
+          artifact_root="$RUNNER_TEMP/cloudflared"
+          mkdir -p app/src/main/jniLibs app/src/main/assets/licenses/cloudflared
+          # upload-artifact v4 strips the common path prefix. Locate each ABI payload
+          # by its stable filename instead of assuming the original repository path.
           for abi in arm64-v8a armeabi-v7a x86_64; do
+            source="$(find "$artifact_root" -type f -path "*/$abi/libcloudflared.so" -print -quit)"
+            test -n "$source"
+            test -s "$source"
             binary="app/src/main/jniLibs/$abi/libcloudflared.so"
-            test -s "$binary"
-            # Actions artifacts do not preserve executable mode; restore it before runtime checks.
-            chmod 755 "$binary"
+            mkdir -p "$(dirname "$binary")"
+            install -m 755 "$source" "$binary"
             test -x "$binary"
           done
+          # Preserve any separately uploaded third-party notices when present.
+          notice_dir="$(find "$artifact_root" -type d -path "*/licenses/cloudflared" -print -quit)"
+          if [[ -n "$notice_dir" ]]; then
+            cp -a "$notice_dir/." app/src/main/assets/licenses/cloudflared/
+          fi
+          test -s app/src/main/jniLibs/arm64-v8a/libcloudflared.so
+          test -s app/src/main/jniLibs/armeabi-v7a/libcloudflared.so
+          test -s app/src/main/jniLibs/x86_64/libcloudflared.so
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
