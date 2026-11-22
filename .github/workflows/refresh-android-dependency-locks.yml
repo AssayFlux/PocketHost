@@ -13,7 +13,7 @@ on:
       - "settings.gradle.kts"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: pockethost-android-lock-refresh
@@ -43,3 +43,25 @@ jobs:
           path: app/gradle.lockfile
           if-no-files-found: error
           retention-days: 7
+      - name: Commit refreshed dependency lock with the GitHub API
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const path = 'app/gradle.lockfile';
+            const content = fs.readFileSync(path, 'base64');
+            const current = await github.rest.repos.getContent({ owner, repo, path, ref: 'Alpha' });
+            if (current.data.encoding === 'base64' &&
+                Buffer.from(current.data.content, 'base64').equals(Buffer.from(content, 'base64'))) {
+              core.info('Android dependency lock state is already current.');
+              return;
+            }
+            await github.rest.repos.createOrUpdateFileContents({
+              owner, repo, path, branch: 'Alpha',
+              sha: current.data.sha,
+              message: 'Refresh Android dependency locks',
+              content
+            });
+            core.info('Committed refreshed Android dependency lock state.');
