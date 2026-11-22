@@ -169,7 +169,7 @@ internal object CloudflareDnsApi {
     }
 
     fun save(token: String, zone: CloudflareZone, id: String?, type: String, name: String,
-        content: String, proxied: Boolean, priority: String) {
+        content: String, proxied: Boolean, priority: String): String {
         val recordType = type.uppercase()
         validate(recordType, name, content, zone.name, priority)
         val recordName = if (name.trim() == "@") zone.name else name.trim().trimEnd('.').lowercase()
@@ -178,8 +178,11 @@ internal object CloudflareDnsApi {
             .put("proxied", proxyEligible(recordType) && proxied)
         if (recordType == "MX") payload.put("priority", priority.toInt())
         val suffix = if (id.isNullOrBlank()) "" else "/${enc(id)}"
-        request(if (id.isNullOrBlank()) "POST" else "PATCH",
+        val response = request(if (id.isNullOrBlank()) "POST" else "PATCH",
             "/zones/${enc(zone.id)}/dns_records$suffix", token, payload)
+        val savedId = response.optJSONObject("result")?.optString("id").orEmpty()
+        require(savedId.isNotBlank()) { "Cloudflare did not return the DNS record ID; ownership was not saved." }
+        savedId
     }
 
     fun delete(token: String, zoneId: String, id: String) {
