@@ -151,7 +151,8 @@ private val pocketHostNavGroups = listOf(
         PocketHostNavItem("Relay Node", "Operate this device as a relay node", Icons.Outlined.NetworkCheck, "Settings:Relay node"),
         PocketHostNavItem("Relay Host", "Connect this host to a relay", Icons.Outlined.NetworkCheck, "Settings:Relay host"),
         PocketHostNavItem("Hostnames & access", "Domains, visitor access and policy", Icons.Outlined.Security, "Settings:Hostnames & access"),
-        PocketHostNavItem("DNS management", "Manage DNS records and routing", Icons.Outlined.Language, "Settings:DNS management")
+        PocketHostNavItem("DNS management", "Manage DNS records and routing", Icons.Outlined.Language, "Settings:DNS management"),
+        PocketHostNavItem("Dynamic DNS", "Automatically sync public IPv4 and IPv6", Icons.Outlined.Sync, "Settings:Dynamic DNS")
     ),
     "RUNTIMES" to listOf(
         PocketHostNavItem("Runtime overview", "Runtime health and resource controls", Icons.Outlined.Memory, "Settings:Runtimes"),
