@@ -3,7 +3,6 @@ package com.assayflux.pockethost
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +36,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,37 +58,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 internal fun PocketHostOwnerHeader(
     currentUserId: String,
-    selectedTab: String,
-    selectedSection: String,
-    hosting: Boolean,
     onMenuClick: () -> Unit,
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
     val palette = MaterialTheme.colorScheme
-    val headerTitle = when (selectedTab) {
-        "Dashboard" -> "Hosting"
-        "Sites" -> "Websites"
-        "Activity" -> "Activity"
-        "Settings" -> when (selectedSection) {
-            "Network" -> "Network & tunnels"
-            "Server" -> "Server settings"
-            "Remote" -> "Remote control"
-            "Local access" -> "Local access"
-            "Relay node" -> "Native Relay Node"
-            "Relay host" -> "Relay host connection"
-            "Cloudflare" -> "Cloudflare Tunnel"
-            "Cloudflare Access" -> "Cloudflare Access"
-            "DNS management" -> "DNS management"
-            "Hostnames & access" -> "Hostnames & access"
-            "Runtimes" -> "Runtimes"
-            "Python" -> "Python runtime"
-            "Node.js" -> "Node.js runtime"
-            "About" -> "About Pocket Host"
-            else -> "Settings"
-        }
-        else -> selectedTab
-    }
     var accountExpanded by remember { mutableStateOf(false) }
     Surface(color = palette.background, shadowElevation = 2.dp) {
         Row(
@@ -109,7 +81,8 @@ internal fun PocketHostOwnerHeader(
                 Surface(
                     color = palette.surfaceVariant,
                     shape = RoundedCornerShape(50),
-                    modifier = Modifier.clickable { accountExpanded = true }.semantics { contentDescription = "Open account and app menu" }
+                    modifier = Modifier.clickable { accountExpanded = true }
+                        .semantics { contentDescription = "Open account and app menu" }
                 ) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -156,49 +129,11 @@ internal fun PocketHostOwnerHeader(
     }
 }
 
-@Composable
-internal fun PocketHostBottomNavigation(
-    selectedTab: String,
-    selectedSection: String,
-    onNavigate: (String) -> Unit
-) {
-    val palette = MaterialTheme.colorScheme
-    val items = listOf(
-        Triple("Home", "Home", Icons.Outlined.Dashboard),
-        Triple("Hosting", "Dashboard", Icons.Outlined.Language),
-        Triple("Sites", "Sites", Icons.Outlined.FolderOpen),
-        Triple("Workbench", "Workbench", Icons.Outlined.Code),
-        Triple("More", "Settings:General", Icons.Outlined.Settings)
-    )
-    Surface(color = palette.surface, tonalElevation = 3.dp) {
-        androidx.compose.material3.NavigationBar(
-            containerColor = palette.surface,
-            contentColor = palette.onSurface,
-            windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
-        ) {
-            items.forEach { (label, destination, icon) ->
-                val selected = when (destination) {
-                    "Settings:General" -> selectedTab == "Settings"
-                    else -> selectedTab == destination
-                }
-                NavigationBarItem(
-                    selected = selected,
-                    onClick = { onNavigate(destination) },
-                    icon = { Icon(icon, contentDescription = null) },
-                    label = { Text(label, maxLines = 1, fontSize = 10.sp) },
-                    alwaysShowLabel = true
-                )
-            }
-        }
-    }
-}
-
 internal data class PocketHostNavItem(val title: String, val subtitle: String, val icon: ImageVector, val destination: String)
 
 private val pocketHostNavItems = listOf(
     PocketHostNavItem("Dashboard", "Server health, traffic, logs and alerts", Icons.Outlined.Dashboard, "Dashboard"),
-    PocketHostNavItem("Websites & sites", "Import and manage hosted websites", Icons.Outlined.FolderOpen, "Sites"),
-    PocketHostNavItem("File manager", "Browse and edit website files", Icons.Outlined.FolderOpen, "Sites"),
+    PocketHostNavItem("Websites & files", "Import and manage hosted websites and files", Icons.Outlined.FolderOpen, "Sites"),
     PocketHostNavItem("Workbench", "Edit drafts and preview changes", Icons.Outlined.Code, "Workbench"),
     PocketHostNavItem("Deployments", "Releases, snapshots and recovery", Icons.Outlined.Timeline, "Deployments"),
     PocketHostNavItem("Devices", "Trusted devices and fleet access", Icons.Outlined.Memory, "Devices"),
