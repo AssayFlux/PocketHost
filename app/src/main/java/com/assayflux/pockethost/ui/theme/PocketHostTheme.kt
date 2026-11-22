@@ -72,10 +72,10 @@ object PocketHostPalettes {
 
     private fun palette(name: String) = when (name) {
         "Command Center" -> Palette(
-            Color(0xFFF1F6F3), Color(0xFFFFFFFF), Color(0xFFE2ECE6),
-            Color(0xFF14251D), Color(0xFF52685D), Color(0xFF137A57), Color(0xFF416B5A),
-            Color(0xFF0A1510), Color(0xFF12231B), Color(0xFF1D3428),
-            Color(0xFFEAF5EE), Color(0xFFB7CBBF), Color(0xFF55D6A0)
+            Color(0xFFEAF0E1), Color(0xFFFFF9EA), Color(0xFFDFE8D4),
+            Color(0xFF29352A), Color(0xFF5B6956), Color(0xFF557B4B), Color(0xFF9A4D3F),
+            Color(0xFF182119), Color(0xFF253128), Color(0xFF344334),
+            Color(0xFFF1F5E9), Color(0xFFC2D0B9), Color(0xFF7ED957)
         )
         "Midnight" -> Palette(Color(0xFFF0F1F4),Color(0xFFE3E6EC),Color(0xFFD4DAE4),Color(0xFF202735),Color(0xFF596579),Color(0xFF536B91),Color(0xFF8A744F),Color(0xFF11151D),Color(0xFF1C2330),Color(0xFF283344),Color(0xFFF1F3F7),Color(0xFFB5C0D0),Color(0xFFD5A84B))
         "Forest" -> Palette(Color(0xFFF0F3EA),Color(0xFFE1E9D9),Color(0xFFD0DDC8),Color(0xFF243126),Color(0xFF526653),Color(0xFF52734F),Color(0xFF9A7847),Color(0xFF172019),Color(0xFF222E25),Color(0xFF304235),Color(0xFFEAF1E8),Color(0xFFB6C7B5),Color(0xFF9DBA83))
@@ -101,7 +101,7 @@ object PocketHostPalettes {
             surface=p.darkSurface, onSurface=p.darkText,
             surfaceVariant=p.darkRaised, onSurfaceVariant=accessibleTextColor(p.darkMuted, listOf(p.darkBg, p.darkSurface, p.darkRaised)),
             outline=p.darkMuted, outlineVariant=p.darkRaised,
-            error=Color(0xFFFFB4AB), onError=Color(0xFF690005),
+            error=Color(0xFFFFB4A8), onError=Color(0xFF5A1009),
             errorContainer=Color(0xFF7F2925), onErrorContainer=Color(0xFFFFDAD6)
         ) else lightColorScheme(
             primary=p.accent, onPrimary=accessibleContentColor(p.accent),
@@ -113,7 +113,7 @@ object PocketHostPalettes {
             surface=p.lightSurface, onSurface=p.lightText,
             surfaceVariant=p.lightRaised, onSurfaceVariant=accessibleTextColor(p.lightMuted, listOf(p.lightBg, p.lightSurface, p.lightRaised)),
             outline=p.lightMuted, outlineVariant=p.lightRaised,
-            error=Color(0xFFB3261E), onError=Color.White,
+            error=Color(0xFFB44738), onError=Color.White,
             errorContainer=Color(0xFFF9DEDC), onErrorContainer=Color(0xFF410E0B)
         )
     }
