@@ -2,6 +2,8 @@ package com.assayflux.pockethost
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.clickable
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -166,13 +168,27 @@ internal fun PocketHostBottomNavigation(
                     "Settings:General" -> selectedTab == "Settings"
                     else -> selectedTab == destination
                 }
-                androidx.compose.material3.NavigationBarItem(
-                    selected = selected,
-                    onClick = { onNavigate(destination) },
-                    icon = { Icon(icon, contentDescription = null) },
-                    label = { Text(label, maxLines = 1) },
-                    alwaysShowLabel = true
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onNavigate(destination) }
+                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = label,
+                        tint = if (selected) palette.primary else palette.onSurfaceVariant
+                    )
+                    Text(
+                        label,
+                        color = if (selected) palette.primary else palette.onSurfaceVariant,
+                        fontSize = 10.sp,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
