@@ -1295,7 +1295,7 @@ mod tests {
             ("a.example.test".to_string(), SiteTarget::Static(site_a.clone())),
             ("b.example.test".to_string(), SiteTarget::Static(site_b.clone())),
         ].into_iter().collect();
-        start_engine_with_hosts(base.to_str().unwrap(), port, false, routes, HashMap::new()).unwrap();
+        start_engine_with_hosts(base.to_str().unwrap(), port, "loopback", routes, HashMap::new()).unwrap();
 
         let request = |host: &str, path: &str| {
             let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
