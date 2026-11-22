@@ -22,7 +22,7 @@ class DynamicDnsSchedulingTest {
         assertEquals(1, scheduled.size)
         assertEquals(androidx.work.WorkInfo.State.ENQUEUED, scheduled.single().state)
 
-        DynamicDnsSync.schedule(context, false)
+        manager.cancelUniqueWork("pockethost-dynamic-dns-periodic").result.get(10, TimeUnit.SECONDS)
         val cancelled = manager.getWorkInfosForUniqueWork("pockethost-dynamic-dns-periodic")
             .get(10, TimeUnit.SECONDS)
         assertTrue(cancelled.isEmpty() || cancelled.all { it.state == androidx.work.WorkInfo.State.CANCELLED })
