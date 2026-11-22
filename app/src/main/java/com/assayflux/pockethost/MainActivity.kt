@@ -212,7 +212,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { HostingSchedule.onTimeChanged(context) }
     val scope = rememberCoroutineScope()
-    var selectedTab by remember { mutableStateOf("Home") }
+    var selectedTab by remember { mutableStateOf("Dashboard") }
     var settingsSection by remember { mutableStateOf("General") }
     var operatingMode by remember {
         mutableStateOf(context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
@@ -656,9 +656,20 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             }
         ) {
         Scaffold(
-            containerColor = palette.background
+            containerColor = palette.background,
+            topBar = {
+                PocketHostOwnerHeader(
+                    currentUserId = PocketHostOwnerSession.username ?: "Owner",
+                    selectedTab = selectedTab,
+                    selectedSection = settingsSection,
+                    hosting = hosting,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onNavigate = navigate,
+                    onSignOut = onSignOut
+                )
+            }
         ) { innerPadding ->
-            Surface(Modifier.fillMaxSize().statusBarsPadding(), color = palette.background) {
+            Surface(Modifier.fillMaxSize(), color = palette.background) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     // Keep tablet/desktop-like widths readable while letting phones use all available width.
                     val contentWidth = maxWidth.coerceAtMost(1120.dp)
@@ -904,6 +915,12 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                 }
                 }
 
+                }
+                if (selectedTab == "Profile") {
+                    PocketHostProfileScreen(
+                        currentUserId = PocketHostOwnerSession.username ?: "Owner",
+                        onOpenSecuritySettings = { selectedTab = "Settings"; settingsSection = "General" }
+                    )
                 }
                 if (selectedTab == "Dashboard") {
                     PocketHostDashboardScreen(
