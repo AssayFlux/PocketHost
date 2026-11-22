@@ -211,6 +211,70 @@ internal fun PocketHostDashboardScreen(
                 }
             }
         }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = palette.surface)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Live activity", color = palette.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                        Text("Current server counters", color = palette.onSurfaceVariant, fontSize = 12.sp)
+                    }
+                    Surface(
+                        color = if (state.hosting) palette.primaryContainer else palette.surfaceVariant,
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Text(
+                            if (state.hosting) "ACTIVE" else "IDLE",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            color = if (state.hosting) palette.onPrimaryContainer else palette.onSurfaceVariant,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(palette.background).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("Requests", color = palette.onSurfaceVariant, fontSize = 11.sp)
+                        Text(state.requests.toString(), color = palette.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(palette.background).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("Active connections", color = palette.onSurfaceVariant, fontSize = 11.sp)
+                        Text(state.activeConnections.toString(), color = palette.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(palette.background).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("Data served", color = palette.onSurfaceVariant, fontSize = 11.sp)
+                        Text(formatBytes(state.bytesServed), color = palette.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(palette.background).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("Uptime", color = palette.onSurfaceVariant, fontSize = 11.sp)
+                        Text(state.uptimeText.ifBlank { "—" }, color = palette.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Text(
+                    "Today · ${state.todayRequests} requests · ${formatBytes(state.todayBytes)} transferred",
+                    color = palette.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
+            }
+        }
     }
 
     if (selectedPage == "Traffic & capacity") {
