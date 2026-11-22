@@ -1,0 +1,51 @@
+name: Refresh PocketHost Android dependency locks
+
+on:
+  push:
+    branches: [Alpha]
+    paths:
+      - "app/build.gradle.kts"
+      - "app/src/**"
+      - "app/gradle.lockfile"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pockethost-android-lock-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-locks:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: Alpha
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Resolve and write the complete Android dependency lock state
+        run: ./gradlew :app:dependencies --write-locks --no-daemon
+      - name: Commit refreshed lock state when it changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/gradle.lockfile; then
+            echo "Android dependency lock state is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/gradle.lockfile
+          git commit -m "Refresh Android dependency locks"
+          git push origin HEAD:Alpha
