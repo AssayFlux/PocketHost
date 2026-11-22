@@ -42,7 +42,7 @@ class PocketHostDashboardUiSmokeTest {
             // emulators. Wait for the app window and its destination semantics rather
             // than treating a delayed first frame as a missing screen.
             device.waitForWindowUpdate(context.packageName, 30_000)
-            val homeVisible = device.wait(Until.hasObject(By.text("Your services")), 60_000) &&
+            val homeVisible = device.wait(Until.hasObject(By.text("Dashboard")), 60_000) &&
                 device.wait(Until.hasObject(By.desc("Open app navigation")), 15_000) &&
                 device.wait(Until.hasObject(By.desc("Open account and app menu")), 15_000)
             // Capture the hierarchy after the UI has settled; the initial frame can be
