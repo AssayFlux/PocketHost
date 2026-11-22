@@ -50,6 +50,10 @@ internal object DynamicDnsSync {
 
     fun run(context: Context, allowAdoptExisting: Boolean = false): List<FamilyResult> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val lastAttempt = prefs.getLong("last_attempt_ms", 0L)
+        require(now - lastAttempt >= 30_000L) { "Dynamic DNS is rate-limited to one sync attempt every 30 seconds." }
+        check(prefs.edit().putLong("last_attempt_ms", now).commit()) { "Could not record the last DDNS attempt." }
         val domain = CloudflareDnsApi.normalizeDomain(prefs.getString("domain", "").orEmpty())
         val host = prefs.getString("host", "@").orEmpty().trim()
         require(host.isNotBlank()) { "A DNS hostname is required." }
