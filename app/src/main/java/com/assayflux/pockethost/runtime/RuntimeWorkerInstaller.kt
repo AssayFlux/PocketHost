@@ -40,7 +40,7 @@ object RuntimeWorkerInstaller {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(WORKER_PACKAGE)
-            setInstallReason(PackageInstaller.INSTALL_REASON_USER)
+            if (Build.VERSION.SDK_INT >= 29) setInstallReason(PackageInstaller.INSTALL_REASON_USER)
         }
         val sessionId = installer.createSession(params)
         try {
@@ -54,7 +54,7 @@ object RuntimeWorkerInstaller {
                     context,
                     sessionId,
                     callback,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                    PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
                 )
                 session.commit(pending.intentSender)
             }
