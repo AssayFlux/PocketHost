@@ -1,5 +1,5 @@
-name: PocketHost v0.1.0 Alpha Universal Installer APK
-run-name: Pocket Host Alpha universal installer APK
+name: PocketHost v0.1.0 Alpha Separate APKs
+run-name: Pocket Host Alpha app and runtime APKs
 permissions:
   contents: read
 concurrency:
@@ -67,13 +67,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Validate runtime asset prerequisites
-        run: ./gradlew :runtime-worker:generateDebugPythonMiscAssets
+      - name: Build runtime Python and Node.js assets
+        run: ./gradlew :runtime-worker:prepareNodeRuntime :runtime-worker:generateDebugPythonMiscAssets
       - name: Build companion runtime-worker APK
         run: |
           ./gradlew :runtime-worker:assembleDebug
           cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$RUNNER_TEMP/pockethost-apks/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
-      - name: Build one universal PocketHost installer APK
+      - name: Build one universal PocketHost APK
         shell: bash
         run: |
           set -euo pipefail
@@ -81,7 +81,7 @@ jobs:
           echo "arm64-v8a,armeabi-v7a,x86_64" > "$out/APP-ABIS.txt"
           ./gradlew :app:assembleDebug
           cp app/build/outputs/apk/debug/app-debug.apk "$out/pockethost-v0.1.0-alpha-universal-debug.apk"
-      - name: Verify universal APK, embedded companion and native ABIs
+      - name: Verify both standalone APKs, matching signatures and native ABIs
         shell: bash
         run: |
           set -euo pipefail
@@ -102,22 +102,22 @@ jobs:
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost.so"
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libcloudflared.so"
+            unzip -Z1 "$worker" | grep -Fx "lib/$abi/libnode.so"
           done
-          unzip -Z1 "$apk" | grep -Fx "assets/pockethost-runtime-worker.apk"
-          unzip -p "$apk" "assets/pockethost-runtime-worker.apk" > "$out/embedded-runtime-worker.apk"
-          cmp "$worker" "$out/embedded-runtime-worker.apk"
-          for abi in arm64-v8a armeabi-v7a x86_64; do
-            unzip -Z1 "$out/embedded-runtime-worker.apk" | grep -Fx "lib/$abi/libnode.so"
-          done
+          if unzip -Z1 "$apk" | grep -Fq "assets/pockethost-runtime-worker.apk"; then
+            echo "Runtime companion must remain a separate APK." >&2
+            exit 1
+          fi
+          echo "arm64-v8a,armeabi-v7a,x86_64" > "$out/RUNTIME-WORKER-ABIS.txt"
           test -d app/src/main/assets/licenses/cloudflared
           find app/src/main/assets/licenses/cloudflared -type f -print -quit | grep -q .
-          sha256sum "$apk" | tee "$out/SHA256SUMS"
-          echo "Universal APK, embedded runtime companion, signing certificate and native ABI payloads verified." | tee "$out/APK-VERIFICATION.txt"
-          rm -f "$worker" "$out/worker-signature.txt" "$out/embedded-runtime-worker.apk"
+          sha256sum "$apk" "$worker" | tee "$out/SHA256SUMS"
+          echo "PocketHost and Runtime Worker are separate universal APKs with matching signing certificates and verified native ABI payloads." | tee "$out/APK-VERIFICATION.txt"
+          rm -f "$out/worker-signature.txt" "$out/app-signature.txt"
       - name: Upload APKs and build evidence
         uses: actions/upload-artifact@v4
         with:
-          name: pockethost-v0.1.0-alpha-universal-installer-apk
+          name: pockethost-v0.1.0-alpha-separate-apks
           path: ${{ runner.temp }}/pockethost-apks/*
           if-no-files-found: error
           retention-days: 30
