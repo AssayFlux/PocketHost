@@ -656,14 +656,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             }
         ) {
         Scaffold(
-            containerColor = palette.background,
-            bottomBar = {
-                PocketHostBottomNavigation(
-                    selectedTab = selectedTab,
-                    selectedSection = settingsSection,
-                    onNavigate = navigate
-                )
-            },
+            containerColor = palette.background
         ) { innerPadding ->
             Surface(Modifier.fillMaxSize().statusBarsPadding(), color = palette.background) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
