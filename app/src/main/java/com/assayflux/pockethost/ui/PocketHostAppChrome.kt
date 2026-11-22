@@ -90,55 +90,59 @@ internal fun PocketHostOwnerHeader(
         else -> selectedTab
     }
     var accountExpanded by remember { mutableStateOf(false) }
-    Surface(color = palette.background) {
+    Surface(color = palette.background, shadowElevation = 2.dp) {
         Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            PocketHostBrandMark(Modifier.size(36.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("POCKET HOST", color = palette.onSurface, fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
-                Text(headerTitle, color = palette.onSurface, fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Surface(
-                color = if (hosting) palette.primaryContainer else palette.surfaceVariant,
-                shape = RoundedCornerShape(50)
-            ) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.size(7.dp).clip(CircleShape)
-                        .background(if (hosting) palette.primary else palette.outline))
-                    Text(if (hosting) "RUNNING" else "OFFLINE",
-                        color = if (hosting) palette.onPrimaryContainer else palette.onSurfaceVariant,
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            IconButton(onClick = onMenuClick,
-                modifier = Modifier.semantics { contentDescription = "Open app navigation" }) {
-                Icon(Icons.Outlined.Menu, contentDescription = null, tint = palette.onSurface)
+            PocketHostBrandMark(Modifier.size(34.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text("PocketHost", color = palette.onSurface, fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp)
+                Text("PRIVATE WEB HOSTING", color = palette.onSurfaceVariant,
+                    fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             }
             Box {
-                IconButton(onClick = { accountExpanded = true },
-                    modifier = Modifier.semantics { contentDescription = "Open account and app menu" }) {
-                    Icon(Icons.Outlined.Person, contentDescription = null, tint = palette.onSurface)
+                Surface(
+                    color = palette.surfaceVariant,
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.clickable { accountExpanded = true }
+                ) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Outlined.Person, contentDescription = null, tint = palette.onSurface, modifier = Modifier.size(18.dp))
+                        Text(currentUserId, color = palette.onSurface, fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Outlined.ExpandMore, contentDescription = null, tint = palette.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    }
                 }
                 DropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
-                    DropdownMenuItem(text = { Text("App settings") },
+                    DropdownMenuItem(
+                        text = { Column {
+                            Text("Signed in as", fontSize = 10.sp, color = palette.onSurfaceVariant)
+                            Text(currentUserId, fontWeight = FontWeight.SemiBold)
+                        } },
+                        onClick = { accountExpanded = false; onNavigate("Profile") }
+                    )
+                    DropdownMenuItem(text = { Text("Profile & password") },
+                        leadingIcon = { Icon(Icons.Outlined.Person, null) },
+                        onClick = { accountExpanded = false; onNavigate("Profile") })
+                    DropdownMenuItem(text = { Text("Fingerprint & security") },
+                        leadingIcon = { Icon(Icons.Outlined.Security, null) },
+                        onClick = { accountExpanded = false; onNavigate("Settings:General") })
+                    DropdownMenuItem(text = { Text("App preferences") },
                         leadingIcon = { Icon(Icons.Outlined.Settings, null) },
                         onClick = { accountExpanded = false; onNavigate("Settings:General") })
-                    DropdownMenuItem(text = { Text("Network & access") },
-                        leadingIcon = { Icon(Icons.Outlined.Security, null) },
-                        onClick = { accountExpanded = false; onNavigate("Settings:Network") })
-                    DropdownMenuItem(text = { Text("About Pocket Host") },
-                        leadingIcon = { Icon(Icons.Outlined.Info, null) },
-                        onClick = { accountExpanded = false; onNavigate("Settings:About") })
                     DropdownMenuItem(text = { Text("Sign out") },
                         leadingIcon = { Icon(Icons.Outlined.Person, null) },
                         onClick = { accountExpanded = false; onSignOut() })
                 }
+            }
+            IconButton(onClick = onMenuClick,
+                modifier = Modifier.semantics { contentDescription = "Open PocketHost services" }) {
+                Icon(Icons.Outlined.Menu, contentDescription = "Open services", tint = palette.onSurface)
             }
         }
     }
@@ -184,18 +188,24 @@ internal fun PocketHostBottomNavigation(
 internal data class PocketHostNavItem(val title: String, val subtitle: String, val icon: ImageVector, val destination: String)
 
 private val pocketHostNavItems = listOf(
-    PocketHostNavItem("Home", "Service overview and quick status", Icons.Outlined.Dashboard, "Home"),
-    PocketHostNavItem("Hosting", "Start, stop and monitor the web server", Icons.Outlined.Language, "Dashboard"),
-    PocketHostNavItem("Websites & files", "Import, edit, publish and recover sites", Icons.Outlined.FolderOpen, "Sites"),
-    PocketHostNavItem("Workbench", "Edit site files and preview changes", Icons.Outlined.Code, "Workbench"),
-    PocketHostNavItem("Deployments", "Production publish and rollback", Icons.Outlined.Code, "Deployments"),
-    PocketHostNavItem("Devices", "Trusted devices and fleet administration", Icons.Outlined.Memory, "Devices"),
-    PocketHostNavItem("Network & tunnels", "LAN access, Relay and Cloudflare", Icons.Outlined.NetworkCheck, "Settings:Network"),
-    PocketHostNavItem("Runtimes", "Optional Python and Node.js services", Icons.Outlined.Code, "Settings:Runtimes"),
-    PocketHostNavItem("Activity & logs", "Operational events and diagnostics", Icons.Outlined.Timeline, "Activity"),
+    PocketHostNavItem("Dashboard", "Server health, traffic, logs and alerts", Icons.Outlined.Dashboard, "Dashboard"),
+    PocketHostNavItem("Websites & sites", "Import and manage hosted websites", Icons.Outlined.FolderOpen, "Sites"),
+    PocketHostNavItem("File manager", "Browse and edit website files", Icons.Outlined.FolderOpen, "Sites"),
+    PocketHostNavItem("Workbench", "Edit drafts and preview changes", Icons.Outlined.Code, "Workbench"),
+    PocketHostNavItem("Deployments", "Releases, snapshots and recovery", Icons.Outlined.Timeline, "Deployments"),
+    PocketHostNavItem("Devices", "Trusted devices and fleet access", Icons.Outlined.Memory, "Devices"),
+    PocketHostNavItem("Network settings", "Ports, LAN and connectivity", Icons.Outlined.NetworkCheck, "Settings:Network"),
+    PocketHostNavItem("Cloudflare Tunnel", "Public tunnel connection", Icons.Outlined.Language, "Settings:Cloudflare"),
+    PocketHostNavItem("Relay Node", "Operate this device as a relay node", Icons.Outlined.NetworkCheck, "Settings:Relay node"),
+    PocketHostNavItem("Relay Host", "Connect this host to a relay", Icons.Outlined.NetworkCheck, "Settings:Relay host"),
+    PocketHostNavItem("Hostnames & access", "Domains, visitor access and policy", Icons.Outlined.Security, "Settings:Hostnames & access"),
+    PocketHostNavItem("DNS management", "Manage DNS records and routing", Icons.Outlined.Language, "Settings:DNS management"),
+    PocketHostNavItem("Python runtime", "Configure and run Python apps", Icons.Outlined.Code, "Settings:Python"),
+    PocketHostNavItem("Node.js runtime", "Configure and run Node.js apps", Icons.Outlined.Code, "Settings:Node.js"),
+    PocketHostNavItem("Activity & logs", "Events and diagnostic exports", Icons.Outlined.Timeline, "Activity"),
     PocketHostNavItem("Learn", "Guides and operating limits", Icons.Outlined.School, "Learn"),
-    PocketHostNavItem("Settings", "Appearance and device preferences", Icons.Outlined.Settings, "Settings:General"),
-    PocketHostNavItem("About", "Version and platform information", Icons.Outlined.Info, "Settings:About")
+    PocketHostNavItem("Application settings", "Appearance and device preferences", Icons.Outlined.Settings, "Settings:General"),
+    PocketHostNavItem("About PocketHost", "Version and platform details", Icons.Outlined.Info, "Settings:About")
 )
 
 @Composable
