@@ -662,9 +662,6 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             topBar = {
                 PocketHostOwnerHeader(
                     currentUserId = PocketHostOwnerSession.username ?: "Owner",
-                    selectedTab = selectedTab,
-                    selectedSection = settingsSection,
-                    hosting = hosting,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onNavigate = navigate,
                     onSignOut = onSignOut
@@ -760,12 +757,6 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         }
                     }
                 }
-                }
-                if (selectedTab == "Settings") {
-                    PocketHostSettingsSectionNavigation(
-                        selectedSection = settingsSection,
-                        onSectionSelected = { settingsSection = it }
-                    )
                 }
                 if (selectedTab == "Settings" && settingsSection == "General") {
                     PocketHostSettingsScreen(
