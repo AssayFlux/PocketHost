@@ -182,7 +182,7 @@ internal object CloudflareDnsApi {
             "/zones/${enc(zone.id)}/dns_records$suffix", token, payload)
         val savedId = response.optJSONObject("result")?.optString("id").orEmpty()
         require(savedId.isNotBlank()) { "Cloudflare did not return the DNS record ID; ownership was not saved." }
-        savedId
+        return savedId
     }
 
     fun delete(token: String, zoneId: String, id: String) {
