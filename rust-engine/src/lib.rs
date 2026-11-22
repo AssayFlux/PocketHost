@@ -912,12 +912,21 @@ fn start_engine_with_hosts(root: &str, port: u16, bind_mode: &str, host_paths: H
     }
     REJECTED_CONNECTIONS.store(0, Ordering::Relaxed);
 
-    // Public-origin is separately consent-gated at the JNI boundary.
-    // LAN and public-origin bind to IPv4 interfaces; internet reachability is a separate diagnostic.
-    let bind_host = if bind_mode == "loopback" { "127.0.0.1" } else { "0.0.0.0" };
-    let listener = std::net::TcpListener::bind((bind_host, port))
-        .map_err(|e| format!("Cannot bind port {port}: {e}"))?;
-    listener.set_nonblocking(true).map_err(|e| e.to_string())?;
+    // Bind separate v4/v6 sockets with IPV6_V6ONLY=true so neither listener
+    // shadows the other. Public-origin consent is enforced at the JNI boundary.
+    let (v4_address, v6_address) = if bind_mode == "loopback" {
+        (
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)),
+            SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::LOCALHOST, port, 0, 0))
+        )
+    } else {
+        (
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port)),
+            SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, port, 0, 0))
+        )
+    };
+    let listener_v4 = bind_listener(v4_address, true)?;
+    let listener_v6 = bind_listener(v6_address, true)?;
     let (stop_tx, stop_rx) = oneshot::channel();
     let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
 
@@ -930,18 +939,22 @@ fn start_engine_with_hosts(root: &str, port: u16, bind_mode: &str, host_paths: H
             }
         };
         // Tokio I/O resources must be created while the runtime is entered.
-        // Constructing TcpListener::from_std outside an entered runtime panics
-        // on Android (and can terminate the native engine thread before JNI
-        // receives its readiness signal).
-        let listener = match runtime.block_on(async { TcpListener::from_std(listener) }) {
-            Ok(listener) => listener,
+        let listeners = runtime.block_on(async {
+            let v4 = TcpListener::from_std(listener_v4)
+                .map_err(|e| format!("Cannot initialize IPv4 listener: {e}"))?;
+            let v6 = TcpListener::from_std(listener_v6)
+                .map_err(|e| format!("Cannot initialize IPv6 listener: {e}"))?;
+            Ok::<_, String>((v4, v6))
+        });
+        let (listener_v4, listener_v6) = match listeners {
+            Ok(listeners) => listeners,
             Err(error) => {
-                let _ = ready_tx.send(Err(format!("Cannot initialize listener: {error}")));
+                let _ = ready_tx.send(Err(error));
                 return;
             }
         };
         if ready_tx.send(Ok(())).is_err() { return; }
-        runtime.block_on(accept_loop(listener, root, canonical_hosts, canonical_access, site_limits, stop_rx));
+        runtime.block_on(accept_loop(listener_v4, listener_v6, root, canonical_hosts, canonical_access, site_limits, stop_rx));
     }).map_err(|e| format!("Cannot start engine thread: {e}"))?;
 
     match ready_rx.recv() {
