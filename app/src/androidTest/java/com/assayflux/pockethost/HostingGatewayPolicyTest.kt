@@ -16,10 +16,12 @@ class HostingGatewayPolicyTest {
         val preferences = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE)
         val oldConsent = preferences.getBoolean("public_origin_consent", false)
         val oldDiagnostics = preferences.getBoolean("public_origin_diagnostics_passed", false)
+        val oldTlsReady = preferences.getBoolean("public_origin_tls_ready", false)
         try {
             preferences.edit()
                 .putBoolean("public_origin_consent", false)
                 .putBoolean("public_origin_diagnostics_passed", false)
+                .putBoolean("public_origin_tls_ready", false)
                 .commit()
             val noConsent = runCatching {
                 HostingGateway.start(context, 18080, HostingGateway.BindMode.PUBLIC_ORIGIN)
@@ -34,10 +36,20 @@ class HostingGatewayPolicyTest {
                 HostingGateway.start(context, 18080, HostingGateway.BindMode.PUBLIC_ORIGIN)
             }.exceptionOrNull()
             assertTrue(noDiagnostics?.message.orEmpty().contains("diagnostics"))
+
+            preferences.edit()
+                .putBoolean("public_origin_diagnostics_passed", true)
+                .putBoolean("public_origin_tls_ready", false)
+                .commit()
+            val noTls = runCatching {
+                HostingGateway.start(context, 18080, HostingGateway.BindMode.PUBLIC_ORIGIN)
+            }.exceptionOrNull()
+            assertTrue(noTls?.message.orEmpty().contains("HTTPS gateway"))
         } finally {
             preferences.edit()
                 .putBoolean("public_origin_consent", oldConsent)
                 .putBoolean("public_origin_diagnostics_passed", oldDiagnostics)
+                .putBoolean("public_origin_tls_ready", oldTlsReady)
                 .commit()
         }
     }
