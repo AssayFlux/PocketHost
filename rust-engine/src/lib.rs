@@ -1290,9 +1290,9 @@ mod tests {
 
         let probe = StdListener::bind(("127.0.0.1", 0)).unwrap();
         let port = probe.local_addr().unwrap().port();
-        drop(probe);
         let upstream_probe = StdListener::bind(("127.0.0.1", 0)).unwrap();
         let unavailable_upstream_port = upstream_probe.local_addr().unwrap().port();
+        drop(probe);
         drop(upstream_probe);
         let routes = [
             ("a.example.test".to_string(), SiteTarget::Static(site_a.clone())),
