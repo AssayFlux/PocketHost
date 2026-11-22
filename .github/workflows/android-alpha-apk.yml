@@ -103,7 +103,7 @@ jobs:
       - name: Verify APK metadata, signatures and native ABI payloads
         shell: bash
         env:
-          ABI_SELECTION: ${{ inputs.abi }}
+          ABI_SELECTION: ${{ inputs.abi || 'all' }}
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/pockethost-apks"
