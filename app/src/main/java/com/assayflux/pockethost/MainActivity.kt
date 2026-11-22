@@ -136,7 +136,7 @@ class MainActivity : ComponentActivity() {
             val savedMode = appearance.getString("appearance_mode", null)
                 ?: if (appearance.contains("dark_theme")) { if (appearance.getBoolean("dark_theme", false)) "Dark" else "Light" } else "System"
             val useDark = when (savedMode) { "Dark" -> true; "Light" -> false; else -> isSystemInDarkTheme() }
-            val savedTheme = appearance.getString("appearance_theme", "Classic") ?: "Classic"
+            val savedTheme = appearance.getString("appearance_theme", "Command Center") ?: "Command Center"
             PocketHostTheme(darkTheme = useDark, themeName = savedTheme) {
                 if (!unlocked.value) {
                     BiometricUnlockScreen(onRetry = { authenticateAtLaunch() })
@@ -227,7 +227,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         })
     }
     var selectedTheme by remember {
-        mutableStateOf(appearancePreferences.getString("appearance_theme", "Classic") ?: "Classic")
+        mutableStateOf(appearancePreferences.getString("appearance_theme", "Command Center") ?: "Command Center")
     }
     val darkTheme = when (appearanceMode) {
         "Dark" -> true
@@ -657,6 +657,13 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         ) {
         Scaffold(
             containerColor = palette.background,
+            bottomBar = {
+                PocketHostBottomNavigation(
+                    selectedTab = selectedTab,
+                    selectedSection = settingsSection,
+                    onNavigate = navigate
+                )
+            },
             topBar = {
                 PocketHostOwnerHeader(
                     selectedTab = selectedTab,
@@ -671,11 +678,16 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             Surface(Modifier.fillMaxSize(), color = palette.background) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     // Keep tablet/desktop-like widths readable while letting phones use all available width.
-                    val contentWidth = maxWidth.coerceAtMost(840.dp)
+                    val contentWidth = maxWidth.coerceAtMost(1120.dp)
+                    val horizontalContentPadding = when {
+                        maxWidth < 360.dp -> 12.dp
+                        maxWidth >= 900.dp -> 28.dp
+                        else -> 20.dp
+                    }
                     Column(
                         Modifier.width(contentWidth).fillMaxHeight().align(Alignment.TopCenter)
                             .padding(innerPadding).consumeWindowInsets(innerPadding).imePadding()
-                            .verticalScroll(contentScrollState).padding(horizontal = 16.dp, vertical = 12.dp),
+                            .verticalScroll(contentScrollState).padding(horizontal = horizontalContentPadding, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                 if (selectedTab == "Home") {
