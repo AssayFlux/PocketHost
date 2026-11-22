@@ -78,6 +78,7 @@ import com.assayflux.pockethost.relay.NativeRelayService
 import com.assayflux.pockethost.relay.RelayNodeConfigStore
 import com.assayflux.pockethost.relay.RelayNodeIdentityStore
 import com.assayflux.pockethost.relay.RelayCredentialIssuer
+import com.assayflux.pockethost.dns.CloudflareDnsManagerScreen
 import com.assayflux.pockethost.tunnel.CloudflareTokenStore
 import com.assayflux.pockethost.tunnel.CloudflareTunnelRuntime
 import kotlinx.coroutines.Dispatchers
@@ -1757,14 +1758,7 @@ if (settingsSection == "Hostnames & access") {
                 }
 
                 if (settingsSection == "DNS management") {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("SERVICE COMING SOON", color = palette.primary, fontWeight = FontWeight.Bold)
-                            Text("Automatic DNS record management", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Pocket Host does not create or update public DNS records yet. Native Relay currently validates its configured DNS TXT ownership proof when the node starts; it does not continuously revalidate that proof.", color = palette.onSurfaceVariant)
-                            Text("Until DNS management is implemented, configure A/AAAA records and router forwarding with your DNS provider, then restart the Relay Node after changing ownership records.", color = palette.onSurfaceVariant)
-                        }
-                    }
+                    CloudflareDnsManagerScreen()
                 }
                 if (settingsSection == "Cloudflare Access") {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
