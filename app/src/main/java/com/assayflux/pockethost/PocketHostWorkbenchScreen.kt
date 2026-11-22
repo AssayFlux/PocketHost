@@ -2,6 +2,8 @@ package com.assayflux.pockethost
 
 import android.content.Context
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,10 +46,13 @@ import java.io.File
 internal fun PocketHostWorkbenchScreen(context: Context) {
     val palette = MaterialTheme.colorScheme
     var selectedPage by remember { mutableStateOf("Explorer") }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
         listOf("Explorer", "Editor", "Changes", "History").forEach { page ->
             FilterChip(selected = selectedPage == page, onClick = { selectedPage = page },
-                label = { Text(page, fontSize = 11.sp) }, modifier = Modifier.weight(1f))
+                label = { Text(page, fontSize = 12.sp, maxLines = 1) })
         }
     }
     val scope = rememberCoroutineScope()
