@@ -60,8 +60,8 @@ internal object NetworkDiagnostics {
         require(PublicAddressDetector.isGloballyRoutable(parsed, parsed is Inet6Address)) {
             "The target is not a globally routable public address."
         }
-        val target = if (parsed is Inet6Address) "tcp://[${parsed.hostAddress?.substringBefore('%')}]:$port"
-            else "tcp://${parsed.hostAddress}:$port"
+        val target = if (parsed is Inet6Address) "[${parsed.hostAddress?.substringBefore('%')}]:$port"
+            else "${parsed.hostAddress}:$port"
         val encoded = URLEncoder.encode(target, "UTF-8")
         val request = URL("https://check-host.net/check-tcp?host=$encoded&max_nodes=3")
         val initial = request.openConnection() as HttpURLConnection
