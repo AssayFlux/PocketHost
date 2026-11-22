@@ -69,7 +69,9 @@ jobs:
           disable-animations: true
           emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -camera-front none"
           script: |
-            set -euo pipefail
+            # The emulator action executes this script through /bin/sh on Ubuntu.
+            # Keep it POSIX-portable; dash rejects Bash-only `pipefail`.
+            set -eu
             app_apk="app/build/outputs/apk/debug/app-debug.apk"
             worker_apk="runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk"
             test -s "$app_apk"
