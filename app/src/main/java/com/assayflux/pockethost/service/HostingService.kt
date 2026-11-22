@@ -83,7 +83,6 @@ class HostingService : Service() {
             }
         }
 
-        val engineAlreadyRunning = NativeEngine.status() == "RUNNING"
         if (!RuntimeTrustGate.isAcknowledged(this) &&
             (statePreferences.getBoolean("python_enabled", false) || statePreferences.getBoolean("node_enabled", false))) {
             statePreferences.edit().putBoolean("python_enabled", false).putBoolean("node_enabled", false).commit()
@@ -94,16 +93,19 @@ class HostingService : Service() {
             statePreferences.getString("gateway_bind_mode", null),
             statePreferences.getBoolean("allow_lan", false)
         )
-        val result = if (engineAlreadyRunning) "OK" else runCatching {
+        val result = runCatching {
             com.assayflux.pockethost.engine.HostingGateway.start(
                 this, statePreferences.getInt("port", 8080), bindMode
             )
         }.getOrElse { "ERROR: ${it.message ?: "Gateway startup failed"}" }
         if (result == "OK") {
-            if (!engineAlreadyRunning || !statePreferences.contains("hosting_started_elapsed_ms")) {
+            if (!statePreferences.contains("hosting_started_elapsed_ms")) {
                 statePreferences.edit().putLong("hosting_started_elapsed_ms", android.os.SystemClock.elapsedRealtime()).apply()
             }
-            if (!engineAlreadyRunning) MetricsStore.beginSession(this)
+            if (!statePreferences.getBoolean("hosting_metrics_session_active", false)) {
+                MetricsStore.beginSession(this)
+                statePreferences.edit().putBoolean("hosting_metrics_session_active", true).apply()
+            }
             CapacityController.apply(this)
             startMetricsMonitor()
             val pythonEnabled = statePreferences.getBoolean("python_enabled", false)
@@ -270,7 +272,7 @@ class HostingService : Service() {
         runCatching { com.assayflux.pockethost.runtime.RuntimeWorkerClient.shutdownWorker(this) }
         runCatching { com.assayflux.pockethost.engine.HostingGateway.stop() }
         releaseWakeLock()
-        statePreferences.edit().remove("hosting_started_elapsed_ms").apply()
+        statePreferences.edit().remove("hosting_started_elapsed_ms").putBoolean("hosting_metrics_session_active", false).apply()
         if (!statePreferences.getString("service_status", "").orEmpty().startsWith("Hosting failed:")) {
             updateStatus("Hosting stopped.")
         }
