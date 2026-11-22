@@ -6,6 +6,20 @@ concurrency:
   group: pockethost-alpha-apk-builder-${{ github.ref }}-${{ inputs.abi || 'all' }}
   cancel-in-progress: false
 on:
+  push:
+    branches: [Alpha]
+    paths:
+      - ".github/workflows/android-alpha-apk.yml"
+      - ".github/workflows/android-integration.yml"
+      - "app/**"
+      - "runtime-worker/**"
+      - "rust-engine/**"
+      - "relay-node/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "scripts/build-cloudflared-android.sh"
   workflow_dispatch:
     inputs:
       abi:
