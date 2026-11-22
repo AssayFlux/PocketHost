@@ -36,6 +36,7 @@ class CloudflareDnsManagerTest {
     @Test
     fun recordValidationAcceptsSupportedRecordTypesAndZoneNames() {
         assertEquals("assayflux.org", CloudflareDnsApi.normalizeDomain(" AssayFlux.org. "))
+        assertTrue(CloudflareDnsApi.supportedRecordTypes().containsAll(listOf("A", "AAAA")))
         CloudflareDnsApi.validate("A", "@", "192.0.2.10", "assayflux.org", "10")
         CloudflareDnsApi.validate("AAAA", "www.assayflux.org", "2001:db8::10", "assayflux.org", "10")
         CloudflareDnsApi.validate("CNAME", "www.assayflux.org", "assayflux.org", "assayflux.org", "10")
@@ -46,7 +47,9 @@ class CloudflareDnsManagerTest {
     @Test
     fun recordValidationRejectsInvalidAddressesAndForeignNames() {
         assertInvalid { CloudflareDnsApi.validate("A", "@", "999.2.3.4", "assayflux.org", "10") }
+        assertInvalid { CloudflareDnsApi.validate("A", "@", "192.168.001.1", "assayflux.org", "10") }
         assertInvalid { CloudflareDnsApi.validate("AAAA", "@", "not-an-ipv6-address", "assayflux.org", "10") }
+        assertInvalid { CloudflareDnsApi.validate("AAAA", "@", "fe80::1%wlan0", "assayflux.org", "10") }
         assertInvalid { CloudflareDnsApi.validate("CNAME", "www.other.test", "assayflux.org", "assayflux.org", "10") }
         assertInvalid { CloudflareDnsApi.validate("MX", "@", "mail.assayflux.org", "assayflux.org", "70000") }
     }

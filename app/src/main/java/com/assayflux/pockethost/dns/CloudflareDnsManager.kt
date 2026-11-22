@@ -87,6 +87,8 @@ internal object CloudflareApiTokenStore {
 
 internal object CloudflareDnsApi {
     private const val BASE = "https://api.cloudflare.com/client/v4"
+    fun supportedRecordTypes() = listOf("A", "AAAA", "CNAME", "TXT", "MX")
+    fun isSupportedRecordType(type: String) = type.uppercase() in supportedRecordTypes()
     fun proxyEligible(type: String) = type.uppercase() in setOf("A", "AAAA", "CNAME")
 
     fun normalizeDomain(raw: String): String {
@@ -101,19 +103,23 @@ internal object CloudflareDnsApi {
     fun validate(type: String, rawName: String, rawContent: String, zone: String, priority: String) {
         val name = if (rawName.trim() == "@") zone else rawName.trim().trimEnd('.').lowercase()
         require(name == zone || name.endsWith(".$zone")) { "Record name must belong to the selected zone." }
-        require(name.split('.').all { it.isNotEmpty() && it.length <= 63 && !it.startsWith('-') &&
-            !it.endsWith('-') && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '*' } }) {
-            "Record name contains an invalid DNS label."
-        }
+        require(name.split('.').all { label ->
+            label.isNotEmpty() && label.length <= 63 &&
+                (label == "*" || (label.first().let { it.isLetterOrDigit() || it == '_' } &&
+                    label.last().let { it.isLetterOrDigit() || it == '_' } &&
+                    label.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' }))
+        }) { "Record name contains an invalid DNS label." }
         val content = rawContent.trim()
         require(content.isNotEmpty() && content.length <= 4096) { "Record content is required (maximum 4,096 characters)." }
         when (type.uppercase()) {
             "A" -> require(content.split('.').let { parts ->
-                parts.size == 4 && parts.all { it.toIntOrNull()?.let { n -> n in 0..255 } == true }
-            }) { "Enter a valid IPv4 address." }
-            "AAAA" -> require(content.contains(":") && runCatching {
+                parts.size == 4 && parts.all { octet ->
+                    octet.matches(Regex("0|[1-9][0-9]{0,2}") ) && octet.toIntOrNull()?.let { it in 0..255 } == true
+                }
+            }) { "Enter a valid IPv4 address in dotted-decimal notation." }
+            "AAAA" -> require(content.contains(":") && !content.contains("%") && runCatching {
                 InetAddress.getByName(content) is Inet6Address
-            }.getOrDefault(false)) { "Enter a valid IPv6 address." }
+            }.getOrDefault(false)) { "Enter a valid IPv6 address without an interface scope suffix." }
             "CNAME" -> normalizeDomain(content)
             "MX" -> {
                 normalizeDomain(content)
@@ -274,7 +280,16 @@ internal fun CloudflareDnsManagerScreen() {
                             .onFailure { message = it.message ?: "Could not remove API token." }
                     }) { Text("Remove token") }
                 }
-                OutlinedTextField(domain, { domain = it }, label = { Text("Zone domain (e.g. assayflux.org)") },
+                OutlinedTextField(domain, { value ->
+                    if (value != domain) {
+                        domain = value
+                        zone = null
+                        records = emptyList()
+                        editingId = null
+                        deleting = null
+                        message = "Domain changed. Find the zone again before editing DNS records."
+                    }
+                }, label = { Text("Zone domain (e.g. assayflux.org)") },
                     singleLine = true, modifier = Modifier.fillMaxWidth())
                 Button(enabled = tokenSaved && domain.isNotBlank() && !busy, onClick = {
                     scope.launch {
@@ -298,7 +313,7 @@ internal fun CloudflareDnsManagerScreen() {
                         Spacer(Modifier.width(8.dp))
                         OutlinedButton(onClick = { menu = true }) { Text(type) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            listOf("A", "AAAA", "CNAME", "TXT", "MX").forEach { option ->
+                            CloudflareDnsApi.supportedRecordTypes().forEach { option ->
                                 DropdownMenuItem(text = { Text(option) }, onClick = {
                                     type = option; proxied = CloudflareDnsApi.proxyEligible(option); menu = false
                                 })
@@ -341,10 +356,15 @@ internal fun CloudflareDnsManagerScreen() {
                                 Text("TTL ${if (record.ttl == 1) "Auto" else record.ttl} · ${if (record.proxied) "Proxied" else "DNS only"}",
                                     color = palette.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    TextButton(onClick = {
-                                        editingId = record.id; type = record.type; name = record.name
-                                        content = record.content; priority = (record.priority ?: 10).toString(); proxied = record.proxied
-                                    }) { Text("Edit") }
+                                    if (CloudflareDnsApi.isSupportedRecordType(record.type)) {
+                                        TextButton(onClick = {
+                                            editingId = record.id; type = record.type; name = record.name
+                                            content = record.content; priority = (record.priority ?: 10).toString(); proxied = record.proxied
+                                        }) { Text("Edit") }
+                                    } else {
+                                        Text("Edit this record type in Cloudflare.", color = palette.onSurfaceVariant,
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
                                     TextButton(onClick = { deleting = record }) { Text("Delete") }
                                 }
                             }
