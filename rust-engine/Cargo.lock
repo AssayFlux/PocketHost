@@ -331,6 +331,7 @@ dependencies = [
  "jni",
  "percent-encoding",
  "serde_json",
+ "socket2",
  "tokio",
  "tokio-util",
 ]
