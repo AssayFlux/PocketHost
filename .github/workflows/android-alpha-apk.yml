@@ -3,7 +3,7 @@ run-name: Pocket Host Alpha universal installer APK
 permissions:
   contents: read
 concurrency:
-  group: pockethost-alpha-apk-builder-${{ github.ref }}-${{ inputs.abi || 'all' }}
+  group: pockethost-alpha-universal-installer-${{ github.ref }}
   cancel-in-progress: true
 on:
   push:
@@ -70,7 +70,9 @@ jobs:
       - name: Validate runtime asset prerequisites
         run: ./gradlew :runtime-worker:generateDebugPythonMiscAssets
       - name: Build companion runtime-worker APK
-        run: ./gradlew :runtime-worker:assembleDebug
+        run: |
+          ./gradlew :runtime-worker:assembleDebug
+          cp runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk "$RUNNER_TEMP/pockethost-apks/pockethost-runtime-worker-v0.1.0-alpha-debug.apk"
       - name: Build one universal PocketHost installer APK
         shell: bash
         run: |
