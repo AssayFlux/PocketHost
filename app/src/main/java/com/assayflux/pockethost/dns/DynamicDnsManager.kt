@@ -92,6 +92,7 @@ internal fun DynamicDnsManagerScreen() {
     var adoptExisting by remember { mutableStateOf(false) }
     var detected by remember { mutableStateOf<DetectedPublicAddresses?>(null) }
     var assessments by remember { mutableStateOf<List<AddressFamilyDiagnostics>>(emptyList()) }
+    var allowExternalProbe by remember { mutableStateOf(false) }
     var history by remember { mutableStateOf(DynamicDnsSync.history(context).take(5)) }
     var status by remember { mutableStateOf("Detect both address families independently. Public IP detection does not prove inbound reachability.") }
     var busy by remember { mutableStateOf(false) }
@@ -141,6 +142,34 @@ internal fun DynamicDnsManagerScreen() {
                     Text(item.assessment, style = MaterialTheme.typography.bodySmall)
                     Text("Inbound reachability: ${item.inboundReachability}", style = MaterialTheme.typography.bodySmall)
                 }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(allowExternalProbe, { allowExternalProbe = it })
+                    Text("I consent to sending my public IP and gateway port to Check-Host.net for remote TCP probes")
+                }
+                Button(enabled = !busy && allowExternalProbe && detected != null &&
+                    (detected?.ipv4 != null || detected?.ipv6 != null), onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            val gatewayPort = context.getSharedPreferences("pockethost_state", 0).getInt("port", 8080)
+                            val base = assessments.ifEmpty {
+                                withContext(Dispatchers.IO) { NetworkDiagnostics.assess(context, detected!!) }
+                            }
+                            val checked = withContext(Dispatchers.IO) {
+                                base.map { item ->
+                                    val address = item.detectedPublicAddress
+                                    val result = if (address == null) "No public address; probe skipped."
+                                        else runCatching { NetworkDiagnostics.probeInbound(address, gatewayPort) }
+                                            .getOrElse { "Probe failed: ${it.message ?: "unknown error"}" }
+                                    item.copy(inboundReachability = result)
+                                }
+                            }
+                            assessments = checked
+                            status = "External TCP probes completed. Results are point-in-time and do not guarantee reachability from every network."
+                        } finally { busy = false }
+                    }
+                }) { Text("Probe inbound access externally") }
+                Text("This sends each detected public address and the configured gateway port to Check-Host.net. Only run it if you consent. A failed probe may indicate CGNAT, firewall, routing or filtering; a successful probe confirms only the tested TCP port.", style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(enabled = !busy, onClick = {
                     scope.launch {
                         busy = true
