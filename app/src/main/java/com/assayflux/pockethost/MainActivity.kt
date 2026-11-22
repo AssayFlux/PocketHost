@@ -632,7 +632,7 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
         val palette = MaterialTheme.colorScheme
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val contentScrollState = rememberScrollState()
-        LaunchedEffect(selectedTab) { contentScrollState.scrollTo(0) }
+        LaunchedEffect(selectedTab, settingsSection) { contentScrollState.scrollTo(0) }
         val navigate: (String) -> Unit = { destination ->
             if (destination.startsWith("Settings:")) {
                 selectedTab = "Settings"
@@ -685,8 +685,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                         else -> 20.dp
                     }
                     Column(
-                        Modifier.width(contentWidth).fillMaxHeight().align(Alignment.TopCenter)
-                            .padding(innerPadding).consumeWindowInsets(innerPadding).imePadding()
+                        Modifier.width(contentWidth).align(Alignment.TopCenter)
+                            .padding(innerPadding).consumeWindowInsets(innerPadding).imePadding().fillMaxHeight()
                             .verticalScroll(contentScrollState).padding(horizontal = horizontalContentPadding, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
