@@ -150,8 +150,11 @@ jobs:
             cp -a "$RUNNER_TEMP/cloudflared/app/src/main/assets/licenses/cloudflared" app/src/main/assets/licenses/
           fi
           for abi in arm64-v8a armeabi-v7a x86_64; do
-            test -s "app/src/main/jniLibs/$abi/libcloudflared.so"
-            test -x "app/src/main/jniLibs/$abi/libcloudflared.so"
+            binary="app/src/main/jniLibs/$abi/libcloudflared.so"
+            test -s "$binary"
+            # Actions artifacts do not preserve executable mode; restore it before runtime checks.
+            chmod 755 "$binary"
+            test -x "$binary"
           done
       - uses: gradle/actions/setup-gradle@v4
         with:
