@@ -1354,10 +1354,16 @@ mod tests {
         let a_index = request("a.example.test", "/");
         let b_index = request("b.example.test", "/");
         let a_cannot_read_b = request("a.example.test", "/only-b.txt");
+        let mut ipv6_stream = TcpStream::connect((Ipv6Addr::LOCALHOST, port)).unwrap();
+        ipv6_stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+        write!(ipv6_stream, "GET / HTTP/1.1\\r\\nHost: a.example.test\\r\\nConnection: close\\r\\n\\r\\n").unwrap();
+        let mut ipv6_response = String::new();
+        ipv6_stream.read_to_string(&mut ipv6_response).unwrap();
         let unavailable_node = request("node.example.test", "/");
         assert!(unavailable_node.starts_with("HTTP/1.1 502"), "failed upstream was not reported: {unavailable_node}");
         assert!(a_index.contains("SITE-A"), "unexpected response: {a_index}");
         assert!(b_index.contains("SITE-B"), "unexpected response: {b_index}");
+        assert!(ipv6_response.contains("SITE-A"), "IPv6 loopback did not reach the gateway: {ipv6_response}");
         assert!(a_cannot_read_b.starts_with("HTTP/1.1 404"), "cross-site path leaked: {a_cannot_read_b}");
 
         stop_engine().unwrap();
