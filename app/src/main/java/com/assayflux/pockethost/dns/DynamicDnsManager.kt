@@ -189,7 +189,8 @@ internal fun DynamicDnsManagerScreen() {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("AUTOMATIC DDNS", fontWeight = FontWeight.SemiBold)
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Checkbox(autoSync, { enabled ->
+                    Checkbox(autoSync, enabled = domain.isNotBlank() && host.isNotBlank() &&
+                        tokenPresent && (includeIpv4 || includeIpv6), onCheckedChange = { enabled ->
                         autoSync = enabled
                         prefs.edit().putBoolean("auto_sync", enabled).apply()
                         DynamicDnsSync.schedule(context, enabled)
