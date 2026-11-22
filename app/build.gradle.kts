@@ -9,6 +9,18 @@ val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val relayRustDir = rootProject.layout.projectDirectory.dir("relay-node")
 val relayJniOutput = layout.buildDirectory.dir("generated/relay/jniLibs")
 val generatedBrandResources = layout.buildDirectory.dir("generated/brandResources")
+val embeddedRuntimeAssets = layout.buildDirectory.dir("generated/runtimeWorkerAssets")
+val embedRuntimeWorkerApk by tasks.registering(Copy::class) {
+    dependsOn(":runtime-worker:assembleDebug")
+    from(rootProject.file("runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk"))
+    into(embeddedRuntimeAssets.map { it.dir("assets") })
+    rename { "pockethost-runtime-worker.apk" }
+    doFirst {
+        check(rootProject.file("runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk").isFile) {
+            "The isolated runtime companion APK must be built before PocketHost packaging."
+        }
+    }
+}
 val generatePocketHostLauncherIcons by tasks.registering(GeneratePocketHostLauncherIcons::class) {
     sourceSvg.set(rootProject.layout.projectDirectory.file("Assets/Pocket Host 7.svg"))
     outputDirectory.set(generatedBrandResources)
@@ -62,6 +74,7 @@ android {
     sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("generated/rust/jniLibs"))
     sourceSets["main"].jniLibs.srcDir(relayJniOutput)
     sourceSets["main"].res.srcDir(generatedBrandResources)
+    sourceSets["main"].assets.srcDir(embeddedRuntimeAssets.map { it.dir("assets") })
     signingConfigs {
         if (releaseSigningReady) {
             create("release") {
@@ -92,7 +105,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 }
-tasks.named("preBuild").configure { dependsOn(buildRustAndroid, buildNativeRelayAndroid, generatePocketHostLauncherIcons) }
+tasks.named("preBuild").configure { dependsOn(buildRustAndroid, buildNativeRelayAndroid, generatePocketHostLauncherIcons, embedRuntimeWorkerApk) }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.10.0")
