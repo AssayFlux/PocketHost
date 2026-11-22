@@ -8,7 +8,7 @@ Target: Self-contained Android website hosting without Termux or Cloudflare Tunn
 
 - Public access: support both Cloudflare DNS-only direct-origin mode and Cloudflare-proxied mode. Neither mode uses Cloudflare Tunnel.
 - Workloads: static websites, Node.js applications, and Python applications.
-- Gateway: integrate the existing Native Relay TLS/ACME implementation as the candidate unified inbound gateway, after security and lifecycle review. Do not run two competing public listeners.
+- Gateway: build one direct-origin HTTP/HTTPS gateway in front of the Rust site/runtime upstreams. Reuse and extract the Native Relay TLS/ACME and certificate-storage components where their contracts fit; do not embed the full Relay visitor-forwarding service as the local origin gateway. The current Native Relay is a host-session/visitor-forwarding architecture with pairing, DNS ownership proofs and SSE sessions, not a simple local reverse proxy.
 - Runtime worker remains a separate companion APK.
 - Cloudflare DNS is managed through the API using least-privilege credentials stored with Android Keystore encryption.
 - Alpha remains the development branch; no promotion to another branch is authorized.
@@ -39,8 +39,9 @@ Acceptance:
 
 - Create one authoritative site registry for static, Node and Python workloads.
 - Create a process supervisor contract: start, stop, restart, readiness, health, exit status, logs and resource limits.
-- Integrate Native Relay as the sole public HTTP/HTTPS gateway candidate.
-- Route gateway hostnames to the existing Rust static engine or runtime upstreams.
+- Extract and integrate reusable TLS/ACME/certificate lifecycle components from Native Relay after auditing their HTTP-01 assumptions and persistence.
+- Implement one direct-origin gateway that routes hostnames to the Rust static engine or runtime upstreams.
+- Keep the full Native Relay visitor-forwarding subsystem separate; it is not the direct-origin gateway.
 - Keep management APIs and runtime control endpoints loopback-only and authenticated.
 - Define explicit bind modes: loopback, LAN, and public-origin. Public-origin is enabled only after explicit user action and diagnostics.
 - Prevent port conflicts and duplicate listeners.
@@ -59,7 +60,7 @@ Acceptance:
 - Associate domain, site, address family, proxy setting, origin port and TLS policy.
 - Validate Cloudflare zone ownership and token permissions before mutation.
 - Add safe DNS reconciliation with record ownership/conflict detection and rollback where possible.
-- Implement ACME DNS-01 issuance and renewal; persist certificates/private keys securely.
+- Implement ACME DNS-01 issuance and renewal (the existing Relay ACME implementation must be reviewed because its current flow requests HTTP-01); persist certificates/private keys securely.
 - Configure HTTPS gateway on a supported unprivileged origin port.
 - Support apex and www hostnames and multiple domains per site.
 - Add origin health checks and external verification instructions.
