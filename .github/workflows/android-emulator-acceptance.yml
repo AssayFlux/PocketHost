@@ -69,15 +69,28 @@ jobs:
           disable-animations: true
           emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -camera-front none"
           script: |
-            # The emulator action executes this script through /bin/sh on Ubuntu.
-            # Keep it POSIX-portable; dash rejects Bash-only `pipefail`.
+            # The emulator action may execute from its own action directory.
+            # Anchor every repository path to GITHUB_WORKSPACE.
             set -eu
-            app_apk="app/build/outputs/apk/debug/app-debug.apk"
-            worker_apk="runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk"
-            test -s "$app_apk"
-            test -s "$worker_apk"
+            cd "$GITHUB_WORKSPACE"
+            app_apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+            worker_apk="$GITHUB_WORKSPACE/runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk"
+            echo "Repository: $PWD"
+            test -s "$app_apk" || { echo "Missing app APK: $app_apk"; find "$GITHUB_WORKSPACE/app/build/outputs" -maxdepth 5 -type f -name '*.apk' -print 2>/dev/null || true; exit 1; }
+            test -s "$worker_apk" || { echo "Missing runtime APK: $worker_apk"; find "$GITHUB_WORKSPACE/runtime-worker/build/outputs" -maxdepth 5 -type f -name '*.apk' -print 2>/dev/null || true; exit 1; }
+            adb start-server
+            adb wait-for-device
+            booted=""
+            attempt=0
+            while [ "$attempt" -lt 90 ]; do
+              booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              [ "$booted" = "1" ] && break
+              attempt=$((attempt + 1))
+              sleep 2
+            done
+            test "$booted" = "1" || { echo "Android emulator did not finish booting."; exit 1; }
             adb install -r "$worker_apk"
             adb install -r "$app_apk"
             adb shell pm path com.assayflux.pockethost.worker
             adb shell pm path com.assayflux.pockethost
-            ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 --stacktrace
+            "$GITHUB_WORKSPACE/gradlew" :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 --stacktrace
