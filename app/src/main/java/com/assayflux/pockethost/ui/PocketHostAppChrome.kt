@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -168,7 +169,7 @@ internal fun PocketHostBottomNavigation(
                     "Settings:General" -> selectedTab == "Settings"
                     else -> selectedTab == destination
                 }
-                androidx.compose.material3.NavigationBarItem(
+                NavigationBarItem(
                     selected = selected,
                     onClick = { onNavigate(destination) },
                     icon = { Icon(icon, contentDescription = null) },
