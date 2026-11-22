@@ -199,6 +199,8 @@ internal fun DynamicDnsManagerScreen() {
                     Text("Enable background synchronization (15-minute minimum)")
                 }
                 Text("Background updates use Android WorkManager with network constraints and exponential retry. Android battery restrictions may delay execution.", style = MaterialTheme.typography.bodySmall)
+                Text("Last successful A update: ${prefs.getString("last_success_A", "Never")}", style = MaterialTheme.typography.bodySmall)
+                Text("Last successful AAAA update: ${prefs.getString("last_success_AAAA", "Never")}", style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(adoptExisting, { adoptExisting = it })
                     Text("I explicitly authorize PocketHost to adopt one existing matching A/AAAA record if present")
