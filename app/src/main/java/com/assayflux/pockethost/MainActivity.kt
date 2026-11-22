@@ -664,18 +664,8 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     onNavigate = navigate
                 )
             },
-            topBar = {
-                PocketHostOwnerHeader(
-                    selectedTab = selectedTab,
-                    selectedSection = settingsSection,
-                    hosting = hosting,
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    onNavigate = navigate,
-                    onSignOut = onSignOut
-                )
-            }
         ) { innerPadding ->
-            Surface(Modifier.fillMaxSize(), color = palette.background) {
+            Surface(Modifier.fillMaxSize().statusBarsPadding(), color = palette.background) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     // Keep tablet/desktop-like widths readable while letting phones use all available width.
                     val contentWidth = maxWidth.coerceAtMost(1120.dp)
