@@ -108,7 +108,7 @@ internal fun PocketHostOwnerHeader(
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.size(7.dp).clip(CircleShape)
                         .background(if (hosting) palette.primary else palette.outline))
-                    Text(if (hosting) "LIVE" else "OFFLINE",
+                    Text(if (hosting) "RUNNING" else "OFFLINE",
                         color = if (hosting) palette.onPrimaryContainer else palette.onSurfaceVariant,
                         fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
