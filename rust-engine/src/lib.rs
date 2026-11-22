@@ -13,7 +13,8 @@ use jni::JNIEnv;
 use percent_encoding::percent_decode_str;
 use std::path::{Component, Path, PathBuf};
 use std::collections::{HashMap, HashSet};
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, TcpListener as StdTcpListener};
+use socket2::{Domain, Protocol, Socket, Type};
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
@@ -722,16 +723,20 @@ async fn serve_inner(root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>
     Ok(response.body(body).expect("file response"))
 }
 
-async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashMap<String, SiteTarget>>, host_access: Arc<HashMap<String, SiteAccess>>, site_limits: Arc<HashMap<String, Arc<Semaphore>>>, mut stop: oneshot::Receiver<()>) {
+async fn accept_loop(
+    listener_v4: TcpListener,
+    listener_v6: TcpListener,
+    root: PathBuf,
+    host_roots: Arc<HashMap<String, SiteTarget>>,
+    host_access: Arc<HashMap<String, SiteAccess>>,
+    site_limits: Arc<HashMap<String, Arc<Semaphore>>>,
+    mut stop: oneshot::Receiver<()>
+) {
     let mut connections = JoinSet::new();
-    // At most 32 accepted sockets may wait up to 200 ms for an active slot.
-    // Queue permits are acquired before spawning, so task creation stays bounded.
     let queue_slots = Arc::new(Semaphore::new(MAX_QUEUED_CONNECTIONS));
     loop {
         tokio::select! {
             _ = &mut stop => {
-                // Stop accepting new sockets and let active responses finish for
-                // up to three seconds before force-closing lingering keep-alive work.
                 let deadline = tokio::time::Instant::now() + SHUTDOWN_DRAIN;
                 while !connections.is_empty() {
                     match tokio::time::timeout_at(deadline, connections.join_next()).await {
@@ -746,71 +751,94 @@ async fn accept_loop(listener: TcpListener, root: PathBuf, host_roots: Arc<HashM
                 }
                 break;
             },
-            accepted = listener.accept() => {
-                let Ok((stream, peer)) = accepted else { continue };
-                let queue_permit = match queue_slots.clone().try_acquire_owned() {
-                    Ok(permit) => permit,
-                    Err(_) => {
-                        reject_overloaded(stream).await;
-                        continue;
-                    }
-                };
-                let site_root = root.clone();
-                let site_roots = host_roots.clone();
-                let site_access = host_access.clone();
-                let site_limiters = site_limits.clone();
-                connections.spawn(async move {
-                    // Try the active slot first. If this future is cancelled before
-                    // its first poll, no active count has been reserved or leaked.
-                    let immediately_acquired = try_reserve_connection(
-                        &ACTIVE_CONNECTIONS,
-                        CAPACITY_LIMIT.load(Ordering::Acquire)
-                    );
-                    let queued_guard = if immediately_acquired { None } else { Some(QueuedConnection::new()) };
-                    let acquired = if immediately_acquired {
-                        true
-                    } else {
-                        tokio::time::timeout(QUEUE_WAIT, async {
-                            loop {
-                                let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
-                                if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) {
-                                    break true;
-                                }
-                                tokio::time::sleep(Duration::from_millis(10)).await;
-                            }
-                        }).await.unwrap_or(false)
-                    };
-                    if !acquired {
-                        drop(queued_guard);
-                        drop(queue_permit);
-                        reject_overloaded(stream).await;
-                        return;
-                    }
-                    // No await occurs between reserving the active count and
-                    // constructing its RAII guard, so cancellation cannot leak a slot.
-                    let _active = ActiveConnection;
-                    drop(queued_guard);
-                    drop(queue_permit);
-                    let service = service_fn(move |req| serve(site_root.clone(), site_roots.clone(), site_access.clone(), site_limiters.clone(), req, peer));
-                    let mut builder = Builder::new(TokioExecutor::new());
-                    // Bound multiplexed request fan-out independently of the
-                    // TCP connection cap. Hyper's default is 200 streams/socket.
-                    builder.http1()
-                        .timer(hyper_util::rt::TokioTimer::new())
-                        .header_read_timeout(HTTP1_HEADER_READ_TIMEOUT)
-                        .max_headers(MAX_HTTP1_HEADERS)
-                        .max_buf_size(MAX_HTTP1_BUFFER_BYTES);
-                    builder.http2()
-                        .max_concurrent_streams(MAX_HTTP2_STREAMS_PER_CONNECTION)
-                        .max_pending_accept_reset_streams(MAX_HTTP2_PENDING_RESET_STREAMS)
-                        .max_local_error_reset_streams(MAX_HTTP2_LOCAL_ERROR_RESETS)
-                        .max_header_list_size(MAX_HTTP_HEADER_LIST_BYTES);
-                    let _ = builder.serve_connection(TokioIo::new(stream), service).await;
-                });
-            }
+            accepted = listener_v4.accept() => {
+                accept_one(accepted, &root, &host_roots, &host_access, &site_limits, &queue_slots, &mut connections).await;
+            },
+            accepted = listener_v6.accept() => {
+                accept_one(accepted, &root, &host_roots, &host_access, &site_limits, &queue_slots, &mut connections).await;
+            },
             Some(_) = connections.join_next(), if !connections.is_empty() => {}
         }
     }
+}
+
+async fn accept_one(
+    accepted: std::io::Result<(tokio::net::TcpStream, SocketAddr)>,
+    root: &PathBuf,
+    host_roots: &Arc<HashMap<String, SiteTarget>>,
+    host_access: &Arc<HashMap<String, SiteAccess>>,
+    site_limits: &Arc<HashMap<String, Arc<Semaphore>>>,
+    queue_slots: &Arc<Semaphore>,
+    connections: &mut JoinSet<()>
+) {
+    let Ok((stream, peer)) = accepted else { return };
+    let queue_permit = match queue_slots.clone().try_acquire_owned() {
+        Ok(permit) => permit,
+        Err(_) => {
+            reject_overloaded(stream).await;
+            return;
+        }
+    };
+    let site_root = root.clone();
+    let site_roots = host_roots.clone();
+    let site_access = host_access.clone();
+    let site_limiters = site_limits.clone();
+    connections.spawn(async move {
+        let immediately_acquired = try_reserve_connection(
+            &ACTIVE_CONNECTIONS,
+            CAPACITY_LIMIT.load(Ordering::Acquire)
+        );
+        let queued_guard = if immediately_acquired { None } else { Some(QueuedConnection::new()) };
+        let acquired = if immediately_acquired {
+            true
+        } else {
+            tokio::time::timeout(QUEUE_WAIT, async {
+                loop {
+                    let current_limit = CAPACITY_LIMIT.load(Ordering::Acquire);
+                    if try_reserve_connection(&ACTIVE_CONNECTIONS, current_limit) { break true; }
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            }).await.unwrap_or(false)
+        };
+        if !acquired {
+            drop(queued_guard);
+            drop(queue_permit);
+            reject_overloaded(stream).await;
+            return;
+        }
+        let _active = ActiveConnection;
+        drop(queued_guard);
+        drop(queue_permit);
+        let service = service_fn(move |req| serve(
+            site_root.clone(), site_roots.clone(), site_access.clone(), site_limiters.clone(), req, peer
+        ));
+        let mut builder = Builder::new(TokioExecutor::new());
+        builder.http1()
+            .timer(hyper_util::rt::TokioTimer::new())
+            .header_read_timeout(HTTP1_HEADER_READ_TIMEOUT)
+            .max_headers(MAX_HTTP1_HEADERS)
+            .max_buf_size(MAX_HTTP1_BUFFER_BYTES);
+        builder.http2()
+            .max_concurrent_streams(MAX_HTTP2_STREAMS_PER_CONNECTION)
+            .max_pending_accept_reset_streams(MAX_HTTP2_PENDING_RESET_STREAMS)
+            .max_local_error_reset_streams(MAX_HTTP2_LOCAL_ERROR_RESETS)
+            .max_header_list_size(MAX_HTTP_HEADER_LIST_BYTES);
+        let _ = builder.serve_connection(TokioIo::new(stream), service).await;
+    });
+}
+
+fn bind_listener(address: SocketAddr, ipv6_only: bool) -> Result<StdTcpListener, String> {
+    let domain = if address.is_ipv4() { Domain::IPV4 } else { Domain::IPV6 };
+    let socket = Socket::new(domain, Type::STREAM, Some(Protocol::TCP))
+        .map_err(|e| format!("Cannot create gateway socket: {e}"))?;
+    socket.set_reuse_address(true).map_err(|e| format!("Cannot configure gateway socket: {e}"))?;
+    if address.is_ipv6() {
+        socket.set_only_v6(ipv6_only).map_err(|e| format!("Cannot configure IPv6-only listener: {e}"))?;
+    }
+    socket.bind(&address.into()).map_err(|e| format!("Cannot bind gateway address {address}: {e}"))?;
+    socket.listen(1024).map_err(|e| format!("Cannot listen on gateway address {address}: {e}"))?;
+    socket.set_nonblocking(true).map_err(|e| format!("Cannot configure nonblocking gateway socket: {e}"))?;
+    Ok(socket.into())
 }
 
 fn start_engine(root: &str, port: u16, allow_lan: bool) -> Result<(), String> {
