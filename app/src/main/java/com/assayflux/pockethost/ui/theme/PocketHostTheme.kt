@@ -72,10 +72,10 @@ object PocketHostPalettes {
 
     private fun palette(name: String) = when (name) {
         "Command Center" -> Palette(
-            Color(0xFFEAF0E1), Color(0xFFFFF9EA), Color(0xFFDFE8D4),
-            Color(0xFF29352A), Color(0xFF5B6956), Color(0xFF557B4B), Color(0xFF9A4D3F),
-            Color(0xFF182119), Color(0xFF253128), Color(0xFF344334),
-            Color(0xFFF1F5E9), Color(0xFFC2D0B9), Color(0xFF7ED957)
+            Color(0xFFF1F5FC), Color(0xFFFFFFFF), Color(0xFFE3ECFA),
+            Color(0xFF101D36), Color(0xFF53647D), Color(0xFF0755C9), Color(0xFFFF7900),
+            Color(0xFF07152F), Color(0xFF102344), Color(0xFF1B345B),
+            Color(0xFFF4F7FC), Color(0xFFC3D0E4), Color(0xFF4D91FF)
         )
         "Midnight" -> Palette(Color(0xFFF0F1F4),Color(0xFFE3E6EC),Color(0xFFD4DAE4),Color(0xFF202735),Color(0xFF596579),Color(0xFF536B91),Color(0xFF8A744F),Color(0xFF11151D),Color(0xFF1C2330),Color(0xFF283344),Color(0xFFF1F3F7),Color(0xFFB5C0D0),Color(0xFFD5A84B))
         "Forest" -> Palette(Color(0xFFF0F3EA),Color(0xFFE1E9D9),Color(0xFFD0DDC8),Color(0xFF243126),Color(0xFF526653),Color(0xFF52734F),Color(0xFF9A7847),Color(0xFF172019),Color(0xFF222E25),Color(0xFF304235),Color(0xFFEAF1E8),Color(0xFFB6C7B5),Color(0xFF9DBA83))

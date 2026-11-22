@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.assayflux.pockethost.management.HostAccountStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,11 +58,12 @@ internal fun PocketHostLoginScreen(context: Context, onAuthenticated: (String) -
             .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("AF", color = palette.primary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-        Text("Pocket Host", color = palette.onSurface, style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.SemiBold)
-        Text("YOUR DEVICE. YOUR CONTROL.", color = palette.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall)
+        PocketHostBrandMark(Modifier.size(76.dp))
+        Spacer(Modifier.height(10.dp))
+        Text("PocketHost", color = palette.onSurface, style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold)
+        Text("YOUR CLOUD. ANYWHERE.", color = palette.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp)
         Spacer(Modifier.height(24.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),

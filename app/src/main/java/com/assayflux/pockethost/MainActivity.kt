@@ -670,7 +670,11 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             }
         ) { innerPadding ->
             Surface(Modifier.fillMaxSize(), color = palette.background) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
+                // Scaffold owns the app-bar/system-bar insets. Apply them once to the
+                // content viewport so every destination starts below the topbar.
+                BoxWithConstraints(
+                    Modifier.fillMaxSize().padding(innerPadding).consumeWindowInsets(innerPadding)
+                ) {
                     // Keep tablet/desktop-like widths readable while letting phones use all available width.
                     val contentWidth = maxWidth.coerceAtMost(1120.dp)
                     val horizontalContentPadding = when {
@@ -680,8 +684,10 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
                     }
                     Column(
                         Modifier.width(contentWidth).align(Alignment.TopCenter)
-                            .padding(innerPadding).consumeWindowInsets(innerPadding).imePadding().fillMaxHeight()
-                            .verticalScroll(contentScrollState).padding(horizontal = horizontalContentPadding, vertical = 16.dp),
+                            .imePadding().fillMaxHeight()
+                            .verticalScroll(contentScrollState)
+                            .padding(start = horizontalContentPadding, end = horizontalContentPadding,
+                                top = 10.dp, bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                 if (selectedTab == "Home") {
@@ -1739,25 +1745,7 @@ if (settingsSection == "Node.js") {
 
                 }
 
-if (settingsSection == "Hostnames & access") {
-                Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = palette.surface)
-                    ) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("CONNECTION & SECURITY", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Cloudflare provides public HTTPS to this host's local Rust website listener.", color = palette.onSurfaceVariant)
-                            Text("Private and restricted visitor access is available in hostname routing. Use Cloudflare Access as an additional edge policy if desired.", color = palette.onSurfaceVariant)
-                            Text("Android and OEM power policies can interrupt background hosting.", color = palette.onSurfaceVariant)
-                            OutlinedButton(onClick = { selectedTab = "Sites" }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Open Websites & files")
-                            }
-                        }
-                    }
-                }
-
-                if (settingsSection == "DNS management") {
+if (settingsSection == "DNS management") {
                     CloudflareDnsManagerScreen()
                 }
                 if (settingsSection == "Cloudflare Access") {
