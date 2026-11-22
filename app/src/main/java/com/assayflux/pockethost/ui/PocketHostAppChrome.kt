@@ -131,29 +131,39 @@ internal fun PocketHostOwnerHeader(
 
 internal data class PocketHostNavItem(val title: String, val subtitle: String, val icon: ImageVector, val destination: String)
 
-private val pocketHostNavItems = listOf(
-    PocketHostNavItem("Dashboard", "Server health, traffic, logs and alerts", Icons.Outlined.Dashboard, "Dashboard"),
-    PocketHostNavItem("Websites & files", "Import and manage hosted websites and files", Icons.Outlined.FolderOpen, "Sites"),
-    PocketHostNavItem("Workbench", "Edit drafts and preview changes", Icons.Outlined.Code, "Workbench"),
-    PocketHostNavItem("Deployments", "Releases, snapshots and recovery", Icons.Outlined.Timeline, "Deployments"),
-    PocketHostNavItem("Devices", "Trusted devices and fleet access", Icons.Outlined.Memory, "Devices"),
-    PocketHostNavItem("Network settings", "Ports, LAN and connectivity", Icons.Outlined.NetworkCheck, "Settings:Network"),
-    PocketHostNavItem("Remote control", "Remote administration connection", Icons.Outlined.Security, "Settings:Remote"),
-    PocketHostNavItem("Cloudflare Access", "Identity-aware access protection", Icons.Outlined.Security, "Settings:Cloudflare Access"),
-    PocketHostNavItem("Local access", "Local network and private access", Icons.Outlined.NetworkCheck, "Settings:Local access"),
-    PocketHostNavItem("Server settings", "Ports, limits and power behavior", Icons.Outlined.Settings, "Settings:Server"),
-    PocketHostNavItem("Runtime overview", "Runtime health and resource controls", Icons.Outlined.Memory, "Settings:Runtimes"),
-    PocketHostNavItem("Cloudflare Tunnel", "Public tunnel connection", Icons.Outlined.Language, "Settings:Cloudflare"),
-    PocketHostNavItem("Relay Node", "Operate this device as a relay node", Icons.Outlined.NetworkCheck, "Settings:Relay node"),
-    PocketHostNavItem("Relay Host", "Connect this host to a relay", Icons.Outlined.NetworkCheck, "Settings:Relay host"),
-    PocketHostNavItem("Hostnames & access", "Domains, visitor access and policy", Icons.Outlined.Security, "Settings:Hostnames & access"),
-    PocketHostNavItem("DNS management", "Manage DNS records and routing", Icons.Outlined.Language, "Settings:DNS management"),
-    PocketHostNavItem("Python runtime", "Configure and run Python apps", Icons.Outlined.Code, "Settings:Python"),
-    PocketHostNavItem("Node.js runtime", "Configure and run Node.js apps", Icons.Outlined.Code, "Settings:Node.js"),
-    PocketHostNavItem("Activity & logs", "Events and diagnostic exports", Icons.Outlined.Timeline, "Activity"),
-    PocketHostNavItem("Learn", "Guides and operating limits", Icons.Outlined.School, "Learn"),
-    PocketHostNavItem("Application settings", "Appearance and device preferences", Icons.Outlined.Settings, "Settings:General"),
-    PocketHostNavItem("About PocketHost", "Version and platform details", Icons.Outlined.Info, "Settings:About")
+private val pocketHostNavGroups = listOf(
+    "OVERVIEW" to listOf(
+        PocketHostNavItem("Dashboard", "Server health, traffic, logs and alerts", Icons.Outlined.Dashboard, "Dashboard")
+    ),
+    "HOSTING" to listOf(
+        PocketHostNavItem("Websites & files", "Import and manage hosted websites and files", Icons.Outlined.FolderOpen, "Sites"),
+        PocketHostNavItem("Workbench", "Edit drafts and preview changes", Icons.Outlined.Code, "Workbench"),
+        PocketHostNavItem("Deployments", "Releases, snapshots and recovery", Icons.Outlined.Timeline, "Deployments"),
+        PocketHostNavItem("Server settings", "Ports, limits and power behavior", Icons.Outlined.Settings, "Settings:Server")
+    ),
+    "NETWORK & ACCESS" to listOf(
+        PocketHostNavItem("Devices", "Trusted devices and fleet access", Icons.Outlined.Memory, "Devices"),
+        PocketHostNavItem("Network settings", "Ports, LAN and connectivity", Icons.Outlined.NetworkCheck, "Settings:Network"),
+        PocketHostNavItem("Local access", "Local network and private access", Icons.Outlined.NetworkCheck, "Settings:Local access"),
+        PocketHostNavItem("Remote control", "Remote administration connection", Icons.Outlined.Security, "Settings:Remote"),
+        PocketHostNavItem("Cloudflare Tunnel", "Public tunnel connection", Icons.Outlined.Language, "Settings:Cloudflare"),
+        PocketHostNavItem("Cloudflare Access", "Identity-aware access protection", Icons.Outlined.Security, "Settings:Cloudflare Access"),
+        PocketHostNavItem("Relay Node", "Operate this device as a relay node", Icons.Outlined.NetworkCheck, "Settings:Relay node"),
+        PocketHostNavItem("Relay Host", "Connect this host to a relay", Icons.Outlined.NetworkCheck, "Settings:Relay host"),
+        PocketHostNavItem("Hostnames & access", "Domains, visitor access and policy", Icons.Outlined.Security, "Settings:Hostnames & access"),
+        PocketHostNavItem("DNS management", "Manage DNS records and routing", Icons.Outlined.Language, "Settings:DNS management")
+    ),
+    "RUNTIMES" to listOf(
+        PocketHostNavItem("Runtime overview", "Runtime health and resource controls", Icons.Outlined.Memory, "Settings:Runtimes"),
+        PocketHostNavItem("Python runtime", "Configure and run Python apps", Icons.Outlined.Code, "Settings:Python"),
+        PocketHostNavItem("Node.js runtime", "Configure and run Node.js apps", Icons.Outlined.Code, "Settings:Node.js")
+    ),
+    "SYSTEM" to listOf(
+        PocketHostNavItem("Activity & logs", "Events and diagnostic exports", Icons.Outlined.Timeline, "Activity"),
+        PocketHostNavItem("Learn", "Guides and operating limits", Icons.Outlined.School, "Learn"),
+        PocketHostNavItem("Application settings", "Appearance and device preferences", Icons.Outlined.Settings, "Settings:General"),
+        PocketHostNavItem("About PocketHost", "Version and platform details", Icons.Outlined.Info, "Settings:About")
+    )
 )
 
 @Composable
@@ -172,23 +182,28 @@ internal fun PocketHostSidebar(
                 Text("ASSAYFLUX", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
         }
-        Text("WORKSPACE", color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 4.dp))
-        pocketHostNavItems.filter { it.destination != "Devices" || operatingMode == "COMMAND_CENTER_SERVER" }.forEach { item ->
-            val selected = when {
-                item.destination == "Home" -> selectedTab == "Home"
-                item.destination.startsWith("Settings:") -> selectedTab == "Settings" && selectedSection == item.destination.substringAfter(":")
-                else -> selectedTab == item.destination
+        pocketHostNavGroups.forEach { (groupTitle, groupItems) ->
+            val visibleItems = groupItems.filter { it.destination != "Devices" || operatingMode == "COMMAND_CENTER_SERVER" }
+            if (visibleItems.isNotEmpty()) {
+                Text(groupTitle, color = palette.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 14.dp, top = 10.dp, bottom = 3.dp))
+                visibleItems.forEach { item ->
+                    val selected = when {
+                        item.destination.startsWith("Settings:") -> selectedTab == "Settings" && selectedSection == item.destination.substringAfter(":")
+                        else -> selectedTab == item.destination
+                    }
+                    NavigationDrawerItem(
+                        label = { Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(item.title, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
+                            Text(item.subtitle, fontSize = 10.sp, color = palette.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        } },
+                        selected = selected,
+                        onClick = { onNavigate(item.destination) },
+                        icon = { Icon(item.icon, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
-            NavigationDrawerItem(
-                label = { Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(item.title, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
-                    Text(item.subtitle, fontSize = 10.sp, color = palette.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                } },
-                selected = selected,
-                onClick = { onNavigate(item.destination) },
-                icon = { Icon(item.icon, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth()
-            )
         }
         Spacer(Modifier.padding(bottom = 4.dp))
         Text("Static hosting remains independent of optional runtimes and tunnel services.", color = palette.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
