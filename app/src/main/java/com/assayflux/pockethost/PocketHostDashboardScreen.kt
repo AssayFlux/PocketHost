@@ -258,20 +258,6 @@ internal fun PocketHostDashboardScreen(
                 }
             }
         }
-        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface),
-            shape = RoundedCornerShape(18.dp)) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Local address", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
-                Text(websiteUrl, color = palette.onSurfaceVariant, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("PocketHost address", websiteUrl))
-                        actions.onStatusChange("Server address copied.")
-                    }, modifier = Modifier.weight(1f)) { Text("Copy address") }
-                    OutlinedButton(onClick = actions.onOpenSites, modifier = Modifier.weight(1f)) { Text("Manage websites") }
-                }
-            }
-        }
+
     }
 }
