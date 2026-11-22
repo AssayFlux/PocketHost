@@ -89,10 +89,13 @@ internal fun PocketHostRuntimeInstallCard() {
                     else -> "Install runtime companion"
                 })
             }
-            if (installed) OutlinedButton(
-                onClick = { installed = RuntimeWorkerInstaller.isInstalled(context) },
+            OutlinedButton(
+                onClick = {
+                    installed = RuntimeWorkerInstaller.isInstalled(context)
+                    message = if (installed) "Runtime companion is ready." else "Runtime companion is not installed yet."
+                },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Check runtime status") }
+            ) { Text("Check runtime installation") }
         }
     }
 }
