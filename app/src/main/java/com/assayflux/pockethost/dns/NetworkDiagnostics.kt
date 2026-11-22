@@ -65,6 +65,7 @@ internal object NetworkDiagnostics {
         val encoded = URLEncoder.encode(target, "UTF-8")
         val request = URL("https://check-host.net/check-tcp?host=$encoded&max_nodes=3")
         val initial = request.openConnection() as HttpURLConnection
+        var expectedNodes = 1
         val requestId = try {
             initial.connectTimeout = 7000
             initial.readTimeout = 9000
@@ -72,6 +73,7 @@ internal object NetworkDiagnostics {
             require(initial.responseCode in 200..299) { "Remote probe service rejected the request (HTTP ${initial.responseCode})." }
             val json = JSONObject(initial.inputStream.bufferedReader().use { it.readText() })
             require(json.optInt("ok", 0) == 1) { "Remote probe service did not accept the check." }
+            expectedNodes = json.optJSONObject("nodes")?.length()?.coerceAtLeast(1) ?: 1
             json.optString("request_id").takeIf { it.isNotBlank() }
                 ?: throw IllegalStateException("Remote probe did not return a request ID.")
         } finally { initial.disconnect() }
@@ -102,7 +104,7 @@ internal object NetworkDiagnostics {
                     }
                     if (nodeResult != null && !nodeResult.has("error") && nodeResult.has("time")) reachable++
                 }
-                if (total > 0) return if (reachable > 0)
+                if (total >= expectedNodes || attempt == 4) return if (reachable > 0)
                     "Reachable from $reachable/$total external TCP probes (Check-Host.net)."
                 else "No external probe could connect ($total probes). CGNAT, firewall, routing or port filtering may be responsible."
             }
