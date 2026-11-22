@@ -1356,7 +1356,7 @@ mod tests {
         let a_cannot_read_b = request("a.example.test", "/only-b.txt");
         let mut ipv6_stream = TcpStream::connect((Ipv6Addr::LOCALHOST, port)).unwrap();
         ipv6_stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
-        write!(ipv6_stream, "GET / HTTP/1.1\\r\\nHost: a.example.test\\r\\nConnection: close\\r\\n\\r\\n").unwrap();
+        write!(ipv6_stream, "GET / HTTP/1.1\r\nHost: a.example.test\r\nConnection: close\r\n\r\n").unwrap();
         let mut ipv6_response = String::new();
         ipv6_stream.read_to_string(&mut ipv6_response).unwrap();
         let unavailable_node = request("node.example.test", "/");
