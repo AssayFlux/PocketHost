@@ -2,7 +2,6 @@ package com.assayflux.pockethost.engine
 
 import android.content.Context
 import com.assayflux.pockethost.sites.SiteRegistry
-import org.json.JSONObject
 
 /**
  * Single lifecycle boundary for the direct-origin HTTP gateway.
@@ -40,7 +39,7 @@ object HostingGateway {
             preferences.getInt("python_port", 8081),
             preferences.getInt("node_port", 3000)
         )
-        val root = context.getDir("site", Context.MODE_PRIVATE)
+        val root = java.io.File(context.filesDir, "site")
         if (!root.exists() && !root.mkdirs()) return "Cannot create the managed website directory."
         val result = NativeEngine.startMultiSiteWithBindMode(
             root.absolutePath,
