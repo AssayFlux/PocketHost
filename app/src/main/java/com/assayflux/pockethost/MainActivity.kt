@@ -1512,6 +1512,7 @@ if (settingsSection in setOf("Python", "Node.js")) {
                 }
 
 if (settingsSection == "Python") {
+                PocketHostRuntimeInstallCard()
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1700,6 +1701,7 @@ if (settingsSection == "Hostnames & access") {
                 }
 
 if (settingsSection == "Node.js") {
+                PocketHostRuntimeInstallCard()
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1792,6 +1794,7 @@ if (settingsSection == "Hostnames & access") {
                     }
                 }
                 if (settingsSection == "Runtimes") {
+                    PocketHostRuntimeInstallCard()
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = palette.surface)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("OPTIONAL APPLICATION RUNTIMES", color = palette.onSurface, fontWeight = FontWeight.SemiBold)
