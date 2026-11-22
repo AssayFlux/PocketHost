@@ -34,6 +34,9 @@ object HostingGateway {
             require(preferences.getBoolean("public_origin_diagnostics_passed", false)) {
                 "Public-origin binding is blocked until network diagnostics pass."
             }
+            require(preferences.getBoolean("public_origin_tls_ready", false)) {
+                "Public-origin binding is blocked until the HTTPS gateway and certificate are ready."
+            }
         }
         val routes = SiteRegistry.hostRoutingJson(
             context,
