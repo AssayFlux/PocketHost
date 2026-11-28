@@ -104,16 +104,17 @@ struct CommandAck {
 fn parse_control_origins(raw: &str) -> anyhow::Result<Vec<HeaderValue>> {
     let mut origins = Vec::new();
     for item in raw.split(',').map(str::trim).filter(|item| !item.is_empty()) {
-        let (scheme, authority) = item.split_once("://")
-            .ok_or_else(|| anyhow::anyhow!("invalid control origin: scheme required"))?;
-        let local_http = scheme == "http" &&
-            (authority.starts_with("localhost:") || authority.starts_with("127.0.0.1:"));
-        anyhow::ensure!(scheme == "https" || local_http,
+        let parsed = Url::parse(item)?;
+        let host = parsed.host_str().unwrap_or_default();
+        let local_http = parsed.scheme() == "http" &&
+            (host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1");
+        anyhow::ensure!(parsed.scheme() == "https" || local_http,
             "control origins must use HTTPS (HTTP is allowed only for localhost development)");
-        anyhow::ensure!(!authority.is_empty() && !authority.contains('/') &&
-            !authority.contains('?') && !authority.contains('#') &&
-            !authority.contains('@') && !authority.contains('*'),
-            "control origin must be exact and must not contain a path, credentials, query, fragment or wildcard");
+        anyhow::ensure!(!host.is_empty() && parsed.username().is_empty() &&
+            parsed.password().is_none() && parsed.path() == "/" &&
+            parsed.query().is_none() && parsed.fragment().is_none() &&
+            parsed.port().map(|port| (1..=65535).contains(&port)).unwrap_or(true),
+            "control origin must be an exact origin with a valid hostname/port and no credentials, path, query or fragment");
         let value = item.parse::<HeaderValue>()?;
         if !origins.iter().any(|existing: &HeaderValue| existing == &value) {
             origins.push(value);
