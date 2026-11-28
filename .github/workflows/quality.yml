@@ -71,7 +71,7 @@ jobs:
       - name: Set up Rust Android target
         uses: dtolnay/rust-toolchain@1.88.0
         with:
-          targets: x86_64-linux-android
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --locked
       - name: Run Android instrumentation suite and build debug APK
@@ -83,6 +83,8 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 -PpockethostManagementAllowedOrigins=https://console.example.com --no-daemon --stacktrace
+      - name: Assemble production multi-ABI debug APK
+        run: ./gradlew :app:assembleDebug -PpockethostManagementAllowedOrigins=https://console.example.com --no-daemon --stacktrace
       - name: Publish tested debug APK
         uses: actions/upload-artifact@v4
         with:
