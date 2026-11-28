@@ -37,3 +37,10 @@ These are not honestly certifiable from repository source alone:
 
 ## Workflow policy
 Each workflow owns one product area and produces its own result. App and Runtime Worker APKs are built and uploaded independently. Cross-process integration tests may install both separately-built APKs, but must never bundle one APK inside the other.
+
+
+## Matched APK signing requirement
+The host and runtime worker use a signature-protected Binder permission. APKs built in separate fresh GitHub-hosted jobs may have different debug signing certificates and must not be treated as an installable pair. Use the matched two-file artifact emitted by the Android Integration Acceptance workflow, which builds both modules on one runner with the same debug key. The integration workflow builds all supported ABIs. Production release signing must use the same protected keystore for both APKs; see `docs/APK_SIGNING_AND_INSTALLATION.md`.
+
+## Additional DDNS hardening
+Dynadot response handling now requires a JSON response containing `error_code`; only codes other than `-1` count as accepted. HTML, login/challenge pages, missing codes and explicit API failures are rejected. Instrumentation coverage exercises success, error, malformed HTML and missing-code responses.
