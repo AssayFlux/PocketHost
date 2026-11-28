@@ -110,7 +110,7 @@ fn parse_control_origins(raw: &str) -> anyhow::Result<Vec<HeaderValue>> {
             (host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1");
         anyhow::ensure!(parsed.scheme() == "https" || local_http,
             "control origins must use HTTPS (HTTP is allowed only for localhost development)");
-        anyhow::ensure!(!host.is_empty() && parsed.username().is_empty() &&
+        anyhow::ensure!(!host.is_empty() && !item.contains('*') && parsed.username().is_empty() &&
             parsed.password().is_none() && parsed.path() == "/" &&
             parsed.query().is_none() && parsed.fragment().is_none() &&
             parsed.port().map(|port| (1..=65535).contains(&port)).unwrap_or(true),
