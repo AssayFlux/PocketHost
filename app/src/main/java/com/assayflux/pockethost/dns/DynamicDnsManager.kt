@@ -62,7 +62,7 @@ internal object PublicAddressDetector {
             val fourth = bytes[3].toInt() and 0xff
             // IANA special-purpose ranges that sit inside 2000::/3.
             if (first == 0x20 && second == 0x01 && third == 0x0d && fourth == 0xb8) return false // documentation
-            if (first == 0x20 && second == 0x01 && third == 0x00 && (fourth and 0x80) == 0) return false // 2001::/23
+            if (first == 0x20 && second == 0x01 && (third and 0xfe) == 0x00) return false // 2001::/23
             if (first == 0x20 && second == 0x02) return false // deprecated 6to4
             if (first == 0x3f && second == 0xff && (third and 0xf0) == 0) return false // 3fff::/20 documentation
             return true
