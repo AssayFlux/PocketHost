@@ -115,10 +115,10 @@ internal fun DynamicDnsManagerScreen() {
                     )
                     ExposedDropdownMenu(expanded = providerMenu, onDismissRequest = { providerMenu = false }) {
                         DropdownMenuItem(text = { Text("Dynadot DNS / DDNS") }, onClick = {
-                            provider = "dynadot"; prefs.edit().putString("provider", provider).apply(); providerMenu = false
+                            provider = "dynadot"; prefs.edit().putString("provider", provider).putBoolean("auto_sync", false).apply(); autoSync = false; DynamicDnsSync.schedule(context, false); providerMenu = false
                         })
                         DropdownMenuItem(text = { Text("Cloudflare DNS API") }, onClick = {
-                            provider = "cloudflare"; prefs.edit().putString("provider", provider).apply(); providerMenu = false
+                            provider = "cloudflare"; prefs.edit().putString("provider", provider).putBoolean("auto_sync", false).apply(); autoSync = false; DynamicDnsSync.schedule(context, false); providerMenu = false
                         })
                     }
                 }
