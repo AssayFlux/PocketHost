@@ -2,10 +2,10 @@ name: PocketHost Python Runtime
 on:
   push:
     branches: [Alpha]
-    paths: ["runtime-worker/src/main/python/**", "examples/python-wsgi/**", "tests/python/test_pockethost_runtime.py", ".github/workflows/runtime-python.yml"]
+    paths: ["runtime-worker/src/main/python/**", "examples/python-wsgi/**", "tests/python/test_pockethost_runtime.py", "tests/python/test_webhost_worker_compatibility.py", ".github/workflows/runtime-python.yml"]
   pull_request:
     branches: [Alpha]
-    paths: ["runtime-worker/src/main/python/**", "examples/python-wsgi/**", "tests/python/test_pockethost_runtime.py", ".github/workflows/runtime-python.yml"]
+    paths: ["runtime-worker/src/main/python/**", "examples/python-wsgi/**", "tests/python/test_pockethost_runtime.py", "tests/python/test_webhost_worker_compatibility.py", ".github/workflows/runtime-python.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,5 +20,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m compileall -q runtime-worker/src/main/python examples/python-wsgi tests/python/test_pockethost_runtime.py
+      - run: python -m compileall -q runtime-worker/src/main/python examples/python-wsgi tests/python/test_pockethost_runtime.py tests/python/test_webhost_worker_compatibility.py
       - run: python -m unittest discover -s tests/python -p "test_pockethost_runtime.py" -v
+      - run: python -m unittest discover -s tests/python -p "test_webhost_worker_compatibility.py" -v
