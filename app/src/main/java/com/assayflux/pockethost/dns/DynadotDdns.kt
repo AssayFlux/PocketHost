@@ -80,9 +80,9 @@ internal object DynadotDdnsApi {
     fun update(domainRaw: String, hostRaw: String, type: String, ip: String, password: String): String {
         val domain = CloudflareDnsApi.normalizeDomain(domainRaw)
         val host = hostRaw.trim().trimEnd('.').lowercase()
-        require(host == "@" || host.split('.').all { label ->
-            label.isNotEmpty() && label.length <= 63 && label.all { it.isLetterOrDigit() || it == '-' }
-        }) { "Enter @ for the root domain or a valid subdomain label." }
+        require(host == "@" || (host.length <= 253 && host.split('.').all { label ->
+            label.matches(Regex("[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"))
+        })) { "Enter @ for the root domain or valid ASCII DNS labels (letters/digits at each end; hyphens only inside labels)." }
         require(type == "A" || type == "AAAA") { "Dynadot DDNS supports A and AAAA updates only." }
         val address = java.net.InetAddress.getByName(ip)
         require(if (type == "A") address is java.net.Inet4Address else address is java.net.Inet6Address) {
