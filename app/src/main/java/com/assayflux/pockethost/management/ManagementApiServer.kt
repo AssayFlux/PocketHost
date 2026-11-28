@@ -567,14 +567,27 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
             val nodeHeap = body.optInt("nodeHeapMb", -1)
             if (pythonWorkers !in 2..16 || nodeHeap !in 96..512)
                 return 400 to JSONObject().put("error", "resource_limits_out_of_range")
-            val pythonWasRunning = runCatching { PythonHostRuntime.status(context) }.getOrDefault("STOPPED") == "RUNNING"
-            val nodeWasRunning = NodeHostRuntime.status(context) in setOf("RUNNING", "STARTING")
-            context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
+            val pythonStatus = PythonHostRuntime.status(context)
+            val nodeStatus = NodeHostRuntime.status(context)
+            if (pythonStatus == "UNAVAILABLE" || nodeStatus == "UNAVAILABLE") {
+                return 503 to JSONObject().put("error", "runtime_status_unavailable")
+                    .put("detail", "Runtime limits were not changed because the companion status could not be verified.")
+            }
+            val pythonWasRunning = pythonStatus in setOf("RUNNING", "STARTING")
+            val nodeWasRunning = nodeStatus in setOf("RUNNING", "STARTING")
+            // Stop active runtimes before persisting new limits. Never treat a failed
+            // Binder transaction as a successful stop or report a restart that did not happen.
+            if (pythonWasRunning && PythonHostRuntime.stop(context) != "STOPPED") {
+                return 503 to JSONObject().put("error", "python_runtime_stop_failed")
+            }
+            if (nodeWasRunning && NodeHostRuntime.stop(context) != "STOPPED") {
+                return 503 to JSONObject().put("error", "node_runtime_stop_failed")
+            }
+            val saved = context.getSharedPreferences("pockethost_state", Context.MODE_PRIVATE).edit()
                 .putInt("python_max_workers", pythonWorkers).putInt("node_heap_mb", nodeHeap).commit()
+            if (!saved) return 500 to JSONObject().put("error", "resource_limits_persist_failed")
             // Keep the Rust static server online. Runtime supervisors observe the
             // stopped workers and relaunch them with the newly persisted limits.
-            if (pythonWasRunning) PythonHostRuntime.stop(context)
-            if (nodeWasRunning) NodeHostRuntime.stop(context)
             OperationalLog.record(context, "INFO", "RESOURCE_LIMITS_UPDATED",
                 "Python workers=$pythonWorkers; Node V8 heap=$nodeHeap MB; Python restarted=$pythonWasRunning; Node restarted=$nodeWasRunning")
             return 200 to JSONObject().put("pythonMaxWorkers", pythonWorkers).put("nodeHeapMb", nodeHeap)
