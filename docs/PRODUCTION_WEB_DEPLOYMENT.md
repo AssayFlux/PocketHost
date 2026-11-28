@@ -39,6 +39,10 @@ Create DNS records for both console and API hostnames pointing to the public ser
 | `api` | A | Public IPv4 of the gateway |
 | `console` | AAAA | Public IPv6, only if the gateway is reachable over IPv6 |
 | `api` | AAAA | Public IPv6, only if the gateway is reachable over IPv6 |
+| `www` (or your chosen visitor hostname) | A | Public IPv4 of the same gateway |
+| `www` (or your chosen visitor hostname) | AAAA | Public IPv6, only if the gateway is reachable over IPv6 |
+
+If the apex domain itself is the website hostname, point its `@` A/AAAA records to the same gateway too. Reserve the console and API hostnames for PocketHost; do not also register them as visitor sites.
 
 If Cloudflare proxying is enabled, configure SSL/TLS mode to **Full (strict)** and ensure the origin can complete the ACME challenge. Do not publish an AAAA record unless IPv6 routing and firewall access to TCP/80 and TCP/443 are working.
 
