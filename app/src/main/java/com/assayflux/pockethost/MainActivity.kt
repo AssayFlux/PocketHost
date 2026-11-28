@@ -437,8 +437,12 @@ private fun PocketHostDashboard(onSignOut: () -> Unit) {
             todayRequests = metrics.todayRequests
             todayBytes = metrics.todayBytes
             activeConnections = runCatching { NativeEngine.activeConnections() }.getOrDefault(0L)
-            pythonHosting = runCatching { PythonHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
-            nodeHosting = runCatching { NodeHostRuntime.status(context) == "RUNNING" }.getOrDefault(false)
+            val runtimeStatuses = withContext(Dispatchers.IO) {
+                runCatching { PythonHostRuntime.status(context) }.getOrDefault("UNAVAILABLE") to
+                    runCatching { NodeHostRuntime.status(context) }.getOrDefault("UNAVAILABLE")
+            }
+            pythonHosting = runtimeStatuses.first == "RUNNING"
+            nodeHosting = runtimeStatuses.second == "RUNNING"
             tunnelStatus = CloudflareTunnelRuntime.status()
             relayStatus = RelayAgent.status()
             nativeRelayStatus = runCatching { NativeRelay.status() }.getOrDefault("UNAVAILABLE")
