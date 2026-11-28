@@ -15,7 +15,7 @@ import java.net.InetAddress
 class DualStackNetworkDiagnosticsTest {
     @Test
     fun ipv4RejectsPrivateLoopbackAndCarrierGradeNat() {
-        listOf("127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "100.64.0.1", "169.254.1.1")
+        listOf("127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "100.64.0.1", "169.254.1.1", "192.0.0.1", "192.88.99.1")
             .forEach { value ->
                 assertFalse("$value must not be published", PublicAddressDetector.isGloballyRoutable(InetAddress.getByName(value), false))
             }
@@ -24,7 +24,7 @@ class DualStackNetworkDiagnosticsTest {
 
     @Test
     fun ipv6RejectsUlaLinkLocalAndDocumentationAddresses() {
-        listOf("::1", "fe80::1", "fc00::1", "2001:db8::1").forEach { value ->
+        listOf("::1", "fe80::1", "fc00::1", "2001:db8::1", "2001::1", "2002::1", "3fff::1").forEach { value ->
             assertFalse("$value must not be published", PublicAddressDetector.isGloballyRoutable(InetAddress.getByName(value), true))
         }
         assertTrue(PublicAddressDetector.isGloballyRoutable(InetAddress.getByName("2606:4700:4700::1111"), true))
