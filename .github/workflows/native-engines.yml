@@ -1,0 +1,42 @@
+name: PocketHost Native Engines
+on:
+  push:
+    branches: [Alpha]
+    paths: ["rust-engine/**", "relay-node/**", ".cargo/**", ".github/workflows/native-engines.yml"]
+  pull_request:
+    branches: [Alpha]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - run: cargo test --manifest-path rust-engine/Cargo.toml --locked
+      - run: cargo test --manifest-path relay-node/Cargo.toml --locked
+  android-abi:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "ndk;27.2.12479018"
+      - run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - run: cargo install cargo-ndk --version 4.1.2 --locked
+      - working-directory: rust-engine
+        run: cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o "$RUNNER_TEMP/engine" build --release --locked
+      - working-directory: relay-node
+        run: cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o "$RUNNER_TEMP/relay" build --release --locked
+      - run: |
+          set -e
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            test -s "$RUNNER_TEMP/engine/$abi/libpockethost.so"
+            test -s "$RUNNER_TEMP/relay/$abi/libassayflux_relay_node.so"
+          done

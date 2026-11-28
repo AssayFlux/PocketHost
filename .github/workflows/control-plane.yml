@@ -1,0 +1,33 @@
+name: PocketHost Control Plane
+on:
+  push:
+    branches: [Alpha]
+    paths: ["control-plane/**", ".github/workflows/control-plane.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["control-plane/**", ".github/workflows/control-plane.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  control-plane:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pockethost
+          POSTGRES_PASSWORD: pockethost-ci
+          POSTGRES_DB: pockethost
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pockethost -d pockethost"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://pockethost:pockethost-ci@localhost:5432/pockethost
+      POCKETHOST_CONTROL_ADMIN_TOKEN: ci-only-test-admin-token-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - run: cargo check --manifest-path control-plane/Cargo.toml --locked
+      - run: cargo test --manifest-path control-plane/Cargo.toml --locked

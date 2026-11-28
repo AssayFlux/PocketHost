@@ -1,0 +1,28 @@
+name: PocketHost Python Agent and Protocol
+on:
+  push:
+    branches: [Alpha]
+    paths: ["agents/**", "protocol/**", "tests/python/**", "tests/test_protocol_contracts.py", "scripts/validate-protocol.py", "scripts/validate-android-role-policy.py", ".github/workflows/python-agent.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["agents/**", "protocol/**", "tests/python/**", "tests/test_protocol_contracts.py", "scripts/validate-protocol.py", "scripts/validate-android-role-policy.py"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-protocol:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: agents/linux/pyproject.toml
+      - run: python -m pip install "jsonschema==4.23.0" -e agents/linux
+      - run: python -m compileall -q agents/linux/src runtime-worker/src/main/python examples/python-wsgi tests/python
+      - run: python scripts/validate-protocol.py
+      - run: python scripts/validate-android-role-policy.py
+      - env:
+          PYTHONPATH: agents/linux/src
+        run: python -m unittest discover -s tests/python -v
