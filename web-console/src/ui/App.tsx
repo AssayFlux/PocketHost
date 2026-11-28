@@ -11,7 +11,7 @@ type CapacityState = { percent: number; safeConcurrency: number; effectiveConcur
 type CapacityBenchmark = { state: string; safeConcurrency?: number; workload?: string; error?: string; levels?: Array<{ concurrency: number; samples: number; errors: number; p95LatencyMs: number; withinSafeThreshold: boolean }> };
 type DailyReport = { date: string; totalRequests: number; totalBytes: number; eventCount: number; errorCount: number; warningCount: number };
 
-const defaultApi = "http://127.0.0.1:17841";
+const defaultApi = import.meta.env.VITE_POCKETHOST_LOCAL_API_BASE?.trim() || "http://127.0.0.1:17841";
 const storedToken = () => { try { return sessionStorage.getItem("pockethost_device_token") || ""; } catch { return ""; } };
 
 export function App() {
@@ -48,7 +48,17 @@ export function App() {
   const [busy, setBusy] = useState(false);
 
   const request = useCallback(async <T extends Record<string, unknown>>(path: string, init: RequestInit = {}): Promise<T> => {
-    const response = await fetch(apiBase.replace(/\/$/, "") + path, {
+    let apiUrl: URL;
+    try {
+      apiUrl = new URL(apiBase.trim());
+      if (!["http:", "https:"].includes(apiUrl.protocol) || apiUrl.username || apiUrl.password ||
+          apiUrl.search || apiUrl.hash || (apiUrl.pathname !== "/" && apiUrl.pathname !== "")) {
+        throw new Error("invalid");
+      }
+    } catch {
+      throw new Error("Enter a valid HTTP(S) management API origin without credentials, path, query or fragment.");
+    }
+    const response = await fetch(apiUrl.origin + path, {
       ...init,
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
       cache: "no-store",
@@ -336,6 +346,7 @@ export function App() {
         <article className="panel">
           <div className="panel-heading"><h3>Host account login</h3><span className="muted-tag">OWNER / OPERATOR</span></div>
           <label>Management API address<input value={apiBase} onChange={e => setApiBase(e.target.value)} spellCheck={false} /></label>
+          <small className="scope-note">This connects to the Android host's loopback management API. 127.0.0.1 means the device running this browser; use Remote Control Plane below to manage a phone remotely through the public API.</small>
           <label>Username<input autoComplete="username" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} /></label>
           <label>Password<input type="password" autoComplete="current-password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} /></label>
           <button disabled={busy || !loginUsername || !loginPassword} onClick={login}>Sign in</button>
