@@ -117,21 +117,20 @@ internal object DynadotDdnsApi {
             require(status in 200..299) {
                 "Dynadot DDNS rejected the update (HTTP $status). Check that Dynadot DNS and DDNS are enabled for this domain."
             }
+            // Dynadot's documented/ddns-go-compatible response is JSON with
+            // error_code; -1 is failure and every other code is success. Never
+            // interpret an arbitrary non-empty HTML/login/challenge page as success.
             val json = runCatching { JSONObject(body) }.getOrNull()
-            if (json != null && json.has("error_code")) {
-                require(json.optInt("error_code", -1) != -1) {
-                    val details = json.optJSONArray("content")?.let { items ->
-                        (0 until items.length()).mapNotNull { items.optString(it).takeIf(String::isNotBlank) }.joinToString("; ")
-                    }.orEmpty()
-                    details.takeIf(String::isNotBlank)
-                        ?: "Dynadot reported an unsuccessful DDNS update. Check the domain-specific password and Dynadot DNS configuration."
-                }
-            } else {
-                val normalized = body.lowercase()
-                require(body.isNotBlank() && !normalized.contains("invalid password") &&
-                    !normalized.contains("unauthorized") && !normalized.contains("update failed")) {
-                    "Dynadot reported an unsuccessful DDNS update. Check the domain-specific password and Dynadot DNS configuration."
-                }
+                ?: throw IllegalStateException("Dynadot returned an unexpected response instead of its DDNS JSON result.")
+            require(json.has("error_code")) {
+                "Dynadot response did not contain error_code; the update cannot be verified."
+            }
+            require(json.optInt("error_code", -1) != -1) {
+                val details = json.optJSONArray("content")?.let { items ->
+                    (0 until items.length()).mapNotNull { items.optString(it).takeIf(String::isNotBlank) }.joinToString("; ")
+                }.orEmpty()
+                details.takeIf(String::isNotBlank)
+                    ?: "Dynadot reported an unsuccessful DDNS update. Check the domain-specific password and Dynadot DNS configuration."
             }
             return body.ifBlank { "Dynadot accepted the HTTPS update request." }
         } finally {
