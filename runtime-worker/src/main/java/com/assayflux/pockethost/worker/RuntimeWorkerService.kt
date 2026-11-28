@@ -65,11 +65,14 @@ class RuntimeWorkerService : Service() {
 
     private fun verifyHostCaller() {
         val callerUid = Binder.getCallingUid()
-        val hostPackage = "com.assayflux.pockethost"
+        val allowedHostPackages = setOf("com.assayflux.pockethost", "com.assayflux.webhost")
         val callerPackages = packageManager.getPackagesForUid(callerUid).orEmpty()
-        check(hostPackage in callerPackages) { "Only AssayFlux Pocket Host may control the runtime companion." }
-        check(packageManager.checkSignatures(packageName, hostPackage) == PackageManager.SIGNATURE_MATCH) {
-            "Runtime companion and host application signatures do not match."
+        val matchedHost = callerPackages.firstOrNull { host ->
+            host in allowedHostPackages &&
+                packageManager.checkSignatures(packageName, host) == PackageManager.SIGNATURE_MATCH
+        }
+        check(matchedHost != null) {
+            "Only an allowlisted, matching-signed PocketHost or AssayFlux WebHost application may control the runtime companion."
         }
     }
 
@@ -93,6 +96,49 @@ class RuntimeWorkerService : Service() {
                 name.startsWith("firebase-adminsdk")) && name.endsWith(".json")) return true
         return listOf(".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".mobileprovision")
             .any { name.endsWith(it) }
+    }
+
+
+    /**
+     * Keep CMS runtime-owned state when the host refreshes its transferred source bundle.
+     * SQLite, session secrets, setup state and uploads live under instance/ and must not be
+     * replaced by a stale host-side asset copy during the next project install.
+     */
+    private fun preserveRuntimeState(existingRoot: File, stagingRoot: File) {
+        val source = File(existingRoot, "instance")
+        if (!source.exists()) return
+        check(source.isDirectory && !java.nio.file.Files.isSymbolicLink(source.toPath())) {
+            "Existing CMS instance state is not a regular directory."
+        }
+        val target = File(stagingRoot, "instance")
+        if (target.exists()) check(target.deleteRecursively()) { "Could not clear staged instance data." }
+        val canonicalTarget = target.canonicalFile
+        var entries = 0
+        var bytes = 0L
+        source.walkTopDown().forEach { item ->
+            check(!java.nio.file.Files.isSymbolicLink(item.toPath())) {
+                "Existing CMS instance contains a symbolic link; refusing to replace the project."
+            }
+            val relative = source.toPath().relativize(item.toPath()).toString()
+            val output = if (relative.isEmpty()) canonicalTarget else File(canonicalTarget, relative).canonicalFile
+            check(output.toPath().startsWith(canonicalTarget.toPath())) {
+                "Existing CMS instance contains an unsafe path."
+            }
+            entries++
+            check(entries <= MAX_ARCHIVE_ENTRIES) { "Existing CMS instance contains too many entries." }
+            if (item.isDirectory) {
+                check(output.mkdirs() || output.isDirectory) { "Could not preserve CMS instance directory." }
+            } else {
+                check(item.isFile) { "Existing CMS instance contains an unsupported filesystem entry." }
+                val size = item.length()
+                check(size <= MAX_PERSISTENT_STATE_BYTES - bytes) {
+                    "CMS persistent instance data exceeds the 512 MiB preservation limit."
+                }
+                bytes += size
+                output.parentFile?.mkdirs()
+                item.copyTo(output, overwrite = true)
+            }
+        }
     }
 
     @Synchronized
@@ -219,6 +265,7 @@ class RuntimeWorkerService : Service() {
                     zip.closeEntry()
                 }
             }
+            if (destination.exists()) preserveRuntimeState(destination, staging)
             val movedPrevious = if (destination.exists()) {
                 check(destination.renameTo(backup)) { "Could not stage existing project for replacement." }
                 true
@@ -238,6 +285,15 @@ class RuntimeWorkerService : Service() {
         } finally {
             runCatching { descriptor.close() }
         }
+    }
+
+
+    private fun pythonProjectStatus(siteId: String): String {
+        require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid project identifier." }
+        val root = File(projectsRoot, siteId).canonicalFile
+        check(root.toPath().startsWith(projectsRoot.canonicalFile.toPath())) { "Invalid project root." }
+        val active = pythonModule()?.callAttr("is_project_active", root.absolutePath)?.toString() == "True"
+        return if (active) "RUNNING" else "STOPPED"
     }
 
     private fun startPython(siteId: String, port: Int): String {
@@ -359,6 +415,7 @@ class RuntimeWorkerService : Service() {
                         pythonModule()?.callAttr("stop")?.toString() ?: "STOPPED"
                     }
                     TRANSACTION_PYTHON_STATUS -> pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
+                    TRANSACTION_PYTHON_PROJECT_STATUS -> pythonProjectStatus(data.readString().orEmpty())
                     TRANSACTION_PYTHON_METRICS -> pythonModule()?.callAttr("metrics_json")?.toString() ?: "{}"
                     TRANSACTION_NODE_START -> startNode(
                         data.readString().orEmpty(), data.readString().orEmpty(), data.readInt(), data.readInt()
@@ -431,6 +488,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
         const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
         const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
+        const val TRANSACTION_PYTHON_PROJECT_STATUS = IBinder.FIRST_CALL_TRANSACTION + 17
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
