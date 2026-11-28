@@ -12,6 +12,7 @@ Pocket Host is an Android-first, self-hosted platform for managing and serving w
 ## Project documents
 
 - [Repository baseline](docs/BASELINE.md): what exists now and what remains unverified.
+- [Production web deployment](docs/PRODUCTION_WEB_DEPLOYMENT.md): static console, API, Caddy routing, DNS, TLS and Android relay setup.
 - [Current engineering audit](docs/ENGINEERING_AUDIT_2026-11-21.md): historical Cloudflared CI remediation and workflow boundaries.
 - [v0.1.0 Phase 2 acceptance](docs/V0.1.0_PHASE2_ACCEPTANCE.md): current automated, emulator, device and real-network verification status.
 - [North Star](docs/NORTH_STAR.md): long-term product direction and boundaries.
