@@ -55,7 +55,8 @@ services:
     read_only: true
     tmpfs: ["/var/cache/nginx", "/var/run", "/tmp"]
     security_opt: ["no-new-privileges:true"]
-    cap_drop: [ALL]
+    # Nginx master must retain its normal container capabilities to drop worker
+    # privileges to the nginx account; the container is still read-only and isolated.
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz"]
       interval: 15s
