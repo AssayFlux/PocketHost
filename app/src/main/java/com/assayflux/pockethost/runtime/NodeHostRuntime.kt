@@ -29,7 +29,8 @@ object NodeHostRuntime {
 
     @Synchronized
     fun stop(context: Context): String =
-        runCatching { RuntimeWorkerClient.stopNode(context) }.getOrDefault("STOPPED")
+        runCatching { RuntimeWorkerClient.stopNode(context) }
+            .getOrElse { "ERROR: ${it.message ?: "Runtime Worker stop failed."}" }
 
     fun status(context: Context): String =
         runCatching { RuntimeWorkerClient.nodeStatus(context) }.getOrDefault("UNAVAILABLE")
