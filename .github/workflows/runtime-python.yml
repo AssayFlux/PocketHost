@@ -1,0 +1,24 @@
+name: PocketHost Python Runtime
+on:
+  push:
+    branches: [Alpha]
+    paths: ["runtime-worker/src/main/python/**", "examples/python-wsgi/**", "tests/python/test_pockethost_runtime.py", ".github/workflows/runtime-python.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["runtime-worker/src/main/python/**", "examples/python-wsgi/**", "tests/python/test_pockethost_runtime.py", ".github/workflows/runtime-python.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: runtime-python-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  python-runtime:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m compileall -q runtime-worker/src/main/python examples/python-wsgi tests/python/test_pockethost_runtime.py
+      - run: python -m unittest discover -s tests/python -p "test_pockethost_runtime.py" -v
