@@ -101,6 +101,27 @@ struct CommandAck {
     result: Value,
 }
 
+fn parse_control_origins(raw: &str) -> anyhow::Result<Vec<HeaderValue>> {
+    let mut origins = Vec::new();
+    for item in raw.split(',').map(str::trim).filter(|item| !item.is_empty()) {
+        let (scheme, authority) = item.split_once("://")
+            .ok_or_else(|| anyhow::anyhow!("invalid control origin: scheme required"))?;
+        let local_http = scheme == "http" &&
+            (authority.starts_with("localhost:") || authority.starts_with("127.0.0.1:"));
+        anyhow::ensure!(scheme == "https" || local_http,
+            "control origins must use HTTPS (HTTP is allowed only for localhost development)");
+        anyhow::ensure!(!authority.is_empty() && !authority.contains('/') &&
+            !authority.contains('?') && !authority.contains('#') &&
+            !authority.contains('@') && !authority.contains('*'),
+            "control origin must be exact and must not contain a path, credentials, query, fragment or wildcard");
+        let value = item.parse::<HeaderValue>()?;
+        if !origins.iter().any(|existing: &HeaderValue| existing == &value) {
+            origins.push(value);
+        }
+    }
+    Ok(origins)
+}
+
 fn control_host_matches(headers: &HeaderMap, expected_host: &str) -> bool {
     let expected = expected_host.trim().trim_end_matches('.').to_ascii_lowercase();
     if expected.is_empty() { return false; }
@@ -1373,12 +1394,19 @@ async fn main() -> anyhow::Result<()> {
     let db = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
     sqlx::migrate!("./migrations").run(&db).await?;
     let state = AppState { db, admin_token, relay: relay::RelayHub::default() };
-    let cors = match std::env::var("POCKETHOST_CONTROL_ORIGIN") {
-        Ok(origin) => CorsLayer::new()
-            .allow_origin(origin.parse::<HeaderValue>()?)
+    // Browser access is restricted to an explicit, comma-separated exact-origin list.
+    // POCKETHOST_CONTROL_ORIGIN remains the single WebAuthn RP origin and backwards-compatible fallback.
+    let configured_origins = std::env::var("POCKETHOST_CONTROL_ORIGINS")
+        .or_else(|_| std::env::var("POCKETHOST_CONTROL_ORIGIN"))
+        .unwrap_or_default();
+    let allowed_origins = parse_control_origins(&configured_origins)?;
+    let cors = if allowed_origins.is_empty() {
+        CorsLayer::new()
+    } else {
+        CorsLayer::new()
+            .allow_origin(allowed_origins)
             .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
-            .allow_headers([AUTHORIZATION, CONTENT_TYPE]),
-        Err(_) => CorsLayer::new(),
+            .allow_headers([AUTHORIZATION, CONTENT_TYPE])
     };
     let control_app = Router::new()
         .route("/health", get(health))
@@ -2020,6 +2048,22 @@ mod tests {
             "artifact creation must never overwrite an existing file");
         assert_eq!(fs::read(&committed).unwrap(), b"zip-data");
         fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn control_cors_accepts_multiple_exact_https_origins_and_deduplicates() {
+        let origins = parse_control_origins("https://console.example.com, https://admin.example.com,https://console.example.com").unwrap();
+        assert_eq!(origins.len(), 2);
+        assert!(origins.iter().any(|origin| origin == "https://console.example.com"));
+    }
+
+    #[test]
+    fn control_cors_rejects_wildcards_paths_and_insecure_remote_origins() {
+        assert!(parse_control_origins("https://*.example.com").is_err());
+        assert!(parse_control_origins("https://console.example.com/path").is_err());
+        assert!(parse_control_origins("http://console.example.com").is_err());
+        assert!(parse_control_origins("https://console.example.com").is_ok());
+        assert!(parse_control_origins("http://localhost:5173").is_ok());
     }
 
     #[test]
