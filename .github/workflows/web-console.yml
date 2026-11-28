@@ -45,13 +45,14 @@ jobs:
         run: docker build -f web-console/Dockerfile -t pockethost-web-console:ci .
         working-directory: .
       - name: Validate production Compose configuration
-        run: docker compose --env-file control-plane/.env.example --profile public config --quiet
+        run: docker compose -f control-plane/compose.yaml --env-file control-plane/.env.example --profile public config --quiet
         working-directory: .
       - name: Validate Caddy production routes
         run: |
           docker run --rm \\
             -e CONTROL_PLANE_DOMAIN=api.example.com \\
             -e POCKETHOST_CONSOLE_DOMAIN=console.example.com \\
+            -e POCKETHOST_CLOUDFLARED_IP=172.31.240.11 \\
             -v "$PWD/control-plane/Caddyfile:/etc/caddy/Caddyfile:ro" \\
             -v "$PWD/control-plane/trusted-proxy.caddy:/etc/caddy/trusted-proxy.caddy:ro" \\
             caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
