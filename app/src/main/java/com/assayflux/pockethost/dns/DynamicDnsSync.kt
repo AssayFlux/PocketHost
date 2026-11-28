@@ -61,9 +61,22 @@ internal object DynamicDnsSync {
         val include4 = prefs.getBoolean("ipv4", true)
         val include6 = prefs.getBoolean("ipv6", true)
         require(include4 || include6) { "Select at least one address family." }
+        val provider = prefs.getString("provider", "cloudflare") ?: "cloudflare"
+        val addresses = PublicAddressDetector.detect()
+        if (provider == "dynadot") {
+            val password = DynadotDdnsCredentialStore.read(context)
+                ?: throw IllegalStateException("Save the domain-specific Dynadot DDNS password first.")
+            val outcomes = mutableListOf<FamilyResult>()
+            if (include4) outcomes += syncDynadotFamily(domain, host, "A", addresses.ipv4, password)
+            if (include6) outcomes += syncDynadotFamily(domain, host, "AAAA", addresses.ipv6, password)
+            outcomes.forEach { recordHistory(context, it) }
+            val successes = outcomes.count { it.success }
+            OperationalLog.record(context, if (successes == outcomes.size && outcomes.isNotEmpty()) "INFO" else "WARN",
+                "DDNS_SYNC_DYNADOT", outcomes.joinToString("; ") { "${it.type}: ${it.message}" })
+            return outcomes
+        }
         val token = CloudflareApiTokenStore.read(context)
             ?: throw IllegalStateException("Save a scoped Cloudflare DNS API token first.")
-        val addresses = PublicAddressDetector.detect()
         val zone = CloudflareDnsApi.findZone(token, domain)
         val fqdn = if (host == "@") zone.name else "${host.trimEnd('.').lowercase()}.${zone.name}"
         require(fqdn == zone.name || fqdn.endsWith(".${zone.name}")) { "Hostname is outside the selected DNS zone." }
@@ -76,6 +89,23 @@ internal object DynamicDnsSync {
         OperationalLog.record(context, if (success == outcomes.size && outcomes.isNotEmpty()) "INFO" else "WARN",
             "DDNS_SYNC", outcomes.joinToString("; ") { "${it.type}: ${it.message}" })
         return outcomes
+    }
+
+    private fun syncDynadotFamily(domain: String, host: String, type: String, address: String?, password: String): FamilyResult {
+        return try {
+            val ip = address ?: throw IllegalStateException("No globally routable public $type address detected; Dynadot record left unchanged.")
+            val response = DynadotDdnsApi.update(domain, host, type, ip, password)
+            val fqdn = if (host == "@") domain else "${host.trimEnd('.').lowercase()}.$domain"
+            if (!verifyPublicDns(fqdn, type, ip, false)) {
+                throw IllegalStateException("Dynadot accepted the update, but public DNS has not converged yet. It will be checked again. Response: ${response.take(180)}")
+            }
+            val timestamp = Instant.now().toString()
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString("last_success_$type", timestamp).putString("last_address_$type", ip).apply()
+            FamilyResult(type, true, "Dynadot updated and public DNS verified as $ip", ip)
+        } catch (error: Exception) {
+            FamilyResult(type, false, error.message ?: "Dynadot DDNS update failed.")
+        }
     }
 
     private fun syncFamily(
