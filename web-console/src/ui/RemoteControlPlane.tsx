@@ -519,7 +519,7 @@ export function RemoteControlPlane() {
       <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => { setEndpoint(event.target.value); setSessionToken(""); }} placeholder="https://api.example.com" /></label>
       <label>API credential<input type="password" value={adminToken} onChange={event => { setAdminToken(event.target.value); setSessionToken(""); }} placeholder="Owner, Editor or Viewer credential" /><small>Used only to create a short-lived administrative session; it is not accepted by management endpoints.</small></label>
       <div className="site-actions">
-        <button disabled={busy || !endpoint.startsWith("https://") || adminToken.length < 32} onClick={connect}>Create session &amp; connect</button>
+        <button disabled={busy || !isSecureControlEndpoint(endpoint) || adminToken.length < 32} onClick={connect}>Create session &amp; connect</button>
         <button disabled={busy || !sessionToken} onClick={refreshDevices}>Refresh devices</button>
         <button disabled={busy || !sessionToken} onClick={disconnect}>Disconnect</button>
       </div>
@@ -601,10 +601,10 @@ export function RemoteControlPlane() {
       <label>Passkey name<input value={passkeyDisplayName} onChange={event => setPasskeyDisplayName(event.target.value)} maxLength={80} /></label>
       <div className="site-actions">
         <button disabled={busy || !sessionToken || sessionRole !== "owner" || !passkeyDisplayName.trim()} onClick={() => void enrollOwnerPasskey()}>Enroll owner passkey</button>
-        <button disabled={busy || !endpoint.startsWith("https://")} onClick={() => void authenticateOwnerPasskey().then(() => setMessage("Signed in with Owner passkey.")).catch(error => setMessage(error instanceof Error ? error.message : "Passkey sign-in failed."))}>Sign in with passkey</button>
+        <button disabled={busy || !isSecureControlEndpoint(endpoint)} onClick={() => void authenticateOwnerPasskey().then(() => setMessage("Signed in with Owner passkey.")).catch(error => setMessage(error instanceof Error ? error.message : "Passkey sign-in failed."))}>Sign in with passkey</button>
       </div>
       <label>One-time recovery code<input value={recoveryCodeInput} onChange={event => setRecoveryCodeInput(event.target.value)} autoComplete="off" spellCheck={false} placeholder="Paste one 64-character recovery code" /></label>
-      <button disabled={busy || !endpoint.startsWith("https://") || recoveryCodeInput.trim().length !== 64} onClick={() => void recoverOwnerSession()}>Recover Owner session</button>
+      <button disabled={busy || !isSecureControlEndpoint(endpoint) || recoveryCodeInput.trim().length !== 64} onClick={() => void recoverOwnerSession()}>Recover Owner session</button>
       {recoveryCodes.length > 0 && <div className="notice">
         <strong>Save these one-time recovery codes offline</strong>
         <p>Each code can be used once. Enrolling a replacement passkey after recovery rotates this set.</p>
