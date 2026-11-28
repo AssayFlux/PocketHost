@@ -26,6 +26,11 @@ class WebHostRuntimeCompatibilityTests(unittest.TestCase):
         gradle = (ROOT / "runtime-worker/build.gradle.kts").read_text()
         self.assertIn('install("Flask==3.1.1")', gradle)
 
+    def test_worker_keeps_the_existing_protocol_version(self):
+        service = (ROOT / "runtime-worker/src/main/java/com/assayflux/pockethost/worker/RuntimeWorkerService.kt").read_text()
+        self.assertIn("const val PROTOCOL_VERSION = 1", service)
+        self.assertIn("TRANSACTION_PYTHON_PROJECT_STATUS = IBinder.FIRST_CALL_TRANSACTION + 17", service)
+
 
 if __name__ == "__main__":
     unittest.main()
