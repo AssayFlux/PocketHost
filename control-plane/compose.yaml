@@ -27,7 +27,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-pockethost}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-pockethost}
       POCKETHOST_CONTROL_ADMIN_TOKEN: ${POCKETHOST_CONTROL_ADMIN_TOKEN:?Set a long random administrator token}
       POCKETHOST_CONTROL_API_HOST: ${POCKETHOST_CONTROL_API_HOST:?Set the dedicated control-plane hostname}
-      POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the exact HTTPS console origin}
+      POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the canonical HTTPS console origin for WebAuthn}
+      POCKETHOST_CONTROL_ORIGINS: ${POCKETHOST_CONTROL_ORIGINS:?Set comma-separated exact HTTPS console origins}
       POCKETHOST_TRUSTED_PROXY_IPS: ${POCKETHOST_TRUSTED_PROXY_IPS:-172.31.240.10,172.31.240.11}
       POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
       POCKETHOST_RELAY_BIND: 0.0.0.0:8081
@@ -42,13 +43,37 @@ services:
     cap_drop: [ALL]
     networks: [private]
 
+  web-console:
+    build:
+      context: ..
+      dockerfile: web-console/Dockerfile
+      args:
+        VITE_POCKETHOST_CONTROL_API_BASE: https://${CONTROL_PLANE_DOMAIN:?Set CONTROL_PLANE_DOMAIN}
+    restart: unless-stopped
+    expose: ["80"]
+    read_only: true
+    tmpfs: ["/var/cache/nginx", "/var/run", "/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    networks: [private]
+
   caddy:
     profiles: ["public"]
     image: caddy:2
     restart: unless-stopped
-    depends_on: [control-plane]
+    depends_on:
+      control-plane:
+        condition: service_started
+      web-console:
+        condition: service_healthy
     environment:
       CONTROL_PLANE_DOMAIN: ${CONTROL_PLANE_DOMAIN:?Set CONTROL_PLANE_DOMAIN}
+      POCKETHOST_CONSOLE_DOMAIN: ${POCKETHOST_CONSOLE_DOMAIN:?Set POCKETHOST_CONSOLE_DOMAIN}
       POCKETHOST_CLOUDFLARED_IP: ${POCKETHOST_CLOUDFLARED_IP:-172.31.240.11}
     ports:
       - "80:80"
