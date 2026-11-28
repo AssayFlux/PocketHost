@@ -29,7 +29,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.9" }
       - name: Configure shared AssayFlux release signing (optional)
-        if: ${{ secrets.ASSAYFLUX_SHARED_KEYSTORE_BASE64 != '' }}
+        if: ${{ secrets.ASSAYFLUX_SHARED_KEYSTORE_BASE64 != '' && secrets.ASSAYFLUX_SHARED_KEYSTORE_PASSWORD != '' && secrets.ASSAYFLUX_SHARED_KEY_ALIAS != '' && secrets.ASSAYFLUX_SHARED_KEY_PASSWORD != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.ASSAYFLUX_SHARED_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ASSAYFLUX_SHARED_KEYSTORE_PASSWORD }}
