@@ -67,8 +67,8 @@ internal object DynamicDnsSync {
             val password = DynadotDdnsCredentialStore.read(context)
                 ?: throw IllegalStateException("Save the domain-specific Dynadot DDNS password first.")
             val outcomes = mutableListOf<FamilyResult>()
-            if (include4) outcomes += syncDynadotFamily(domain, host, "A", addresses.ipv4, password)
-            if (include6) outcomes += syncDynadotFamily(domain, host, "AAAA", addresses.ipv6, password)
+            if (include4) outcomes += syncDynadotFamily(context, domain, host, "A", addresses.ipv4, password)
+            if (include6) outcomes += syncDynadotFamily(context, domain, host, "AAAA", addresses.ipv6, password)
             outcomes.forEach { recordHistory(context, it) }
             val successes = outcomes.count { it.success }
             OperationalLog.record(context, if (successes == outcomes.size && outcomes.isNotEmpty()) "INFO" else "WARN",
@@ -91,7 +91,7 @@ internal object DynamicDnsSync {
         return outcomes
     }
 
-    private fun syncDynadotFamily(domain: String, host: String, type: String, address: String?, password: String): FamilyResult {
+    private fun syncDynadotFamily(context: Context, domain: String, host: String, type: String, address: String?, password: String): FamilyResult {
         return try {
             val ip = address ?: throw IllegalStateException("No globally routable public $type address detected; Dynadot record left unchanged.")
             val response = DynadotDdnsApi.update(domain, host, type, ip, password)
