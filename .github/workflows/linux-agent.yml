@@ -1,0 +1,29 @@
+name: PocketHost Linux Agent
+on:
+  push:
+    branches: [Alpha]
+    paths: ["agents/linux/**", "tests/python/**", "runtime-worker/src/main/python/**", "examples/python-wsgi/**", ".github/workflows/linux-agent.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["agents/linux/**", "tests/python/**", "runtime-worker/src/main/python/**", "examples/python-wsgi/**", ".github/workflows/linux-agent.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: linux-agent-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux-agent:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: agents/linux/pyproject.toml
+      - run: python -m pip install -e agents/linux
+      - run: python -m compileall -q agents/linux/src runtime-worker/src/main/python examples/python-wsgi tests/python
+      - env:
+          PYTHONPATH: agents/linux/src
+        run: python -m unittest discover -s tests/python -v
