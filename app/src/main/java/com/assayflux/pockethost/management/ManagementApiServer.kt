@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Debug
 import android.content.Intent
 import com.assayflux.pockethost.service.HostingService
+import com.assayflux.pockethost.BuildConfig
 import java.io.File
 import com.assayflux.pockethost.diagnostics.MetricsStore
 import com.assayflux.pockethost.diagnostics.OperationalLog
@@ -22,6 +23,7 @@ import com.assayflux.pockethost.sites.SiteRegistry
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.net.URI
 import java.net.ServerSocket
 import java.net.Socket
 import java.security.MessageDigest
@@ -868,13 +870,31 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
     private fun tokenHash(token: String): String = MessageDigest.getInstance("SHA-256")
         .digest(token.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
-    private fun allowedOrigin(origin: String?): Boolean = origin != null && (
-        origin.matches(Regex("http://localhost:[0-9]{1,5}")) ||
-        origin.matches(Regex("http://127\\.0\\.0\\.1:[0-9]{1,5}")) ||
-        origin == "https://assayflux.xyz" ||
-        origin == "https://www.assayflux.xyz" ||
-        origin == "https://pockethost.assayflux.xyz"
-    )
+    private val configuredAllowedOrigins by lazy {
+        BuildConfig.MANAGEMENT_ALLOWED_ORIGINS.split(',')
+            .map { it.trim() }
+            .filter { value ->
+                runCatching {
+                    val uri = URI(value)
+                    uri.scheme.equals("https", ignoreCase = true) &&
+                        !uri.host.isNullOrBlank() && uri.rawUserInfo == null &&
+                        uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null
+                }.getOrDefault(false)
+            }.toSet()
+    }
+
+    private fun allowedOrigin(origin: String?): Boolean {
+        if (origin.isNullOrBlank()) return false
+        if (origin in configuredAllowedOrigins) return true
+        // Local development only; production domains must be explicitly allowlisted at build time.
+        return runCatching {
+            val uri = URI(origin)
+            uri.scheme.equals("http", ignoreCase = true) &&
+                (uri.host.equals("localhost", ignoreCase = true) || uri.host == "127.0.0.1") &&
+                uri.port in 1..65535 && uri.rawUserInfo == null &&
+                uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null
+        }.getOrDefault(false)
+    }
 
     private fun respond(output: BufferedOutputStream, status: Int, body: JSONObject, origin: String? = null) {
         val bytes = body.toString().toByteArray(Charsets.UTF_8)
