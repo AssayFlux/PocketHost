@@ -9,6 +9,15 @@ val rustDir = rootProject.layout.projectDirectory.dir("rust-engine")
 val relayRustDir = rootProject.layout.projectDirectory.dir("relay-node")
 val relayJniOutput = layout.buildDirectory.dir("generated/relay/jniLibs")
 val generatedBrandResources = layout.buildDirectory.dir("generated/brandResources")
+val managementAllowedOrigins = providers.gradleProperty("pockethostManagementAllowedOrigins")
+    .orElse("https://assayflux.xyz,https://www.assayflux.xyz,https://pockethost.assayflux.xyz")
+    .get()
+require(managementAllowedOrigins.split(',').all { raw ->
+    val origin = raw.trim()
+    origin.startsWith("https://") && origin.substringAfter("://").isNotBlank() &&
+        !origin.substringAfter("://").contains('/') && !origin.contains('*') &&
+        !origin.contains('@') && !origin.contains('?') && !origin.contains('#')
+}) { "pockethostManagementAllowedOrigins must be comma-separated exact HTTPS origins without paths or wildcards" }
 val generatePocketHostLauncherIcons by tasks.registering(GeneratePocketHostLauncherIcons::class) {
     sourceSvg.set(rootProject.layout.projectDirectory.file("Assets/Pocket Host 7.svg"))
     outputDirectory.set(generatedBrandResources)
@@ -53,6 +62,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "MANAGEMENT_ALLOWED_ORIGINS", "\\\"${managementAllowedOrigins.replace("\\", "\\\\").replace("\\\"", "\\\\\\\"")}\\\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters.clear()
@@ -85,7 +95,7 @@ android {
             useLegacyPackaging = true
         }
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
