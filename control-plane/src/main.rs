@@ -1397,10 +1397,13 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState { db, admin_token, relay: relay::RelayHub::default() };
     // Browser access is restricted to an explicit, comma-separated exact-origin list.
     // POCKETHOST_CONTROL_ORIGIN remains the single WebAuthn RP origin and backwards-compatible fallback.
-    let configured_origins = std::env::var("POCKETHOST_CONTROL_ORIGINS")
-        .or_else(|_| std::env::var("POCKETHOST_CONTROL_ORIGIN"))
-        .unwrap_or_default();
+    let mut configured_origins = std::env::var("POCKETHOST_CONTROL_ORIGINS").unwrap_or_default();
+    if let Ok(canonical_origin) = std::env::var("POCKETHOST_CONTROL_ORIGIN") {
+        if !configured_origins.trim().is_empty() { configured_origins.push(','); }
+        configured_origins.push_str(&canonical_origin);
+    }
     let allowed_origins = parse_control_origins(&configured_origins)?;
+    anyhow::ensure!(!allowed_origins.is_empty(), "at least one exact HTTPS control origin must be configured");
     let cors = if allowed_origins.is_empty() {
         CorsLayer::new()
     } else {
