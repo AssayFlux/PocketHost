@@ -42,5 +42,5 @@ jobs:
         env:
           VITE_POCKETHOST_CONTROL_API_BASE: https://api.example.invalid
       - name: Build production container
-        run: docker build -f Dockerfile -t pockethost-web-console:ci ..
+        run: docker build -f web-console/Dockerfile -t pockethost-web-console:ci .
         working-directory: .
