@@ -397,9 +397,12 @@ object RuntimeWorkerClient {
     }
 
     fun nodeStatus(context: Context): String {
-        // A status query is observational: never start the foreground companion just to
-        // discover that no runtime is active or that the companion has been shut down.
-        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
+        // A status query binds only from a background thread; it never starts a foreground
+        // service. Main-thread callers get an honest UNAVAILABLE until a cached Binder exists.
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) {
+            return unavailableWithoutCachedBinder(context)
+        }
+        if (cachedWorkerAvailable() == null && !workerInstalled(context)) return "STOPPED"
         return withWorker(context) { transact(it, TRANSACTION_NODE_STATUS) as String }
     }
 
@@ -433,9 +436,12 @@ object RuntimeWorkerClient {
     }
 
     fun pythonStatus(context: Context): String {
-        // A status query is observational: never start the foreground companion just to
-        // discover that no runtime is active or that the companion has been shut down.
-        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
+        // A status query binds only from a background thread; it never starts a foreground
+        // service. Main-thread callers get an honest UNAVAILABLE until a cached Binder exists.
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) {
+            return unavailableWithoutCachedBinder(context)
+        }
+        if (cachedWorkerAvailable() == null && !workerInstalled(context)) return "STOPPED"
         return withWorker(context) { transact(it, TRANSACTION_PYTHON_STATUS) as String }
     }
 
