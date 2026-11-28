@@ -34,6 +34,8 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$apk"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             unzip -Z1 "$apk" | grep -Fx "lib/$abi/libnode.so"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libnodebridge.so"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost_sandbox.so"
           done
           sha256sum "$apk" | tee runtime-worker/build/outputs/apk/debug/SHA256SUMS
       - uses: actions/upload-artifact@v4
