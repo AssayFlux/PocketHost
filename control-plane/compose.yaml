@@ -28,6 +28,7 @@ services:
       POCKETHOST_CONTROL_ADMIN_TOKEN: ${POCKETHOST_CONTROL_ADMIN_TOKEN:?Set a long random administrator token}
       POCKETHOST_CONTROL_API_HOST: ${POCKETHOST_CONTROL_API_HOST:?Set the dedicated control-plane hostname}
       POCKETHOST_CONTROL_ORIGIN: ${POCKETHOST_CONTROL_ORIGIN:?Set the canonical HTTPS console origin for WebAuthn}
+      POCKETHOST_WEBAUTHN_RP_ID: ${POCKETHOST_WEBAUTHN_RP_ID:?Set the WebAuthn RP ID to the console domain}
       POCKETHOST_CONTROL_ORIGINS: ${POCKETHOST_CONTROL_ORIGINS:?Set comma-separated exact HTTPS console origins}
       POCKETHOST_TRUSTED_PROXY_IPS: ${POCKETHOST_TRUSTED_PROXY_IPS:-172.31.240.10,172.31.240.11}
       POCKETHOST_CONTROL_BIND: 0.0.0.0:8080
@@ -50,13 +51,13 @@ services:
       args:
         VITE_POCKETHOST_CONTROL_API_BASE: https://${CONTROL_PLANE_DOMAIN:?Set CONTROL_PLANE_DOMAIN}
     restart: unless-stopped
-    expose: ["80"]
+    expose: ["8080"]
     read_only: true
     tmpfs: ["/var/cache/nginx", "/var/run", "/tmp"]
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz"]
       interval: 15s
       timeout: 3s
       retries: 5
