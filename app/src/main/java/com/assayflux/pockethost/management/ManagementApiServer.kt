@@ -36,6 +36,19 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.Semaphore
 
+internal fun isAllowedManagementOrigin(origin: String?, configuredOrigins: Set<String>): Boolean {
+    if (origin.isNullOrBlank()) return false
+    if (origin in configuredOrigins) return true
+    // Local development only; production domains must be explicitly allowlisted at build time.
+    return runCatching {
+        val uri = URI(origin)
+        uri.scheme.equals("http", ignoreCase = true) &&
+            (uri.host.equals("localhost", ignoreCase = true) || uri.host == "127.0.0.1") &&
+            uri.port in 1..65535 && uri.rawUserInfo == null &&
+            uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null
+    }.getOrDefault(false)
+}
+
 /**
  * Loopback-only management API. Pairing is explicitly approved on the Android device;
  * bearer credentials are memory-only, expire, and can be revoked independently.
@@ -884,18 +897,8 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
             }.toSet()
     }
 
-    private fun allowedOrigin(origin: String?): Boolean {
-        if (origin.isNullOrBlank()) return false
-        if (origin in configuredAllowedOrigins) return true
-        // Local development only; production domains must be explicitly allowlisted at build time.
-        return runCatching {
-            val uri = URI(origin)
-            uri.scheme.equals("http", ignoreCase = true) &&
-                (uri.host.equals("localhost", ignoreCase = true) || uri.host == "127.0.0.1") &&
-                uri.port in 1..65535 && uri.rawUserInfo == null &&
-                uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null
-        }.getOrDefault(false)
-    }
+    private fun allowedOrigin(origin: String?): Boolean =
+        isAllowedManagementOrigin(origin, configuredAllowedOrigins)
 
     private fun respond(output: BufferedOutputStream, status: Int, body: JSONObject, origin: String? = null) {
         val bytes = body.toString().toByteArray(Charsets.UTF_8)
