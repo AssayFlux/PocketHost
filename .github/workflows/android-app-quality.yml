@@ -23,7 +23,8 @@ jobs:
           packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
       - run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@1.88.0
-        with: { targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android }
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - run: cargo install cargo-ndk --version 4.1.2 --locked
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.9" }
