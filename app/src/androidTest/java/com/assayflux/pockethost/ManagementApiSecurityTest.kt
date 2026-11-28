@@ -3,6 +3,7 @@ package com.assayflux.pockethost
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.assayflux.pockethost.management.ManagementApiServer
+import com.assayflux.pockethost.management.isAllowedManagementOrigin
 import com.assayflux.pockethost.engine.NativeEngine
 import org.json.JSONObject
 import org.junit.After
@@ -71,6 +72,18 @@ class ManagementApiSecurityTest {
         val second = request("POST", "/api/v1/pair/challenge", "{}")
         assertEquals(201, second.first)
         assertNotNull(JSONObject(second.second).optString("challengeId").takeIf { it.isNotBlank() })
+    }
+
+    @Test
+    fun managementCorsUsesConfiguredExactOriginsAndKeepsLocalDevelopmentNarrow() {
+        val allowed = setOf("https://console.example.com", "https://admin.example.com")
+        assertTrue(isAllowedManagementOrigin("https://console.example.com", allowed))
+        assertTrue(isAllowedManagementOrigin("https://admin.example.com", allowed))
+        assertFalse(isAllowedManagementOrigin("https://attacker.example", allowed))
+        assertFalse(isAllowedManagementOrigin("http://console.example.com", allowed))
+        assertFalse(isAllowedManagementOrigin("https://console.example.com/path", allowed))
+        assertTrue(isAllowedManagementOrigin("http://localhost:5173", allowed))
+        assertFalse(isAllowedManagementOrigin("http://localhost", allowed))
     }
 
     @Test
