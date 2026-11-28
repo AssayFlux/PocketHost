@@ -115,7 +115,7 @@ fn parse_control_origins(raw: &str) -> anyhow::Result<Vec<HeaderValue>> {
             parsed.query().is_none() && parsed.fragment().is_none() &&
             parsed.port().map(|port| (1..=65535).contains(&port)).unwrap_or(true),
             "control origin must be an exact origin with a valid hostname/port and no credentials, path, query or fragment");
-        let value = item.parse::<HeaderValue>()?;
+        let value = parsed.origin().ascii_serialization().parse::<HeaderValue>()?;
         if !origins.iter().any(|existing: &HeaderValue| existing == &value) {
             origins.push(value);
         }
