@@ -27,7 +27,7 @@ Edit `control-plane/.env` and set:
 - Strong unique hexadecimal values (at least 64 random hex characters) for the admin token and database password; using hex avoids reserved-character problems in the PostgreSQL connection URL.
 - Correct trusted proxy addresses if the Docker subnet is changed.
 
-Do not use wildcard CORS origins. The WebAuthn origin and RP ID must correspond to the browser console origin. The API hostname is separately restricted by `POCKETHOST_CONTROL_API_HOST`. Keep the console and API hostnames distinct because Caddy routes them to different upstream services.
+Do not use wildcard CORS origins. The WebAuthn origin and RP ID must correspond to the browser console origin. The API hostname is separately restricted by `POCKETHOST_CONTROL_API_HOST`. Keep the console and API hostnames distinct because Caddy routes them to different upstream services. The canonical console origin is the WebAuthn origin; additional CORS origins are not automatically additional passkey RP origins, so perform Owner passkey enrollment and sign-in on the canonical console hostname.
 
 ## 2. DNS
 
