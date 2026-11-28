@@ -19,7 +19,7 @@ import java.io.FileInputStream
 import java.util.zip.ZipInputStream
 
 /**
- * Separate-UID runtime companion. Only the signed Pocket Host host app may issue commands.
+ * Separate-UID runtime companion. Only allowlisted PocketHost or WebHost host apps with a matching signing certificate may issue commands.
  * Project archives are unpacked into this package's private files directory; customer code
  * executes only under this companion application's Android UID.
  */
