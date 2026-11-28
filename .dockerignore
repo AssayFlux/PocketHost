@@ -1,0 +1,9 @@
+.git
+**/.git
+**/node_modules
+**/dist
+**/target
+**/.gradle
+**/build
+control-plane/.env
+.env
