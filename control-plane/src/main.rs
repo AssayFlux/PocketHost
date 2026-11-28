@@ -106,7 +106,7 @@ fn parse_control_origins(raw: &str) -> anyhow::Result<Vec<HeaderValue>> {
     for item in raw.split(',').map(str::trim).filter(|item| !item.is_empty()) {
         let parsed = Url::parse(item)?;
         let host = parsed.host_str().unwrap_or_default();
-        let local_http = parsed.scheme() == "http" &&
+        let local_http = parsed.scheme() == "http" && parsed.port().is_some() &&
             (host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1");
         anyhow::ensure!(parsed.scheme() == "https" || local_http,
             "control origins must use HTTPS (HTTP is allowed only for localhost development)");
@@ -1404,14 +1404,10 @@ async fn main() -> anyhow::Result<()> {
     }
     let allowed_origins = parse_control_origins(&configured_origins)?;
     anyhow::ensure!(!allowed_origins.is_empty(), "at least one exact HTTPS control origin must be configured");
-    let cors = if allowed_origins.is_empty() {
-        CorsLayer::new()
-    } else {
-        CorsLayer::new()
-            .allow_origin(allowed_origins)
-            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
-            .allow_headers([AUTHORIZATION, CONTENT_TYPE])
-    };
+    let cors = CorsLayer::new()
+        .allow_origin(allowed_origins)
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
     let control_app = Router::new()
         .route("/health", get(health))
         .route("/v1/admin/session", post(create_admin_session).delete(revoke_admin_session))
