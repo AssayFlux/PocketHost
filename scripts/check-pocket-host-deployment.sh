@@ -17,21 +17,21 @@ resolve "$API_DOMAIN"
 resolve "$VISITOR_DOMAIN"
 
 check_address_families() {
-  local host="$1" path="$2" family="$3" resolver="$4"
+  local host="$1" path="$2" family_flag="$3" family_label="$4" resolver="$5"
   if getent "$resolver" "$host" >/dev/null 2>&1; then
-    curl "$family" --fail --silent --show-error --output /dev/null "https://$host$path" ||
+    curl "$family_flag" --fail --silent --show-error --output /dev/null "https://$host$path" ||
       fail "$host publishes $family DNS but HTTPS connectivity failed"
-    printf 'PASS: %s HTTPS connectivity for %s\n' "$family" "$host"
+    printf 'PASS: %s HTTPS connectivity for %s\n' "$family_label" "$host"
   else
-    printf 'SKIP: %s has no %s address record\n' "$host" "$family"
+    printf 'SKIP: %s has no %s address record\n' "$host" "$family_label"
   fi
 }
 
 for host_path in "$CONSOLE_DOMAIN|/" "$API_DOMAIN|/health" "$VISITOR_DOMAIN|/"; do
   host="${host_path%%|*}"
   path="${host_path#*|}"
-  check_address_families "$host" "$path" IPv4 ahostsv4
-  check_address_families "$host" "$path" IPv6 ahostsv6
+  check_address_families "$host" "$path" -4 IPv4 ahostsv4
+  check_address_families "$host" "$path" -6 IPv6 ahostsv6
 done
 
 api_body="$(curl --fail --silent --show-error "https://$API_DOMAIN/health")" ||
