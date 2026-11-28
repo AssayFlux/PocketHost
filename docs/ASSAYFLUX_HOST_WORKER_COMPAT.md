@@ -17,3 +17,5 @@ Both APKs must be signed with the same certificate. Independently generated debu
 ## Trust boundary
 
 The Worker is a separate Android UID from the host app, but Python code within the Worker still shares the Worker's UID. This is not per-project OS isolation. Only trusted code should be run until a stronger sandbox is implemented and verified.
+
+The standalone Worker APK workflow accepts the same four repository Actions secrets in both repositories: `ASSAYFLUX_SHARED_KEYSTORE_BASE64`, `ASSAYFLUX_SHARED_KEYSTORE_PASSWORD`, `ASSAYFLUX_SHARED_KEY_ALIAS` and `ASSAYFLUX_SHARED_KEY_PASSWORD`. When all are configured, it builds and publishes both debug and release Worker APKs; the release APK uses the shared certificate expected by AssayFlux Host.
