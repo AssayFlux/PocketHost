@@ -76,6 +76,7 @@ internal object PublicAddressDetector {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DynamicDnsManagerScreen() {
     val context = LocalContext.current
