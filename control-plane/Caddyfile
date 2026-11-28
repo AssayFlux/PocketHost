@@ -8,6 +8,20 @@
     }
 }
 
+# Dedicated console hostname: static React/Vite app, never the visitor relay.
+{$POCKETHOST_CONSOLE_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy web-console:80
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        X-Frame-Options "DENY"
+        -Server
+    }
+}
+
+# Dedicated management API hostname.
 {$CONTROL_PLANE_DOMAIN} {
     encode zstd gzip
     reverse_proxy control-plane:8080 {
@@ -17,6 +31,7 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "no-referrer"
+        X-Frame-Options "DENY"
         -Server
     }
 }
@@ -25,6 +40,8 @@
     redir https://{host}{uri} permanent
 }
 
+# All other authorized hostnames are visitor-ingress routes. The control plane
+# checks DNS ownership before Caddy is permitted to issue an on-demand cert.
 :443 {
     tls {
         on_demand
@@ -37,6 +54,7 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "no-referrer"
+        X-Frame-Options "DENY"
         -Server
     }
 }
