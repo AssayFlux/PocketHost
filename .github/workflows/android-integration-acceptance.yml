@@ -1,0 +1,68 @@
+name: PocketHost Android Integration Acceptance
+on:
+  push:
+    branches: [Alpha]
+    paths: ["app/**", "runtime-worker/**", "buildSrc/**", "Assets/Pocket Host 7.svg", "rust-engine/**", "relay-node/**", "gradle/**", "gradlew", "build.gradle.kts", "settings.gradle.kts", "scripts/build-cloudflared-android.sh", ".github/workflows/android-integration-acceptance.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-integration-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  install-and-instrument:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018 cmake;3.22.1"
+      - run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v6
+        with: { go-version: "1.27.4", cache: false }
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - run: cargo install cargo-ndk --version 4.1.2 --locked
+      - run: bash scripts/build-cloudflared-android.sh
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.9" }
+      - name: Assemble each APK as its own Gradle module output
+        run: |
+          set -euo pipefail
+          ./gradlew :runtime-worker:assembleDebug -PpockethostAbi=x86_64
+          ./gradlew :app:assembleDebug -PpockethostAbi=x86_64
+          test -s runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk
+          test -s app/build/outputs/apk/debug/app-debug.apk
+      - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -camera-front none"
+          script: |
+            set -euo pipefail
+            cd "$GITHUB_WORKSPACE"
+            adb wait-for-device
+            worker="$GITHUB_WORKSPACE/runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk"
+            app="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+            adb install -r "$worker"
+            adb install -r "$app"
+            adb shell pm path com.assayflux.pockethost.worker
+            adb shell pm path com.assayflux.pockethost
+            "$GITHUB_WORKSPACE/gradlew" :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 --no-daemon --stacktrace
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pockethost-android-integration-reports
+          path: app/build/reports/**
+          if-no-files-found: warn
+          retention-days: 14
