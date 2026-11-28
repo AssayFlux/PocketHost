@@ -72,17 +72,33 @@ jobs:
         uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
-      - name: Run Android instrumentation suite and build debug APK
+      - name: Install pinned cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build app and companion runtime for emulator
+        run: ./gradlew :runtime-worker:assembleDebug :app:assembleDebug -PpockethostAbi=x86_64 -PpockethostManagementAllowedOrigins=https://console.example.com --no-daemon --stacktrace
+      - name: Run Android instrumentation suite on API 35 emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # GitHub hosted runners may not expose KVM; allow the emulator's TCG fallback.
+          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
-          profile: pixel_2
+          profile: pixel_6
+          emulator-boot-timeout: 900
           disable-animations: true
-          script: ./gradlew :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 -PpockethostManagementAllowedOrigins=https://console.example.com --no-daemon --stacktrace
+          emulator-options: "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -wipe-data -camera-back none -camera-front none"
+          script: |
+            set -eu
+            worker_apk="$GITHUB_WORKSPACE/runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk"
+            app_apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+            test -s "$worker_apk"
+            test -s "$app_apk"
+            adb wait-for-device
+            adb install -r "$worker_apk"
+            adb install -r "$app_apk"
+            "$GITHUB_WORKSPACE/gradlew" :app:connectedDebugAndroidTest -PpockethostAbi=x86_64 -PpockethostManagementAllowedOrigins=https://console.example.com --no-daemon --stacktrace
       - name: Assemble production multi-ABI debug APK
         run: ./gradlew :app:assembleDebug -PpockethostManagementAllowedOrigins=https://console.example.com --no-daemon --stacktrace
       - name: Publish tested debug APK
