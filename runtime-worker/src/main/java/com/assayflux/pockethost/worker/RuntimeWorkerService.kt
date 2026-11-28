@@ -65,11 +65,14 @@ class RuntimeWorkerService : Service() {
 
     private fun verifyHostCaller() {
         val callerUid = Binder.getCallingUid()
-        val hostPackage = "com.assayflux.pockethost"
+        val allowedHostPackages = setOf("com.assayflux.pockethost", "com.assayflux.host")
         val callerPackages = packageManager.getPackagesForUid(callerUid).orEmpty()
-        check(hostPackage in callerPackages) { "Only AssayFlux Pocket Host may control the runtime companion." }
-        check(packageManager.checkSignatures(packageName, hostPackage) == PackageManager.SIGNATURE_MATCH) {
-            "Runtime companion and host application signatures do not match."
+        val matchedHost = callerPackages.firstOrNull { host ->
+            host in allowedHostPackages &&
+                packageManager.checkSignatures(packageName, host) == PackageManager.SIGNATURE_MATCH
+        }
+        check(matchedHost != null) {
+            "Only an allowlisted, matching-signed PocketHost or AssayFlux Host application may control the runtime companion."
         }
     }
 
