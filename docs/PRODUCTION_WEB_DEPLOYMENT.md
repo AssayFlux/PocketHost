@@ -6,7 +6,7 @@ This deployment composes three deliberately separate public routes:
 - `api.example.com`: Rust/Axum control-plane API.
 - Other verified hostnames: Caddy visitor ingress to the relay listener on port 8081.
 
-The Android management API remains loopback-only on the phone. Do not publish port 17841 to the internet. Its production CORS origins are compiled into the APK as an exact allowlist. Build the APK with `-PpockethostManagementAllowedOrigins=https://console.yourdomain.tld` (comma-separated for multiple exact HTTPS origins) so the installed host accepts the deployed console origin; localhost development origins remain separately permitted. The console's local-device panel is intended for a browser on the same device/network path; use **Remote Control Plane** for remote management through the independently deployed Rust API.
+The Android management API remains loopback-only on the phone. Do not publish port 17841 to the internet. Its production CORS origins are compiled into the APK as an exact allowlist. Build a new APK with `./gradlew :app:assembleDebug -PpockethostManagementAllowedOrigins=https://console.yourdomain.tld` (comma-separated for multiple exact HTTPS origins) so the installed host accepts the deployed console origin; localhost development origins remain separately permitted. This allowlist is compiled into the APK, so changing it requires rebuilding and reinstalling the app. The console's local-device panel is intended for a browser on the same device/network path; use **Remote Control Plane** for remote management through the independently deployed Rust API.
 
 ## 1. Configure
 
@@ -27,7 +27,7 @@ Edit `control-plane/.env` and set:
 - Strong unique hexadecimal values (at least 64 random hex characters) for the admin token and database password; using hex avoids reserved-character problems in the PostgreSQL connection URL.
 - Correct trusted proxy addresses if the Docker subnet is changed.
 
-Do not use wildcard CORS origins. The WebAuthn origin and RP ID must correspond to the browser console origin. The API hostname is separately restricted by `POCKETHOST_CONTROL_API_HOST`.
+Do not use wildcard CORS origins. The WebAuthn origin and RP ID must correspond to the browser console origin. The API hostname is separately restricted by `POCKETHOST_CONTROL_API_HOST`. Keep the console and API hostnames distinct because Caddy routes them to different upstream services.
 
 ## 2. DNS
 
