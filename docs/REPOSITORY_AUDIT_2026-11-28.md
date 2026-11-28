@@ -67,3 +67,6 @@ Dynadot response handling now requires a JSON response containing `error_code`; 
 - Split native engine, native relay, Linux agent and protocol-contract checks into independent workflows; split deployment infrastructure validation from the web-console build.
 
 - Split Python WSGI runtime, Node preload smoke tests, Linux agent tests, protocol contract tests and trusted-proxy spoofing tests into their own workflow files; each now has independent triggers and concurrency.
+
+## CI issue discovered during verification
+The first Android app quality run exposed a YAML flow-mapping error: the unquoted comma-separated Rust target list was parsed as multiple mapping keys, so only `aarch64-linux-android` was installed. The workflow now passes the complete list as a block scalar. The corrected Android app quality rerun is in progress; the initial failure is not counted as a passing check.
