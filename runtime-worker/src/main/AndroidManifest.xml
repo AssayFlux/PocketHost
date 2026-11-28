@@ -9,6 +9,7 @@
         android:protectionLevel="signature" />
     <queries>
         <package android:name="com.assayflux.pockethost" />
+        <package android:name="com.assayflux.webhost" />
     </queries>
     <application
         android:allowBackup="false"
