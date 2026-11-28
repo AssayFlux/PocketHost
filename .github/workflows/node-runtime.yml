@@ -1,0 +1,23 @@
+name: PocketHost Node Runtime
+on:
+  push:
+    branches: [Alpha]
+    paths: ["runtime-worker/src/main/assets/pockethost-node-metrics.cjs", "tests/node/**", ".github/workflows/node-runtime.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["runtime-worker/src/main/assets/pockethost-node-metrics.cjs", "tests/node/**", ".github/workflows/node-runtime.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: node-runtime-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  node-runtime:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+      - run: node tests/node/metrics-smoke.cjs
