@@ -182,6 +182,13 @@ object RuntimeWorkerClient {
     /** Status queries must not start a foreground service or block the UI on first launch. */
     private fun cachedWorkerAvailable(): IBinder? = cachedBinder?.takeIf { it.isBinderAlive }
 
+    private fun workerInstalled(context: Context): Boolean = runCatching {
+        context.packageManager.getApplicationInfo(WORKER_PACKAGE, 0)
+    }.isSuccess
+
+    private fun unavailableWithoutCachedBinder(context: Context): String =
+        if (workerInstalled(context)) "UNAVAILABLE" else "STOPPED"
+
     private fun transact(binder: IBinder, code: Int, write: (Parcel) -> Unit = {}): Any? {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -385,14 +392,14 @@ object RuntimeWorkerClient {
         }
 
     fun stopNode(context: Context): String {
-        if (cachedWorkerAvailable() == null) return "STOPPED"
+        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
         return withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
     }
 
     fun nodeStatus(context: Context): String {
         // A status query is observational: never start the foreground companion just to
         // discover that no runtime is active or that the companion has been shut down.
-        if (cachedWorkerAvailable() == null) return "STOPPED"
+        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
         return withWorker(context) { transact(it, TRANSACTION_NODE_STATUS) as String }
     }
 
@@ -421,14 +428,14 @@ object RuntimeWorkerClient {
     }
 
     fun stopPython(context: Context): String {
-        if (cachedWorkerAvailable() == null) return "STOPPED"
+        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
         return withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
     }
 
     fun pythonStatus(context: Context): String {
         // A status query is observational: never start the foreground companion just to
         // discover that no runtime is active or that the companion has been shut down.
-        if (cachedWorkerAvailable() == null) return "STOPPED"
+        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
         return withWorker(context) { transact(it, TRANSACTION_PYTHON_STATUS) as String }
     }
 
