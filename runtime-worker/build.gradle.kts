@@ -141,6 +141,9 @@ android {
 chaquopy {
     defaultConfig {
         version = "3.11"
+        pip {
+            install("Flask==3.1.1")
+        }
     }
 }
 
