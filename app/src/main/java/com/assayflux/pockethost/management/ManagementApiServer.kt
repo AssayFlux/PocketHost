@@ -878,7 +878,8 @@ private const val SESSION_SECONDS = 12 * 60 * 60L
                     val uri = URI(value)
                     uri.scheme.equals("https", ignoreCase = true) &&
                         !uri.host.isNullOrBlank() && uri.rawUserInfo == null &&
-                        uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null
+                        uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null &&
+                        (uri.port == -1 || uri.port in 1..65535)
                 }.getOrDefault(false)
             }.toSet()
     }
