@@ -69,9 +69,9 @@ docker compose --env-file .env --profile public exec caddy caddy validate --conf
 Also run the repeatable external acceptance script from a machine outside the server LAN after the phone has connected and the visitor route is enabled:
 
 ```sh
-CONSOLE_DOMAIN=console.yourdomain.tld \\
-API_DOMAIN=api.yourdomain.tld \\
-VISITOR_DOMAIN=www.yourdomain.tld \\
+CONSOLE_DOMAIN=console.yourdomain.tld \
+API_DOMAIN=api.yourdomain.tld \
+VISITOR_DOMAIN=www.yourdomain.tld \
 bash scripts/check-pocket-host-deployment.sh
 ```
 
