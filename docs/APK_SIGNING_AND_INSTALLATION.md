@@ -10,7 +10,7 @@ The host binds to the companion's exported Binder service, which is protected by
 ## CI artifacts
 
 - The independent App APK and Runtime Worker APK workflows prove that each module builds and packages independently. Do not assume that artifacts from different workflow runs have matching signing certificates.
-- Use the two APK files from the single `PocketHost Android Integration Acceptance` run's `pockethost-matched-app-and-runtime-worker-apks` artifact. Both are built on the same runner with the same ephemeral debug signing key, are checked for all three supported ABIs, and are installed together during the acceptance test.
+- Use the two APK files from the single `PocketHost Android Integration Acceptance` run's `pockethost-matched-app-and-runtime-worker-apks` artifact. Both are built on the same runner; CI compares their signer SHA-256 certificate digests, checks package IDs and all three supported ABIs, then installs them together during acceptance.
 - These are debug artifacts for testing, not production releases.
 
 ## Production signing
