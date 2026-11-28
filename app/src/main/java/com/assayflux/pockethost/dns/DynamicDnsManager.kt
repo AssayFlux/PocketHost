@@ -157,9 +157,11 @@ internal fun DynamicDnsManagerScreen() {
                     Checkbox(includeIpv6, { includeIpv6 = it; prefs.edit().putBoolean("ipv6", it).apply() })
                     Text("IPv6 (AAAA)")
                 }
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Checkbox(proxied, { proxied = it; prefs.edit().putBoolean("proxied", it).apply() })
-                    Text("Proxy eligible records through Cloudflare")
+                if (provider == "cloudflare") {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(proxied, { proxied = it; prefs.edit().putBoolean("proxied", it).apply() })
+                        Text("Proxy eligible records through Cloudflare")
+                    }
                 }
                 if (provider == "cloudflare") {
                     OutlinedTextField(token, { token = it }, label = {
@@ -250,11 +252,15 @@ internal fun DynamicDnsManagerScreen() {
                 Text("Background updates use Android WorkManager with network constraints and exponential retry. Android battery restrictions may delay execution.", style = MaterialTheme.typography.bodySmall)
                 Text("Last successful A update: ${prefs.getString("last_success_A", "Never")}", style = MaterialTheme.typography.bodySmall)
                 Text("Last successful AAAA update: ${prefs.getString("last_success_AAAA", "Never")}", style = MaterialTheme.typography.bodySmall)
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Checkbox(adoptExisting, { adoptExisting = it })
-                    Text("I explicitly authorize PocketHost to adopt one existing matching A/AAAA record if present")
+                if (provider == "cloudflare") {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(adoptExisting, { adoptExisting = it })
+                        Text("I explicitly authorize PocketHost to adopt one existing matching A/AAAA record if present")
+                    }
+                    Text("Leave this off to protect records created or managed outside PocketHost. Background sync never adopts records automatically.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("Dynadot's DDNS endpoint directly updates the selected root/subdomain A or AAAA record. Review existing records first; its service may replace conflicting records.", style = MaterialTheme.typography.bodySmall)
                 }
-                Text("Leave this off to protect records created or managed outside PocketHost. Background sync never adopts records automatically.", style = MaterialTheme.typography.bodySmall)
                 Button(enabled = !busy && domain.isNotBlank() && host.isNotBlank() &&
                     (if (provider == "dynadot") dynadotPasswordPresent else tokenPresent) &&
                     (includeIpv4 || includeIpv6), onClick = {
