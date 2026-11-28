@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_POCKETHOST_CONTROL_API_BASE?: string;
+  readonly VITE_POCKETHOST_LOCAL_API_BASE?: string;
 }
 
 interface ImportMeta {
