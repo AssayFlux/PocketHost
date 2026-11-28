@@ -57,11 +57,11 @@ public abstract class GeneratePocketHostLauncherIcons extends DefaultTask {
             }
 
             Map<String, Double> densities = new LinkedHashMap<>();
-            densities.put("mdpi", 1);
+            densities.put("mdpi", 1.0);
             densities.put("hdpi", 1.5);
-            densities.put("xhdpi", 2);
-            densities.put("xxhdpi", 3);
-            densities.put("xxxhdpi", 4);
+            densities.put("xhdpi", 2.0);
+            densities.put("xxhdpi", 3.0);
+            densities.put("xxxhdpi", 4.0);
 
             File root = getOutputDirectory().get().getAsFile();
             for (Map.Entry<String, Double> density : densities.entrySet()) {
@@ -133,7 +133,7 @@ public abstract class GeneratePocketHostLauncherIcons extends DefaultTask {
     }
 
     private static void verifyOpaqueWhiteBackedPngs(File root, Map<String, Double> densities) throws IOException {
-        for (Map.Entry<String, Integer> density : densities.entrySet()) {
+        for (Map.Entry<String, Double> density : densities.entrySet()) {
             int expected = (int) Math.round(48 * density.getValue());
             File png = new File(new File(root, "mipmap-" + density.getKey()), "ic_launcher.png");
             BufferedImage image = ImageIO.read(png);
