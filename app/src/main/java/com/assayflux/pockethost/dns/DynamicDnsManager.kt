@@ -81,6 +81,10 @@ internal fun DynamicDnsManagerScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("pockethost_ddns", 0) }
+    var provider by remember { mutableStateOf(prefs.getString("provider", "cloudflare") ?: "cloudflare") }
+    var providerMenu by remember { mutableStateOf(false) }
+    var dynadotPassword by remember { mutableStateOf("") }
+    var dynadotPasswordPresent by remember { mutableStateOf(DynadotDdnsCredentialStore.hasPassword(context)) }
     var token by remember { mutableStateOf("") }
     var tokenPresent by remember { mutableStateOf(CloudflareApiTokenStore.hasToken(context)) }
     var domain by remember { mutableStateOf(prefs.getString("domain", "") ?: "") }
@@ -101,11 +105,47 @@ internal fun DynamicDnsManagerScreen() {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("DYNAMIC DNS", fontWeight = FontWeight.Bold)
-                Text("PocketHost updates only A/AAAA records that it created or that you explicitly authorize it to adopt. DNS-only and Cloudflare-proxied records are supported; neither bypasses CGNAT or blocked inbound traffic.", style = MaterialTheme.typography.bodySmall)
+                Text("Choose the authoritative DNS provider for this domain. Dynadot DDNS works only while the domain uses Dynadot nameservers; Cloudflare API updates work only while the domain is an active Cloudflare zone.", style = MaterialTheme.typography.bodySmall)
+                ExposedDropdownMenuBox(expanded = providerMenu, onExpandedChange = { providerMenu = !providerMenu }) {
+                    OutlinedTextField(
+                        value = if (provider == "dynadot") "Dynadot DNS / DDNS" else "Cloudflare DNS API",
+                        onValueChange = {}, readOnly = true, label = { Text("DNS provider") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerMenu) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = providerMenu, onDismissRequest = { providerMenu = false }) {
+                        DropdownMenuItem(text = { Text("Dynadot DNS / DDNS") }, onClick = {
+                            provider = "dynadot"; prefs.edit().putString("provider", provider).apply(); providerMenu = false
+                        })
+                        DropdownMenuItem(text = { Text("Cloudflare DNS API") }, onClick = {
+                            provider = "cloudflare"; prefs.edit().putString("provider", provider).apply(); providerMenu = false
+                        })
+                    }
+                }
+                if (provider == "dynadot") {
+                    Text("In Dynadot: enable Dynadot DNS and Dynamic DNS for this domain, then generate its DDNS password. This is not your Dynadot account password. DDNS may replace conflicting DNS records for the selected hostname.", style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(dynadotPassword, { dynadotPassword = it },
+                        label = { Text(if (dynadotPasswordPresent) "Replace saved Dynadot DDNS password (optional)" else "Dynadot domain DDNS password") },
+                        visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(enabled = dynadotPassword.isNotBlank() && !busy, onClick = {
+                            runCatching { DynadotDdnsCredentialStore.save(context, dynadotPassword) }
+                                .onSuccess { dynadotPassword = ""; dynadotPasswordPresent = true; status = "Encrypted Dynadot DDNS password saved." }
+                                .onFailure { status = it.message ?: "Could not save Dynadot DDNS password." }
+                        }) { Text("Save Dynadot password") }
+                        OutlinedButton(enabled = dynadotPasswordPresent && !busy, onClick = {
+                            runCatching { DynadotDdnsCredentialStore.clear(context) }
+                                .onSuccess { dynadotPasswordPresent = false; dynadotPassword = ""; status = "Dynadot DDNS password removed." }
+                                .onFailure { status = it.message ?: "Could not remove Dynadot password." }
+                        }) { Text("Remove") }
+                    }
+                } else {
+                    Text("Cloudflare API mode requires an active Cloudflare zone and a scoped token with Zone:Read and DNS:Edit. It is independent of the Tunnel token.", style = MaterialTheme.typography.bodySmall)
+                }
                 OutlinedTextField(domain, {
                     domain = it.trim()
                     prefs.edit().putString("domain", domain).apply()
-                }, label = { Text("Cloudflare zone (e.g. example.com)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }, label = { Text("Domain (e.g. example.com)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(host, {
                     host = it.trim()
                     prefs.edit().putString("host", host).apply()
@@ -121,14 +161,16 @@ internal fun DynamicDnsManagerScreen() {
                     Checkbox(proxied, { proxied = it; prefs.edit().putBoolean("proxied", it).apply() })
                     Text("Proxy eligible records through Cloudflare")
                 }
-                OutlinedTextField(token, { token = it }, label = {
-                    Text(if (tokenPresent) "Replace saved DNS API token (optional)" else "Cloudflare DNS API token")
-                }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-                Button(enabled = token.isNotBlank() && !busy, onClick = {
-                    runCatching { CloudflareApiTokenStore.save(context, token) }
-                        .onSuccess { token = ""; tokenPresent = true; status = "Encrypted Cloudflare DNS API token saved." }
-                        .onFailure { status = it.message ?: "Could not save token." }
-                }) { Text("Save API token securely") }
+                if (provider == "cloudflare") {
+                    OutlinedTextField(token, { token = it }, label = {
+                        Text(if (tokenPresent) "Replace saved DNS API token (optional)" else "Cloudflare DNS API token")
+                    }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Button(enabled = token.isNotBlank() && !busy, onClick = {
+                        runCatching { CloudflareApiTokenStore.save(context, token) }
+                            .onSuccess { token = ""; tokenPresent = true; status = "Encrypted Cloudflare DNS API token saved." }
+                            .onFailure { status = it.message ?: "Could not save token." }
+                    }) { Text("Save API token securely") }
+                }
             }
         }
         Card(Modifier.fillMaxWidth()) {
@@ -197,7 +239,7 @@ internal fun DynamicDnsManagerScreen() {
                 Text("AUTOMATIC DDNS", fontWeight = FontWeight.SemiBold)
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(autoSync, enabled = domain.isNotBlank() && host.isNotBlank() &&
-                        tokenPresent && (includeIpv4 || includeIpv6), onCheckedChange = { enabled ->
+                        (if (provider == "dynadot") dynadotPasswordPresent else tokenPresent) && (includeIpv4 || includeIpv6), onCheckedChange = { enabled ->
                         autoSync = enabled
                         prefs.edit().putBoolean("auto_sync", enabled).apply()
                         DynamicDnsSync.schedule(context, enabled)
@@ -213,7 +255,8 @@ internal fun DynamicDnsManagerScreen() {
                     Text("I explicitly authorize PocketHost to adopt one existing matching A/AAAA record if present")
                 }
                 Text("Leave this off to protect records created or managed outside PocketHost. Background sync never adopts records automatically.", style = MaterialTheme.typography.bodySmall)
-                Button(enabled = !busy && domain.isNotBlank() && host.isNotBlank() && tokenPresent &&
+                Button(enabled = !busy && domain.isNotBlank() && host.isNotBlank() &&
+                    (if (provider == "dynadot") dynadotPasswordPresent else tokenPresent) &&
                     (includeIpv4 || includeIpv6), onClick = {
                     scope.launch {
                         busy = true
