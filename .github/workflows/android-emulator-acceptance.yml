@@ -11,6 +11,8 @@ on:
       - ".github/workflows/android-emulator-acceptance.yml"
       - ".github/workflows/android-integration.yml"
       - "app/**"
+      - "buildSrc/**"
+      - "Assets/Pocket Host 7.svg"
       - "runtime-worker/**"
       - "rust-engine/**"
       - "relay-node/**"
