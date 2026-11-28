@@ -1,0 +1,26 @@
+name: PocketHost Protocol Contracts
+on:
+  push:
+    branches: [Alpha]
+    paths: ["protocol/**", "tests/test_protocol_contracts.py", "scripts/validate-protocol.py", "scripts/validate-android-role-policy.py", "agents/linux/src/pockethost_agent/ROLE_CAPABILITY_POLICY.json", ".github/workflows/protocol-contracts.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["protocol/**", "tests/test_protocol_contracts.py", "scripts/validate-protocol.py", "scripts/validate-android-role-policy.py", "agents/linux/src/pockethost_agent/ROLE_CAPABILITY_POLICY.json", ".github/workflows/protocol-contracts.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: protocol-contracts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  protocol-contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install "jsonschema==4.23.0"
+      - run: python scripts/validate-protocol.py
+      - run: python scripts/validate-android-role-policy.py
+      - run: python -m unittest discover -s tests -p "test_protocol_contracts.py" -v
