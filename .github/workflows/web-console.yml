@@ -8,6 +8,7 @@ on:
       - ".dockerignore"
       - ".github/workflows/web-console.yml"
   pull_request:
+    branches: [Alpha]
     paths:
       - "web-console/**"
       - ".github/workflows/web-console.yml"
