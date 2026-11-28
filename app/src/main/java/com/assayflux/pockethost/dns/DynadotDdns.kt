@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import org.json.JSONObject
 import java.net.URLEncoder
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -116,10 +117,21 @@ internal object DynadotDdnsApi {
             require(status in 200..299) {
                 "Dynadot DDNS rejected the update (HTTP $status). Check that Dynadot DNS and DDNS are enabled for this domain."
             }
-            val normalized = body.lowercase()
-            require(!normalized.contains("error") && !normalized.contains("invalid") &&
-                !normalized.contains("failed") && !normalized.contains("unauthorized")) {
-                "Dynadot reported an unsuccessful DDNS update. Check the domain-specific password and Dynadot DNS configuration."
+            val json = runCatching { JSONObject(body) }.getOrNull()
+            if (json != null && json.has("error_code")) {
+                require(json.optInt("error_code", -1) != -1) {
+                    val details = json.optJSONArray("content")?.let { items ->
+                        (0 until items.length()).mapNotNull { items.optString(it).takeIf(String::isNotBlank) }.joinToString("; ")
+                    }.orEmpty()
+                    details.takeIf(String::isNotBlank)
+                        ?: "Dynadot reported an unsuccessful DDNS update. Check the domain-specific password and Dynadot DNS configuration."
+                }
+            } else {
+                val normalized = body.lowercase()
+                require(body.isNotBlank() && !normalized.contains("invalid password") &&
+                    !normalized.contains("unauthorized") && !normalized.contains("update failed")) {
+                    "Dynadot reported an unsuccessful DDNS update. Check the domain-specific password and Dynadot DNS configuration."
+                }
             }
             return body.ifBlank { "Dynadot accepted the HTTPS update request." }
         } finally {
