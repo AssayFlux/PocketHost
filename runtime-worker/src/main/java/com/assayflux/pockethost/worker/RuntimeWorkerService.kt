@@ -491,6 +491,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_PYTHON_PROJECT_STATUS = IBinder.FIRST_CALL_TRANSACTION + 17
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
+        const val MAX_PERSISTENT_STATE_BYTES = 512L * 1024L * 1024L
         private const val MAX_ARCHIVE_ENTRIES = 10_000
         private const val MAX_FILE_BYTES = 64L * 1024L * 1024L
         private const val MAX_PROJECT_BYTES = 256L * 1024L * 1024L
