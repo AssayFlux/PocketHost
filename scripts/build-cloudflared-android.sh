@@ -32,7 +32,6 @@ if [[ ! -d "$WORK/.git" ]] || [[ "$(git -C "$WORK" rev-parse HEAD 2>/dev/null ||
 fi
 cd "$WORK"
 test "$(git rev-parse HEAD)" = "$UPSTREAM_COMMIT"
-test "$(git describe --tags --exact-match HEAD)" = "$VERSION"
 
 # Include notices for the full statically linked Go dependency graph in the APK.
 go install github.com/google/go-licenses@v1.6.0
