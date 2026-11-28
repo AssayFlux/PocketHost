@@ -7,6 +7,10 @@ on:
       - "web-console/**"
       - "control-plane/Caddyfile"
       - "control-plane/compose.yaml"
+      - "control-plane/Dockerfile"
+      - "control-plane/.env.example"
+      - "control-plane/trusted-proxy.caddy"
+      - ".dockerignore"
       - ".github/workflows/web-console.yml"
   pull_request:
     paths:
