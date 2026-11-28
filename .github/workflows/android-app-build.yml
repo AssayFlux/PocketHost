@@ -38,6 +38,11 @@ jobs:
           apk=app/build/outputs/apk/debug/app-debug.apk
           test -s "$apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$apk"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libpockethost.so"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libcloudflared.so"
+          done
           if unzip -Z1 "$apk" | grep -Fq "assets/pockethost-runtime-worker.apk"; then
             echo "Runtime worker must be distributed as a separate APK." >&2
             exit 1
