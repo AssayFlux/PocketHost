@@ -1,12 +1,14 @@
 # AssayFlux Host Runtime Worker compatibility
 
-The Runtime Worker remains a separately installed APK. Its Binder service accepts exactly the existing PocketHost host package and the dedicated private AssayFlux Host package `com.assayflux.host`, and only when the caller's signing certificate matches the Worker APK.
+The Runtime Worker remains a separately installed APK. Its Binder service accepts exactly the existing PocketHost host package and the dedicated private AssayFlux Host package `com.assayflux.host`, and only when the caller's signing certificate matches the Worker.
 
-The Worker build now includes Flask 3.1.1 in its embedded CPython environment so the existing AssayFlux CMS WSGI entrypoint can run without a separate Termux/Python installation.
+The Worker build includes Flask 3.1.1 in its embedded CPython environment so the existing AssayFlux CMS WSGI entrypoint can run without a separate Termux/Python installation.
 
 ## Persistent CMS data
 
-AssayFlux CMS stores its SQLite database, session key, one-time setup code and uploaded files under `instance/`. A host project refresh replaces the transferred source tree. The Worker now preserves the previous Worker-owned `instance/` directory when it installs an updated project archive, with symlink/path checks, an entry-count limit and a 512 MiB data-copy limit. This prevents a host-side source refresh from silently resetting the CMS database and uploads.
+AssayFlux CMS stores its SQLite database, session key, one-time setup code and uploaded files under `instance/`. A host project refresh replaces the transferred source tree. The Worker preserves the previous Worker-owned `instance/` directory when it installs an updated project archive, with symlink/path checks, an entry-count limit and a 512 MiB data-copy limit. This prevents a host-side source refresh from silently resetting the CMS database and uploads.
+
+The Worker exposes an additive Binder query for the active Python project ID. AssayFlux Host uses it to distinguish its own CMS from another Python WSGI project already running in the shared Worker. The current Python runtime supports one active WSGI listener; the new app refuses a conflicting start instead of treating a global RUNNING status as proof that its CMS is active.
 
 ## Release signing
 
