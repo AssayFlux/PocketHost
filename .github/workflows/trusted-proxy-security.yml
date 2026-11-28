@@ -1,0 +1,22 @@
+name: PocketHost Trusted Proxy Security
+on:
+  push:
+    branches: [Alpha]
+    paths: ["control-plane/trusted-proxy.caddy", "tests/proxy/**", ".github/workflows/trusted-proxy-security.yml"]
+  pull_request:
+    branches: [Alpha]
+    paths: ["control-plane/trusted-proxy.caddy", "tests/proxy/**", ".github/workflows/trusted-proxy-security.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: trusted-proxy-security-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  trusted-proxy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify trusted proxy metadata cannot be spoofed by an untrusted peer
+        run: bash tests/proxy/test_trusted_proxy.sh
