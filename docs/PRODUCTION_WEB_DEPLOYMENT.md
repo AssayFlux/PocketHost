@@ -6,7 +6,7 @@ This deployment composes three deliberately separate public routes:
 - `api.example.com`: Rust/Axum control-plane API.
 - Other verified hostnames: Caddy visitor ingress to the relay listener on port 8081.
 
-The Android management API remains loopback-only on the phone. Do not publish port 17841 to the internet. The console's local-device panel is intended for a browser on the same device/network path; use **Remote Control Plane** for remote management through the independently deployed Rust API.
+The Android management API remains loopback-only on the phone. Do not publish port 17841 to the internet. Its production CORS origins are compiled into the APK as an exact allowlist. Build the APK with `-PpockethostManagementAllowedOrigins=https://console.yourdomain.tld` (comma-separated for multiple exact HTTPS origins) so the installed host accepts the deployed console origin; localhost development origins remain separately permitted. The console's local-device panel is intended for a browser on the same device/network path; use **Remote Control Plane** for remote management through the independently deployed Rust API.
 
 ## 1. Configure
 
