@@ -1,3 +1,4 @@
+import java.net.URI
 import com.assayflux.pockethost.build.GeneratePocketHostLauncherIcons
 
 plugins {
@@ -14,7 +15,7 @@ val managementAllowedOrigins = providers.gradleProperty("pockethostManagementAll
     .get()
 require(managementAllowedOrigins.split(',').all { raw ->
     val origin = raw.trim()
-    val parsed = runCatching { java.net.URI(origin) }.getOrNull()
+    val parsed = runCatching { URI(origin) }.getOrNull()
     parsed != null && parsed.scheme == "https" && !parsed.host.isNullOrBlank() &&
         parsed.rawUserInfo == null && parsed.rawPath.isNullOrEmpty() &&
         parsed.rawQuery == null && parsed.rawFragment == null &&
