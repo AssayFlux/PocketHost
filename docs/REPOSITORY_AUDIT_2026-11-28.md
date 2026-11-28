@@ -13,10 +13,13 @@ Reviewed the complete Alpha repository tree (379 entries at the time of this aud
    - `rust-hosting-engine.yml`
    - `native-relay-node.yml`
    - `control-plane.yml`
-   - `linux-agent.yml`
-   - `protocol-contracts.yml`
    - `deployment-infrastructure.yml`
    - `web-console.yml`
+   - `linux-agent.yml`
+   - `runtime-python.yml`
+   - `node-runtime.yml`
+   - `protocol-contracts.yml`
+   - `trusted-proxy-security.yml`
    - `android-integration-acceptance.yml` is a separate cross-module acceptance workflow; it installs two distinct APKs rather than merging them.
 3. **APK boundary:** app and runtime-worker build jobs are separate. App build asserts that the runtime-worker APK is not embedded. Runtime-worker build verifies its own package ID and Node native libraries.
 
@@ -62,3 +65,5 @@ Dynadot response handling now requires a JSON response containing `error_code`; 
 - Removed the remaining checked-in legacy launcher XML/drawable/color resources so pre-26 density PNGs and the generated v26 adaptive icon are the only launcher resources. This avoids an anydpi XML overriding the generated 48dp legacy icons.
 - Pinned the cloudflared Android source build to immutable upstream commit `b0297f0b24c60a4cef743b7b878e2da3798cb839` instead of trusting a mutable release tag alone.
 - Split native engine, native relay, Linux agent and protocol-contract checks into independent workflows; split deployment infrastructure validation from the web-console build.
+
+- Split Python WSGI runtime, Node preload smoke tests, Linux agent tests, protocol contract tests and trusted-proxy spoofing tests into their own workflow files; each now has independent triggers and concurrency.
