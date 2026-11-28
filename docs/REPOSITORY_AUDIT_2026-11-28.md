@@ -70,3 +70,5 @@ Dynadot response handling now requires a JSON response containing `error_code`; 
 
 ## CI issue discovered during verification
 The first Android app quality run exposed a YAML flow-mapping error: the unquoted comma-separated Rust target list was parsed as multiple mapping keys, so only `aarch64-linux-android` was installed. The workflow now passes the complete list as a block scalar. The corrected Android app quality rerun is in progress; the initial failure is not counted as a passing check.
+
+A subsequent Android Kotlin compile exposed a missing `Context` parameter in the newly hardened Dynadot family-sync helper. The helper now receives the caller context explicitly and can persist per-family success state. The corrected app build, quality and emulator integration workflows have been retriggered; do not treat the preceding failed runs as acceptance passes.
