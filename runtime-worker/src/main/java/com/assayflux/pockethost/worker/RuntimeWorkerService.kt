@@ -286,6 +286,14 @@ class RuntimeWorkerService : Service() {
         }
     }
 
+    private fun pythonProjectStatus(siteId: String): String {
+        require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid project identifier." }
+        val root = File(projectsRoot, siteId).canonicalFile
+        check(root.toPath().startsWith(projectsRoot.canonicalFile.toPath())) { "Invalid project root." }
+        val active = pythonModule()?.callAttr("is_project_active", root.absolutePath)?.toString() == "True"
+        return if (active) "RUNNING" else "STOPPED"
+    }
+
     private fun startPython(siteId: String, port: Int): String {
         require(siteId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "Invalid Python project identifier." }
         require(port in 1024..65535) { "Invalid Python listener port." }
@@ -405,6 +413,7 @@ class RuntimeWorkerService : Service() {
                         pythonModule()?.callAttr("stop")?.toString() ?: "STOPPED"
                     }
                     TRANSACTION_PYTHON_STATUS -> pythonModule()?.callAttr("status")?.toString() ?: "STOPPED"
+                    TRANSACTION_PYTHON_PROJECT_STATUS -> pythonProjectStatus(data.readString().orEmpty())
                     TRANSACTION_PYTHON_METRICS -> pythonModule()?.callAttr("metrics_json")?.toString() ?: "{}"
                     TRANSACTION_NODE_START -> startNode(
                         data.readString().orEmpty(), data.readString().orEmpty(), data.readInt(), data.readInt()
@@ -478,6 +487,7 @@ class RuntimeWorkerService : Service() {
         const val TRANSACTION_SHUTDOWN = IBinder.FIRST_CALL_TRANSACTION + 14
         const val TRANSACTION_PYTHON_CONFIGURE = IBinder.FIRST_CALL_TRANSACTION + 15
         const val TRANSACTION_PROTOCOL_VERSION = IBinder.FIRST_CALL_TRANSACTION + 16
+        const val TRANSACTION_PYTHON_PROJECT_STATUS = IBinder.FIRST_CALL_TRANSACTION + 17
         private const val CHANNEL = "pockethost-runtime-worker"
         private const val NOTIFICATION_ID = 41
         private const val MAX_ARCHIVE_ENTRIES = 10_000
