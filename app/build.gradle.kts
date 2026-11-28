@@ -14,10 +14,12 @@ val managementAllowedOrigins = providers.gradleProperty("pockethostManagementAll
     .get()
 require(managementAllowedOrigins.split(',').all { raw ->
     val origin = raw.trim()
-    origin.startsWith("https://") && origin.substringAfter("://").isNotBlank() &&
-        !origin.substringAfter("://").contains('/') && !origin.contains('*') &&
-        !origin.contains('@') && !origin.contains('?') && !origin.contains('#')
-}) { "pockethostManagementAllowedOrigins must be comma-separated exact HTTPS origins without paths or wildcards" }
+    val parsed = runCatching { java.net.URI(origin) }.getOrNull()
+    parsed != null && parsed.scheme == "https" && !parsed.host.isNullOrBlank() &&
+        parsed.rawUserInfo == null && parsed.rawPath.isNullOrEmpty() &&
+        parsed.rawQuery == null && parsed.rawFragment == null &&
+        (parsed.port == -1 || parsed.port in 1..65535) && !origin.contains('*')
+}) { "pockethostManagementAllowedOrigins must be comma-separated exact HTTPS origins without credentials, paths, wildcards or invalid ports" }
 val generatePocketHostLauncherIcons by tasks.registering(GeneratePocketHostLauncherIcons::class) {
     sourceSvg.set(rootProject.layout.projectDirectory.file("Assets/Pocket Host 7.svg"))
     outputDirectory.set(generatedBrandResources)
