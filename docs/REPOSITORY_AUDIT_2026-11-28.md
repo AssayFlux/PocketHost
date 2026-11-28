@@ -44,3 +44,13 @@ The host and runtime worker use a signature-protected Binder permission. APKs bu
 
 ## Additional DDNS hardening
 Dynadot response handling now requires a JSON response containing `error_code`; only codes other than `-1` count as accepted. HTML, login/challenge pages, missing codes and explicit API failures are rejected. Instrumentation coverage exercises success, error, malformed HTML and missing-code responses.
+
+
+## Further findings and fixes from the full-source pass
+- Replaced the legacy instrumentation assertion that expected an embedded worker APK. The test now asserts the worker is separately installed and absent from the host APK.
+- Tightened Dynadot response handling to require its JSON `error_code` contract, with instrumentation tests for success, explicit failure, malformed HTML and missing code.
+- Expanded dual-stack public-address filtering to reject additional IANA special-purpose IPv4/IPv6 ranges and added regression cases.
+- Runtime status/stop paths no longer report `STOPPED` merely because a Binder connection is absent. Background status/stop calls bind and query the installed companion; UI refresh performs those calls off the main thread. Resource-limit changes now fail closed if status/stop cannot be verified.
+- The app and worker APK workflows now verify their own packaged native libraries for all three supported ABIs. The lock refresh workflow covers both Android modules.
+- UI review found product gaps that are explicitly surfaced rather than hidden: live Deployments/rollback and in-app Cloudflare Access policy management are not implemented.
+- Runtime security boundary limitations are documented in `docs/RUNTIME_SECURITY_MODEL.md`. Current Python/Node customer code runs under the shared companion UID; the isolated-process/seccomp probe is not production per-project isolation.
