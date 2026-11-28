@@ -392,7 +392,10 @@ object RuntimeWorkerClient {
         }
 
     fun stopNode(context: Context): String {
-        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
+        if (cachedWorkerAvailable() == null && !workerInstalled(context)) return "STOPPED"
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) {
+            return "UNAVAILABLE"
+        }
         return withWorker(context) { transact(it, TRANSACTION_NODE_STOP) as String }
     }
 
@@ -431,7 +434,10 @@ object RuntimeWorkerClient {
     }
 
     fun stopPython(context: Context): String {
-        if (cachedWorkerAvailable() == null) return unavailableWithoutCachedBinder(context)
+        if (cachedWorkerAvailable() == null && !workerInstalled(context)) return "STOPPED"
+        if (cachedWorkerAvailable() == null && Looper.myLooper() == Looper.getMainLooper()) {
+            return "UNAVAILABLE"
+        }
         return withWorker(context) { transact(it, TRANSACTION_PYTHON_STOP) as String }
     }
 
