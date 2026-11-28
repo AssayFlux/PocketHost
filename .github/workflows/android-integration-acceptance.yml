@@ -33,10 +33,17 @@ jobs:
       - name: Assemble each APK as its own Gradle module output
         run: |
           set -euo pipefail
-          ./gradlew :runtime-worker:assembleDebug -PpockethostAbi=x86_64
-          ./gradlew :app:assembleDebug -PpockethostAbi=x86_64
-          test -s runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk
-          test -s app/build/outputs/apk/debug/app-debug.apk
+          ./gradlew :runtime-worker:assembleDebug
+          ./gradlew :app:assembleDebug
+          worker=runtime-worker/build/outputs/apk/debug/runtime-worker-debug.apk
+          app=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$worker"
+          test -s "$app"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            unzip -Z1 "$app" | grep -Fx "lib/$abi/libpockethost.so"
+            unzip -Z1 "$app" | grep -Fx "lib/$abi/libassayflux_relay_node.so"
+            unzip -Z1 "$worker" | grep -Fx "lib/$abi/libnode.so"
+          done
       - uses: reactivecircus/android-emulator-runner@v2
         env:
           ANDROID_I_WANT_MY_TCG: "yes"
