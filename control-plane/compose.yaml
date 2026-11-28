@@ -69,7 +69,7 @@ services:
     restart: unless-stopped
     depends_on:
       control-plane:
-        condition: service_started
+        condition: service_healthy
       web-console:
         condition: service_healthy
     environment:
