@@ -1,0 +1,46 @@
+name: PocketHost Web Console
+
+on:
+  push:
+    branches: [Alpha]
+    paths:
+      - "web-console/**"
+      - "control-plane/Caddyfile"
+      - "control-plane/compose.yaml"
+      - ".github/workflows/web-console.yml"
+  pull_request:
+    paths:
+      - "web-console/**"
+      - "control-plane/Caddyfile"
+      - "control-plane/compose.yaml"
+      - ".github/workflows/web-console.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-console-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-console/package-lock.json
+      - run: npm ci
+      - name: Type-check and build production console
+        run: npm run build
+        env:
+          VITE_POCKETHOST_CONTROL_API_BASE: https://api.example.invalid
+      - name: Build production container
+        run: docker build -f Dockerfile -t pockethost-web-console:ci ..
+        working-directory: .
