@@ -66,6 +66,17 @@ curl -fsSI https://console.yourdomain.tld/
 docker compose --env-file .env --profile public exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
+Also run the repeatable external acceptance script from a machine outside the server LAN after the phone has connected and the visitor route is enabled:
+
+```sh
+CONSOLE_DOMAIN=console.yourdomain.tld \\
+API_DOMAIN=api.yourdomain.tld \\
+VISITOR_DOMAIN=www.yourdomain.tld \\
+bash scripts/check-pocket-host-deployment.sh
+```
+
+The script verifies DNS resolution, trusted HTTPS certificates, API and console responses, allowed and rejected CORS preflights, and a successful visitor response. It does not replace physical-device recovery testing.
+
 Also verify from a network outside the server LAN:
 
 - Console HTML and static assets load over HTTPS.
