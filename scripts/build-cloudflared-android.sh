@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Build pinned upstream cloudflared for Android using the Android NDK.
 VERSION="2026.11.0"
+UPSTREAM_COMMIT="b0297f0b24c60a4cef743b7b878e2da3798cb839"
 NDK="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
 if [[ -z "$NDK" || ! -d "$NDK" ]]; then
   echo "ANDROID_NDK_HOME must point to the installed Android NDK" >&2
@@ -21,11 +22,16 @@ for compiler in aarch64-linux-android26-clang armv7a-linux-androideabi26-clang x
 done
 mkdir -p "$WORK" "$OUT"
 
-if [[ ! -d "$WORK/.git" ]]; then
+if [[ ! -d "$WORK/.git" ]] || [[ "$(git -C "$WORK" rev-parse HEAD 2>/dev/null || true)" != "$UPSTREAM_COMMIT" ]]; then
   rm -rf "$WORK"
-  git clone --depth 1 --branch "$VERSION" https://github.com/cloudflare/cloudflared.git "$WORK"
+  mkdir -p "$WORK"
+  git -C "$WORK" init
+  git -C "$WORK" remote add origin https://github.com/cloudflare/cloudflared.git
+  git -C "$WORK" fetch --depth 1 origin "$UPSTREAM_COMMIT"
+  git -C "$WORK" checkout --detach FETCH_HEAD
 fi
 cd "$WORK"
+test "$(git rev-parse HEAD)" = "$UPSTREAM_COMMIT"
 test "$(git describe --tags --exact-match HEAD)" = "$VERSION"
 
 # Include notices for the full statically linked Go dependency graph in the APK.
