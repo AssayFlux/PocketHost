@@ -46,7 +46,8 @@ object PythonHostRuntime {
 
     @Synchronized
     fun stop(context: Context): String =
-        runCatching { RuntimeWorkerClient.stopPython(context) }.getOrDefault("STOPPED")
+        runCatching { RuntimeWorkerClient.stopPython(context) }
+            .getOrElse { "ERROR: ${it.message ?: "Runtime Worker stop failed."}" }
 
     @Synchronized
     fun status(context: Context): String =
