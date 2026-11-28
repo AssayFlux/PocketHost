@@ -44,14 +44,16 @@ export function App() {
   const [capacityDirty, setCapacityDirty] = useState(false);
   const [benchmark, setBenchmark] = useState<CapacityBenchmark | null>(null);
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
-  const [message, setMessage] = useState("Connect to an enrolled Pocket Host host through the local network or fleet control plane.");
+  const [message, setMessage] = useState("Connect to this Android host through its loopback API. Use Remote Control Plane for off-device management.");
   const [busy, setBusy] = useState(false);
 
   const request = useCallback(async <T extends Record<string, unknown>>(path: string, init: RequestInit = {}): Promise<T> => {
     let apiUrl: URL;
     try {
       apiUrl = new URL(apiBase.trim());
-      if (!["http:", "https:"].includes(apiUrl.protocol) || apiUrl.username || apiUrl.password ||
+      const localHttp = apiUrl.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(apiUrl.hostname.toLowerCase());
+      if (!(apiUrl.protocol === "https:" || localHttp) || apiUrl.username || apiUrl.password ||
           apiUrl.search || apiUrl.hash || (apiUrl.pathname !== "/" && apiUrl.pathname !== "")) {
         throw new Error("invalid");
       }
