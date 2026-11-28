@@ -107,6 +107,7 @@ jobs:
           bash -n scripts/build-cloudflared-android.sh
           bash -n scripts/check-public-hostname.sh
           bash -n tests/proxy/test_trusted_proxy.sh
+          bash -n scripts/check-pocket-host-deployment.sh
       - name: Validate GitHub Actions wrapper
         uses: gradle/actions/wrapper-validation@v4
       - name: Validate trusted proxy behavior
