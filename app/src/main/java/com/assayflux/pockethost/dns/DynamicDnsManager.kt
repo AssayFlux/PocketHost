@@ -57,8 +57,14 @@ internal object PublicAddressDetector {
             val bytes = address.address
             val first = bytes[0].toInt() and 0xff
             if ((first and 0xe0) != 0x20) return false
-            if ((bytes[0].toInt() and 0xff) == 0x20 && (bytes[1].toInt() and 0xff) == 0x01 &&
-                (bytes[2].toInt() and 0xff) == 0x0d && (bytes[3].toInt() and 0xff) == 0xb8) return false
+            val second = bytes[1].toInt() and 0xff
+            val third = bytes[2].toInt() and 0xff
+            val fourth = bytes[3].toInt() and 0xff
+            // IANA special-purpose ranges that sit inside 2000::/3.
+            if (first == 0x20 && second == 0x01 && third == 0x0d && fourth == 0xb8) return false // documentation
+            if (first == 0x20 && second == 0x01 && third == 0x00 && (fourth and 0x80) == 0) return false // 2001::/23
+            if (first == 0x20 && second == 0x02) return false // deprecated 6to4
+            if (first == 0x3f && second == 0xff && (third and 0xf0) == 0) return false // 3fff::/20 documentation
             return true
         }
         if (address !is java.net.Inet4Address) return false
@@ -68,7 +74,9 @@ internal object PublicAddressDetector {
         if (p[0] == 169 && p[1] == 254) return false
         if (p[0] == 172 && p[1] in 16..31) return false
         if (p[0] == 192 && p[1] == 168) return false
-        if (p[0] == 192 && p[1] == 0 && p[2] == 2) return false
+        if (p[0] == 192 && p[1] == 0 && p[2] == 0) return false // IETF protocol assignments
+        if (p[0] == 192 && p[1] == 0 && p[2] == 2) return false // documentation
+        if (p[0] == 192 && p[1] == 88 && p[2] == 99) return false // deprecated 6to4 relay anycast
         if (p[0] == 198 && p[1] in 18..19) return false
         if (p[0] == 198 && p[1] == 51 && p[2] == 100) return false
         if (p[0] == 203 && p[1] == 0 && p[2] == 113) return false
