@@ -62,7 +62,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "MANAGEMENT_ALLOWED_ORIGINS", "\\\"${managementAllowedOrigins.replace("\\", "\\\\").replace("\\\"", "\\\\\\\"")}\\\"")
+        buildConfigField("String", "MANAGEMENT_ALLOWED_ORIGINS", "\"$managementAllowedOrigins\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters.clear()
