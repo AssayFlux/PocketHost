@@ -60,6 +60,20 @@ function serializePasskeyCredential(credential: PublicKeyCredential): Record<str
 }
 
 
+const configuredControlEndpoint = import.meta.env.VITE_POCKETHOST_CONTROL_API_BASE?.trim() || "";
+
+function isSecureControlEndpoint(value: string): boolean {
+  try {
+    const parsed = new URL(value.trim());
+    return parsed.protocol === "https:" &&
+      !parsed.username && !parsed.password &&
+      (parsed.pathname === "/" || parsed.pathname === "") &&
+      !parsed.search && !parsed.hash;
+  } catch {
+    return false;
+  }
+}
+
 const initialPayloads: Record<string, string> = {
   site_action: JSON.stringify({ siteId: "my-site", action: "stop" }, null, 2),
   tunnel_action: JSON.stringify({ action: "stop" }, null, 2),
@@ -67,7 +81,7 @@ const initialPayloads: Record<string, string> = {
 };
 
 export function RemoteControlPlane() {
-  const [endpoint, setEndpoint] = useState(() => localStorage.getItem("pockethost_control_endpoint") || "");
+  const [endpoint, setEndpoint] = useState(() => localStorage.getItem("pockethost_control_endpoint") || configuredControlEndpoint);
   const [adminToken, setAdminToken] = useState("");
   const [reauthCredential, setReauthCredential] = useState("");
   const [sessionToken, setSessionToken] = useState("");
@@ -123,7 +137,7 @@ export function RemoteControlPlane() {
   }
 
   async function authenticateOwnerPasskey(): Promise<string> {
-    if (!endpoint.startsWith("https://")) throw new Error("Use an HTTPS Control Plane URL for passkey authentication.");
+    if (!isSecureControlEndpoint(endpoint)) throw new Error("Use an HTTPS Control Plane URL for passkey authentication.");
     if (!window.PublicKeyCredential || !navigator.credentials) throw new Error("This browser does not support WebAuthn passkeys.");
     const base = endpoint.replace(/\/$/, "");
     const startResponse = await fetch(base + "/v1/admin/passkeys/authentication/start", { method: "POST", cache: "no-store" });
@@ -258,7 +272,7 @@ export function RemoteControlPlane() {
   async function connect() {
     setBusy(true);
     try {
-      if (!endpoint.startsWith("https://")) throw new Error("Use an HTTPS Control Plane URL.");
+      if (!isSecureControlEndpoint(endpoint)) throw new Error("Enter an HTTPS Control Plane origin without credentials, path, query or fragment.");
       if (!adminToken) throw new Error("Enter the long-lived administrative credential to connect.");
       const nextSession = await exchangeAdminSession(adminToken);
       setReauthCredential(adminToken);
@@ -502,7 +516,7 @@ export function RemoteControlPlane() {
     <div className="panel-heading"><h3>Remote Control Plane</h3><span className="muted-tag">INDEPENDENT BACKEND</span></div>
     <p>Manage enrolled Pocket Host nodes while their host agents remain active. Administrative credentials exchange for revocable 12-hour sessions; device commands currently use outbound HTTPS polling.</p>
     <div className="resource-panel">
-      <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => { setEndpoint(event.target.value); setSessionToken(""); }} placeholder="https://control.example.com" /></label>
+      <label>Control Plane HTTPS URL<input value={endpoint} onChange={event => { setEndpoint(event.target.value); setSessionToken(""); }} placeholder="https://api.example.com" /></label>
       <label>API credential<input type="password" value={adminToken} onChange={event => { setAdminToken(event.target.value); setSessionToken(""); }} placeholder="Owner, Editor or Viewer credential" /><small>Used only to create a short-lived administrative session; it is not accepted by management endpoints.</small></label>
       <div className="site-actions">
         <button disabled={busy || !endpoint.startsWith("https://") || adminToken.length < 32} onClick={connect}>Create session &amp; connect</button>
